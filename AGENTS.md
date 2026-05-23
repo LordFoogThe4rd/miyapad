@@ -118,6 +118,8 @@ User clicks "Use server-side tokenization"
 
 **Adding new tokenizers:** Drop a directory containing `tokenizer.json` into `server/tokenizers/<model name>/`. The server scans for subdirectories with `tokenizer.json` on every GET `/api/v1/tokenizers` call — no restart needed if the directory already existed before the first call (the scan is dynamic, but newly added files are picked up on the next request).
 
+**Tokenizer licenses:** Each tokenizer directory should include a `LICENSE` file for the redistributed tokenizer. The project is AGPL-3.0, but permissively-licensed tokenizers (MIT, Apache 2.0) can be bundled — just ensure their license notice is included.
+
 **Server dependency:** `@huggingface/tokenizers` must be installed (`npm install` in `server/`), otherwise tokenizer operations will throw a module-load error. The `tokenizer.js` module uses dynamic `import()` to lazily load the package.
 
 ---
