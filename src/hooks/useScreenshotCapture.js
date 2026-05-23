@@ -18,7 +18,11 @@ export function useScreenshotCapture() {
 	const toDataURL = useCallback(async (url) => {
 		if (!url) return '';
 		try {
-			const response = await fetch(url);
+			let fetchUrl = url;
+			if (sessionStorage?.sessionEndpoint) {
+				fetchUrl = `${sessionStorage.sessionEndpoint}/proxy-image?url=${encodeURIComponent(url)}`;
+			}
+			const response = await fetch(fetchUrl);
 			const blob = await response.blob();
 			return new Promise((resolve, reject) => {
 				const reader = new FileReader();
@@ -30,7 +34,7 @@ export function useScreenshotCapture() {
 			console.error("Failed to convert image to base64", err);
 			return url;
 		}
-	}, []);
+	}, [sessionStorage]);
 
 	const takeScreenshot = useCallback(async () => {
 		const area = promptArea.current;

@@ -508,6 +508,28 @@ app.post('/zstd_incremental_maintenance', (req, res) => {
     });
 });
 
+// Image proxy route - fetches images server-side to avoid CORS issues
+app.get('/proxy-image', async (req, res) => {
+	const imageUrl = req.query.url;
+	if (!imageUrl) {
+		return res.status(400).send('Missing url query parameter');
+	}
+	try {
+		const response = await axios.get(imageUrl, {
+			responseType: 'arraybuffer',
+			headers: {
+				'User-Agent': 'Mozilla/5.0',
+			}
+		});
+		res.set('Content-Type', response.headers['content-type']);
+		res.set('Access-Control-Allow-Origin', '*');
+		res.set('Cache-Control', 'public, max-age=86400');
+		res.send(Buffer.from(response.data));
+	} catch (error) {
+		res.status(error.response?.status || 500).send('Failed to fetch image');
+	}
+});
+
 // Dynamic POST proxy route
 app.post('/proxy/*', async (req, res) => {
     // Capture the part of the URL after '/proxy'
