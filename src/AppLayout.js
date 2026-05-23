@@ -18,7 +18,7 @@ import { defaultPresets } from './defaults/presets.js';
 import { defaultPrompt } from './defaults/prompt.js';
 import { defaultThemes } from './defaults/themes.js';
 import { exportText, normalizeEndpoint } from './api/common.js';
-import { getTokenCount, getTokens, getModels, completion, chatCompletion, abortCompletion } from './api/index.js';
+import { getTokenCount, serverTokenCount, getTokens, getModels, completion, chatCompletion, abortCompletion } from './api/index.js';
 import { joinPrompt, replaceUnprintableBytes, replaceNewlines } from './utils/strings.js';
 import { regexSplitString, regexIndexOf, regexLastIndexOf, memoize, createLenientPrefixRegex, createLenientRegex, prefixMatchLength, escapeRegExp } from './utils/regex.js';
 import {
@@ -58,7 +58,8 @@ export function AppLayout() {
 		disableLogprobs, setDisableLogprobs, postSamplingProbs, setPostSamplingProbs, showPromptPreview, setShowPromptPreview,
 		promptPreviewTokens, setPromptPreviewTokens, currentThemeName, setCurrentThemeName, allThemes, setAllThemes,
 		showMarkdownPreview, setShowMarkdownPreview, ttsEnabled, setTTSEnabled, ttsVoiceId, setTTSVoiceId, ttsPitch, setTTSPitch,
-		ttsRate, setTTSRate, ttsVolume, setTTSVolume, ttsSpeakInputs, setTTSSpeakInputs, ttsMaxUserInput, setTTSMaxUserInput
+		ttsRate, setTTSRate, ttsVolume, setTTSVolume, ttsSpeakInputs, setTTSSpeakInputs, ttsMaxUserInput, setTTSMaxUserInput,
+		useServerTokenization
 	} = useSettings();
 
 	const {
@@ -374,14 +375,17 @@ export function AppLayout() {
 		const ac = new AbortController();
 		const to = setTimeout(async () => {
 			try {
-				const tokenCount = await getTokenCount({
+		const tokenCount = await (useServerTokenization && isMikupadEndpoint && sessionStorage?.sessionEndpoint
+				? serverTokenCount({ sessionEndpoint: sessionStorage.sessionEndpoint, content: finalPromptText, signal: ac.signal })
+				: getTokenCount({
 					endpoint,
 					endpointAPI,
 					...(endpointAPI == API_OPENAI_COMPAT || endpointAPI == API_LLAMA_CPP ? { endpointAPIKey } : {}),
 					content: finalPromptText,
 					signal: ac.signal,
 					...(isMikupadEndpoint ? { proxyEndpoint: sessionStorage.proxyEndpoint } : {})
-				});
+				})
+			);
 				setTokens(tokenCount);
 			} catch (e) {
 				if (e.name !== 'AbortError')

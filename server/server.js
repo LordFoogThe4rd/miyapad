@@ -7,6 +7,7 @@ const minimist = require('minimist');
 const axios = require('axios');
 const open = require('open');
 const zlib = require('zlib');
+const tokenizer = require('./tokenizer');
 
 const app = express();
 
@@ -34,7 +35,7 @@ const headersToRemove = [
 ];
 
 // Server API version
-const SERVER_VERSION = 3;
+const SERVER_VERSION = 4;
 
 app.use(cors(), bodyParser.json({limit: "100mb"}));
 
@@ -428,7 +429,11 @@ app.get('/', (req, res) => {
 
 // GET route to get the server version
 app.get('/version', (req, res) => {
-    res.json({ version: SERVER_VERSION, features: { zstd_compression: true } });
+    res.json({
+        version: SERVER_VERSION,
+        features: { zstd_compression: true, server_tokenizer: true },
+        tokenizers: tokenizer.getAvailableTokenizers()
+    });
 });
 
 // GET route to run VACUUM on the database
@@ -528,6 +533,72 @@ app.get('/proxy-image', async (req, res) => {
 	} catch (error) {
 		res.status(error.response?.status || 500).send('Failed to fetch image');
 	}
+});
+
+// GET route to list available tokenizers
+app.get('/api/v1/tokenizers', (req, res) => {
+    try {
+        const available = tokenizer.getAvailableTokenizers();
+        res.json({ ok: true, tokenizers: available, loaded: tokenizer.getLoadedModel() });
+    } catch (e) {
+        res.status(500).json({ ok: false, message: e.message });
+    }
+});
+
+// POST route to load a tokenizer
+app.post('/api/v1/tokenizer/load', async (req, res) => {
+    const { model } = req.body;
+    if (!model) {
+        return res.status(400).json({ ok: false, message: 'Missing model parameter' });
+    }
+    try {
+        await tokenizer.loadTokenizer(model);
+        res.json({ ok: true, model });
+    } catch (e) {
+        res.status(500).json({ ok: false, message: e.message });
+    }
+});
+
+// POST route to count tokens
+app.post('/api/v1/token-count', async (req, res) => {
+    const { content } = req.body;
+    if (content === undefined || content === null) {
+        return res.status(400).json({ ok: false, message: 'Missing content parameter' });
+    }
+    try {
+        const count = await tokenizer.tokenCount(content);
+        res.json({ ok: true, count });
+    } catch (e) {
+        res.status(500).json({ ok: false, message: e.message });
+    }
+});
+
+// POST route to tokenize
+app.post('/api/v1/tokenize', async (req, res) => {
+    const { content } = req.body;
+    if (content === undefined || content === null) {
+        return res.status(400).json({ ok: false, message: 'Missing content parameter' });
+    }
+    try {
+        const { ids, tokens } = await tokenizer.tokenize(content);
+        res.json({ ok: true, ids, strings: tokens });
+    } catch (e) {
+        res.status(500).json({ ok: false, message: e.message });
+    }
+});
+
+// POST route to detokenize
+app.post('/api/v1/detokenize', async (req, res) => {
+    const { tokens: tokenIds } = req.body;
+    if (!tokenIds || !Array.isArray(tokenIds) || tokenIds.length === 0) {
+        return res.status(400).json({ ok: false, message: 'Missing or invalid tokens parameter' });
+    }
+    try {
+        const content = await tokenizer.detokenize(tokenIds);
+        res.json({ ok: true, content });
+    } catch (e) {
+        res.status(500).json({ ok: false, message: e.message });
+    }
 });
 
 // Dynamic POST proxy route

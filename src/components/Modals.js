@@ -31,6 +31,7 @@ export function Modals({ toggleModal, currentThemeName, setCurrentThemeName, all
 		screenshotBackgroundColor, setScreenshotBackgroundColor,
 		screenshotStoryFont, setScreenshotStoryFont,
 		screenshotGeneralFont, setScreenshotGeneralFont,
+		useServerTokenization, setUseServerTokenization, tokenizerModel, setTokenizerModel,
 		screenshotFontWeight, setScreenshotFontWeight,
 		screenshotFontSize, setScreenshotFontSize,
 		screenshotLineHeight, setScreenshotLineHeight,
@@ -192,7 +193,8 @@ export function Modals({ toggleModal, currentThemeName, setCurrentThemeName, all
 				ttsVolume, setTTSVolume,
 				ttsSpeakInputs, setTTSSpeakInputs,
 				ttsMaxUserInput, setTTSMaxUserInput,
-				isMikupadEndpoint, cancel, listTTSVoices, ttsStop, ttsAvailable, handleExportDB, handleImportDB, exportPrompt,
+				isMikupadEndpoint, sessionStorage, cancel, listTTSVoices, ttsStop, ttsAvailable, handleExportDB, handleImportDB, exportPrompt,
+				useServerTokenization, setUseServerTokenization, tokenizerModel, setTokenizerModel,
 				screenshotIncludeSessionName, setScreenshotIncludeSessionName,
 				screenshotIncludeDate, setScreenshotIncludeDate,
 				screenshotBackgroundUrl, setScreenshotBackgroundUrl,
@@ -255,7 +257,7 @@ export function Modals({ toggleModal, currentThemeName, setCurrentThemeName, all
 			isOpen=${modalState.bias}
 			closeModal=${() => closeModal("bias")}
 			biasState=${{ logitBias, setLogitBias, logitBiasParam, setLogitBiasParam, setRejectedAPIKey }}
-			apiConfig=${{ sessionStorage, endpoint, endpointAPI, endpointAPIKey, isMikupadEndpoint }}
+			apiConfig=${{ sessionStorage, endpoint, endpointAPI, endpointAPIKey, isMikupadEndpoint, useServerTokenization }}
 			cancel=${cancel}/>
 
 		<!-- Sorry. -->

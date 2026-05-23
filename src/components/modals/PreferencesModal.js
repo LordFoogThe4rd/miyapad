@@ -1,10 +1,11 @@
 import { html } from 'htm/react';
-import { useState } from 'react';
+import { useState, useEffect, useCallback } from 'react';
 import { Modal } from '../Modal.js';
 import { Checkbox } from '../controls/Checkbox.js';
 import { InputBox } from '../controls/InputBox.js';
 import { InputSlider } from '../controls/InputSlider.js';
 import { SelectBox } from '../controls/SelectBox.js';
+import { getServerTokenizers, loadServerTokenizer } from '../../api/index.js';
 
 const tabStyle = (active) => ({
 	flex: 1,
@@ -37,6 +38,8 @@ export function PreferencesModal({ isOpen, closeModal, settings }) {
 		ttsSpeakInputs, setTTSSpeakInputs,
 		ttsMaxUserInput, setTTSMaxUserInput,
 		isMikupadEndpoint, cancel, listTTSVoices, ttsStop, ttsAvailable, handleExportDB, handleImportDB, exportPrompt,
+		useServerTokenization, setUseServerTokenization, tokenizerModel, setTokenizerModel,
+		sessionStorage,
 		screenshotIncludeSessionName, setScreenshotIncludeSessionName,
 		screenshotIncludeDate, setScreenshotIncludeDate,
 		screenshotBackgroundUrl, setScreenshotBackgroundUrl,
@@ -50,6 +53,44 @@ export function PreferencesModal({ isOpen, closeModal, settings }) {
 		screenshotAiTextColor, setScreenshotAiTextColor,
 		screenshotModelAvatarUrl, setScreenshotModelAvatarUrl
 	} = settings;
+
+	const [tokenizerList, setTokenizerList] = useState([]);
+	const [tokenizerStatus, setTokenizerStatus] = useState('');
+
+	const refreshTokenizers = useCallback(async () => {
+		if (!isMikupadEndpoint || !sessionStorage?.sessionEndpoint) return;
+		try {
+			const data = await getServerTokenizers({ sessionEndpoint: sessionStorage.sessionEndpoint });
+			setTokenizerList(data.tokenizers || []);
+			if (data.loaded) {
+				setTokenizerStatus(`Loaded: ${data.loaded}`);
+			}
+		} catch (e) {
+			setTokenizerList([]);
+			setTokenizerStatus('Failed to fetch tokenizers');
+		}
+	}, [isMikupadEndpoint, sessionStorage]);
+
+	useEffect(() => {
+		if (activeTab === 'server' && isMikupadEndpoint) {
+			refreshTokenizers();
+		}
+	}, [activeTab, isMikupadEndpoint, refreshTokenizers]);
+
+	const handleTokenizerChange = useCallback(async (model) => {
+		setTokenizerModel(model);
+		if (!model) {
+			setTokenizerStatus('No tokenizer selected');
+			return;
+		}
+		setTokenizerStatus('Loading...');
+		try {
+			await loadServerTokenizer({ sessionEndpoint: sessionStorage.sessionEndpoint, model });
+			setTokenizerStatus(`Loaded: ${model}`);
+		} catch (e) {
+			setTokenizerStatus(`Error: ${e.message}`);
+		}
+	}, [sessionStorage, setTokenizerModel]);
 
 	return html`
 		<${Modal} isOpen=${isOpen} onClose=${closeModal}
@@ -65,6 +106,12 @@ export function PreferencesModal({ isOpen, closeModal, settings }) {
 						onClick=${() => setActiveTab('screenshot')}>
 						Screenshot
 					</button>
+					${isMikupadEndpoint && html`
+						<button style=${tabStyle(activeTab === 'server')}
+							onClick=${() => setActiveTab('server')}>
+							Server
+						</button>
+					`}
 				</div>
 
 				${activeTab === 'editor' && html`
@@ -198,6 +245,38 @@ export function PreferencesModal({ isOpen, closeModal, settings }) {
 						<${InputBox} label="Model Avatar URL (square preferred)"
 							value=${screenshotModelAvatarUrl}
 							onValueChange=${setScreenshotModelAvatarUrl}/>
+					</div>
+				`}
+
+				${activeTab === 'server' && html`
+					<div className="vbox" style=${{ gap: '2px', marginTop: '8px' }}>
+						<${Checkbox} label="Use server-side tokenization"
+							value=${useServerTokenization}
+							onValueChange=${setUseServerTokenization}/>
+						${useServerTokenization && html`
+							<div className="hbox" style=${{ gap: '8px', alignItems: 'center' }}>
+								<${SelectBox}
+									label="Tokenizer model"
+									value=${tokenizerModel || ''}
+									onValueChange=${handleTokenizerChange}
+									options=${[
+										{ name: '(none)', value: '' },
+										...tokenizerList.map(t => ({ name: t, value: t }))
+									]}/>
+								<button className="symbol-button" title="Refresh list"
+									onClick=${refreshTokenizers}>
+									<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="var(--color-light)" style=${{ width: '.95em', height: '.95em' }}>
+										<path d="M12 4V1L8 5l4 4V6c3.31 0 6 2.69 6 6 0 1.01-.25 1.97-.7 2.8l1.46 1.46C19.54 15.03 20 13.57 20 12c0-4.42-3.58-8-8-8zm0 14c-3.31 0-6-2.69-6-6 0-1.01.25-1.97.7-2.8L5.24 7.74C4.46 8.97 4 10.43 4 12c0 4.42 3.58 8 8 8v3l4-4-4-4v3z"/>
+									</svg>
+								</button>
+							</div>
+							<div style=${{ fontSize: '0.85em', color: 'var(--color-base-60)', padding: '4px 0' }}>
+								${tokenizerStatus || 'No tokenizer loaded'}
+							</div>
+							<div style=${{ fontSize: '0.8em', color: 'var(--color-base-50)', marginTop: '4px' }}>
+								Place tokenizer.json files in server/tokenizers/&lt;model-name&gt;/ on the Mikupad server.
+							</div>
+						`}
 					</div>
 				`}
 			</div>

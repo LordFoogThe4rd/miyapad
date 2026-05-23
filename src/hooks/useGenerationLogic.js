@@ -3,13 +3,13 @@ import { useSettings } from '../contexts/SettingsContext.js';
 import { useGeneration } from '../contexts/GenerationContext.js';
 import { usePromptBuilder } from './usePromptBuilder.js';
 import { useTTS } from './useTTS.js';
-import { getTokenCount, completion, chatCompletion, abortCompletion } from '../api/index.js';
+import { getTokenCount, serverTokenCount, completion, chatCompletion, abortCompletion } from '../api/index.js';
 import { API_LLAMA_CPP, API_KOBOLD_CPP, API_OPENAI_COMPAT, API_AI_HORDE } from '../constants.js';
 import { replaceNewlines } from '../utils/strings.js';
 import { regexLastIndexOf, createLenientRegex } from '../utils/regex.js';
 
 export function useGenerationLogic() {
-	const { endpoint, endpointAPI, endpointAPIKey, endpointModel, seed, maxPredictTokens, temperature, dynaTempRange, dynaTempExp, repeatPenalty, repeatLastN, penalizeNl, presencePenalty, frequencyPenalty, topK, topP, typicalP, minP, tfsZ, mirostat, mirostatTau, mirostatEta, xtcThreshold, xtcProbability, dryMultiplier, dryBase, dryAllowedLength, dryPenaltyRange, drySequenceBreakers, bannedTokens, ignoreEos, openaiPresets, stoppingStrings, useBasicStoppingMode, basicStoppingModeType, logitBias, logitBiasParam, enabledSamplers, grammar, useChatAPI, useTokenStreaming, disableLogprobs, postSamplingProbs, showPromptPreview, promptPreviewTokens, templates, selectedTemplate, chatMode, setChatMode, setUseChatAPI, setSelectedTemplate, isMikupadEndpoint, sessionStorage, ttsEnabled } = useSettings();
+	const { endpoint, endpointAPI, endpointAPIKey, endpointModel, seed, maxPredictTokens, temperature, dynaTempRange, dynaTempExp, repeatPenalty, repeatLastN, penalizeNl, presencePenalty, frequencyPenalty, topK, topP, typicalP, minP, tfsZ, mirostat, mirostatTau, mirostatEta, xtcThreshold, xtcProbability, dryMultiplier, dryBase, dryAllowedLength, dryPenaltyRange, drySequenceBreakers, bannedTokens, ignoreEos, openaiPresets, stoppingStrings, useBasicStoppingMode, basicStoppingModeType, logitBias, logitBiasParam, enabledSamplers, grammar, useChatAPI, useTokenStreaming, disableLogprobs, postSamplingProbs, showPromptPreview, promptPreviewTokens, templates, selectedTemplate, chatMode, setChatMode, setUseChatAPI, setSelectedTemplate, isMikupadEndpoint, sessionStorage, ttsEnabled, useServerTokenization } = useSettings();
 	const { promptArea, promptOverlay, undoStack, redoStack, probsDelayTimer, keyState, sessionReconnectTimer, useScrollSmoothing, hordeTaskId, promptPreviewElement, markdownPreviewRef, isSyncingScroll, promptChunks, setPromptChunks, currentPromptChunk, setCurrentPromptChunk, undoHovered, setUndoHovered, showProbs, setShowProbs, cancel, setCancel, sessionEndpointConnecting, setSessionEndpointConnecting, sessionEndpointError, setSessionEndpointError, rejectedAPIKey, setRejectedAPIKey, openaiModels, setOpenaiModels, tokens, setTokens, tokensPerSec, setTokensPerSec, predictStartTokens, setPredictStartTokens, lastError, setLastError, savedScrollTop, setSavedScrollTop, modalState, setModalState, contextMenuState, setContextMenuState, instructModalState, setInstructModalState, hordeQueuePos, setHordeQueuePos, hordeProcessing, setHordeProcessing, promptPreviewChunks, setPromptPreviewChunks, promptPreviewReroll, setPromptPreviewReroll, ttsAvailable, setTTSAvailable, ttsNewText, ttsLastChunk, ttsQueue, ttsVoices, ttsPaused, activeGenId, abortControllerRef, triggerPredict, setTriggerPredict, restartedPredict, setRestartedPredict } = useGeneration();
 	const { fimPromptInfo, finalPromptText, convertChatToJSON } = usePromptBuilder();
 	const { ttsProcessQueue, ttsStop, ttsPushUserInput, ttsAddChunk, listTTSVoices } = useTTS();
@@ -92,14 +92,17 @@ export function useGenerationLogic() {
 			if (showPromptPreview) setPromptPreviewChunks([]); // Discard current preview.
 
 			if (!callback) {
-				const tokenCount = await getTokenCount({
-					endpoint,
-					endpointAPI,
-					...(endpointAPI == API_OPENAI_COMPAT || endpointAPI == API_LLAMA_CPP ? { endpointAPIKey } : {}),
-					content: prompt,
-					signal: ac.signal,
-					...(isMikupadEndpoint ? { proxyEndpoint: sessionStorage.proxyEndpoint } : {})
-				});
+				const tokenCount = await (useServerTokenization && isMikupadEndpoint && sessionStorage?.sessionEndpoint
+					? serverTokenCount({ sessionEndpoint: sessionStorage.sessionEndpoint, content: prompt, signal: ac.signal })
+					: getTokenCount({
+						endpoint,
+						endpointAPI,
+						...(endpointAPI == API_OPENAI_COMPAT || endpointAPI == API_LLAMA_CPP ? { endpointAPIKey } : {}),
+						content: prompt,
+						signal: ac.signal,
+						...(isMikupadEndpoint ? { proxyEndpoint: sessionStorage.proxyEndpoint } : {})
+					})
+				);
 				if (myId !== activeGenId.current) return;
 				setTokens(tokenCount);
 				setPredictStartTokens(tokenCount);

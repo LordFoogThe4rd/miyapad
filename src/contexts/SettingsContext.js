@@ -112,7 +112,10 @@ export function SettingsProvider({ children, sessionStorage, templateStorage, th
 	const [ttsSpeakInputs, setTTSSpeakInputs] = usePersistentState('ttsSpeakInputs', true);
 	const [ttsMaxUserInput, setTTSMaxUserInput] = usePersistentState('ttsMaxUserInput', 50);
 
-	const [screenshotIncludeSessionName, setScreenshotIncludeSessionName] = usePersistentState('screenshotIncludeSessionName', true);
+	const [useServerTokenization, setUseServerTokenization] = usePersistentState('useServerTokenization', false);
+const [tokenizerModel, setTokenizerModel] = usePersistentState('tokenizerModel', null);
+
+const [screenshotIncludeSessionName, setScreenshotIncludeSessionName] = usePersistentState('screenshotIncludeSessionName', true);
 	const [screenshotIncludeDate, setScreenshotIncludeDate] = usePersistentState('screenshotIncludeDate', true);
 	const [screenshotBackgroundUrl, setScreenshotBackgroundUrl] = usePersistentState('screenshotBackgroundUrl', '');
 	const [screenshotBackgroundColor, setScreenshotBackgroundColor] = usePersistentState('screenshotBackgroundColor', '#121212');
@@ -151,6 +154,7 @@ export function SettingsProvider({ children, sessionStorage, templateStorage, th
 		promptPreviewTokens, setPromptPreviewTokens, currentThemeName, setCurrentThemeName, allThemes, setAllThemes,
 		showMarkdownPreview, setShowMarkdownPreview, ttsEnabled, setTTSEnabled, ttsVoiceId, setTTSVoiceId, ttsPitch, setTTSPitch,
 		ttsRate, setTTSRate, ttsVolume, setTTSVolume, ttsSpeakInputs, setTTSSpeakInputs, ttsMaxUserInput, setTTSMaxUserInput,
+		useServerTokenization, setUseServerTokenization, tokenizerModel, setTokenizerModel,
 		screenshotIncludeSessionName, setScreenshotIncludeSessionName, screenshotIncludeDate, setScreenshotIncludeDate,
 		screenshotBackgroundUrl, setScreenshotBackgroundUrl, screenshotBackgroundColor, setScreenshotBackgroundColor,
 		screenshotStoryFont, setScreenshotStoryFont, screenshotGeneralFont, setScreenshotGeneralFont,

@@ -2,11 +2,11 @@ import { useEffect } from 'react';
 import { useSettings } from '../contexts/SettingsContext.js';
 import { useGeneration } from '../contexts/GenerationContext.js';
 import { usePromptBuilder } from './usePromptBuilder.js';
-import { getTokenCount } from '../api/index.js';
+import { getTokenCount, serverTokenCount } from '../api/index.js';
 import { API_OPENAI_COMPAT, API_LLAMA_CPP } from '../constants.js';
 
 export function useTokenCounters() {
-	const { endpoint, endpointAPI, endpointAPIKey, sessionStorage, isMikupadEndpoint, contextLength, authorNoteTokens, setAuthorNoteTokens, memoryTokens, setMemoryTokens, worldInfo } = useSettings();
+	const { endpoint, endpointAPI, endpointAPIKey, sessionStorage, isMikupadEndpoint, useServerTokenization, contextLength, authorNoteTokens, setAuthorNoteTokens, memoryTokens, setMemoryTokens, worldInfo } = useSettings();
 	const { cancel, modalState } = useGeneration();
 	const { templateReplacements, replacePlaceholders } = usePromptBuilder();
 
@@ -26,14 +26,18 @@ export function useTokenCounters() {
 		const ac = new AbortController();
 		const to = setTimeout(async () => {
 			try {
-				const tokenCount = await getTokenCount({
-					endpoint,
-					endpointAPI,
-					...(endpointAPI == API_OPENAI_COMPAT || endpointAPI == API_LLAMA_CPP ? { endpointAPIKey } : {}),
-					content: `${replacePlaceholders(assembled,templateReplacements)}`,
-					signal: ac.signal,
-					...(isMikupadEndpoint ? { proxyEndpoint: sessionStorage.proxyEndpoint } : {})
-				});
+				const content = `${replacePlaceholders(assembled,templateReplacements)}`;
+				const tokenCount = await (useServerTokenization && isMikupadEndpoint && sessionStorage?.sessionEndpoint
+					? serverTokenCount({ sessionEndpoint: sessionStorage.sessionEndpoint, content, signal: ac.signal })
+					: getTokenCount({
+						endpoint,
+						endpointAPI,
+						...(endpointAPI == API_OPENAI_COMPAT || endpointAPI == API_LLAMA_CPP ? { endpointAPIKey } : {}),
+						content,
+						signal: ac.signal,
+						...(isMikupadEndpoint ? { proxyEndpoint: sessionStorage.proxyEndpoint } : {})
+					})
+				);
 				setAuthorNoteTokens((prevauthorNoteTokens) => ({
 					...prevauthorNoteTokens,
 					"tokens": tokenCount - 1 
@@ -48,7 +52,7 @@ export function useTokenCounters() {
 
 		ac.signal.addEventListener('abort', () => clearTimeout(to));
 		return () => ac.abort();
-	},[modalState["context"],authorNoteTokens.text,authorNoteTokens.prefix,authorNoteTokens.suffix,contextLength,cancel,endpoint,endpointAPI])
+	},[modalState["context"],authorNoteTokens.text,authorNoteTokens.prefix,authorNoteTokens.suffix,contextLength,cancel,endpoint,endpointAPI,useServerTokenization])
 
 	function handleMemoryTokensChange(key,value) {
 		setMemoryTokens((prevMemoryTokens) => ({ ...prevMemoryTokens, [key]: value }));
@@ -67,14 +71,18 @@ export function useTokenCounters() {
 		const ac = new AbortController();
 		const to = setTimeout(async () => {
 			try {
-				const tokenCount = await getTokenCount({
-					endpoint,
-					endpointAPI,
-					...(endpointAPI == API_OPENAI_COMPAT || endpointAPI == API_LLAMA_CPP ? { endpointAPIKey } : {}),
-					content: `${replacePlaceholders(assembled,templateReplacements)}`,
-					signal: ac.signal,
-					...(isMikupadEndpoint ? { proxyEndpoint: sessionStorage.proxyEndpoint } : {})
-				});
+				const content = `${replacePlaceholders(assembled,templateReplacements)}`;
+				const tokenCount = await (useServerTokenization && isMikupadEndpoint && sessionStorage?.sessionEndpoint
+					? serverTokenCount({ sessionEndpoint: sessionStorage.sessionEndpoint, content, signal: ac.signal })
+					: getTokenCount({
+						endpoint,
+						endpointAPI,
+						...(endpointAPI == API_OPENAI_COMPAT || endpointAPI == API_LLAMA_CPP ? { endpointAPIKey } : {}),
+						content,
+						signal: ac.signal,
+						...(isMikupadEndpoint ? { proxyEndpoint: sessionStorage.proxyEndpoint } : {})
+					})
+				);
 				setMemoryTokens((prevMemoryTokens) => ({
 					...prevMemoryTokens,
 					"tokens": tokenCount - 1 
@@ -89,7 +97,7 @@ export function useTokenCounters() {
 
 		ac.signal.addEventListener('abort', () => clearTimeout(to));
 		return () => ac.abort();
-	},[modalState["context"],memoryTokens.text,memoryTokens.prefix,memoryTokens.suffix,cancel,endpoint,endpointAPI])
+	},[modalState["context"],memoryTokens.text,memoryTokens.prefix,memoryTokens.suffix,cancel,endpoint,endpointAPI,useServerTokenization])
 	// token counts for wi
 	useEffect(() => {
 		const assembled = memoryTokens.worldInfo && memoryTokens.worldInfo !== ""
@@ -103,14 +111,18 @@ export function useTokenCounters() {
 		const ac = new AbortController();
 		const to = setTimeout(async () => {
 			try {
-				const tokenCount = await getTokenCount({
-					endpoint,
-					endpointAPI,
-					...(endpointAPI == API_OPENAI_COMPAT || endpointAPI == API_LLAMA_CPP ? { endpointAPIKey } : {}),
-					content: `${replacePlaceholders(assembled,templateReplacements)}`,
-					signal: ac.signal,
-					...(isMikupadEndpoint ? { proxyEndpoint: sessionStorage.proxyEndpoint } : {})
-				});
+				const content = `${replacePlaceholders(assembled,templateReplacements)}`;
+				const tokenCount = await (useServerTokenization && isMikupadEndpoint && sessionStorage?.sessionEndpoint
+					? serverTokenCount({ sessionEndpoint: sessionStorage.sessionEndpoint, content, signal: ac.signal })
+					: getTokenCount({
+						endpoint,
+						endpointAPI,
+						...(endpointAPI == API_OPENAI_COMPAT || endpointAPI == API_LLAMA_CPP ? { endpointAPIKey } : {}),
+						content,
+						signal: ac.signal,
+						...(isMikupadEndpoint ? { proxyEndpoint: sessionStorage.proxyEndpoint } : {})
+					})
+				);
 				setMemoryTokens((prevMemoryTokens) => ({
 					...prevMemoryTokens,
 					"tokensWI": tokenCount - 1 
@@ -125,7 +137,7 @@ export function useTokenCounters() {
 
 		ac.signal.addEventListener('abort', () => clearTimeout(to));
 		return () => ac.abort();
-	},[modalState["context"],worldInfo.prefix,memoryTokens.worldInfo,worldInfo.suffix,cancel,endpoint,endpointAPI])
+	},[modalState["context"],worldInfo.prefix,memoryTokens.worldInfo,worldInfo.suffix,cancel,endpoint,endpointAPI,useServerTokenization])
 
 	return { handleauthorNoteTokensChange, handleMemoryTokensChange };
 }

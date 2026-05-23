@@ -13,7 +13,7 @@ export class ServerDBAdapter {
 		if (!res.ok)
 			throw new Error("Not a mikupad server or version mismatch.");
 		const { version } = await res.json();
-		if (version !== 3)
+		if (version < 3)
 			throw new Error("Mikupad server version mismatch.");
 	}
 

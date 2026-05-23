@@ -37,6 +37,7 @@ server/scratch_list_tables.js
 
 # Server-specific
 server/node_modules/
+server/sqlite-zstd/target/
 server/*.so
 server/*.dll
 server/*.dylib

@@ -3,11 +3,11 @@ import { useState, useEffect, useMemo } from 'react';
 import { Modal } from '../Modal.js';
 import { InputBox } from '../controls/InputBox.js';
 import { API_LLAMA_CPP, API_KOBOLD_CPP, API_AI_HORDE, API_OPENAI_COMPAT } from '../../constants.js';
-import { getTokens } from '../../api/index.js';
+import { getTokens, serverTokenize } from '../../api/index.js';
 
 export function LogitBiasModal({ isOpen, closeModal, biasState, apiConfig, cancel }) {
 	const { logitBias, setLogitBias, logitBiasParam, setLogitBiasParam, setRejectedAPIKey } = biasState;
-	const { sessionStorage, endpoint, endpointAPI, endpointAPIKey, isMikupadEndpoint } = apiConfig;
+	const { sessionStorage, endpoint, endpointAPI, endpointAPIKey, isMikupadEndpoint, useServerTokenization } = apiConfig;
 	const [lastBiasError, setLastBiasError] = useState(undefined);
 	const [logitBiasTemp, setLogitBiasTemp] = useState([]);
 	const [logitBiasSorted, setLogitBiasSorted] = useState([]);
@@ -84,26 +84,34 @@ export function LogitBiasModal({ isOpen, closeModal, biasState, apiConfig, cance
 				// Now granted, I have not found any strings where this is actually an issue in 
 				// the tokenizers of the models I use, but this is still a huge hackjob of a 
 				// workaround. If anyone can think of a better solution, please let me know.
-				tokens = await getTokens({
+			const useServerTk = useServerTokenization && isMikupadEndpoint && sessionStorage?.sessionEndpoint;
+			const serverEp = sessionStorage?.sessionEndpoint;
+			tokens = await (useServerTk
+				? serverTokenize({ sessionEndpoint: serverEp, content: `!==${biasString}`.replace(/\\n/g,'\n'), signal: ac.signal })
+				: getTokens({
 					endpoint,
 					endpointAPI,
 					...(endpointAPI == API_OPENAI_COMPAT || endpointAPI == API_LLAMA_CPP ? { endpointAPIKey } : {}),
 					content: `!==${biasString}`.replace(/\\n/g,'\n'),
 					signal: ac.signal,
 					...(isMikupadEndpoint ? { proxyEndpoint: sessionStorage.proxyEndpoint } : {})
-				});
-				if (tokens.length === 0) {
-					setLastBiasError("Error: Tokenizer endpoint unavailable.");
-					return;
-				}
-				const logitBiasWorkaround = await getTokens({
+				})
+			);
+			if (tokens.length === 0) {
+				setLastBiasError("Error: Tokenizer endpoint unavailable.");
+				return;
+			}
+			const logitBiasWorkaround = await (useServerTk
+				? serverTokenize({ sessionEndpoint: serverEp, content: `!==`, signal: ac.signal })
+				: getTokens({
 					endpoint,
 					endpointAPI,
 					...(endpointAPI == API_OPENAI_COMPAT || endpointAPI == API_LLAMA_CPP ? { endpointAPIKey } : {}),
 					content: `!==`,
 					signal: ac.signal,
 					...(isMikupadEndpoint ? { proxyEndpoint: sessionStorage.proxyEndpoint } : {})
-				});
+				})
+			);
 				// Remove however many tokens !== is tokenized as for the workaround
 				tokens.ids = tokens.ids.slice(logitBiasWorkaround.ids.length);
 				if ( Array.isArray(tokens.str) ) {

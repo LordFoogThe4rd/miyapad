@@ -5,6 +5,65 @@ import { koboldCppTokenCount, koboldCppTokenize, koboldCppCompletion, koboldCppA
 import { openaiAphroditeTokenCount, openaiOobaTokenCount, openaiTabbyTokenCount, openaiOobaTokenize, openaiTabbyTokenize, openaiModels, openaiCompletion, openaiChatCompletion, openaiOobaAbortCompletion } from './openai.js';
 import { aiHordeModels, aiHordeCompletion, aiHordeAbortCompletion } from './aihorde.js';
 
+export async function serverTokenCount({ sessionEndpoint, signal, content }) {
+	const res = await fetch(`${sessionEndpoint}/api/v1/token-count`, {
+		method: 'POST',
+		headers: { 'Content-Type': 'application/json' },
+		body: JSON.stringify({ content }),
+		signal,
+	});
+	if (!res.ok)
+		throw new Error(`HTTP ${res.status}`);
+	const { count } = await res.json();
+	return count;
+}
+
+export async function serverTokenize({ sessionEndpoint, signal, content }) {
+	const res = await fetch(`${sessionEndpoint}/api/v1/tokenize`, {
+		method: 'POST',
+		headers: { 'Content-Type': 'application/json' },
+		body: JSON.stringify({ content }),
+		signal,
+	});
+	if (!res.ok)
+		throw new Error(`HTTP ${res.status}`);
+	const data = await res.json();
+	return { ids: data.ids, str: data.strings };
+}
+
+export async function serverDetokenize({ sessionEndpoint, signal, tokens: tokenIds }) {
+	const res = await fetch(`${sessionEndpoint}/api/v1/detokenize`, {
+		method: 'POST',
+		headers: { 'Content-Type': 'application/json' },
+		body: JSON.stringify({ tokens: tokenIds }),
+		signal,
+	});
+	if (!res.ok)
+		throw new Error(`HTTP ${res.status}`);
+	const { content } = await res.json();
+	return content;
+}
+
+export async function getServerTokenizers({ sessionEndpoint }) {
+	const res = await fetch(`${sessionEndpoint}/api/v1/tokenizers`);
+	if (!res.ok)
+		throw new Error(`HTTP ${res.status}`);
+	const data = await res.json();
+	return data;
+}
+
+export async function loadServerTokenizer({ sessionEndpoint, model }) {
+	const res = await fetch(`${sessionEndpoint}/api/v1/tokenizer/load`, {
+		method: 'POST',
+		headers: { 'Content-Type': 'application/json' },
+		body: JSON.stringify({ model }),
+	});
+	if (!res.ok)
+		throw new Error(`HTTP ${res.status}`);
+	const data = await res.json();
+	return data;
+}
+
 export async function getTokenCount({ endpoint, endpointAPI, endpointAPIKey, signal, ...options }) {
 	endpoint = normalizeEndpoint(endpoint, endpointAPI);
 	switch (endpointAPI) {
