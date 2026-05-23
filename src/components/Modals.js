@@ -7,7 +7,7 @@ import { usePromptBuilder } from '../hooks/usePromptBuilder.js';
 import { useTTS } from '../hooks/useTTS.js';
 import { exportText } from '../api/common.js';
 import { defaultPresets } from '../defaults/presets.js';
-import { EditorPreferencesModal } from './modals/EditorPreferencesModal.js';
+import { PreferencesModal } from './modals/PreferencesModal.js';
 import { MemoryModal } from './modals/MemoryModal.js';
 import { AuthorNoteModal } from './modals/AuthorNoteModal.js';
 import { ContextModal } from './modals/ContextModal.js';
@@ -20,13 +20,8 @@ import { InstructModal } from './modals/InstructModal.js';
 import { ThemeManagerModal } from './modals/ThemeManagerModal.js';
 import { AIHordeSettingsModal } from './modals/AIHordeSettingsModal.js';
 import { CompressionInfoModal } from './modals/CompressionInfoModal.js';
-import { ScreenshotModal } from './modals/ScreenshotModal.js';
 import { SessionsModal } from './modals/SessionsModal.js';
 import { EditorContextMenu } from './EditorContextMenu.js';
-import { SVG_Stop } from './icons/index.js';
-import { Checkbox } from './controls/Checkbox.js';
-import { InputSlider } from './controls/InputSlider.js';
-import { SelectBox } from './controls/SelectBox.js';
 
 export function Modals({ toggleModal, currentThemeName, setCurrentThemeName, allThemes, setAllThemes, applyChatTemplate }) {
 	const { endpoint, setEndpointAPIKey, endpointAPIKey, endpointAPI, endpointModel, setEndpointModel, templates, selectedTemplate, setSelectedTemplate, templatesImport, setTemplates, templateStorage, grammar, setGrammar, isMikupadEndpoint, sessionStorage, fontSizeMultiplier, setFontSizeMultiplier, spellCheck, setSpellCheck, attachSidebar, setAttachSidebar, preserveCursorPosition, setPreserveCursorPosition, tokenHighlightMode, setTokenHighlightMode, tokenColorMode, setTokenColorMode, showProbsMode, setShowProbsMode, ttsEnabled, setTTSEnabled, ttsVoiceId, setTTSVoiceId, ttsPitch, setTTSPitch, ttsRate, setTTSRate, ttsVolume, setTTSVolume, ttsSpeakInputs, setTTSSpeakInputs, ttsMaxUserInput, setTTSMaxUserInput, useChatAPI, setUseChatAPI, memoryTokens, authorNoteTokens, authorNoteDepth, setAuthorNoteDepth, worldInfo, setWorldInfo, sillyTarvernWorldInfoJSON, setSillyTarvernWorldInfoJSON, logitBias, setLogitBias, logitBiasParam, setLogitBiasParam, templateList, setTemplateList,
@@ -89,6 +84,10 @@ export function Modals({ toggleModal, currentThemeName, setCurrentThemeName, all
 			reader.readAsText(file);
 		};
 		fileInput.click();
+	};
+
+	const exportPrompt = () => {
+		exportText(`${sessionStorage.getProperty('name')}.txt`, promptArea.current.value);
 	};
 
 	const insertTemplate = (sysInst) => {
@@ -175,89 +174,38 @@ export function Modals({ toggleModal, currentThemeName, setCurrentThemeName, all
 	}, [instructModalState.result]);
 
 	return html`
-		<${EditorPreferencesModal}
-			isOpen=${modalState.prompt}
-			closeModal=${() => closeModal("prompt")}>
-			<${InputSlider} label="Font size multiplier" min="0.5" max="5" step="0.01" strict="1"
-				value=${fontSizeMultiplier} onValueChange=${setFontSizeMultiplier}/>
-			<${Checkbox} label="Enable spell checking"
-				value=${spellCheck} onValueChange=${setSpellCheck}/>
-			<${Checkbox} label="Attach sidebar"
-				value=${attachSidebar} onValueChange=${setAttachSidebar}/>
-			<${Checkbox} label="Preserve cursor position after prediction (disabled in Chat Mode)"
-				value=${preserveCursorPosition} onValueChange=${setPreserveCursorPosition}/>
-			<${SelectBox}
-				label="Token highlight"
-				value=${tokenHighlightMode}
-				onValueChange=${setTokenHighlightMode}
-				options=${[
-					{ name: 'Show on editor hover', value: 0 },
-					{ name: 'Show on token hover', value: 1 },
-					{ name: 'Hide', value: -1 },
-				]}/>
-			${tokenHighlightMode !== -1 && html`
-				<${SelectBox}
-					label="Token highlight color"
-					value=${tokenColorMode}
-					onValueChange=${setTokenColorMode}
-					options=${[
-						{ name: 'Default', value: 0 },
-						{ name: 'Color by probability', value: 1 },
-						{ name: 'Color by perplexity', value: 2 },
-					]}/>
-				<${SelectBox}
-					label="Token probability display"
-					value=${showProbsMode}
-					onValueChange=${setShowProbsMode}
-					options=${[
-						{ name: 'Show on hover', value: 0 },
-						{ name: 'Show on hover while holding CTRL', value: 1 },
-						{ name: 'Hide', value: -1 },
-					]}/>`}
-			<div className="vbox" style=${{ marginTop: '10px', gap: '8px' }}>
-				${!isMikupadEndpoint && html`
-					<div className="hbox" style=${{ gap: '8px' }}>
-						<button style=${{ flex: 1 }} onClick=${handleExportDB}>Export Full DB</button>
-						<button style=${{ flex: 1 }} onClick=${handleImportDB}>Import Full DB</button>
-					</div>
-				`}
-				<button 
-					style=${{ width: '100%' }}
-					onClick=${() => exportText(`${sessionStorage.getProperty('name')}.txt`, promptArea.current.value)}>
-					Export prompt to plaintext
-				</button>
-			</div>
-			<${Checkbox} label="Enable Text-to-Speech"
-						disabled=${!!cancel || !ttsAvailable}
-						title=${!ttsAvailable ? 'TTS is not available in your browser' : ''}
-						value=${ttsEnabled} onValueChange=${setTTSEnabled}/>
-			${ttsEnabled && html`
-			<div className="hbox-flex" style=${{ "flex-wrap": "unset" }}>
-					<${SelectBox}
-						id="voices"
-						label="Voice"
-						disabled=${!!cancel}
-						value=${ttsVoiceId}
-						onValueChange=${setTTSVoiceId}
-						options=${listTTSVoices}/>
-					<button title="Stop TTS (Ctrl + E)" className="symbol-button" disabled=${!speechSynthesis.speaking} onClick=${() => ttsStop()}>
-						<${SVG_Stop} style=${{ 'width': '.95em', 'transform': 'translate(-45%, -45%)' }}/>
-					</button>
-			</div>
-			<${Checkbox} label="Speak User Inputs"
-						disabled=${!!cancel} value=${ttsSpeakInputs} onValueChange=${setTTSSpeakInputs}/>
-			<${InputSlider} label="Max User Input Length" type="number" step="1" min="1" max="400"
-				disabled=${!ttsSpeakInputs} readonly=${!!cancel} value=${ttsMaxUserInput} onValueChange=${setTTSMaxUserInput}/>
-			<div className="hbox">
-				<${InputSlider} label="TTS Pitch" type="number" step="0.1" max="2"
-					readOnly=${!!cancel} value=${ttsPitch} onValueChange=${setTTSPitch}/>
-					<${InputSlider} label="TTS Rate" type="number" step="0.1" max="10"
-					readOnly=${!!cancel} value=${ttsRate} onValueChange=${setTTSRate}/>
-					<${InputSlider} label="TTS Volume" type="number" step="0.1" max="2"
-					readOnly=${!!cancel} value=${ttsVolume} onValueChange=${setTTSVolume}/>
-			</div>
-			`}
-		</${EditorPreferencesModal}>
+		<${PreferencesModal}
+			isOpen=${modalState.preferences}
+			closeModal=${() => closeModal("preferences")}
+			settings=${{
+				fontSizeMultiplier, setFontSizeMultiplier,
+				spellCheck, setSpellCheck,
+				attachSidebar, setAttachSidebar,
+				preserveCursorPosition, setPreserveCursorPosition,
+				tokenHighlightMode, setTokenHighlightMode,
+				tokenColorMode, setTokenColorMode,
+				showProbsMode, setShowProbsMode,
+				ttsEnabled, setTTSEnabled,
+				ttsVoiceId, setTTSVoiceId,
+				ttsPitch, setTTSPitch,
+				ttsRate, setTTSRate,
+				ttsVolume, setTTSVolume,
+				ttsSpeakInputs, setTTSSpeakInputs,
+				ttsMaxUserInput, setTTSMaxUserInput,
+				isMikupadEndpoint, cancel, listTTSVoices, ttsStop, ttsAvailable, handleExportDB, handleImportDB, exportPrompt,
+				screenshotIncludeSessionName, setScreenshotIncludeSessionName,
+				screenshotIncludeDate, setScreenshotIncludeDate,
+				screenshotBackgroundUrl, setScreenshotBackgroundUrl,
+				screenshotBackgroundColor, setScreenshotBackgroundColor,
+				screenshotStoryFont, setScreenshotStoryFont,
+				screenshotGeneralFont, setScreenshotGeneralFont,
+				screenshotFontWeight, setScreenshotFontWeight,
+				screenshotFontSize, setScreenshotFontSize,
+				screenshotLineHeight, setScreenshotLineHeight,
+				screenshotFontColor, setScreenshotFontColor,
+				screenshotAiTextColor, setScreenshotAiTextColor,
+				screenshotModelAvatarUrl, setScreenshotModelAvatarUrl
+			}}/>
 
 		<${MemoryModal}
 			isOpen=${modalState.memory}
@@ -383,24 +331,6 @@ export function Modals({ toggleModal, currentThemeName, setCurrentThemeName, all
 			closeModal=${() => closeModal("sessions")}
 			sessionStorage=${sessionStorage}
 			cancel=${cancel}/>
-
-		<${ScreenshotModal}
-			isOpen=${modalState.screenshot}
-			closeModal=${() => closeModal("screenshot")}
-			settings=${{
-				screenshotIncludeSessionName, setScreenshotIncludeSessionName,
-				screenshotIncludeDate, setScreenshotIncludeDate,
-				screenshotBackgroundUrl, setScreenshotBackgroundUrl,
-				screenshotBackgroundColor, setScreenshotBackgroundColor,
-				screenshotStoryFont, setScreenshotStoryFont,
-				screenshotGeneralFont, setScreenshotGeneralFont,
-				screenshotFontWeight, setScreenshotFontWeight,
-				screenshotFontSize, setScreenshotFontSize,
-				screenshotLineHeight, setScreenshotLineHeight,
-				screenshotFontColor, setScreenshotFontColor,
-				screenshotAiTextColor, setScreenshotAiTextColor,
-				screenshotModelAvatarUrl, setScreenshotModelAvatarUrl
-			}}/>
 
 		<${EditorContextMenu}
 			isOpen=${contextMenuState.visible}

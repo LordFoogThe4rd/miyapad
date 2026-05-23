@@ -1,4 +1,4 @@
-export { EditorPreferencesModal } from './EditorPreferencesModal.js';
+export { PreferencesModal } from './PreferencesModal.js';
 export { MemoryModal } from './MemoryModal.js';
 export { AuthorNoteModal } from './AuthorNoteModal.js';
 export { ContextModal } from './ContextModal.js';

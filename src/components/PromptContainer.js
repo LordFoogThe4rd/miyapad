@@ -334,9 +334,9 @@ export function PromptContainer({ sidebarHeight }) {
 	return html`
 		<div id="prompt-container" onMouseMove=${onPromptMouseMove} style=${{ 'margin-bottom': isMobile && !showMarkdownPreview ? sidebarHeight + 'px' : 0 }}>
 			<button
-				title="Editor Preferences"
+				title="Preferences"
 				className="textAreaSettings"
-				onClick=${() => toggleModal("prompt")}>
+				onClick=${() => toggleModal("preferences")}>
 				<${SVG_Settings}/>
 			</button>
 			<button
@@ -354,15 +354,8 @@ export function PromptContainer({ sidebarHeight }) {
 				<${SVG_SplitView}/>
 			</button>
 			<button
-				title="Screenshot Settings"
-				style=${{ "margin-top": "4.5em" }}
-				className="textAreaSettings"
-				onClick=${() => toggleModal("screenshot")}>
-				<${SVG_Settings}/>
-			</button>
-			<button
 				title="Take Screenshot"
-				style=${{ "margin-top": "6em" }}
+				style=${{ "margin-top": "4.5em" }}
 				className="textAreaSettings"
 				onClick=${takeScreenshot}>
 				<${SVG_Camera} style=${{ "height": "1.3em" }} />
