@@ -1,0 +1,109 @@
+button {
+	appearance: none;
+	border: none;
+	outline: none;
+	font: inherit;
+	padding: 4px 8px;
+	color: inherit;
+	background: var(--color-bg-input-1);
+	border-radius: 2px;
+	cursor: pointer;
+}
+.sidebar-btn-icon {
+	display: inline-flex;
+	align-items: center;
+	justify-content: center;
+	gap: 6px;
+	line-height: 1;
+}
+.sidebar-btn-icon > * {
+	display: inline-flex;
+	align-items: center;
+}
+.sidebar-btn-icon svg {
+	width: 1em;
+	height: 1em;
+	flex-shrink: 0;
+}
+button.textAreaSettings {
+	all: unset;
+	color: var(--color-svg-2);
+	width:1.25em;
+	position:absolute;
+	top:calc(1.25em + 1px);
+	right:1px;
+}
+button.textAreaSettings.textAreaSettings-bias {
+	top: 1.45em;
+	right: 5px;
+}
+.token-counter {
+	pointer-events: none;
+	font-size: 0.7em;
+	color: var(--color-text-hint);
+	display: inline-block;
+	margin-left: 4px;
+}
+.token-counter::after {
+	content:" t";
+}
+.total-token-counter {
+	text-align: right;
+	font-size: 0.9em;
+	color: var(--color-text-ui);
+	margin-top: 4px;
+	padding: 4px 8px;
+	background: var(--color-bg-input-1);
+	border-radius: 2px;
+}
+.total-token-counter::after {
+	content:" Tokens";
+}
+button:hover {
+	background: var(--color-bg-highlight-1);
+}
+button:active {
+	background: var(--color-bg-highlight-2);
+}
+button:disabled {
+	background: var(--color-bg-disabled-1);
+	opacity: 0.8;
+}
+button:focus-visible {
+	outline: 1px solid var(--color-base-0);
+}
+button.processing {
+	outline: 1px solid rgba(255, 255, 255, 0.5);
+	animation: .5s ease-out infinite alternate processing;
+}
+@keyframes processing {
+	from { outline-width: 0px; }
+	to { outline-width: 4px; }
+}
+button.completing {
+	outline: 1px solid limegreen;
+	animation: .5s ease-out infinite alternate completing;
+}
+@keyframes completing {
+	from { outline-width: 0px; }
+	to { outline-width: 4px; }
+}
+
+.buttons {
+	display: flex;
+	gap: 8px;
+	justify-content: center;
+}
+.buttons .shorts {
+	line-height: 0;
+}
+.buttons .shorts > button {
+	height: 100%;
+}
+
+.instructTemplatesImportExport{
+	width: fit-content;
+	margin: auto;
+	display: flex;
+	gap: 8px;
+}

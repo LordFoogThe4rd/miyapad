@@ -4,7 +4,8 @@
 
 ## What's different
 
-- **Modular Parcel 2 project** (~50+ files across `src/`) instead of a single monolithic HTML
+- **Modular Parcel 2 project** (~60+ files across `src/`) instead of a single monolithic HTML
+- **Split CSS architecture** — monolithic `styles.css` refactored into 18 component-specific partials under `src/css/`, imported via `@import` for easier maintenance
 - **React Context API** state management (`SettingsContext`, `GenerationContext`) instead of inline global state
 - **sqlite-zstd transparent Zstandard compression** at the database level, with auto-vacuum and background dictionary training every 5 minutes
 - **Database schema v4** with per-table column names to avoid compression index collisions, plus V2→V3→V4 migration

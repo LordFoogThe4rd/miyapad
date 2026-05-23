@@ -1,0 +1,46 @@
+#probs {
+	position: absolute;
+	background: var(--color-bg-popover-2);
+	top: var(--probs-top);
+	left: var(--probs-left);
+	display: flex;
+	transform: translate(-50%, -100%);
+	border-radius: 5px;
+	box-shadow: 0 1px 1px 1px #00000033;
+	z-index: 9999;
+
+	overflow-x: auto;
+	max-width: 99%;
+	scrollbar-width: thin;
+}
+#probs > button {
+	cursor: pointer;
+	background: transparent;
+	color: var(--color-text-ui);
+	border-radius: 0;
+	padding: calc(4px * var(--font-size-multiplier)) calc(8px * var(--font-size-multiplier));
+	display: flex;
+	flex-direction: column;
+	flex: none;
+	font-size: calc(1rem * var(--font-size-multiplier));
+}
+#probs > button.current {
+	background: var(--color-bg-highlight-1);
+}
+#probs > button:first-child {
+	border-radius: calc(5px * var(--font-size-multiplier)) 0 0 calc(5px * var(--font-size-multiplier));
+	padding-left: calc(6px * var(--font-size-multiplier));
+}
+#probs > button:last-child {
+	border-radius: 0 calc(5px * var(--font-size-multiplier)) calc(5px * var(--font-size-multiplier)) 0;
+	padding-right: calc(6px * var(--font-size-multiplier));
+}
+#probs > button:hover {
+	background: var(--color-bg-highlight-1);
+}
+#probs > button:active {
+	background: var(--color-bg-highlight-2);
+}
+#probs > button > .prob {
+	font-size: calc(0.8rem * var(--font-size-multiplier));
+}

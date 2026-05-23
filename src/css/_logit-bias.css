@@ -1,0 +1,84 @@
+.hbox-button {
+	margin-top: auto;
+	width: 1.625rem;
+}
+.hbox-flex {
+	display: flex;
+	flex-direction: row;
+	gap: 8px;
+}
+.hbox-flex > .InputBox {
+	width: 100%;
+}
+.small-inputBox {
+	width: 8em;
+}
+.logitBiasContainer {
+	position: relative;
+	flex-wrap: unset !important;
+}
+.logitBiasPower-sidebar {
+	width:10ch !important;
+}
+
+.overflow-container {
+	overflow-y:auto;
+}
+#logitBiasPower {
+	text-align: center;
+}
+
+.lb-modal-grid-column {
+	display: grid;
+	grid-auto-rows: min-content;
+	gap: 8px;
+	max-height: 40vh;
+	padding-right: .75em;
+}
+.lb-modal-grid-row  {
+	display: grid;
+	grid-template-columns: 4em 1fr min-content;
+	grid-template-rows: min-content min-content min-content;
+	gap: 1px 8px;
+	grid-template-areas:
+		"power input add"
+		". tokens remove"
+		"hr hr hr";
+	padding: 1px;
+}
+.lb-modal-power {
+	grid-area: power;
+	text-align: center;
+}
+.lb-modal-input {
+	grid-area: input;
+	text-align: left;
+}
+.lb-modal-button.lb-modal-button-add {
+	grid-area: add;
+}
+.lb-modal-button.lb-modal-button-remove {
+	grid-area: remove;
+}
+.lb-modal-tokenized {
+	grid-area: tokens;
+	font-family: monospace;
+	font-size:0.7rem;
+	margin-top: auto;
+	display: grid;
+	align-content: center;
+	margin: auto 0 auto 0;
+	width: 100%;
+	overflow-wrap: anywhere;
+}
+.lb-modal-biasList hr {
+	grid-area: hr;
+	width: 90%;
+	margin: 4px auto auto auto;
+}
+
+.lb-modal-biasList {
+	display: grid;
+	grid-template-columns: 1fr 1fr;
+	gap: 8px;
+}

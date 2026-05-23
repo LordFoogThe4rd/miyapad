@@ -1,0 +1,44 @@
+#searchAndReplace {
+	position: absolute;
+	width: 40vw;
+	background: var(--color-bg-ui-1);
+	top:.75em;
+	left:.75em;
+	border-radius:3px;
+	padding:0.25em;
+}
+
+#searchAndReplace .widget-content {
+	padding: .2em;
+}
+
+.searchAndReplace-inputs {
+	display: flex;
+	flex-direction: row;
+	gap: 8px;
+	margin-bottom:8px;
+}
+.searchAndReplace-inputs .InputBox {
+	flex: 1
+}
+.searchAndReplace-inputs .SelectBox {
+	width: max-content;
+}
+
+.searchAndReplace-buttons {
+	display: flex;
+	gap: 8px;
+}
+#searchAndReplace .findButton {
+	display: flex;
+	align-items: center;
+}
+#searchAndReplace .findButtonText svg {
+	margin-right:.25em;
+}
+#searchAndReplace .findButton svg {
+	width: .75em;
+}
+.number-matches {
+	align-content: center;
+}

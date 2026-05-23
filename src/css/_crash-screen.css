@@ -1,0 +1,27 @@
+#crash-screen {
+    position: fixed;
+    top: 0;
+    left: 0;
+    width: 100vw;
+    height: 100vh;
+    background-color: rgba(20, 20, 30, 0.95);
+    color: #f0f0f0;
+    font-family: monospace;
+    padding: 2em;
+    z-index: 99999;
+    overflow: auto;
+    box-sizing: border-box;
+}
+#crash-screen h1 {
+    color: #ff8080;
+    border-bottom: 1px solid #ff8080;
+    padding-bottom: 0.5em;
+}
+#crash-screen pre {
+    white-space: pre-wrap;
+    word-wrap: break-word;
+    margin-top: 1em;
+    background-color: #333;
+    padding: 1em;
+    border-radius: 5px;
+}

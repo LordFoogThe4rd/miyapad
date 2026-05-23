@@ -1,0 +1,43 @@
+#prompt-overlay {
+	white-space: pre-wrap;
+	position: absolute;
+	left: 0;
+	top: 0;
+	right: 0;
+	bottom: 0;
+	transform: translate(0px, 0px);
+	background: transparent;
+	color: transparent;
+	pointer-events: none;
+	user-select: none;
+	-ms-user-select: none;
+	-webkit-user-select: none;
+	overflow: hidden;
+}
+
+#prompt-container:hover #prompt-overlay > .machine {
+	background: color-mix(in srgb, var(--bg-color, var(--color-miku)) 10%, transparent);
+}
+#prompt-container #prompt-overlay > .machine.erase {
+	background: color-mix(in srgb, #FF0000 10%, transparent);
+}
+#prompt-container #prompt-overlay > .machine.current {
+	border-radius: 3px;
+	outline: 1px solid var(--color-bg-highlight-1);
+	outline-offset: 1px;
+}
+#prompt-container #prompt-overlay > .preview {
+	color: var(--color-text-prompt);
+	opacity: 40%;
+}
+#prompt-container #prompt-overlay > .nudge {
+    outline: 1px solid var(--color-text-prompt);
+    margin-left: 5px;
+	padding-bottom: 2px;
+    padding: 0 4px;
+    font-size: calc(11px * var(--font-size-multiplier));
+    background-color: transparent;
+    border-radius: 3px;
+	position: relative;
+	top: -2px;
+}

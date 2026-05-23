@@ -1,0 +1,45 @@
+@media (min-width: calc(40.5em + 250px)) {
+	body.attachSidebar {
+		margin-right: auto;
+		margin-left: auto;
+	}
+}
+
+@media (min-width: calc(40.5em + 250px)) {
+	body.attachSidebar #prompt-container {
+		min-width: 36em;
+		max-width: 36em;
+	}
+}
+
+#button-settings, #mobileSidebarButton {
+	display: none;
+}
+
+@media (max-width: 767.98px) {
+	body {
+		flex-direction: column;
+	}
+	#prompt-container {
+		width: 100%;
+		max-width: 100%;
+		border: none !important;
+	}
+	#sidebar {
+		width: auto;
+		max-height: calc(93vh - 8px);
+		position: fixed;
+		left: 0;
+		right: 0;
+		bottom: 0;
+	}
+	#sidebar .theme-selector:not(.visible), #sidebar .horz-separator:not(.visible), .sidebar-groups:not(.visible), .collapsible-group:not(.visible) {
+		display: none;
+	}
+	#button-settings, #mobileSidebarButton {
+		display: block;
+	}
+	#markdown-preview {
+		max-height: 50vh;
+	}
+}

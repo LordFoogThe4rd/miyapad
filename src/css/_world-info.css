@@ -1,0 +1,81 @@
+.modal-wi-content {
+	display: flex;
+	flex-direction:column;
+	margin-top:0.5em;
+	max-height:50vh;
+}
+
+#modal-wi-global{
+	display: flex;
+	flex-direction: column;
+	gap: 4px;
+}
+
+#button-wi-new {
+	width: 100%;
+}
+
+.wi-entry {
+	margin: 4px 0;
+}
+
+.wi-entry-controls {
+	display: grid;
+	grid-template-columns: min-content 1fr;
+	grid-template-rows: min-content 1fr;
+	border-top: 1px solid var(--color-bg-rule);
+	padding-top: 8px;
+	grid-template-areas:
+	  "wi-entry-filler wi-entry-name ."
+	  "wi-entry-buttons wi-entry-text ."
+}
+.wi-entry-filler { grid-area: wi-entry-filler; }
+.wi-entry-name {
+	grid-area: wi-entry-name;
+	margin-bottom:8px;
+}
+.wi-entry-name input {
+	font-weight:bold !important;
+	font-size: 1.2rem !important;
+}
+
+.wi-entry-buttons {
+	grid-area: wi-entry-buttons;
+	margin-right: 4px;
+	display: flex;
+	align-items: center;
+	justify-content: center;
+}
+.wi-entry-buttons-container {
+	display: flex;
+	flex-direction: column;
+	justify-content: space-between;
+	height: 5em;
+}
+.wi-entry-buttons button {
+	display: grid;
+	width:2em;
+	height:fit-content;
+}
+
+.wi-entry-text {
+	grid-area: wi-entry-text;
+}
+.wi-entry-text .hbox {
+	grid-area: wi-entry-text;
+	margin-bottom:4px;
+}
+
+.symbol-button {
+	position: relative;
+	margin-top: auto;
+	width: 2.182rem;
+	height: 1.625rem;
+}
+.symbol-button > svg {
+	position: absolute;
+	top: 50%;
+	left: 50%;
+	color: var(--color-svg-1);
+	transform: translate(-50%, -50%);
+}

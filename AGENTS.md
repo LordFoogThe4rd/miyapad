@@ -15,7 +15,7 @@ The application features full local browser persistence via IndexedDB or central
 * **Bundler & Dev Server**: Parcel.
 * **Markdown Renderer**: `marked`.
 * **State Management**: React Context (`SettingsContext` & `GenerationContext`).
-* **Styling**: Standard vanilla CSS with dynamic theme swapping via a custom CSS injector element.
+* **Styling**: Standard vanilla CSS split into 18 partial files under `src/css/` (imported via `src/styles.css`), with dynamic theme swapping via a custom CSS injector element.
 
 ### Backend (Optional)
 * **Runtime**: Node.js & Express.
@@ -44,11 +44,12 @@ mikupad/
     ├── api/                       # API modules for backends (llama.cpp, Horde, OpenAI, etc.)
     ├── components/                # React components (Modals, Sidebar, controls, icons)
     ├── contexts/                  # SettingsContext and GenerationContext
+    ├── css/                       # CSS partials (18 files, imported by styles.css)
     ├── defaults/                  # Hardcoded defaults for presets, prompts, themes
     ├── hooks/                     # Custom hooks (generation logic, prompt builders, etc.)
     ├── storage/                   # Storage adapters (IndexedDB, Server REST API, storages)
     ├── utils/                     # RegEx helpers and string manipulation utilities
-    └── styles.css                 # Master stylesheet containing styles and default themes
+    └── styles.css                 # Entry point that @imports all css/ partials
 ```
 
 ---
@@ -210,6 +211,7 @@ From the `server/` directory:
 * **Uncontrolled Textarea Scroll Preservation**: In `AppLayout.js`, the main prompt textarea updates in an uncontrolled manner during prediction. This ensures the user does not lose cursor positions, highlights, or scrolling alignments when text chunks stream in at high frequencies. Always maintain this pattern when updating prompt-related text structures.
 * **Storage Modifications**: When modifying session storage columns or tables, preserve the adapter architecture so changes apply to both IndexedDB and the SQLite server implementation. Always ensure schema migrations are coded gracefully (such as the database V3-to-V4 migration step).
 * **Build After Editing**: Always run `npm run build` after editing any source file (`src/` or `server/`) and before declaring work complete. The build catches broken imports, missing exports, and syntax errors.
+* **CSS Conventions**: Styles are organized into partial files under `src/css/`, imported by `src/styles.css` via `@import`. Each partial targets a specific component or logical group (e.g., `_buttons.css`, `_form-controls.css`, `_modal.css`). Component-specific media queries live with their partial; global layout media queries go in `_responsive.css`. When adding new styles, put them in the matching partial or create a new one if none fits.
 
 ### Screenshot Capture
 

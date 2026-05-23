@@ -1,0 +1,35 @@
+.widget-body {
+	z-index: 10;
+	color: var(--color-text-ui);
+	box-shadow: #0004 2px 2px 6px 2px;
+}
+
+.widget-title-bar {
+	display: flex;
+	align-items: center;
+}
+.button-widget-top {
+	all:unset;
+	margin: auto;
+	width:1.25em;
+	height:1.25em;
+	border-radius: 3px;
+}
+.widget-title {
+	-webkit-user-select: none;
+	-ms-user-select: none;
+	user-select: none;
+	padding:0.2em;
+	font-weight: bold;
+	font-size: 110%;
+	background-color: var(--color-bg-input-1);
+	border-radius:2px;
+	width: calc(100% - 2em);
+	display: flex;
+	align-items: center;
+}
+
+.widget-title svg {
+	height: 1em;
+	margin-right: .25em;
+}

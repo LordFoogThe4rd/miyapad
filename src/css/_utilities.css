@@ -1,0 +1,91 @@
+.flexfiller {
+	flex-grow: 1;
+}
+
+.flex1 {
+	flex: 1;
+}
+
+.hbox {
+	flex: none;
+	display: grid;
+	grid: auto / auto-flow minmax(min-content, 1fr);
+	gap: 8px;
+}
+.hbox-flex {
+	display: flex;
+	flex-wrap: wrap;
+	gap: 8px;
+}
+
+.vbox {
+	flex: none;
+	display: grid;
+	grid: auto / minmax(min-content, 1fr) auto-flow;
+	grid-template-rows: 0fr 0fr 0fr 0fr;
+	gap: 4px;
+}
+
+.tooltip {
+	position: relative;
+}
+.tooltip .tooltiptext {
+	white-space: pre-wrap;
+	pointer-events: none;
+	width: 95%;
+	background-color: #000000AA;
+	color: var(--color-text-ui);
+	text-align: center;
+	padding: 5px 4px;
+	margin: 0 -8px;
+	border-radius: 6px;
+	opacity: 0;
+	transition: opacity 0.3s;
+
+	position: absolute;
+	z-index: 1;
+	transform: translate(0, -75%);
+}
+.tooltip .tooltiptext.short {
+	transform: translate(0, -45%);
+}
+.tooltip:hover .tooltiptext {
+	opacity: 1;
+}
+
+.error-text {
+	width: max-content;
+	text-align: center;
+	background: #4E3534;
+	border-radius: 4px;
+	color: #FF8080;
+	margin-left: auto;
+	margin-right: auto;
+	padding: 2px 10px;
+	max-width: 215px;
+}
+
+#error-bar {
+	position: absolute;
+	top: 0;
+	left: 0;
+	right: 0;
+	min-height: 0;
+
+	background-color: #4E3534;
+	color: #FF8080;
+	text-align: center;
+	box-shadow: 0 4px 6px rgba(0, 0, 0, 0.1);
+}
+
+#error-bar div {
+	padding: 10px;
+}
+
+.flex-separator {
+	margin-left: auto;
+}
+
+.horz-separator {
+	border-top: 3px dotted var(--color-bg-highlight-4);
+}

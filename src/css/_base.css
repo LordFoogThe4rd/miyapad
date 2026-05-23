@@ -1,0 +1,129 @@
+body {
+	margin: 0;
+	display: flex;
+	flex: auto;
+	flex-direction: row;
+
+	--font-size-multiplier: 1.0;
+}
+
+#prompt-container {
+	position: relative;
+	font-size: calc(1.125rem * var(--font-size-multiplier));
+	max-width: 36em;
+	margin-right: auto;
+	margin-left: auto;
+	flex: 1;
+	display: flex;
+	flex-direction: column;
+}
+
+#prompt-area, #prompt-overlay {
+	flex: 1;
+	border: none;
+	outline: none;
+	resize: none;
+	background: var(--color-bg-prompt);
+	color: var(--color-text-prompt);
+	padding: 2em 3em;
+	margin: 0;
+	scrollbar-gutter: stable;
+	font: inherit;
+	box-sizing: content-box;
+	text-size-adjust: 100%;
+	-webkit-text-size-adjust: 100%;
+	-moz-text-size-adjust: 100%;
+	word-wrap: break-word;
+	overflow-y: scroll;
+}
+
+.modal .wi-textarea {
+	resize:vertical;
+	background: var(--color-bg-prompt);
+	color: var(--color-text-prompt);
+}
+
+#memory-area, #an-area, .expanded-text-area-settings, .wi-textarea {
+	flex: 1;
+	border: none;
+	outline: none;
+	resize: none;
+	background: var(--color-bg-prompt);
+	color: var(--color-text-prompt);
+	padding: 0.5em;
+	scrollbar-gutter: stable;
+	font-family: inherit;
+	border-radius: 2px;
+}
+#memory-area {
+	min-height:9.5em;
+}
+#an-area {
+	min-height:3.5em;
+}
+.wi-textarea {
+	min-height: 4em;
+}
+
+#advancedContextPlaceholders {
+	color: var(--color-text-ui);
+	background: var(--color-bg-input-1);
+	margin: 1em auto;
+	padding: .25em;
+	border-radius: 2px;
+	width: fit-content;
+}
+#advancedContextPlaceholders table {
+	border-color: var(--color-base-80);
+}
+#advancedContextPlaceholders th,
+#advancedContextPlaceholders td {
+	text-align: center;
+	padding: 0.15em;
+}
+#advancedContextPlaceholders td {
+	user-select:all;
+}
+
+#advanced-context-order-settings {
+	min-height: 3.5em;
+}
+
+.expanded-text-area-settings {
+	margin: 8px 0 8px 0;
+	width:100%;
+	box-sizing: border-box;
+	height:25.5em;
+}
+
+#markdown-preview {
+    display: none;
+    flex: 1;
+	border: none;
+	outline: none;
+	resize: none;
+	background: var(--color-bg-prompt);
+	color: var(--color-text-prompt);
+    padding: 2em 3em;
+	margin: 0;
+	scrollbar-gutter: stable;
+	font: inherit;
+	box-sizing: border-box;
+    font-size: calc(1.125rem * var(--font-size-multiplier));
+	text-size-adjust: 100%;
+	-webkit-text-size-adjust: 100%;
+	-moz-text-size-adjust: 100%;
+    font-family: serif;
+    word-wrap: break-word;
+    overflow-y: scroll;
+	height: calc(100vh);
+}
+
+body.markdown-preview-on #prompt-container {
+    max-width: none;
+    margin-left: 0;
+    margin-right: 0;
+}
+body.markdown-preview-on #markdown-preview {
+    display: block;
+}

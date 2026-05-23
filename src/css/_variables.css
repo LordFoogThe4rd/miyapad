@@ -1,0 +1,49 @@
+html {
+	--color-miku: #009bb3;
+	--color-base-0: oklch(0.20 0.02 60);
+	--color-base-10: color-mix(in oklch, var(--color-base-100) 10%, var(--color-base-0));
+	--color-base-20: color-mix(in oklch, var(--color-base-100) 20%, var(--color-base-0));
+	--color-base-30: color-mix(in oklch, var(--color-base-100) 30%, var(--color-base-0));
+	--color-base-40: color-mix(in oklch, var(--color-base-100) 40%, var(--color-base-0));
+	--color-base-50: color-mix(in oklch, var(--color-base-100) 50%, var(--color-base-0));
+	--color-base-60: color-mix(in oklch, var(--color-base-100) 60%, var(--color-base-0));
+	--color-base-70: color-mix(in oklch, var(--color-base-100) 70%, var(--color-base-0));
+	--color-base-80: color-mix(in oklch, var(--color-base-100) 80%, var(--color-base-0));
+	--color-base-90: color-mix(in oklch, var(--color-base-100) 90%, var(--color-base-0));
+	--color-base-100: oklch(0.95 0.04 70);
+	--color-dark: var(--color-base-0);
+	--color-light: var(--color-base-100);
+
+	--color-text-prompt: var(--color-base-10);
+	--color-text-ui: var(--color-base-100);
+	--color-text-hint: var(--color-base-80);
+	--color-text-disabled: var(--color-base-50);
+	--color-svg-1: var(--color-text-ui);
+	--color-svg-2: var(--color-base-50);
+
+	--color-bg-prompt: var(--color-base-100);
+	--color-bg-input-1: var(--color-base-30);
+	--color-bg-input-2: var(--color-base-20);
+	--color-bg-ui-1: var(--color-base-50);
+	--color-bg-ui-2: var(--color-base-40);
+	--color-bg-popover-1: var(--color-base-40);
+	--color-bg-popover-2: var(--color-base-30);
+	--color-bg-rule: var(--color-base-40);
+	--color-bg-highlight-1: var(--color-base-40);
+	--color-bg-highlight-2: var(--color-base-50);
+	--color-bg-highlight-3: var(--color-base-60);
+	--color-bg-highlight-4: var(--color-base-60);
+	--color-bg-active: var(--color-base-30);
+	--color-bg-disabled-1: var(--color-base-60);
+	--color-bg-disabled-2: var(--color-base-20);
+
+	font-family: serif;
+	font-size: 16px;
+	min-height: 100%;
+	display: flex;
+	flex-direction: column;
+
+	accent-color: var(--color-base-30);
+	background: var(--color-bg-input-2);
+	color: var(--color-text-prompt);
+}

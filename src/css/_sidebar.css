@@ -1,0 +1,54 @@
+#sidebar {
+	font-family: inherit;
+	width: 250px;
+	background: var(--color-bg-ui-1);
+	color: var(--color-text-ui);
+	padding: 4px 8px;
+	display: flex;
+	flex-direction: column;
+	gap: 4px;
+	overflow: auto;
+	max-height: calc(100vh - 8px);
+}
+
+.instructTemplateSidebar > .SelectBox {
+	width: 100%;
+}
+.instructTemplateSidebar > .hbox-button {
+	min-width: max-content;
+}
+
+.collapsible-group {
+	border: none;
+	outline: none;
+	margin: 0;
+}
+
+.collapsible-header {
+	user-select: none;
+	cursor: pointer;
+	display: flex;
+	align-items: center;
+	padding: 4px 8px;
+	color: inherit;
+	background-color: var(--color-bg-input-1);
+	border-radius: 2px;
+}
+.collapsible-header svg {
+	margin-right: 5px;
+}
+
+.collapsible-content {
+	transform: scaleY(0);
+	transition: transform 0.15s ease-in-out 0s, max-height 0.15s ease-in-out 0s;
+	transform-origin: center top;
+	display: flex;
+	flex-direction: column;
+	gap: 4px;
+	overflow: hidden;
+	max-height: 0;
+}
+.collapsible-content.expanded {
+	transform: scaleY(1);
+	margin-top: 4px;
+}
