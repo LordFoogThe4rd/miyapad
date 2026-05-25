@@ -14,8 +14,10 @@ export async function serverTokenCount({ sessionEndpoint, signal, content }) {
 	});
 	if (!res.ok)
 		throw new Error(`HTTP ${res.status}`);
-	const { count } = await res.json();
-	return count;
+	const data = await res.json();
+	if (data.error)
+		throw new Error(data.error);
+	return data.count;
 }
 
 export async function serverTokenize({ sessionEndpoint, signal, content }) {

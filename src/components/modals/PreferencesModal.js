@@ -271,7 +271,7 @@ export function PreferencesModal({ isOpen, closeModal, settings }) {
 								</button>
 							</div>
 							<div style=${{ fontSize: '0.85em', color: 'var(--color-base-60)', padding: '4px 0' }}>
-								${tokenizerStatus || (tokenizerModel ? html`<span className="error-text">No tokenizer loaded</span>` : 'No tokenizer loaded')}
+								${tokenizerStatus || 'No tokenizer loaded'}
 							</div>
 							<div style=${{ fontSize: '0.8em', color: 'var(--color-base-50)', marginTop: '4px' }}>
 								Place tokenizer.json files in server/tokenizers/&lt;model-name&gt;/ on the Mikupad server.
