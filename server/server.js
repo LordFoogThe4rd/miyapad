@@ -408,6 +408,24 @@ const db = new sqlite3.Database(storagePath, (err) => {
                             });
                         });
                     }).then(() => {
+                        return new Promise((res) => {
+                            db.get(`SELECT value FROM meta WHERE key = 'tokenizer_model'`, async (err, row) => {
+                                if (err) {
+                                    console.error('Failed to query saved tokenizer:', err.message);
+                                    return res();
+                                }
+                                if (row && row.value) {
+                                    try {
+                                        await tokenizer.loadTokenizer(row.value);
+                                        console.log(`Auto-restored saved tokenizer: ${row.value}`);
+                                    } catch (e) {
+                                        console.error(`Failed to auto-restore tokenizer "${row.value}":`, e.message);
+                                    }
+                                }
+                                res();
+                            });
+                        });
+                    }).then(() => {
                         startBackgroundMaintenance(db);
                     });
                 }).catch((err) => {
@@ -553,6 +571,7 @@ app.post('/api/v1/tokenizer/load', async (req, res) => {
     }
     try {
         await tokenizer.loadTokenizer(model);
+        db.run(`INSERT OR REPLACE INTO meta (key, value) VALUES ('tokenizer_model', ?)`, [model]);
         res.json({ ok: true, model });
     } catch (e) {
         res.status(500).json({ ok: false, message: e.message });
@@ -564,6 +583,9 @@ app.post('/api/v1/token-count', async (req, res) => {
     const { content } = req.body;
     if (content === undefined || content === null) {
         return res.status(400).json({ ok: false, message: 'Missing content parameter' });
+    }
+    if (!tokenizer.isLoaded()) {
+        return res.json({ ok: true, count: 0, error: 'No tokenizer loaded' });
     }
     try {
         const count = await tokenizer.tokenCount(content);
@@ -579,6 +601,9 @@ app.post('/api/v1/tokenize', async (req, res) => {
     if (content === undefined || content === null) {
         return res.status(400).json({ ok: false, message: 'Missing content parameter' });
     }
+    if (!tokenizer.isLoaded()) {
+        return res.json({ ok: true, ids: [], strings: [], error: 'No tokenizer loaded' });
+    }
     try {
         const { ids, tokens } = await tokenizer.tokenize(content);
         res.json({ ok: true, ids, strings: tokens });
@@ -592,6 +617,9 @@ app.post('/api/v1/detokenize', async (req, res) => {
     const { tokens: tokenIds } = req.body;
     if (!tokenIds || !Array.isArray(tokenIds) || tokenIds.length === 0) {
         return res.status(400).json({ ok: false, message: 'Missing or invalid tokens parameter' });
+    }
+    if (!tokenizer.isLoaded()) {
+        return res.json({ ok: true, content: '', error: 'No tokenizer loaded' });
     }
     try {
         const content = await tokenizer.detokenize(tokenIds);

@@ -18,7 +18,7 @@ import { defaultPresets } from './defaults/presets.js';
 import { defaultPrompt } from './defaults/prompt.js';
 import { defaultThemes } from './defaults/themes.js';
 import { exportText, normalizeEndpoint } from './api/common.js';
-import { getTokenCount, serverTokenCount, getTokens, getModels, completion, chatCompletion, abortCompletion } from './api/index.js';
+import { getTokenCount, serverTokenCount, getTokens, getModels, completion, chatCompletion, abortCompletion, loadServerTokenizer } from './api/index.js';
 import { joinPrompt, replaceUnprintableBytes, replaceNewlines } from './utils/strings.js';
 import { regexSplitString, regexIndexOf, regexLastIndexOf, memoize, createLenientPrefixRegex, createLenientRegex, prefixMatchLength, escapeRegExp } from './utils/regex.js';
 import {
@@ -59,7 +59,8 @@ export function AppLayout() {
 		promptPreviewTokens, setPromptPreviewTokens, currentThemeName, setCurrentThemeName, allThemes, setAllThemes,
 		showMarkdownPreview, setShowMarkdownPreview, ttsEnabled, setTTSEnabled, ttsVoiceId, setTTSVoiceId, ttsPitch, setTTSPitch,
 		ttsRate, setTTSRate, ttsVolume, setTTSVolume, ttsSpeakInputs, setTTSSpeakInputs, ttsMaxUserInput, setTTSMaxUserInput,
-		useServerTokenization
+		useServerTokenization,
+		tokenizerModel
 	} = useSettings();
 
 	const {
@@ -504,6 +505,17 @@ export function AppLayout() {
 			sessionStorage.removeEventListener('sessionchange', onSessionChange);
 			sessionStorage.removeEventListener('error', onSessionError);
 		};
+	}, []);
+
+	useEffect(() => {
+		if (!useServerTokenization || !tokenizerModel || !isMikupadEndpoint) return;
+		if (!sessionStorage?.sessionEndpoint) return;
+
+		loadServerTokenizer({ sessionEndpoint: sessionStorage.sessionEndpoint, model: tokenizerModel })
+			.catch(e => {
+				if (e.name !== 'AbortError')
+					reportError(e);
+			});
 	}, []);
 
 
