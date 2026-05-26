@@ -273,8 +273,8 @@ export function PreferencesModal({ isOpen, closeModal, settings }) {
 							<div style=${{ fontSize: '0.85em', color: 'var(--color-base-60)', padding: '4px 0' }}>
 								${tokenizerStatus || 'No tokenizer loaded'}
 							</div>
-							<div style=${{ fontSize: '0.8em', color: 'var(--color-base-50)', marginTop: '4px' }}>
-								Place tokenizer.json files in server/tokenizers/&lt;model-name&gt;/ on the Mikupad server.
+							<div style=${{ fontSize: '0.8em', color: 'var(--color-text-hint)', marginTop: '4px' }}>
+								Place a tokenizer.json file in server/tokenizers/${'<model-name>'}/ on the Mikupad server.
 							</div>
 						`}
 					</div>
