@@ -386,13 +386,11 @@ export function PromptContainer({ sidebarHeight }) {
 		const getRatioColor = (ratio) => {
 			const sRatio = Math.max(0, Math.min(1, ratio));
 			if (sRatio <= 0.5) {
-				// Scale ratio from [0, 0.5] to [0, 1]
 				const adjustedRatio = sRatio / 0.5;
-				return `color-mix(in srgb, red ${100 - adjustedRatio * 100}%, yellow ${adjustedRatio * 100}%)`;
+				return `color-mix(in srgb, var(--color-prob-low) ${100 - adjustedRatio * 100}%, var(--color-prob-mid) ${adjustedRatio * 100}%)`;
 			} else {
-				// Scale ratio from [0.5, 1] to [0, 1]
 				const adjustedRatio = (sRatio - 0.5) / 0.5;
-				return `color-mix(in srgb, yellow ${100 - adjustedRatio * 100}%, var(--color-miku) ${adjustedRatio * 100}%)`;
+				return `color-mix(in srgb, var(--color-prob-mid) ${100 - adjustedRatio * 100}%, var(--color-prob-high) ${adjustedRatio * 100}%)`;
 			}
 		};
 		const chunkProb = chunk.prob ?? 1;

@@ -1,5 +1,9 @@
 html {
 	--color-miku: #009bb3;
+	--color-prob-low: red;
+	--color-prob-mid: yellow;
+	--color-prob-high: var(--color-miku);
+	--color-highlight-erase: #FF0000;
 	--color-base-0: oklch(0.20 0.02 60);
 	--color-base-10: color-mix(in oklch, var(--color-base-100) 10%, var(--color-base-0));
 	--color-base-20: color-mix(in oklch, var(--color-base-100) 20%, var(--color-base-0));

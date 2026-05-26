@@ -19,7 +19,7 @@
 	background: color-mix(in srgb, var(--bg-color, var(--color-miku)) 10%, transparent);
 }
 #prompt-container #prompt-overlay > .machine.erase {
-	background: color-mix(in srgb, #FF0000 10%, transparent);
+	background: color-mix(in srgb, var(--color-highlight-erase) 10%, transparent);
 }
 #prompt-container #prompt-overlay > .machine.current {
 	border-radius: 3px;
