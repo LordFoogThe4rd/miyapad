@@ -32,8 +32,18 @@ mikupad/
 ├── mikupad.html                   # HTML entry point (loads src/main.js as module)
 ├── package.json                   # Frontend dependencies and run scripts
 ├── server/                        # Node.js backend server
+│   ├── lib/                       # Core modules (database, auth, utils)
+│   │   ├── auth.js                # Basic Auth middleware factory
+│   │   ├── database.js            # DB connection, migrations, zstd setup, maintenance
+│   │   └── utils.js               # Helpers (column names, compression, header filters)
+│   ├── routes/                    # Express route handlers by concern
+│   │   ├── data.js                # /load, /save, /rename, /all, /sessions, /delete
+│   │   ├── proxy.js               # /proxy/* (GET/POST/DELETE), /proxy-image
+│   │   ├── system.js              # /version, /vacuum, /log
+│   │   ├── tokenizer.js           # /api/v1/tokenizer/* endpoints
+│   │   └── zstd.js                # /zstd_* management endpoints
 │   ├── libsqlite_zstd.so          # Precompiled sqlite-zstd shared library for Linux
-│   ├── server.js                  # Main Express app and database management logic
+│   ├── server.js                  # Entrypoint: arg parsing, app setup, mount routes, start
 │   ├── package.json               # Backend dependencies
 │   ├── start.sh / start.bat       # Startup scripts
 │   └── web-session-storage.db     # SQLite storage file (auto-generated)
@@ -101,7 +111,7 @@ Mikupad supports an optional server-side tokenization engine using HuggingFace t
 
 **Key files:**
 - `server/tokenizer.js` — Core module: scans `server/tokenizers/` for subdirectories containing `tokenizer.json`, loads a HuggingFace `Tokenizer` from the JSON definition, provides `tokenCount()`, `tokenize()`, and `detokenize()` methods.
-- `server/server.js` — Serves API endpoints and reports `server_tokenizer: true` in the `/version` response.
+- `server/routes/tokenizer.js` — Serves API endpoints and reports `server_tokenizer: true` in the `/version` response.
 - `src/api/index.js` — Client API functions: `serverTokenCount()`, `serverTokenize()`, `serverDetokenize()`, `getServerTokenizers()`, `loadServerTokenizer()`.
 - `src/components/modals/PreferencesModal.js` — UI: checkbox to enable/disable ("Use server-side tokenization") and a dropdown to select which tokenizer model to load, with a refresh button and status display.
 
@@ -127,7 +137,7 @@ User clicks "Use server-side tokenization"
 
 ## Backend Server & Database Specifications
 
-The server (`server/server.js`) uses **SQLite3** combined with the precompiled **`sqlite-zstd` extension** to perform transparent, row-level Zstandard compression on database records.
+The server (`server/server.js` — entrypoint that loads modules from `lib/` and `routes/`) uses **SQLite3** combined with the precompiled **`sqlite-zstd` extension** to perform transparent, row-level Zstandard compression on database records.
 
 ### Database Schema (v4)
 The database has five main tables:
@@ -138,7 +148,7 @@ The database has five main tables:
 5. **`names`**: Stores lightweight key-to-metadata mapping `{name, created, modified}` (as JSON) for session listing, searching, and sorting.
 
 #### Schema Column Constraints
-The `sqlite-zstd` extension can experience index naming collisions if multiple tables use identical column names (e.g., `data`). To avoid this, each table maps to a unique column name managed dynamically via the server's `getColumnName(storeName)` helper:
+The `sqlite-zstd` extension can experience index naming collisions if multiple tables use identical column names (e.g., `data`). To avoid this, each table maps to a unique column name managed dynamically via the server's `getColumnName(storeName)` helper (in `lib/utils.js`):
 * `sessions` table uses **`session_data`**
 * `templates` table uses **`template_data`**
 * `themes` table uses **`theme_data`**
@@ -155,7 +165,7 @@ The `sqlite-zstd` extension can experience index naming collisions if multiple t
 
 | Route | Method | Description |
 | :--- | :--- | :--- |
-| `/version` | GET | Returns backend API version (`3`) and features. |
+| `/version` | GET | Returns backend API version (`4`) and features. |
 | `/vacuum` | GET | Runs a SQLite `VACUUM` to compact database storage. |
 | `/load` | POST | Loads record contents for a store name and key. |
 | `/save` | POST | Saves or updates record contents for a store name and key. |

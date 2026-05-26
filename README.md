@@ -11,6 +11,7 @@
 - **Database schema v4** with per-table column names to avoid compression index collisions, plus V2→V3→V4 migration
 - **Dedicated Sessions modal** with search, sort by name/created/modified, and table layout
 - **Native screenshot feature** (ported from [`mikupad-screenshot`](https://github.com/LordFoogThe4rd/mikupad-screenshot)) — select text in the editor, click the camera icon, and render a styled quote PNG with AI vs User color coding, customizable via the gear icon (fonts, colors, background image, avatar, metadata toggles)
+- **Modular server architecture** — the monolithic `server.js` broken down into `lib/` (database, auth, utils) and `routes/` (data, proxy, system, tokenizer, zstd) for maintainability
 - **Server-side tokenization** — optional HuggingFace tokenizer engine that replaces client-side token counting with accurate server-side tokenization. Drop a `tokenizer.json` into `server/tokenizers/<name>/` and enable via Preferences → Server → "Use server-side tokenization"
 - **Customizable token highlight colors** — token probability gradient endpoints (`--color-prob-low`, `--color-prob-mid`, `--color-prob-high`) and erase highlight (`--color-highlight-erase`) are CSS variables, customizable in themes instead of hardcoded
 
