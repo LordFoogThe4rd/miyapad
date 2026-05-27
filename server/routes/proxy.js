@@ -23,8 +23,8 @@ module.exports = function(app) {
         }
     });
 
-    app.post('/proxy/*', async (req, res) => {
-        const path = req.params[0];
+    const proxyPost = async (req, res) => {
+        const path = req.params[0] || '';
         const targetBaseUrl = req.headers['x-real-url'];
         delete req.headers['x-real-url'];
 
@@ -35,10 +35,12 @@ module.exports = function(app) {
             delete req.headers[header.toLowerCase()];
         });
 
+        const finalUrl = path ? `${targetBaseUrl}/${path}` : targetBaseUrl;
+
         try {
             const response = await axios({
                 method: 'post',
-                url: `${targetBaseUrl}/${path}`,
+                url: finalUrl,
                 data: req.body,
                 headers: {
                     ...req.headers,
@@ -69,10 +71,10 @@ module.exports = function(app) {
                 res.status(500).send(`Error setting up request to target server: ${error.message}`);
             }
         }
-    });
+    };
 
-    app.get('/proxy/*', async (req, res) => {
-        const path = req.params[0];
+    const proxyGet = async (req, res) => {
+        const path = req.params[0] || '';
         const targetBaseUrl = req.headers['x-real-url'];
         delete req.headers['x-real-url'];
 
@@ -83,8 +85,10 @@ module.exports = function(app) {
             delete req.headers[header.toLowerCase()];
         });
 
+        const finalUrl = path ? `${targetBaseUrl}/${path}` : targetBaseUrl;
+
         try {
-            const response = await axios.get(`${targetBaseUrl}/${path}`, {
+            const response = await axios.get(finalUrl, {
                 params: req.query,
                 headers: {
                     ...req.headers,
@@ -105,10 +109,10 @@ module.exports = function(app) {
                 res.status(500).send(`Error setting up request to target server: ${error.message}`);
             }
         }
-    });
+    };
 
-    app.delete('/proxy/*', async (req, res) => {
-        const path = req.params[0];
+    const proxyDelete = async (req, res) => {
+        const path = req.params[0] || '';
         const targetBaseUrl = req.headers['x-real-url'];
         delete req.headers['x-real-url'];
 
@@ -119,8 +123,10 @@ module.exports = function(app) {
             delete req.headers[header.toLowerCase()];
         });
 
+        const finalUrl = path ? `${targetBaseUrl}/${path}` : targetBaseUrl;
+
         try {
-            const response = await axios.delete(`${targetBaseUrl}/${path}`, {
+            const response = await axios.delete(finalUrl, {
                 headers: {
                     ...req.headers,
                     'Content-Type': 'application/json',
@@ -140,5 +146,12 @@ module.exports = function(app) {
                 res.status(500).send(`Error setting up request to target server: ${error.message}`);
             }
         }
-    });
+    };
+
+    app.post('/proxy', proxyPost);
+    app.post('/proxy/*', proxyPost);
+    app.get('/proxy', proxyGet);
+    app.get('/proxy/*', proxyGet);
+    app.delete('/proxy', proxyDelete);
+    app.delete('/proxy/*', proxyDelete);
 };

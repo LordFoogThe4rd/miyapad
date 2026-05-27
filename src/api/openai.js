@@ -258,8 +258,21 @@ function openaiConvertOptions(options, endpoint, isChat) {
 
 export async function* openaiCompletion({ endpoint, endpointAPIKey, proxyEndpoint, signal, ...options }) {
 	let finalEndpoint = proxyEndpoint ?? endpoint;
-	if (!finalEndpoint.endsWith("/completions")) {
-		finalEndpoint += "/completions";
+	const needsPath = (() => {
+		try {
+			return !new URL(endpoint).pathname.endsWith("/completions");
+		} catch {
+			return !endpoint.endsWith("/completions");
+		}
+	})();
+	if (needsPath) {
+		try {
+			const url = new URL(finalEndpoint);
+			url.pathname = url.pathname.replace(/\/$/, "") + "/v1/completions";
+			finalEndpoint = url.toString();
+		} catch {
+			finalEndpoint += "/v1/completions";
+		}
 	}
 	const res = await fetch(finalEndpoint, {
 		method: 'POST',
@@ -390,8 +403,21 @@ async function* openaiBufferUtf8Stream(stream) {
 
 export async function* openaiChatCompletion({ endpoint, endpointAPIKey, proxyEndpoint, signal, ...options }) {
 	let finalEndpoint = proxyEndpoint ?? endpoint;
-	if (!finalEndpoint.endsWith("/completions")) {
-		finalEndpoint += "/v1/chat/completions";
+	const needsPath = (() => {
+		try {
+			return !new URL(endpoint).pathname.endsWith("/completions");
+		} catch {
+			return !endpoint.endsWith("/completions");
+		}
+	})();
+	if (needsPath) {
+		try {
+			const url = new URL(finalEndpoint);
+			url.pathname = url.pathname.replace(/\/$/, "") + "/v1/chat/completions";
+			finalEndpoint = url.toString();
+		} catch {
+			finalEndpoint += "/v1/chat/completions";
+		}
 	}
 	const res = await fetch(finalEndpoint, {
 		method: 'POST',
