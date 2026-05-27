@@ -6,7 +6,7 @@
     "clean": "rm -rf dist .parcel-cache",
     "prebuild": "npm run clean",
     "build": "parcel build mikupad.html --no-cache",
-    "postbuild": "rm -rf .parcel-cache"
+    "postbuild": "node scripts/inline-dist.mjs && rm -rf .parcel-cache"
   },
   "dependencies": {
     "htm": "^3.1.1",
