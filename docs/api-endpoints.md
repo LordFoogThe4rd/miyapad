@@ -10,7 +10,8 @@
 | `/delete` | POST | Deletes a record from its store table (and deletes name index if session). |
 | `/all` | POST | Fetches all rows from the specified table. |
 | `/sessions` | POST | Fetches all session key-to-metadata pairs from the `names` table. |
-| `/proxy/*` | POST/GET/DELETE | Proxies LLM API requests, bypassing CORS issues. Supports token streaming. |
+| `/proxy` | POST/GET/DELETE | Proxies LLM API request directly to the URL in the `X-Real-URL` header. Used when the frontend determines the user's endpoint already includes a full API path. |
+| `/proxy/*` | POST/GET/DELETE | Appends the wildcard path to the `X-Real-URL` base URL. Used when the frontend fills in a standard API path (e.g., `/v1/completions`). Both routes bypass CORS and support token streaming. |
 | `/zstd_get_configs` | GET | Queries active `sqlite-zstd` table configs. |
 | `/zstd_enable_transparent`| POST | Enables transparent compression on a table. |
 | `/zstd_update_transparent`| POST | Modifies compression configuration parameters. |

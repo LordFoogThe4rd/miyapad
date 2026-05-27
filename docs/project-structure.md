@@ -12,7 +12,7 @@ mikupad/
 │   │   └── utils.js               # Helpers (column names, compression, header filters)
 │   ├── routes/                    # Express route handlers by concern
 │   │   ├── data.js                # /load, /save, /rename, /all, /sessions, /delete
-│   │   ├── proxy.js               # /proxy/* (GET/POST/DELETE), /proxy-image
+│   │   ├── proxy.js               # /proxy, /proxy/* (GET/POST/DELETE), /proxy-image
 │   │   ├── system.js              # /version, /vacuum, /log
 │   │   ├── tokenizer.js           # /api/v1/tokenizer/* endpoints
 │   │   └── zstd.js                # /zstd_* management endpoints
