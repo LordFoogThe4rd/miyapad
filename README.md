@@ -32,16 +32,29 @@ This refactored fork moves from a single monolithic HTML file to a **modular Par
 
 ## Getting Started
 
+Download the pre-compiled `mikupad.html` from [Releases](https://github.com/LordFoogThe4rd/mikupad-refactored/releases/latest) and open it in your browser.
+
+### Optional Server
+
+From the `server/` directory:
+
 ```shell
-git clone https://github.com/LordFoogThe4rd/mikupad-refactored.git
-cd mikupad-refactored
 npm install
 npm start
 ```
 
-Then open the URL shown by Parcel (usually `http://localhost:1234`). Choose your preferred backend and start generating text!
+See [Backend Server](docs/backend-server.md) for CLI options and environment variables.
 
-For full offline use, download the pre-compiled `mikupad.html` from [Releases](https://github.com/LordFoogThe4rd/mikupad-refactored/releases/latest).
+### Building from Source
+
+From the root directory:
+
+```shell
+npm install
+npm run build
+```
+
+The compiled `mikupad.html` will be output to `dist/`.
 
 ## Contributing
 
