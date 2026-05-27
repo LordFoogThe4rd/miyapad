@@ -32,20 +32,14 @@ This refactored fork moves from a single monolithic HTML file to a **modular Par
 
 ## Getting Started
 
-Open `mikupad.html` in your web browser. No additional installation is required. Choose your preferred backend and start generating text!
-
 ```shell
 git clone https://github.com/LordFoogThe4rd/mikupad-refactored.git
 cd mikupad-refactored
-open mikupad.html
-```
-
-To run the optional Node.js server:
-
-```shell
 npm install
 npm start
 ```
+
+Then open `http://localhost:3000` in your browser. Choose your preferred backend and start generating text!
 
 For full offline use, download the pre-compiled `mikupad.html` from [Releases](https://github.com/LordFoogThe4rd/mikupad-refactored/releases/latest).
 
