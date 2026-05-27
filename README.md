@@ -2,7 +2,7 @@
 
 **Fork of [mikupad](https://github.com/lmg-anon/mikupad) by lmg-anon** — major architectural overhaul with modern tooling and expanded features.
 
-![image](https://github.com/user-attachments/assets/4c5fa8ff-5926-4a4b-807b-34e4f36a032c)
+![image](docs/assets/tw76055.png)
 
 ## Features
 
