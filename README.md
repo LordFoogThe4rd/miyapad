@@ -39,7 +39,7 @@ npm install
 npm start
 ```
 
-Then open `http://localhost:3000` in your browser. Choose your preferred backend and start generating text!
+Then open the URL shown by Parcel (usually `http://localhost:1234`). Choose your preferred backend and start generating text!
 
 For full offline use, download the pre-compiled `mikupad.html` from [Releases](https://github.com/LordFoogThe4rd/mikupad-refactored/releases/latest).
 
