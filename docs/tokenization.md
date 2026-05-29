@@ -1,6 +1,6 @@
 # Server-Side Tokenization
 
-Mikupad supports an optional server-side tokenization engine using HuggingFace tokenizers via the `@huggingface/tokenizers` npm package. When enabled, all token counting, tokenization, and detokenization operations are delegated to the backend server instead of using client-side estimators.
+Miyapad supports an optional server-side tokenization engine using HuggingFace tokenizers via the `@huggingface/tokenizers` npm package. When enabled, all token counting, tokenization, and detokenization operations are delegated to the backend server instead of using client-side estimators.
 
 ## Key Files
 
@@ -18,7 +18,7 @@ User clicks "Use server-side tokenization"
   → User picks a model from the dropdown
   → POST /api/v1/tokenizer/load { model } loads the tokenizer on the server
   → useTokenCounters, useGenerationLogic, AppLayout, LogitBiasModal
-    check useServerTokenization && isMikupadEndpoint
+    check useServerTokenization && isMiyapadEndpoint
     → POST /api/v1/token-count | /api/v1/tokenize | /api/v1/detokenize
 ```
 

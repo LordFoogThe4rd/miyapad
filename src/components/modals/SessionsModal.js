@@ -20,11 +20,11 @@ export function SessionsModal({ isOpen, closeModal, sessionStorage, cancel }) {
 	const [renamingId, setRenamingId] = useState(undefined);
 	const [isCreating, setIsCreating] = useState(false);
 	const [searchQuery, setSearchQuery] = useState('');
-	const [sortBy, setSortByState] = useState(() => localStorage.getItem('mikupad-sessions-sortBy') || 'modified');
-	const [sortAsc, setSortAscState] = useState(() => localStorage.getItem('mikupad-sessions-sortAsc') === 'true');
+	const [sortBy, setSortByState] = useState(() => localStorage.getItem('miyapad-sessions-sortBy') || 'modified');
+	const [sortAsc, setSortAscState] = useState(() => localStorage.getItem('miyapad-sessions-sortAsc') === 'true');
 
-	const setSortBy = (v) => { setSortByState(v); localStorage.setItem('mikupad-sessions-sortBy', v); };
-	const setSortAsc = (v) => { const next = typeof v === 'function' ? v(sortAsc) : v; setSortAscState(next); localStorage.setItem('mikupad-sessions-sortAsc', String(next)); };
+	const setSortBy = (v) => { setSortByState(v); localStorage.setItem('miyapad-sessions-sortBy', v); };
+	const setSortAsc = (v) => { const next = typeof v === 'function' ? v(sortAsc) : v; setSortAscState(next); localStorage.setItem('miyapad-sessions-sortAsc', String(next)); };
 
 	useEffect(() => {
 		const incrementVersion = () => setVersion(v => v + 1);
@@ -90,7 +90,7 @@ export function SessionsModal({ isOpen, closeModal, sessionStorage, cancel }) {
 	};
 
 	const startCreateSession = () => {
-		setNewSessionName(`MikuPad #${sessionStorage.nextId + 1}`);
+		setNewSessionName(`MiyaPad #${sessionStorage.nextId + 1}`);
 		setIsCreating(true);
 	};
 

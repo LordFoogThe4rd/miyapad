@@ -20,12 +20,12 @@
 
 # REMOVE HTTP SUPPORT:
 
-#   mikupad:
+#   miyapad:
 #     ports: !reset []
 
 # ADD LOCALHOST AI SERVER SUPPORT FOR LINUX USERS:
-# (DELETE `mikupad:` IF ALREADY DEFINED ABOVE)
+# (DELETE `miyapad:` IF ALREADY DEFINED ABOVE)
   
-#   mikupad:
+#   miyapad:
 #     extra_hosts:
 #       - host.docker.internal:host-gateway

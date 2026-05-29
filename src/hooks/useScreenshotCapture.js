@@ -147,7 +147,7 @@ export function useScreenshotCapture() {
 		`;
 
 		// Inject screenshot-specific CSS if not already present
-		if (!document.getElementById('mikupad-screenshot-css')) {
+		if (!document.getElementById('miyapad-screenshot-css')) {
 			const css = `
 				#screenshot-staging-area {
 					position: absolute;
@@ -179,7 +179,7 @@ export function useScreenshotCapture() {
 				.novel-model-name { font-weight: 700; }
 			`;
 			const style = document.createElement('style');
-			style.id = 'mikupad-screenshot-css';
+			style.id = 'miyapad-screenshot-css';
 			style.textContent = css;
 			document.head.appendChild(style);
 		}

@@ -1,9 +1,9 @@
 # Project Structure & Key Directories
 
 ```
-mikupad/
+miyapad/
 ├── dist/                          # Parcel build output (production bundle)
-├── mikupad.html                   # HTML entry point (loads src/main.js as module)
+├── miyapad.html                   # HTML entry point (loads src/main.js as module)
 ├── package.json                   # Frontend dependencies and run scripts
 ├── server/                        # Node.js backend server
 │   ├── lib/                       # Core modules (database, auth, utils)

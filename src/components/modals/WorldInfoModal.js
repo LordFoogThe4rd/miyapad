@@ -140,7 +140,7 @@ export function WorldInfoModal({ isOpen, closeModal, worldInfo, setWorldInfo, ca
 		const anchor = document.createElement("a");
 
 		const now = new Date();
-		anchor.download = `MikuPad-WorldInfo-${now.getFullYear()}-${(""+(now.getMonth() + 1)).padStart(2, "0")}-${(""+now.getDate()).padStart(2, "0")}.json`;
+		anchor.download = `MiyaPad-WorldInfo-${now.getFullYear()}-${(""+(now.getMonth() + 1)).padStart(2, "0")}-${(""+now.getDate()).padStart(2, "0")}.json`;
 		anchor.href = (window.webkitURL || window.URL).createObjectURL(blob);
 		anchor.dataset.downloadurl = ["application/json", anchor.download, anchor.href].join(":");
 		anchor.click();

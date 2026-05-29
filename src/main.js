@@ -15,20 +15,20 @@ import { App } from './App.js';
 
 async function main() {
 	let dbAdapter = new IndexedDBAdapter();
-	let isMikupadEndpoint = false;
+	let isMiyapadEndpoint = false;
 
 	if (window.location.protocol != 'file:' && window.location.pathname == '/') {
 		let serverAdapter = new ServerDBAdapter(window.location.protocol + '//' + window.location.host);
 		try {
 			await serverAdapter.init();
 			dbAdapter = serverAdapter;
-			isMikupadEndpoint = true;
+			isMiyapadEndpoint = true;
 		} catch (e) {
 			reportError(e);
 		}
 	}
 	
-	if (!isMikupadEndpoint) {
+	if (!isMiyapadEndpoint) {
 		// Initialize IndexedDBAdapter
 		await dbAdapter.init();
 	}
@@ -51,7 +51,7 @@ async function main() {
 				useSessionState=${(name, initialState) => useSessionState(sessionStorage, name, initialState)}
 				useDBTemplates=${(initialState => useStorageState(templateStorage, initialState))}
 				useDBThemes=${(initialState => useStorageState(themeStorage, initialState))}
-				isMikupadEndpoint=${isMikupadEndpoint}/>
+				isMiyapadEndpoint=${isMiyapadEndpoint}/>
 		</${ErrorBoundary}>`);
 }
 

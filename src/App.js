@@ -3,7 +3,7 @@ import { SettingsProvider } from './contexts/SettingsContext.js';
 import { GenerationProvider } from './contexts/GenerationContext.js';
 import { AppLayout } from './AppLayout.js';
 
-export function App({ sessionStorage, templateStorage, themeStorage, useSessionState, useDBTemplates, useDBThemes, isMikupadEndpoint }) {
+export function App({ sessionStorage, templateStorage, themeStorage, useSessionState, useDBTemplates, useDBThemes, isMiyapadEndpoint }) {
 	return html`
 		<${SettingsProvider}
 			sessionStorage=${sessionStorage}
@@ -12,7 +12,7 @@ export function App({ sessionStorage, templateStorage, themeStorage, useSessionS
 			useSessionState=${useSessionState}
 			useDBTemplates=${useDBTemplates}
 			useDBThemes=${useDBThemes}
-			isMikupadEndpoint=${isMikupadEndpoint}
+			isMiyapadEndpoint=${isMiyapadEndpoint}
 		>
 			<${GenerationProvider} useSessionState=${useSessionState}>
 				<${AppLayout} />

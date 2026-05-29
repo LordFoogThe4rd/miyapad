@@ -11,10 +11,10 @@ export class ServerDBAdapter {
 			}
 		});
 		if (!res.ok)
-			throw new Error("Not a mikupad server or version mismatch.");
+			throw new Error("Not a miyapad server or version mismatch.");
 		const { version } = await res.json();
 		if (version < 3)
-			throw new Error("Mikupad server version mismatch.");
+			throw new Error("Miyapad server version mismatch.");
 	}
 
 	async openDatabase() {

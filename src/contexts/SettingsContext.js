@@ -6,7 +6,7 @@ import { defaultThemes } from '../defaults/themes.js';
 
 export const SettingsContext = createContext(null);
 
-export function SettingsProvider({ children, sessionStorage, templateStorage, themeStorage, useSessionState, useDBTemplates, useDBThemes, isMikupadEndpoint }) {
+export function SettingsProvider({ children, sessionStorage, templateStorage, themeStorage, useSessionState, useDBTemplates, useDBThemes, isMiyapadEndpoint }) {
 	const [templates, setTemplates] = useDBTemplates(defaultPresets.instructTemplates);
 	const [templateReplacements, setTemplateReplacements] = useState(false);
 	const [templatesImport, setTemplatesImport] = useState(false);
@@ -129,7 +129,7 @@ const [screenshotIncludeSessionName, setScreenshotIncludeSessionName] = usePersi
 	const [screenshotModelAvatarUrl, setScreenshotModelAvatarUrl] = usePersistentState('screenshotModelAvatarUrl', '');
 
 	const state = {
-		sessionStorage, templateStorage, themeStorage, useSessionState, useDBTemplates, useDBThemes, isMikupadEndpoint,
+		sessionStorage, templateStorage, themeStorage, useSessionState, useDBTemplates, useDBThemes, isMiyapadEndpoint,
 		templates, setTemplates, templateReplacements, setTemplateReplacements, templatesImport, setTemplatesImport,
 		selectedTemplate, setSelectedTemplate, chatMode, setChatMode, templateList, setTemplateList,
 		fontSizeMultiplier, setFontSizeMultiplier, spellCheck, setSpellCheck, attachSidebar, setAttachSidebar,

@@ -37,7 +37,7 @@ export function PreferencesModal({ isOpen, closeModal, settings }) {
 		ttsVolume, setTTSVolume,
 		ttsSpeakInputs, setTTSSpeakInputs,
 		ttsMaxUserInput, setTTSMaxUserInput,
-		isMikupadEndpoint, cancel, listTTSVoices, ttsStop, ttsAvailable, handleExportDB, handleImportDB, exportPrompt,
+		isMiyapadEndpoint, cancel, listTTSVoices, ttsStop, ttsAvailable, handleExportDB, handleImportDB, exportPrompt,
 		useServerTokenization, setUseServerTokenization, tokenizerModel, setTokenizerModel,
 		sessionStorage,
 		screenshotIncludeSessionName, setScreenshotIncludeSessionName,
@@ -58,7 +58,7 @@ export function PreferencesModal({ isOpen, closeModal, settings }) {
 	const [tokenizerStatus, setTokenizerStatus] = useState('');
 
 	const refreshTokenizers = useCallback(async () => {
-		if (!isMikupadEndpoint || !sessionStorage?.sessionEndpoint) return;
+		if (!isMiyapadEndpoint || !sessionStorage?.sessionEndpoint) return;
 		try {
 			const data = await getServerTokenizers({ sessionEndpoint: sessionStorage.sessionEndpoint });
 			setTokenizerList(data.tokenizers || []);
@@ -69,13 +69,13 @@ export function PreferencesModal({ isOpen, closeModal, settings }) {
 			setTokenizerList([]);
 			setTokenizerStatus('Failed to fetch tokenizers');
 		}
-	}, [isMikupadEndpoint, sessionStorage]);
+	}, [isMiyapadEndpoint, sessionStorage]);
 
 	useEffect(() => {
-		if (activeTab === 'server' && isMikupadEndpoint) {
+		if (activeTab === 'server' && isMiyapadEndpoint) {
 			refreshTokenizers();
 		}
-	}, [activeTab, isMikupadEndpoint, refreshTokenizers]);
+	}, [activeTab, isMiyapadEndpoint, refreshTokenizers]);
 
 	const handleTokenizerChange = useCallback(async (model) => {
 		setTokenizerModel(model);
@@ -106,7 +106,7 @@ export function PreferencesModal({ isOpen, closeModal, settings }) {
 						onClick=${() => setActiveTab('screenshot')}>
 						Screenshot
 					</button>
-					${isMikupadEndpoint && html`
+					${isMiyapadEndpoint && html`
 						<button style=${tabStyle(activeTab === 'server')}
 							onClick=${() => setActiveTab('server')}>
 							Server
@@ -153,7 +153,7 @@ export function PreferencesModal({ isOpen, closeModal, settings }) {
 									{ name: 'Hide', value: -1 },
 								]}/>`}
 						<div className="vbox" style=${{ marginTop: '10px', gap: '8px' }}>
-							${!isMikupadEndpoint && html`
+							${!isMiyapadEndpoint && html`
 								<div className="hbox" style=${{ gap: '8px' }}>
 									<button style=${{ flex: 1 }} onClick=${handleExportDB}>Export Full DB</button>
 									<button style=${{ flex: 1 }} onClick=${handleImportDB}>Import Full DB</button>
@@ -274,7 +274,7 @@ export function PreferencesModal({ isOpen, closeModal, settings }) {
 								${tokenizerStatus || 'No tokenizer loaded'}
 							</div>
 							<div style=${{ fontSize: '0.8em', color: 'var(--color-text-hint)', marginTop: '4px' }}>
-								Place a tokenizer.json file in server/tokenizers/${'<model-name>'}/ on the Mikupad server.
+								Place a tokenizer.json file in server/tokenizers/${'<model-name>'}/ on the Miyapad server.
 							</div>
 						`}
 					</div>

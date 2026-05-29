@@ -24,7 +24,7 @@ import { SessionsModal } from './modals/SessionsModal.js';
 import { EditorContextMenu } from './EditorContextMenu.js';
 
 export function Modals({ toggleModal, currentThemeName, setCurrentThemeName, allThemes, setAllThemes, applyChatTemplate }) {
-	const { endpoint, setEndpointAPIKey, endpointAPIKey, endpointAPI, endpointModel, setEndpointModel, templates, selectedTemplate, setSelectedTemplate, templatesImport, setTemplates, templateStorage, grammar, setGrammar, isMikupadEndpoint, sessionStorage, fontSizeMultiplier, setFontSizeMultiplier, spellCheck, setSpellCheck, attachSidebar, setAttachSidebar, preserveCursorPosition, setPreserveCursorPosition, tokenHighlightMode, setTokenHighlightMode, tokenColorMode, setTokenColorMode, showProbsMode, setShowProbsMode, ttsEnabled, setTTSEnabled, ttsVoiceId, setTTSVoiceId, ttsPitch, setTTSPitch, ttsRate, setTTSRate, ttsVolume, setTTSVolume, ttsSpeakInputs, setTTSSpeakInputs, ttsMaxUserInput, setTTSMaxUserInput, useChatAPI, setUseChatAPI, memoryTokens, authorNoteTokens, authorNoteDepth, setAuthorNoteDepth, worldInfo, setWorldInfo, sillyTarvernWorldInfoJSON, setSillyTarvernWorldInfoJSON, logitBias, setLogitBias, logitBiasParam, setLogitBiasParam, templateList, setTemplateList,
+	const { endpoint, setEndpointAPIKey, endpointAPIKey, endpointAPI, endpointModel, setEndpointModel, templates, selectedTemplate, setSelectedTemplate, templatesImport, setTemplates, templateStorage, grammar, setGrammar, isMiyapadEndpoint, sessionStorage, fontSizeMultiplier, setFontSizeMultiplier, spellCheck, setSpellCheck, attachSidebar, setAttachSidebar, preserveCursorPosition, setPreserveCursorPosition, tokenHighlightMode, setTokenHighlightMode, tokenColorMode, setTokenColorMode, showProbsMode, setShowProbsMode, ttsEnabled, setTTSEnabled, ttsVoiceId, setTTSVoiceId, ttsPitch, setTTSPitch, ttsRate, setTTSRate, ttsVolume, setTTSVolume, ttsSpeakInputs, setTTSSpeakInputs, ttsMaxUserInput, setTTSMaxUserInput, useChatAPI, setUseChatAPI, memoryTokens, authorNoteTokens, authorNoteDepth, setAuthorNoteDepth, worldInfo, setWorldInfo, sillyTarvernWorldInfoJSON, setSillyTarvernWorldInfoJSON, logitBias, setLogitBias, logitBiasParam, setLogitBiasParam, templateList, setTemplateList,
 		screenshotIncludeSessionName, setScreenshotIncludeSessionName,
 		screenshotIncludeDate, setScreenshotIncludeDate,
 		screenshotBackgroundUrl, setScreenshotBackgroundUrl,
@@ -51,7 +51,7 @@ export function Modals({ toggleModal, currentThemeName, setCurrentThemeName, all
 		try {
 			const data = await sessionStorage.dbAdapter.exportDatabase();
 			const jsonString = JSON.stringify(data, null, 2);
-			exportText('mikupad_db_export.json', jsonString);
+			exportText('miyapad_db_export.json', jsonString);
 		} catch (error) {
 			console.error('Failed to export database:', error);
 			alert('Failed to export database. See console for details.');
@@ -193,7 +193,7 @@ export function Modals({ toggleModal, currentThemeName, setCurrentThemeName, all
 				ttsVolume, setTTSVolume,
 				ttsSpeakInputs, setTTSSpeakInputs,
 				ttsMaxUserInput, setTTSMaxUserInput,
-				isMikupadEndpoint, sessionStorage, cancel, listTTSVoices, ttsStop, ttsAvailable, handleExportDB, handleImportDB, exportPrompt,
+				isMiyapadEndpoint, sessionStorage, cancel, listTTSVoices, ttsStop, ttsAvailable, handleExportDB, handleImportDB, exportPrompt,
 				useServerTokenization, setUseServerTokenization, tokenizerModel, setTokenizerModel,
 				screenshotIncludeSessionName, setScreenshotIncludeSessionName,
 				screenshotIncludeDate, setScreenshotIncludeDate,
@@ -257,7 +257,7 @@ export function Modals({ toggleModal, currentThemeName, setCurrentThemeName, all
 			isOpen=${modalState.bias}
 			closeModal=${() => closeModal("bias")}
 			biasState=${{ logitBias, setLogitBias, logitBiasParam, setLogitBiasParam, setRejectedAPIKey }}
-			apiConfig=${{ sessionStorage, endpoint, endpointAPI, endpointAPIKey, isMikupadEndpoint, useServerTokenization }}
+			apiConfig=${{ sessionStorage, endpoint, endpointAPI, endpointAPIKey, isMiyapadEndpoint, useServerTokenization }}
 			cancel=${cancel}/>
 
 		<!-- Sorry. -->
@@ -318,7 +318,7 @@ export function Modals({ toggleModal, currentThemeName, setCurrentThemeName, all
 			endpoint=${endpoint}
 			endpointAPIKey=${endpointAPIKey}
 			setEndpointAPIKey=${setEndpointAPIKey}
-			isMikupadEndpoint=${isMikupadEndpoint}
+			isMiyapadEndpoint=${isMiyapadEndpoint}
 			sessionStorage=${sessionStorage}
 			endpointModel=${endpointModel}
 			setEndpointModel=${setEndpointModel}

@@ -34,7 +34,7 @@ import { useGeneration } from './contexts/GenerationContext.js';
 
 export function AppLayout() {
 	const {
-		sessionStorage, templateStorage, themeStorage, useSessionState, useDBTemplates, useDBThemes, isMikupadEndpoint,
+		sessionStorage, templateStorage, themeStorage, useSessionState, useDBTemplates, useDBThemes, isMiyapadEndpoint,
 		templates, setTemplates, templateReplacements, setTemplateReplacements, templatesImport, setTemplatesImport,
 		selectedTemplate, setSelectedTemplate, chatMode, setChatMode, templateList, setTemplateList,
 		fontSizeMultiplier, setFontSizeMultiplier, spellCheck, setSpellCheck, attachSidebar, setAttachSidebar,
@@ -132,7 +132,7 @@ export function AppLayout() {
 
 	function setTitleToSession() {
 		const sessionName = sessionStorage.getProperty('name');
-		document.title = sessionName ? 'mikupad - ' + sessionName : 'mikupad';
+		document.title = sessionName ? 'miyapad - ' + sessionName : 'miyapad';
 	}
 
 	useEffect(() => {
@@ -376,7 +376,7 @@ export function AppLayout() {
 		const ac = new AbortController();
 		const to = setTimeout(async () => {
 			try {
-		const tokenCount = await (useServerTokenization && isMikupadEndpoint && sessionStorage?.sessionEndpoint
+		const tokenCount = await (useServerTokenization && isMiyapadEndpoint && sessionStorage?.sessionEndpoint
 				? serverTokenCount({ sessionEndpoint: sessionStorage.sessionEndpoint, content: finalPromptText, signal: ac.signal })
 				: getTokenCount({
 					endpoint,
@@ -384,7 +384,7 @@ export function AppLayout() {
 					...(endpointAPI == API_OPENAI_COMPAT || endpointAPI == API_LLAMA_CPP ? { endpointAPIKey } : {}),
 					content: finalPromptText,
 					signal: ac.signal,
-					...(isMikupadEndpoint ? { proxyEndpoint: sessionStorage.proxyEndpoint } : {})
+					...(isMiyapadEndpoint ? { proxyEndpoint: sessionStorage.proxyEndpoint } : {})
 				})
 			);
 				setTokens(tokenCount);
@@ -410,7 +410,7 @@ export function AppLayout() {
 					endpointAPI,
 					endpointAPIKey,
 					signal: ac.signal,
-					...(isMikupadEndpoint ? { proxyEndpoint: sessionStorage.proxyEndpoint } : {})
+					...(isMiyapadEndpoint ? { proxyEndpoint: sessionStorage.proxyEndpoint } : {})
 				});
 				setOpenaiModels(models);
 			} catch (e) {
@@ -494,7 +494,7 @@ export function AppLayout() {
 					}
 				}, 1000);
 			}
-			setSessionEndpointError("Mikupad server is unreachable!");
+			setSessionEndpointError("Miyapad server is unreachable!");
 			setCurrentPromptChunk(undefined);
 			setUndoHovered(false);
 		}
@@ -508,7 +508,7 @@ export function AppLayout() {
 	}, []);
 
 	useEffect(() => {
-		if (!useServerTokenization || !tokenizerModel || !isMikupadEndpoint) return;
+		if (!useServerTokenization || !tokenizerModel || !isMiyapadEndpoint) return;
 		if (!sessionStorage?.sessionEndpoint) return;
 
 		loadServerTokenizer({ sessionEndpoint: sessionStorage.sessionEndpoint, model: tokenizerModel })

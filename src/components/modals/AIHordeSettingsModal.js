@@ -6,7 +6,7 @@ import { SVG_ShowKey, SVG_HideKey } from '../icons/index.js';
 import { normalizeEndpoint } from '../../api/common.js';
 import { API_AI_HORDE } from '../../constants.js';
 
-export function AIHordeSettingsModal({ isOpen, closeModal, endpoint, endpointAPIKey, setEndpointAPIKey, isMikupadEndpoint, sessionStorage, endpointModel, setEndpointModel, cancel }) {
+export function AIHordeSettingsModal({ isOpen, closeModal, endpoint, endpointAPIKey, setEndpointAPIKey, isMiyapadEndpoint, sessionStorage, endpointModel, setEndpointModel, cancel }) {
     const [models, setModels] = useState([]);
     const [loading, setLoading] = useState(true);
     const [error, setError] = useState(null);
@@ -19,11 +19,11 @@ export function AIHordeSettingsModal({ isOpen, closeModal, endpoint, endpointAPI
         setError(null);
         try {
             const hordeEndpoint = normalizeEndpoint(endpoint, API_AI_HORDE);
-            const res = await fetch(`${isMikupadEndpoint ? sessionStorage.proxyEndpoint : hordeEndpoint}/v2/status/models?type=text`, {
+            const res = await fetch(`${isMiyapadEndpoint ? sessionStorage.proxyEndpoint : hordeEndpoint}/v2/status/models?type=text`, {
                 method: 'GET',
                 headers: {
                     'Content-Type': 'application/json',
-                    ...(isMikupadEndpoint ? { 'X-Real-URL': hordeEndpoint } : {})
+                    ...(isMiyapadEndpoint ? { 'X-Real-URL': hordeEndpoint } : {})
                 },
                 signal: acSignal,
             });

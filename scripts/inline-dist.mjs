@@ -28,4 +28,4 @@ if (jsFile) {
   )
 }
 
-writeFileSync(join(dist, 'mikupad.html'), html)
+writeFileSync(join(dist, 'miyapad.html'), html)

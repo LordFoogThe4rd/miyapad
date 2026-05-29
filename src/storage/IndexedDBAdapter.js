@@ -1,6 +1,6 @@
 export class IndexedDBAdapter {
 	constructor() {
-		this.dbName = 'MikuPad';
+		this.dbName = 'MiyaPad';
 	}
 
 	async init() {
@@ -14,9 +14,9 @@ export class IndexedDBAdapter {
 					// If the response came back in less than 500ms, it was likely an automatic denial
 					// (500ms is generally considered faster than human reaction time)
 					if (elapsedTime < 500) {
-						alert('Your browser has automatically denied persistent storage for Mikupad. Be aware that the browser may clear the database when under storage pressure. You might need to adjust your browser settings to enable this feature, or alternatively, you can use the Mikupad server.');
+						alert('Your browser has automatically denied persistent storage for Miyapad. Be aware that the browser may clear the database when under storage pressure. You might need to adjust your browser settings to enable this feature, or alternatively, you can use the Miyapad server.');
 					} else {
-						alert('You have chosen not to enable persistent storage for Mikupad. Be aware that the browser may clear the database when under storage pressure. As an optional alternative, you can use the Mikupad server.');
+						alert('You have chosen not to enable persistent storage for Miyapad. Be aware that the browser may clear the database when under storage pressure. As an optional alternative, you can use the Miyapad server.');
 					}
 					localStorage.setItem('persistentStorageWarningShown', 'true');
 				}

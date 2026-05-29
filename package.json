@@ -1,11 +1,11 @@
 {
-  "name": "mikupad",
-  "source": "mikupad.html",
+  "name": "miyapad",
+  "source": "miyapad.html",
   "scripts": {
     "start": "parcel",
     "clean": "rm -rf dist .parcel-cache",
     "prebuild": "npm run clean",
-    "build": "parcel build mikupad.html --no-cache",
+    "build": "parcel build miyapad.html --no-cache",
     "postbuild": "node scripts/inline-dist.mjs && rm -rf .parcel-cache"
   },
   "dependencies": {

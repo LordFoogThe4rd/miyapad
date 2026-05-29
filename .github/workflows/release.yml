@@ -22,5 +22,5 @@ jobs:
       - name: Create Release
         uses: softprops/action-gh-release@v2
         with:
-          files: dist/mikupad.html
+          files: dist/miyapad.html
           generate_release_notes: true

@@ -32,7 +32,7 @@ export function Sidebar({ sidebarRef, toggleModal, currentThemeName, setCurrentT
 		useChatAPI, setUseChatAPI, useTokenStreaming, setUseTokenStreaming, disableLogprobs, setDisableLogprobs,
 		postSamplingProbs, setPostSamplingProbs, showPromptPreview, setShowPromptPreview,
 		promptPreviewTokens, setPromptPreviewTokens, templates, selectedTemplate, setSelectedTemplate,
-		isMikupadEndpoint, sessionStorage, chatMode, setChatMode, seed, setSeed, contextLength, setContextLength,
+		isMiyapadEndpoint, sessionStorage, chatMode, setChatMode, seed, setSeed, contextLength, setContextLength,
 		memoryTokens, authorNoteTokens, authorNoteDepth, templateList, tokenHighlightMode
 	} = useSettings();
 
@@ -55,7 +55,7 @@ export function Sidebar({ sidebarRef, toggleModal, currentThemeName, setCurrentT
 	const [maintenanceDbLoad, setMaintenanceDbLoad] = useState(0.5);
 
 	useEffect(() => {
-		if (!isMikupadEndpoint) return;
+		if (!isMiyapadEndpoint) return;
 		const checkVersion = async () => {
 			try {
 				const res = await fetch('/version');
@@ -71,7 +71,7 @@ export function Sidebar({ sidebarRef, toggleModal, currentThemeName, setCurrentT
 			} catch (err) {}
 		};
 		checkVersion();
-	}, [isMikupadEndpoint]);
+	}, [isMiyapadEndpoint]);
 
 	function switchEndpointAPI(value) {
 		let url;
@@ -190,7 +190,7 @@ export function Sidebar({ sidebarRef, toggleModal, currentThemeName, setCurrentT
 			<${CollapsibleGroup} label="Parameters" expanded>
 				<${InputBox} label="Server"
 					className=${isMixedContent() ? 'mixed-content' : ''}
-					tooltip=${isMixedContent() ? 'This URL might be blocked due to mixed content. If the prediction fails, download mikupad.html and run it locally.' : ''}
+					tooltip=${isMixedContent() ? 'This URL might be blocked due to mixed content. If the prediction fails, download miyapad.html and run it locally.' : ''}
 					readOnly=${!!cancel || endpointAPI == API_AI_HORDE}
 					value=${endpointAPI != API_AI_HORDE ? endpoint : 'https://aihorde.net/api'}
 					onValueChange=${setEndpoint}/>

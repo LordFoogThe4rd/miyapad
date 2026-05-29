@@ -39,7 +39,7 @@ export function Sessions({ sessionStorage, disabled }) {
 	};
 
 	const startCreateSession = () => {
-		setNewSessionName(`MikuPad #${sessionStorage.nextId + 1}`);
+		setNewSessionName(`MiyaPad #${sessionStorage.nextId + 1}`);
 		setIsCreating(true);
 	};
 

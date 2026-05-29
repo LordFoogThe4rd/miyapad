@@ -121,7 +121,7 @@ export class SessionStorage extends AbstractStorage {
 		}
 		if (Object.keys(this.sessions).length === 0) {
 			if (!await this.migrateSessions()) {
-				await this.createSession('MikuPad #1');
+				await this.createSession('MiyaPad #1');
 			}
 		}
 		await this.switchSession(this.selectedSession);
@@ -213,7 +213,7 @@ export class SessionStorage extends AbstractStorage {
 		}
 
 		if (!this.sessions[newId].hasOwnProperty('name')) {
-			this.sessions[newId]['name'] = `MikuPad #${this.nextId + 1}`;
+			this.sessions[newId]['name'] = `MiyaPad #${this.nextId + 1}`;
 		}
 
 		if (cloned && !this.sessions[newId]['name'].startsWith('Cloned')) {

@@ -151,7 +151,7 @@ export function ThemeManagerModal({ isOpen, closeModal, allThemes, setAllThemes,
             return;
         }
         const themeToExport = { [editingThemeName]: allThemes[editingThemeName] };
-        exportText(`mikupad_theme_${editingThemeName.replace(/\s+/g, '_')}.json`, JSON.stringify(themeToExport, null, 2));
+        exportText(`miyapad_theme_${editingThemeName.replace(/\s+/g, '_')}.json`, JSON.stringify(themeToExport, null, 2));
     };
 
     const handleImportTheme = () => {

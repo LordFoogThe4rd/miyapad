@@ -1,4 +1,4 @@
-# Mikupad
+# Miyapad
 
 Web-based AI text generation interface. React 19 frontend with optional Node.js/SQLite backend.
 

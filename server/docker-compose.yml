@@ -1,5 +1,5 @@
 services:
-  mikupad:
+  miyapad:
     build:
       context: ..
       dockerfile: server/Dockerfile

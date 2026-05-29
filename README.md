@@ -1,4 +1,4 @@
-# mikupad
+# miyapad
 
 **Fork of [mikupad](https://github.com/lmg-anon/mikupad) by lmg-anon** — major architectural overhaul with modern tooling and expanded features.
 
@@ -32,7 +32,7 @@ This refactored fork moves from a single monolithic HTML file to a **modular Par
 
 ## Getting Started
 
-Download the pre-compiled `mikupad.html` from [Releases](https://github.com/LordFoogThe4rd/mikupad-refactored/releases/latest) and open it in your browser.
+Download the pre-compiled `miyapad.html` from [Releases](https://github.com/LordFoogThe4rd/miyapad/releases/latest) and open it in your browser.
 
 ### Optional Server
 
@@ -54,7 +54,7 @@ npm install
 npm run build
 ```
 
-The compiled `mikupad.html` will be output to `dist/`.
+The compiled `miyapad.html` will be output to `dist/`.
 
 ## Contributing
 

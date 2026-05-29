@@ -7,7 +7,7 @@ import { getTokens, serverTokenize } from '../../api/index.js';
 
 export function LogitBiasModal({ isOpen, closeModal, biasState, apiConfig, cancel }) {
 	const { logitBias, setLogitBias, logitBiasParam, setLogitBiasParam, setRejectedAPIKey } = biasState;
-	const { sessionStorage, endpoint, endpointAPI, endpointAPIKey, isMikupadEndpoint, useServerTokenization } = apiConfig;
+	const { sessionStorage, endpoint, endpointAPI, endpointAPIKey, isMiyapadEndpoint, useServerTokenization } = apiConfig;
 	const [lastBiasError, setLastBiasError] = useState(undefined);
 	const [logitBiasTemp, setLogitBiasTemp] = useState([]);
 	const [logitBiasSorted, setLogitBiasSorted] = useState([]);
@@ -84,7 +84,7 @@ export function LogitBiasModal({ isOpen, closeModal, biasState, apiConfig, cance
 				// Now granted, I have not found any strings where this is actually an issue in 
 				// the tokenizers of the models I use, but this is still a huge hackjob of a 
 				// workaround. If anyone can think of a better solution, please let me know.
-			const useServerTk = useServerTokenization && isMikupadEndpoint && sessionStorage?.sessionEndpoint;
+			const useServerTk = useServerTokenization && isMiyapadEndpoint && sessionStorage?.sessionEndpoint;
 			const serverEp = sessionStorage?.sessionEndpoint;
 			tokens = await (useServerTk
 				? serverTokenize({ sessionEndpoint: serverEp, content: `!==${biasString}`.replace(/\\n/g,'\n'), signal: ac.signal })
@@ -94,7 +94,7 @@ export function LogitBiasModal({ isOpen, closeModal, biasState, apiConfig, cance
 					...(endpointAPI == API_OPENAI_COMPAT || endpointAPI == API_LLAMA_CPP ? { endpointAPIKey } : {}),
 					content: `!==${biasString}`.replace(/\\n/g,'\n'),
 					signal: ac.signal,
-					...(isMikupadEndpoint ? { proxyEndpoint: sessionStorage.proxyEndpoint } : {})
+					...(isMiyapadEndpoint ? { proxyEndpoint: sessionStorage.proxyEndpoint } : {})
 				})
 			);
 			if (tokens.length === 0) {
@@ -109,7 +109,7 @@ export function LogitBiasModal({ isOpen, closeModal, biasState, apiConfig, cance
 					...(endpointAPI == API_OPENAI_COMPAT || endpointAPI == API_LLAMA_CPP ? { endpointAPIKey } : {}),
 					content: `!==`,
 					signal: ac.signal,
-					...(isMikupadEndpoint ? { proxyEndpoint: sessionStorage.proxyEndpoint } : {})
+					...(isMiyapadEndpoint ? { proxyEndpoint: sessionStorage.proxyEndpoint } : {})
 				})
 			);
 				// Remove however many tokens !== is tokenized as for the workaround

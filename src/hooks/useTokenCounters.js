@@ -6,7 +6,7 @@ import { getTokenCount, serverTokenCount } from '../api/index.js';
 import { API_OPENAI_COMPAT, API_LLAMA_CPP } from '../constants.js';
 
 export function useTokenCounters() {
-	const { endpoint, endpointAPI, endpointAPIKey, sessionStorage, isMikupadEndpoint, useServerTokenization, contextLength, authorNoteTokens, setAuthorNoteTokens, memoryTokens, setMemoryTokens, worldInfo } = useSettings();
+	const { endpoint, endpointAPI, endpointAPIKey, sessionStorage, isMiyapadEndpoint, useServerTokenization, contextLength, authorNoteTokens, setAuthorNoteTokens, memoryTokens, setMemoryTokens, worldInfo } = useSettings();
 	const { cancel, modalState } = useGeneration();
 	const { templateReplacements, replacePlaceholders } = usePromptBuilder();
 
@@ -27,7 +27,7 @@ export function useTokenCounters() {
 		const to = setTimeout(async () => {
 			try {
 				const content = `${replacePlaceholders(assembled,templateReplacements)}`;
-				const tokenCount = await (useServerTokenization && isMikupadEndpoint && sessionStorage?.sessionEndpoint
+				const tokenCount = await (useServerTokenization && isMiyapadEndpoint && sessionStorage?.sessionEndpoint
 					? serverTokenCount({ sessionEndpoint: sessionStorage.sessionEndpoint, content, signal: ac.signal })
 					: getTokenCount({
 						endpoint,
@@ -35,7 +35,7 @@ export function useTokenCounters() {
 						...(endpointAPI == API_OPENAI_COMPAT || endpointAPI == API_LLAMA_CPP ? { endpointAPIKey } : {}),
 						content,
 						signal: ac.signal,
-						...(isMikupadEndpoint ? { proxyEndpoint: sessionStorage.proxyEndpoint } : {})
+						...(isMiyapadEndpoint ? { proxyEndpoint: sessionStorage.proxyEndpoint } : {})
 					})
 				);
 				setAuthorNoteTokens((prevauthorNoteTokens) => ({
@@ -72,7 +72,7 @@ export function useTokenCounters() {
 		const to = setTimeout(async () => {
 			try {
 				const content = `${replacePlaceholders(assembled,templateReplacements)}`;
-				const tokenCount = await (useServerTokenization && isMikupadEndpoint && sessionStorage?.sessionEndpoint
+				const tokenCount = await (useServerTokenization && isMiyapadEndpoint && sessionStorage?.sessionEndpoint
 					? serverTokenCount({ sessionEndpoint: sessionStorage.sessionEndpoint, content, signal: ac.signal })
 					: getTokenCount({
 						endpoint,
@@ -80,7 +80,7 @@ export function useTokenCounters() {
 						...(endpointAPI == API_OPENAI_COMPAT || endpointAPI == API_LLAMA_CPP ? { endpointAPIKey } : {}),
 						content,
 						signal: ac.signal,
-						...(isMikupadEndpoint ? { proxyEndpoint: sessionStorage.proxyEndpoint } : {})
+						...(isMiyapadEndpoint ? { proxyEndpoint: sessionStorage.proxyEndpoint } : {})
 					})
 				);
 				setMemoryTokens((prevMemoryTokens) => ({
@@ -112,7 +112,7 @@ export function useTokenCounters() {
 		const to = setTimeout(async () => {
 			try {
 				const content = `${replacePlaceholders(assembled,templateReplacements)}`;
-				const tokenCount = await (useServerTokenization && isMikupadEndpoint && sessionStorage?.sessionEndpoint
+				const tokenCount = await (useServerTokenization && isMiyapadEndpoint && sessionStorage?.sessionEndpoint
 					? serverTokenCount({ sessionEndpoint: sessionStorage.sessionEndpoint, content, signal: ac.signal })
 					: getTokenCount({
 						endpoint,
@@ -120,7 +120,7 @@ export function useTokenCounters() {
 						...(endpointAPI == API_OPENAI_COMPAT || endpointAPI == API_LLAMA_CPP ? { endpointAPIKey } : {}),
 						content,
 						signal: ac.signal,
-						...(isMikupadEndpoint ? { proxyEndpoint: sessionStorage.proxyEndpoint } : {})
+						...(isMiyapadEndpoint ? { proxyEndpoint: sessionStorage.proxyEndpoint } : {})
 					})
 				);
 				setMemoryTokens((prevMemoryTokens) => ({

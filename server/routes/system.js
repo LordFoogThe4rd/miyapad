@@ -6,7 +6,7 @@ const SERVER_VERSION = 4;
 
 module.exports = function(app, db) {
     app.get('/', (req, res) => {
-        res.sendFile(path.join(__dirname, '..', '..', 'dist', 'mikupad.html'));
+        res.sendFile(path.join(__dirname, '..', '..', 'dist', 'miyapad.html'));
     });
 
     app.get('/version', (req, res) => {

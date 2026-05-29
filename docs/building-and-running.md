@@ -6,7 +6,7 @@ From the root directory:
 
 1. Install dependencies: `npm install`
 2. Start the development server: `npm start` (Runs `parcel` dev server)
-3. Build for production: `npm run build` (Runs `parcel build mikupad.html --no-cache`)
+3. Build for production: `npm run build` (Runs `parcel build miyapad.html --no-cache`)
 
 ## Backend Server
 

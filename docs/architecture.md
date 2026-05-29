@@ -2,7 +2,7 @@
 
 ## 1. Storage Abstraction Layer
 
-Mikupad is designed to run seamlessly as a fully self-contained local web app (storing data in the browser) or as a client connected to the Mikupad Node.js server. This is achieved via a pluggable database adapter interface:
+Miyapad is designed to run seamlessly as a fully self-contained local web app (storing data in the browser) or as a client connected to the Miyapad Node.js server. This is achieved via a pluggable database adapter interface:
 
 ```mermaid
 graph TD
@@ -16,7 +16,7 @@ graph TD
 ```
 
 - **`AbstractStorage` (`src/storage/AbstractStorage.js`)**: Base class that coordinates database requests. It implements a **500ms debounced save queue** (`enqueueSave`) to avoid excessive disk/DB writes during rapid user editing.
-- **`IndexedDBAdapter` (`src/storage/IndexedDBAdapter.js`)**: Communicates with the browser's IndexedDB engine (Database `MikuPad`, version 4). Handles database upgrades, persistence requests, exports, and imports.
+- **`IndexedDBAdapter` (`src/storage/IndexedDBAdapter.js`)**: Communicates with the browser's IndexedDB engine (Database `MiyaPad`, version 4). Handles database upgrades, persistence requests, exports, and imports.
 - **`ServerDBAdapter` (`src/storage/ServerDBAdapter.js`)**: Converts database calls to HTTP POST requests hitting the Express server REST endpoints.
 - **Named Storage Optimization**: To prevent massive performance degradation, session titles and metadata are indexed separately in a `names` table/store as a JSON object `{name, created, modified}`. This allows the dedicated Sessions Modal to quickly search, list, and sort sessions by creation or modification timestamps without pulling heavy compressed session history from the database.
 

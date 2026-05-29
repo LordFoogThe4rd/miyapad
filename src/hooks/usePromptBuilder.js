@@ -188,7 +188,7 @@ export function usePromptBuilder() {
 					return
 				}
 
-				// an invalid regex here can completely lock you out of mikupad until you clear
+				// an invalid regex here can completely lock you out of miyapad until you clear
 				// localStorage, so this is necessary to handle that.
 				try {
 					return new RegExp(key, "i").test(searchPrompt) && key !== "";
