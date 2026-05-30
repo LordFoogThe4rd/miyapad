@@ -20,39 +20,30 @@ export function ContextModal({ isOpen, closeModal, tokens, memoryTokens, authorN
 		if (isOpen) setPlaygroundTokens(tokens);
 	}, [isOpen, tokens]);
 	useEffect(() => {
-		if (endpointAPI == API_OPENAI_COMPAT)
-			return;
-		const canServerTokenize = useServerTokenization && isMiyapadEndpoint && sessionStorage?.sessionEndpoint;
-		let cancelled = false;
+		const ac = new AbortController();
 		const to = setTimeout(async () => {
 			const content = playgroundRef.current;
 			try {
-				const count = await getTokenCount({
-					endpoint,
-					endpointAPI,
-					...(endpointAPI == API_OPENAI_COMPAT || endpointAPI == API_LLAMA_CPP ? { endpointAPIKey } : {}),
-					content,
-					...(isMiyapadEndpoint ? { proxyEndpoint: sessionStorage.proxyEndpoint } : {})
-				});
-				if (!cancelled) setPlaygroundTokens(count);
+				const count = await (useServerTokenization && isMiyapadEndpoint && sessionStorage?.sessionEndpoint
+					? serverTokenCount({ sessionEndpoint: sessionStorage.sessionEndpoint, content, signal: ac.signal })
+					: getTokenCount({
+						endpoint,
+						endpointAPI,
+						...(endpointAPI == API_OPENAI_COMPAT || endpointAPI == API_LLAMA_CPP ? { endpointAPIKey } : {}),
+						content,
+						signal: ac.signal,
+						...(isMiyapadEndpoint ? { proxyEndpoint: sessionStorage.proxyEndpoint } : {})
+					})
+				);
+				setPlaygroundTokens(count);
 			} catch (e) {
-				if (!cancelled) {
-					if (canServerTokenize) {
-						try {
-							const count = await serverTokenCount({ sessionEndpoint: sessionStorage.sessionEndpoint, content });
-							if (!cancelled) setPlaygroundTokens(count);
-							return;
-						} catch (e2) {
-							if (!cancelled)
-								reportError(e2);
-						}
-					}
+				if (e.name !== 'AbortError')
 					reportError(e);
-				}
 			}
 		}, 500);
-		return () => { cancelled = true; clearTimeout(to); };
-	}, [contextPlayground]);
+		ac.signal.addEventListener('abort', () => clearTimeout(to));
+		return () => ac.abort();
+	}, [contextPlayground, endpoint, endpointAPI, useServerTokenization]);
 	return html`
 		<${Modal} isOpen=${isOpen} onClose=${closeModal}
 			title="Context"
