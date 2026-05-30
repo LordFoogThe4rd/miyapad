@@ -1,5 +1,5 @@
 import { html } from 'htm/react';
-import { useState, useEffect, useCallback } from 'react';
+import { useState, useEffect, useLayoutEffect, useCallback, useRef } from 'react';
 import { Modal } from '../Modal.js';
 import { Checkbox } from '../controls/Checkbox.js';
 import { InputBox } from '../controls/InputBox.js';
@@ -21,6 +21,48 @@ const tabStyle = (active) => ({
 
 export function PreferencesModal({ isOpen, closeModal, settings }) {
 	const [activeTab, setActiveTab] = useState('editor');
+	const contentRef = useRef(null);
+	const prevHeightRef = useRef(null);
+
+	// Capture the outgoing tab's height synchronously before React commits the new tab's DOM
+	const switchTab = (tab) => {
+		if (tab === activeTab) return;
+		const el = contentRef.current;
+		if (el) {
+			prevHeightRef.current = el.offsetHeight;
+		}
+		setActiveTab(tab);
+	};
+
+	// After React commits the new tab content, animate from old height to new height
+	useLayoutEffect(() => {
+		const el = contentRef.current;
+		if (!el) return;
+
+		const prevHeight = prevHeightRef.current;
+		// On first mount (no previous height), let content render at natural size — no animation
+		if (prevHeight == null) return;
+		prevHeightRef.current = null;
+
+		const newHeight = el.scrollHeight;
+		// Clip overflow only during the transition
+		el.style.overflow = 'hidden';
+		// Pin to old height so the transition has a starting point
+		el.style.height = prevHeight + 'px';
+		// Force layout so the browser registers the starting value
+		void el.offsetHeight;
+		// Set target height to trigger CSS transition
+		el.style.height = newHeight + 'px';
+
+		const onEnd = (e) => {
+			if (e.target !== el) return;
+			// Release to auto so the container can adapt if content changes internally
+			el.style.height = '';
+			el.style.overflow = '';
+		};
+		el.addEventListener('transitionend', onEnd);
+		return () => el.removeEventListener('transitionend', onEnd);
+	}, [activeTab]);
 
 	const {
 		fontSizeMultiplier, setFontSizeMultiplier,
@@ -99,23 +141,23 @@ export function PreferencesModal({ isOpen, closeModal, settings }) {
 			<div className="vbox">
 				<div className="hbox" style=${{ gap: 0 }}>
 					<button style=${tabStyle(activeTab === 'editor')}
-						onClick=${() => setActiveTab('editor')}>
+						onClick=${() => switchTab('editor')}>
 						Editor
 					</button>
 					<button style=${tabStyle(activeTab === 'screenshot')}
-						onClick=${() => setActiveTab('screenshot')}>
+						onClick=${() => switchTab('screenshot')}>
 						Screenshot
 					</button>
 					${isMiyapadEndpoint && html`
 						<button style=${tabStyle(activeTab === 'server')}
-							onClick=${() => setActiveTab('server')}>
+							onClick=${() => switchTab('server')}>
 							Server
 						</button>
 					`}
 				</div>
 
-				${activeTab === 'editor' && html`
-					<div className="vbox" style=${{ gap: '2px', marginTop: '8px' }}>
+				<div ref=${contentRef} style=${{ display: 'flex', flexDirection: 'column', gap: '2px', marginTop: '8px', transition: 'height 0.2s ease-in-out' }}>
+					${activeTab === 'editor' && html`
 						<${InputSlider} label="Font size multiplier" min="0.5" max="5" step="0.01" strict="1"
 							value=${fontSizeMultiplier} onValueChange=${setFontSizeMultiplier}/>
 						<${Checkbox} label="Enable spell checking"
@@ -195,11 +237,9 @@ export function PreferencesModal({ isOpen, closeModal, settings }) {
 									readOnly=${!!cancel} value=${ttsVolume} onValueChange=${setTTSVolume}/>
 							</div>
 						`}
-					</div>
-				`}
+					`}
 
-				${activeTab === 'screenshot' && html`
-					<div className="vbox" style=${{ gap: '2px', marginTop: '8px' }}>
+					${activeTab === 'screenshot' && html`
 						<div className="hbox" style=${{ gap: '1em' }}>
 							<${Checkbox} label="Include Session Name"
 								value=${screenshotIncludeSessionName}
@@ -245,11 +285,9 @@ export function PreferencesModal({ isOpen, closeModal, settings }) {
 						<${InputBox} label="Model Avatar URL (square preferred)"
 							value=${screenshotModelAvatarUrl}
 							onValueChange=${setScreenshotModelAvatarUrl}/>
-					</div>
-				`}
+					`}
 
-				${activeTab === 'server' && html`
-					<div className="vbox" style=${{ gap: '2px', marginTop: '8px' }}>
+					${activeTab === 'server' && html`
 						<${Checkbox} label="Use server-side tokenization"
 							value=${useServerTokenization}
 							onValueChange=${setUseServerTokenization}/>
@@ -277,8 +315,8 @@ export function PreferencesModal({ isOpen, closeModal, settings }) {
 								Place a tokenizer.json file in server/tokenizers/${'<model-name>'}/ on the Miyapad server.
 							</div>
 						`}
-					</div>
-				`}
+					`}
+				</div>
 			</div>
 		</${Modal}>`;
 }

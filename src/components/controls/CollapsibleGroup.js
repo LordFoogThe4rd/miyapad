@@ -1,7 +1,7 @@
 import { html } from 'htm/react';
 import { useState, useEffect, useRef } from 'react';
 import { usePersistentState } from '../../hooks/usePersistentState.js';
-import { SVG_ArrowDown, SVG_ArrowUp } from '../icons/index.js';
+import { SVG_ArrowUp } from '../icons/index.js';
 
 const SVResizeObserver = typeof ResizeObserver !== 'undefined' ? ResizeObserver : class { observe() {} disconnect() {} };
 
@@ -71,13 +71,10 @@ export function CollapsibleGroup({ label, stateLabel, menu, expanded, children }
 		}
 	};
 
-	const expandSvg = html`<${SVG_ArrowDown}/>`;
-	const collapseSvg = html`<${SVG_ArrowUp}/>`;
-
 	return html`
 		<div className="collapsible-group" style=${{position: 'relative'}}>
 			<div className="collapsible-header" onClick=${toggle}>
-				${isCollapsed ? expandSvg : collapseSvg}
+				<${SVG_ArrowUp} style=${{ 'transform': isCollapsed ? 'rotate(180deg)' : 'rotate(0deg)', 'transition': 'transform 0.15s ease-in-out' }}/>
 				${label}
 				<div class="flex-separator"></div>
 				${menu && html`

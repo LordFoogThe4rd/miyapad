@@ -23,6 +23,7 @@
 	flex-direction: column;
 	flex: none;
 	font-size: calc(1rem * var(--font-size-multiplier));
+	transition: background-color 0.2s ease-in-out, transform 0.1s ease-in-out, box-shadow 0.1s ease-in-out;
 }
 #probs > button.current {
 	background: var(--color-bg-highlight-1);

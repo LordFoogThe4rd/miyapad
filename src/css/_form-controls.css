@@ -19,6 +19,11 @@
 	color: inherit;
 	background: var(--color-bg-input-1);
 	flex: none;
+	transition: background-color 0.15s ease-in-out, outline 0.15s ease-in-out;
+}
+
+.InputBox > div > input:not(:read-only):hover, .SelectBox > select:not(:disabled):hover, .TextArea > textarea:not(:read-only):hover {
+	background: var(--color-bg-highlight-1);
 }
 
 .InputBox > div > input:read-only {
@@ -26,7 +31,7 @@
 	opacity: 0.8;
 }
 
-.InputBox > div > input:focus-visible {
+.InputBox > div > input:focus-visible, .SelectBox > select:focus-visible, .TextArea > textarea:focus-visible {
 	outline: 1px solid var(--color-base-0);
 }
 .SelectBox > select:disabled {
@@ -94,6 +99,17 @@
 	border-radius: 50%;
 	cursor: pointer;
 	margin-top: -2px;
+	transition: transform 0.15s ease-in-out, box-shadow 0.15s ease-in-out;
+}
+
+.InputSlider-container input[type="range"]:hover::-webkit-slider-thumb {
+	transform: scale(1.1);
+	box-shadow: 0 0 0 6px var(--color-bg-highlight-2);
+}
+
+.InputSlider-container input[type="range"]:active::-webkit-slider-thumb {
+	transform: scale(1.25);
+	box-shadow: 0 0 0 10px var(--color-bg-highlight-1);
 }
 
 .InputSlider-container input[type="range"]::-moz-range-track {
@@ -108,6 +124,17 @@
 	background: var(--color-light);
 	border-radius: 50%;
 	cursor: pointer;
+	transition: transform 0.15s ease-in-out, box-shadow 0.15s ease-in-out;
+}
+
+.InputSlider-container input[type="range"]:hover::-moz-range-thumb {
+	transform: scale(1.1);
+	box-shadow: 0 0 0 6px var(--color-bg-highlight-2);
+}
+
+.InputSlider-container input[type="range"]:active::-moz-range-thumb {
+	transform: scale(1.25);
+	box-shadow: 0 0 0 10px var(--color-bg-highlight-1);
 }
 
 .InputSlider-container input[type="range"]::-ms-track {

@@ -33,6 +33,10 @@
 	color: inherit;
 	background-color: var(--color-bg-input-1);
 	border-radius: 2px;
+	transition: background-color 0.15s ease-in-out;
+}
+.collapsible-header:hover {
+	background-color: var(--color-bg-highlight-1);
 }
 .collapsible-header svg {
 	margin-right: 5px;

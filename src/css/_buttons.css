@@ -8,6 +8,7 @@ button {
 	background: var(--color-bg-input-1);
 	border-radius: 2px;
 	cursor: pointer;
+	transition: background-color 0.15s ease-in-out, transform 0.1s ease-in-out, opacity 0.15s ease-in-out;
 }
 .sidebar-btn-icon {
 	display: inline-flex;
@@ -64,6 +65,7 @@ button:hover {
 }
 button:active {
 	background: var(--color-bg-highlight-2);
+	transform: scale(0.96);
 }
 button:disabled {
 	background: var(--color-bg-disabled-1);

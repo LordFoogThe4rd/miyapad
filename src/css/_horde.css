@@ -6,6 +6,7 @@
 	border-radius: 4px;
 	gap: 1em;
 	user-select: none;
+	transition: background-color 0.15s ease-in-out;
 }
 .horde-model-entry:hover {
 	background-color: var(--color-bg-highlight-3);

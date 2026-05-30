@@ -218,23 +218,31 @@ export function AppLayout() {
 	}, [promptAreaWidth]);
 	
 	useLayoutEffect(() => {
-		for (const theme of Object.values(allThemes)) {
-			document.documentElement.classList.remove(theme.className);
-		}
+		const applyTheme = () => {
+			for (const theme of Object.values(allThemes)) {
+				document.documentElement.classList.remove(theme.className);
+			}
 
-        const theme = allThemes[currentThemeName];
-        if (theme && theme.className !== 'default') {
-            document.documentElement.classList.add(theme.className);
-            const styleElement = document.getElementById('dynamic-theme-style');
-            if (styleElement) {
-                styleElement.textContent = theme.css;
-            }
-        } else {
-            const styleElement = document.getElementById('dynamic-theme-style');
-            if (styleElement) {
-                styleElement.textContent = '';
-            }
-        }
+	        const theme = allThemes[currentThemeName];
+	        if (theme && theme.className !== 'default') {
+	            document.documentElement.classList.add(theme.className);
+	            const styleElement = document.getElementById('dynamic-theme-style');
+	            if (styleElement) {
+	                styleElement.textContent = theme.css;
+	            }
+	        } else {
+	            const styleElement = document.getElementById('dynamic-theme-style');
+	            if (styleElement) {
+	                styleElement.textContent = '';
+	            }
+	        }
+		};
+
+		if (document.startViewTransition) {
+			document.startViewTransition(applyTheme);
+		} else {
+			applyTheme();
+		}
     }, [currentThemeName, allThemes]);
 
 	useEffect(() => {

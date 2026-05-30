@@ -1,4 +1,5 @@
 .floating-menu {
+	animation: fadeIn 0.15s ease-out;
 	position: absolute;
 	top: 30px;
 	right: 0px;
@@ -14,6 +15,7 @@
 }
 
 .EditorContextMenu {
+	animation: fadeIn 0.15s ease-out;
 	display: none;
 	position: absolute;
 	background: var(--color-bg-popover-1);
@@ -35,12 +37,15 @@
 .MenuItem {
 	padding: 10px 15px;
 	cursor: pointer;
-	transition: background-color 0.2s ease-in-out;
+	transition: background-color 0.15s ease-in-out, transform 0.1s ease-in-out;
 	font-size: 14px;
 	border-radius: 0px;
 }
 .MenuItem:not(.disabled):hover {
 	background: var(--color-bg-highlight-2) !important;
+}
+.MenuItem:not(.disabled):active {
+	transform: scale(0.98);
 }
 
 .MenuItem.disabled {
