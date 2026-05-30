@@ -1,6 +1,6 @@
 # Miyapad
 
-Miyapad is a web-based AI text generation interface. It serves as a high-fidelity frontend client to interact with various local and remote LLM APIs, including llama.cpp, KoboldCPP, OpenAI-compatible APIs, and AI Horde.
+Miyapad is a web-based AI text generation interface focused on autocompletion/Text Completion API. It serves as a high-fidelity frontend client to interact with various local and remote LLM APIs, including llama.cpp, KoboldCPP, OpenAI-compatible APIs, and AI Horde.
 
 The application features full local browser persistence via IndexedDB or centralized SQLite storage using an optional backend server. It supports rich features such as prompt templates, dynamic CSS themes, markdown previews, text-to-speech synthesis (TTS), token counts, interactive log-probability overlays, and a dedicated modal for session management with search and metadata-based sorting.
 
