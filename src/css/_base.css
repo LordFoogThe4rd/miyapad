@@ -106,10 +106,10 @@ body {
 }
 
 .expanded-text-area-settings {
-	margin: 8px 0 8px 0;
+	margin: 8px 0 0 0;
 	width:100%;
 	box-sizing: border-box;
-	height:25.5em;
+	height:24em;
 }
 
 #markdown-preview {
