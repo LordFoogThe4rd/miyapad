@@ -35,7 +35,12 @@ module.exports = function(app) {
             delete req.headers[header.toLowerCase()];
         });
 
-        const finalUrl = path ? `${targetBaseUrl}/${path}` : targetBaseUrl;
+        const finalUrl = path ? new URL(path, targetBaseUrl).href : targetBaseUrl;
+        const baseOrigin = new URL(targetBaseUrl).origin;
+        const basePath = new URL(targetBaseUrl).pathname;
+        if (!finalUrl.startsWith(baseOrigin + basePath)) {
+            return res.status(403).send('Path traversal detected');
+        }
 
         try {
             const response = await axios({
@@ -85,7 +90,12 @@ module.exports = function(app) {
             delete req.headers[header.toLowerCase()];
         });
 
-        const finalUrl = path ? `${targetBaseUrl}/${path}` : targetBaseUrl;
+        const finalUrl = path ? new URL(path, targetBaseUrl).href : targetBaseUrl;
+        const baseOrigin = new URL(targetBaseUrl).origin;
+        const basePath = new URL(targetBaseUrl).pathname;
+        if (!finalUrl.startsWith(baseOrigin + basePath)) {
+            return res.status(403).send('Path traversal detected');
+        }
 
         try {
             const response = await axios.get(finalUrl, {
@@ -123,7 +133,12 @@ module.exports = function(app) {
             delete req.headers[header.toLowerCase()];
         });
 
-        const finalUrl = path ? `${targetBaseUrl}/${path}` : targetBaseUrl;
+        const finalUrl = path ? new URL(path, targetBaseUrl).href : targetBaseUrl;
+        const baseOrigin = new URL(targetBaseUrl).origin;
+        const basePath = new URL(targetBaseUrl).pathname;
+        if (!finalUrl.startsWith(baseOrigin + basePath)) {
+            return res.status(403).send('Path traversal detected');
+        }
 
         try {
             const response = await axios.delete(finalUrl, {
