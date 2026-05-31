@@ -6,6 +6,14 @@
 	from { transform: translateY(20px) scale(0.98); opacity: 0; }
 	to { transform: translateY(0) scale(1); opacity: 1; }
 }
+@keyframes fadeOut {
+	from { opacity: 1; }
+	to { opacity: 0; }
+}
+@keyframes slideDown {
+	from { transform: translateY(0) scale(1); opacity: 1; }
+	to { transform: translateY(20px) scale(0.98); opacity: 0; }
+}
 
 .modal-overlay {
 	animation: fadeIn 0.15s ease-out;
@@ -19,6 +27,9 @@
 	align-items: center;
 	justify-content: center;
 	z-index: 20;
+}
+.modal-overlay.closing {
+	animation: fadeOut 0.15s ease-out;
 }
 .modal-container {
 	width: 100%;
@@ -39,6 +50,9 @@
 	border-radius: 5px;
 	display: flex;
 	flex-direction: column;
+}
+.modal.closing {
+	animation: slideDown 0.15s ease-out;
 }
 .button-modal-top {
 	all:unset;
