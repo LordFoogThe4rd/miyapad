@@ -52,9 +52,9 @@ module.exports = function(app, db) {
 
     app.post('/zstd_incremental_maintenance', (req, res) => {
         const { duration, db_load } = req.body;
-        const durationArg = duration !== undefined && duration !== null ? duration : 'null';
+        const durationArg = duration !== undefined && duration !== null ? duration : null;
         const dbLoadArg = db_load !== undefined ? db_load : 1.0;
-        db.run(`SELECT zstd_incremental_maintenance(${durationArg}, ${dbLoadArg})`, (err) => {
+        db.run('SELECT zstd_incremental_maintenance(?, ?)', [durationArg, dbLoadArg], (err) => {
             if (err) {
                 res.status(500).json({ ok: false, message: 'Error running maintenance: ' + err.message });
             } else {
