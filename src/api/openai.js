@@ -175,7 +175,8 @@ async function openaiTabbyDetokenize({ endpoint, endpointAPIKey, proxyEndpoint, 
 }
 
 export async function openaiModels({ endpoint, endpointAPIKey, proxyEndpoint, signal, ...options }) {
-	const isTogetherAI = endpoint.toLowerCase().includes("together.xyz");
+	const endpointHost = (() => { try { return new URL(endpoint).hostname; } catch { return ''; } })();
+	const isTogetherAI = endpointHost === "api.together.xyz";
 
 	const res = await fetch(`${proxyEndpoint ?? endpoint}/v1/models`, {
 		method: 'GET',
@@ -202,9 +203,10 @@ export async function openaiModels({ endpoint, endpointAPIKey, proxyEndpoint, si
 }
 
 function openaiConvertOptions(options, endpoint, isChat) {
-	const isOpenAI = endpoint.toLowerCase().includes("openai.com");
-	const isTogetherAI = endpoint.toLowerCase().includes("together.xyz");
-	const isOpenRouter = endpoint.toLowerCase().includes("openrouter.ai");
+	const endpointHost = (() => { try { return new URL(endpoint).hostname; } catch { return ''; } })();
+	const isOpenAI = endpointHost === "api.openai.com" || endpointHost.endsWith(".openai.com");
+	const isTogetherAI = endpointHost === "api.together.xyz";
+	const isOpenRouter = endpointHost === "openrouter.ai";
 	const swapOption = (lhs, rhs) => {
 		if (lhs in options) {
 			options[rhs] = options[lhs];
@@ -214,7 +216,7 @@ function openaiConvertOptions(options, endpoint, isChat) {
 	if (options.n_predict === -1) {
 		options.n_predict = 1024;
 	}
-	if (isOpenAI && options.n_probs > 5 || endpoint.toLowerCase().includes("xai")) {
+	if (isOpenAI && options.n_probs > 5 || endpointHost === "api.x.ai") {
 		options.n_probs = 5;
 	}
 	if (isTogetherAI && options.n_probs > 1) {

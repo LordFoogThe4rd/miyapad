@@ -41,7 +41,8 @@ export async function koboldCppTokenize({ endpoint, endpointAPIKey, proxyEndpoin
 }
 
 export function koboldCppConvertOptions(options, endpoint) {
-	const isHorde = endpoint.toLowerCase().includes("aihorde.net");
+	const endpointHost = (() => { try { return new URL(endpoint).hostname; } catch { return ''; } })();
+	const isHorde = endpointHost === "aihorde.net" || endpointHost.endsWith(".aihorde.net");
 	const swapOption = (lhs, rhs) => {
 		if (lhs in options) {
 			options[rhs] = options[lhs];
