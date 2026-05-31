@@ -208,8 +208,9 @@ export function SessionsModal({ isOpen, closeModal, sessionStorage, cancel }) {
 					<button
 						className="sessions-modal-sort-btn"
 						title=${sortAsc ? "Ascending" : "Descending"}
-						onClick=${() => setSortAsc(v => !v)}>
-						${sortAsc ? '↑' : '↓'}
+						onClick=${() => setSortAsc(v => !v)}
+						style=${{ transform: sortAsc ? 'rotate(0deg)' : 'rotate(180deg)' }}>
+						↑
 					</button>
 				</div>
 				<div className="sessions-modal-toolbar-row">

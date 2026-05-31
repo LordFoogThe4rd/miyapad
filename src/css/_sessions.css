@@ -92,6 +92,7 @@
 	line-height: 1;
 	min-width: 2rem;
 	align-self: flex-end;
+	transition: transform 0.2s ease-in-out;
 }
 .sessions-modal-list {
 	max-height: 50vh;
@@ -130,6 +131,7 @@
 
 .sessions-modal-row {
 	cursor: pointer;
+	transition: background-color 0.15s ease-in-out;
 }
 .sessions-modal-row td {
 	padding: 5px 8px;
@@ -147,6 +149,7 @@
 }
 .sessions-modal-row-new {
 	cursor: default;
+	animation: fadeIn 0.2s ease-out;
 }
 .sessions-modal-name {
 	overflow: hidden;
@@ -171,6 +174,7 @@
 	display: inline-flex;
 	align-items: center;
 	line-height: 0;
+	transition: opacity 0.15s;
 }
 .sessions-action-btn:hover {
 	opacity: 1;

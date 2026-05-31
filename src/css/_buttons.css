@@ -109,3 +109,6 @@ button.completing {
 	display: flex;
 	gap: 8px;
 }
+.instructTemplatesImportExport > .hbox-button {
+	min-width: max-content;
+}
