@@ -1,11 +1,46 @@
 const axios = require('axios');
+const { URL } = require('url');
 const { headersToRemove } = require('../lib/utils');
+
+const BLOCKED_HOSTS = new Set([
+    'localhost', '127.0.0.1', '0.0.0.0', '[::1]',
+    '10.0.0.0', '10.0.0.1',
+    '172.16.0.0', '172.17.0.0', '172.18.0.0', '172.19.0.0',
+    '172.20.0.0', '172.21.0.0', '172.22.0.0', '172.23.0.0',
+    '172.24.0.0', '172.25.0.0', '172.26.0.0', '172.27.0.0',
+    '172.28.0.0', '172.29.0.0', '172.30.0.0', '172.31.0.0',
+    '192.168.0.0', '192.168.0.1',
+]);
+
+function isPrivateHostname(hostname) {
+    const lower = hostname.toLowerCase();
+    if (BLOCKED_HOSTS.has(lower)) return true;
+    if (lower.endsWith('.internal') || lower.endsWith('.local')) return true;
+    if (/^10\.\d+\.\d+\.\d+$/.test(lower)) return true;
+    if (/^172\.(1[6-9]|2\d|3[01])\.\d+\.\d+$/.test(lower)) return true;
+    if (/^192\.168\.\d+\.\d+$/.test(lower)) return true;
+    return false;
+}
+
+function isValidProxyUrl(urlString) {
+    try {
+        const parsed = new URL(urlString);
+        if (!['http:', 'https:'].includes(parsed.protocol)) return false;
+        if (isPrivateHostname(parsed.hostname)) return false;
+        return true;
+    } catch {
+        return false;
+    }
+}
 
 module.exports = function(app) {
     app.get('/proxy-image', async (req, res) => {
         const imageUrl = req.query.url;
         if (!imageUrl) {
             return res.status(400).send('Missing url query parameter');
+        }
+        if (!isValidProxyUrl(imageUrl)) {
+            return res.status(403).send('Invalid or disallowed image URL');
         }
         try {
             const response = await axios.get(imageUrl, {
@@ -27,6 +62,10 @@ module.exports = function(app) {
         const path = req.params[0] || '';
         const targetBaseUrl = req.headers['x-real-url'];
         delete req.headers['x-real-url'];
+
+        if (!targetBaseUrl || !isValidProxyUrl(targetBaseUrl)) {
+            return res.status(403).send('Invalid or disallowed target URL');
+        }
 
         const authorization = req.headers['x-real-authorization'];
         delete req.headers['x-real-authorization'];
@@ -65,15 +104,11 @@ module.exports = function(app) {
             });
         } catch (error) {
             if (error.response) {
-                if (error.response.data.pipe !== undefined) {
-                    error.response.data.pipe(res.status(error.response.status));
-                } else {
-                    res.status(error.response.status).send(error.response.data);
-                }
+                res.sendStatus(error.response.status);
             } else if (error.request) {
                 res.status(504).send('No response from target server.');
             } else {
-                res.status(500).send(`Error setting up request to target server: ${error.message}`);
+                res.status(500).send('Error setting up request to target server.');
             }
         }
     };
@@ -82,6 +117,10 @@ module.exports = function(app) {
         const path = req.params[0] || '';
         const targetBaseUrl = req.headers['x-real-url'];
         delete req.headers['x-real-url'];
+
+        if (!targetBaseUrl || !isValidProxyUrl(targetBaseUrl)) {
+            return res.status(403).send('Invalid or disallowed target URL');
+        }
 
         const authorization = req.headers['x-real-authorization'];
         delete req.headers['x-real-authorization'];
@@ -112,11 +151,11 @@ module.exports = function(app) {
             res.send(response.data);
         } catch (error) {
             if (error.response) {
-                res.status(error.response.status).send(error.response.data);
+                res.sendStatus(error.response.status);
             } else if (error.request) {
                 res.status(504).send('No response from target server.');
             } else {
-                res.status(500).send(`Error setting up request to target server: ${error.message}`);
+                res.status(500).send('Error setting up request to target server.');
             }
         }
     };
@@ -125,6 +164,10 @@ module.exports = function(app) {
         const path = req.params[0] || '';
         const targetBaseUrl = req.headers['x-real-url'];
         delete req.headers['x-real-url'];
+
+        if (!targetBaseUrl || !isValidProxyUrl(targetBaseUrl)) {
+            return res.status(403).send('Invalid or disallowed target URL');
+        }
 
         const authorization = req.headers['x-real-authorization'];
         delete req.headers['x-real-authorization'];
@@ -154,11 +197,11 @@ module.exports = function(app) {
             res.send(response.data);
         } catch (error) {
             if (error.response) {
-                res.status(error.response.status).send(error.response.data);
+                res.sendStatus(error.response.status);
             } else if (error.request) {
                 res.status(504).send('No response from target server.');
             } else {
-                res.status(500).send(`Error setting up request to target server: ${error.message}`);
+                res.status(500).send('Error setting up request to target server.');
             }
         }
     };
