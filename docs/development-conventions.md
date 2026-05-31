@@ -23,6 +23,20 @@ When modifying session storage columns or tables, preserve the adapter architect
 
 Always run `npm run build` after editing any source file (`src/` or `server/`) and before declaring work complete. The build catches broken imports, missing exports, and syntax errors.
 
+## Changelog Maintenance
+
+CHANGELOG.md is manually curated. After each non-`docs` commit, add an entry under the `[???]` unreleased heading in `CHANGELOG.md` with the appropriate type subheading (`### Added`, `### Fixed`, `### Changed`, `### Removed`). The `[???]` placeholder is replaced with the actual version number at release time.
+
+```markdown
+## [???] - unreleased
+
+### Added
+- New feature description
+
+### Fixed
+- Bug fix description
+```
+
 ## CSS Conventions
 
 See [CSS Architecture](css.md) for full documentation. Key points:
