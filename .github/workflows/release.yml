@@ -19,8 +19,19 @@ jobs:
           cache: 'npm'
       - run: npm ci
       - run: npm run build
+      - name: Extract changelog section
+        run: |
+          TAG=${GITHUB_REF#refs/tags/}
+          VERSION=${TAG#v}
+          awk -v ver="$VERSION" '
+            /^## \[/ { if (found) exit; if (index($0, "[" ver "]")) found=1; next }
+            found { print }
+          ' CHANGELOG.md > release_notes.md
+          if [ ! -s release_notes.md ]; then
+            echo "No changelog entry found for $TAG" > release_notes.md
+          fi
       - name: Create Release
         uses: softprops/action-gh-release@v2
         with:
           files: dist/miyapad.html
-          generate_release_notes: true
+          body_path: release_notes.md
