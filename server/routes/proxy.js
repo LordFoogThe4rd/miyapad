@@ -104,11 +104,20 @@ module.exports = function(app) {
             });
         } catch (error) {
             if (error.response) {
-                res.sendStatus(error.response.status);
+                if (error.response.data?.pipe) {
+                    const chunks = [];
+                    error.response.data.on('data', c => chunks.push(c));
+                    error.response.data.on('end', () => {
+                        const body = Buffer.concat(chunks).toString('utf8');
+                        res.status(error.response.status).json({ error: body });
+                    });
+                } else {
+                    res.status(error.response.status).json({ error: error.response.data });
+                }
             } else if (error.request) {
-                res.status(504).send('No response from target server.');
+                res.status(504).json({ error: 'No response from target server.' });
             } else {
-                res.status(500).send('Error setting up request to target server.');
+                res.status(500).json({ error: 'Error setting up request to target server.' });
             }
         }
     };
@@ -151,11 +160,11 @@ module.exports = function(app) {
             res.send(response.data);
         } catch (error) {
             if (error.response) {
-                res.sendStatus(error.response.status);
+                res.status(error.response.status).json({ error: error.response.data });
             } else if (error.request) {
-                res.status(504).send('No response from target server.');
+                res.status(504).json({ error: 'No response from target server.' });
             } else {
-                res.status(500).send('Error setting up request to target server.');
+                res.status(500).json({ error: 'Error setting up request to target server.' });
             }
         }
     };
@@ -197,11 +206,11 @@ module.exports = function(app) {
             res.send(response.data);
         } catch (error) {
             if (error.response) {
-                res.sendStatus(error.response.status);
+                res.status(error.response.status).json({ error: error.response.data });
             } else if (error.request) {
-                res.status(504).send('No response from target server.');
+                res.status(504).json({ error: 'No response from target server.' });
             } else {
-                res.status(500).send('Error setting up request to target server.');
+                res.status(500).json({ error: 'Error setting up request to target server.' });
             }
         }
     };
