@@ -28,7 +28,10 @@ async function ensureTokenizerModule() {
 async function loadTokenizer(model) {
 	await ensureTokenizerModule();
 
-	const modelDir = path.join(TOKENIZERS_DIR, model);
+	const modelDir = path.resolve(TOKENIZERS_DIR, model);
+	if (!modelDir.startsWith(TOKENIZERS_DIR + path.sep)) {
+		throw new Error(`Invalid tokenizer model path`);
+	}
 	if (!fs.existsSync(modelDir)) {
 		throw new Error(`Tokenizer model "${model}" not found in ${TOKENIZERS_DIR}`);
 	}
