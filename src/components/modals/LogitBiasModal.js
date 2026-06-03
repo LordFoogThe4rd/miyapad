@@ -63,7 +63,7 @@ export function LogitBiasModal({ isOpen, closeModal, biasState, apiConfig, cance
 		try {
 			// if the string is a comma separated list of numbers wrapped in /
 			var tokens;
-			const isTokenIds = biasString.match(/^(?<!\\)\/(\s*\d+\s*,?\s*)+(?<!\\)\/$/g);
+			const isTokenIds = biasString.match(/^(?<!\\)\/\s*\d+(\s*,\s*\d+)*\s*(?<!\\)\/$/g);
 			if ( isTokenIds != null ) {
 				// split by "," and use it as token ids directly
 				tokens = {
