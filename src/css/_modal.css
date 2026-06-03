@@ -29,7 +29,7 @@
 	z-index: 20;
 }
 .modal-overlay.closing {
-	animation: fadeOut 0.15s ease-out;
+	animation: fadeOut 0.15s ease-out forwards;
 }
 .modal-container {
 	width: 100%;
@@ -52,7 +52,7 @@
 	flex-direction: column;
 }
 .modal.closing {
-	animation: slideDown 0.15s ease-out;
+	animation: slideDown 0.15s ease-out forwards;
 }
 .button-modal-top {
 	all:unset;
