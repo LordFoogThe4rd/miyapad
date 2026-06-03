@@ -38,8 +38,10 @@ export function ContextModal({ isOpen, closeModal, tokens, memoryTokens, authorN
 				);
 				setPlaygroundTokens(count);
 			} catch (e) {
-				if (e.name !== 'AbortError')
+				if (e.name !== 'AbortError') {
 					reportError(e);
+					setPlaygroundTokens(0);
+				}
 			}
 		}, 500);
 		ac.signal.addEventListener('abort', () => clearTimeout(to));
