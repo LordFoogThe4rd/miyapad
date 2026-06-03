@@ -1,5 +1,5 @@
 import { html } from 'htm/react';
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useRef } from 'react';
 import { Modal } from '../Modal.js';
 import { CollapsibleGroup } from '../controls/CollapsibleGroup.js';
 import { getTokenCount, serverTokenCount } from '../../api/index.js';
@@ -9,12 +9,14 @@ export function ContextModal({ isOpen, closeModal, tokens, memoryTokens, authorN
 	const { sessionStorage, endpoint, endpointAPI, endpointAPIKey, isMiyapadEndpoint, useServerTokenization } = apiConfig;
 	const [contextPlayground, setContextPlayground] = useState(finalPromptText);
 	const [playgroundTokens, setPlaygroundTokens] = useState(tokens);
+	const prevIsOpen = useRef(isOpen);
 	useEffect(() => {
-		if (isOpen) setContextPlayground(finalPromptText);
-	}, [isOpen, finalPromptText]);
-	useEffect(() => {
-		if (isOpen) setPlaygroundTokens(tokens);
-	}, [isOpen, tokens]);
+		if (isOpen && !prevIsOpen.current) {
+			setContextPlayground(finalPromptText);
+			setPlaygroundTokens(tokens);
+		}
+		prevIsOpen.current = isOpen;
+	}, [isOpen, finalPromptText, tokens]);
 	useEffect(() => {
 		if (!isOpen) return;
 		const ac = new AbortController();
