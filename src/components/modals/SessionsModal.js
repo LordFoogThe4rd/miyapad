@@ -37,6 +37,8 @@ export function SessionsModal({ isOpen, closeModal, sessionStorage, cancel }) {
 			setSearchQuery('');
 			setRenamingId(undefined);
 			setIsCreating(false);
+			setSortByState(localStorage.getItem('miyapad-sessions-sortBy') || 'modified');
+			setSortAscState(localStorage.getItem('miyapad-sessions-sortAsc') === 'true');
 		}
 	}, [isOpen]);
 
