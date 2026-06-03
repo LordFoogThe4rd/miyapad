@@ -155,6 +155,9 @@ export class SessionStorage extends AbstractStorage {
 
 		this.selectedSession = +sessionId;
 		this.sessions[this.selectedSession] = (await this.loadFromDatabase(db, this.selectedSession));
+		this.sessions[this.selectedSession].modified = Date.now();
+
+		await this.saveToDatabase(db, this.selectedSession, this.sessions[this.selectedSession]);
 
 		this.dispatchChangeEvent();
 		this.dispatchSessionChangeEvent();
