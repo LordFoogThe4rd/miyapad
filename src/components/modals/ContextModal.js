@@ -1,5 +1,5 @@
 import { html } from 'htm/react';
-import { useState, useEffect, useRef } from 'react';
+import { useState, useEffect } from 'react';
 import { Modal } from '../Modal.js';
 import { CollapsibleGroup } from '../controls/CollapsibleGroup.js';
 import { getTokenCount, serverTokenCount } from '../../api/index.js';
@@ -9,10 +9,6 @@ export function ContextModal({ isOpen, closeModal, tokens, memoryTokens, authorN
 	const { sessionStorage, endpoint, endpointAPI, endpointAPIKey, isMiyapadEndpoint, useServerTokenization } = apiConfig;
 	const [contextPlayground, setContextPlayground] = useState(finalPromptText);
 	const [playgroundTokens, setPlaygroundTokens] = useState(tokens);
-	const playgroundRef = useRef(contextPlayground);
-	useEffect(() => {
-		playgroundRef.current = contextPlayground;
-	}, [contextPlayground]);
 	useEffect(() => {
 		if (isOpen) setContextPlayground(finalPromptText);
 	}, [isOpen, finalPromptText]);
@@ -23,7 +19,7 @@ export function ContextModal({ isOpen, closeModal, tokens, memoryTokens, authorN
 		if (!isOpen) return;
 		const ac = new AbortController();
 		const to = setTimeout(async () => {
-			const content = playgroundRef.current;
+			const content = contextPlayground;
 			try {
 				const count = await (useServerTokenization && isMiyapadEndpoint && sessionStorage?.sessionEndpoint
 					? serverTokenCount({ sessionEndpoint: sessionStorage.sessionEndpoint, content, signal: ac.signal })
