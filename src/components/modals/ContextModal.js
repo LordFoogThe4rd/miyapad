@@ -20,6 +20,7 @@ export function ContextModal({ isOpen, closeModal, tokens, memoryTokens, authorN
 		if (isOpen) setPlaygroundTokens(tokens);
 	}, [isOpen, tokens]);
 	useEffect(() => {
+		if (!isOpen) return;
 		const ac = new AbortController();
 		const to = setTimeout(async () => {
 			const content = playgroundRef.current;
@@ -43,7 +44,7 @@ export function ContextModal({ isOpen, closeModal, tokens, memoryTokens, authorN
 		}, 500);
 		ac.signal.addEventListener('abort', () => clearTimeout(to));
 		return () => ac.abort();
-	}, [contextPlayground, endpoint, endpointAPI, useServerTokenization]);
+	}, [isOpen, contextPlayground, endpoint, endpointAPI, useServerTokenization]);
 	return html`
 		<${Modal} isOpen=${isOpen} onClose=${closeModal}
 			title="Context"
