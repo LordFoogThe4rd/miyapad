@@ -114,31 +114,37 @@ export function PromptContainer({ sidebarHeight }) {
 
 		let nv = target.value;
 		if (hideChatTemplates && cleanToOrig) {
-			let startCount = 0;
-			while (startCount < cleanPromptText.length && startCount < nv.length && cleanPromptText[startCount] === nv[startCount]) {
-				startCount++;
+			let startCount = 0, oldEnd = cleanPromptText.length, newEnd = nv.length;
+
+			if (newEnd >= oldEnd && nv.startsWith(cleanPromptText)) {
+				startCount = oldEnd;
+			} else if (oldEnd >= newEnd && cleanPromptText.startsWith(nv)) {
+				startCount = newEnd;
+				oldEnd = newEnd;
+			} else {
+				while (startCount < oldEnd && startCount < newEnd && cleanPromptText[startCount] === nv[startCount])
+					startCount++;
+				while (oldEnd > startCount && newEnd > startCount && cleanPromptText[oldEnd - 1] === nv[newEnd - 1]) {
+					oldEnd--;
+					newEnd--;
+				}
 			}
-			let oldEnd = cleanPromptText.length;
-			let newEnd = nv.length;
-			while (oldEnd > startCount && newEnd > startCount && cleanPromptText[oldEnd - 1] === nv[newEnd - 1]) {
-				oldEnd--;
-				newEnd--;
-			}
+
 			const inserted = nv.slice(startCount, newEnd);
 			const origStart = cleanToOrig[startCount];
 			const origEnd = cleanToOrig[oldEnd];
 
-			let affixesInDeleted = "";
+			let affixesInDeleted = [];
 			let cleanIndex = startCount;
 			for (let k = origStart; k < origEnd; k++) {
 				if (cleanIndex < oldEnd && cleanToOrig[cleanIndex] === k) {
 					cleanIndex++;
 				} else {
-					affixesInDeleted += promptText[k];
+					affixesInDeleted.push(promptText[k]);
 				}
 			}
 
-			nv = promptText.slice(0, origStart) + inserted + affixesInDeleted + promptText.slice(origEnd);
+			nv = promptText.slice(0, origStart) + inserted + affixesInDeleted.join('') + promptText.slice(origEnd);
 		}
 
 		setPromptChunks(oldPrompt => {
@@ -159,9 +165,10 @@ export function PromptContainer({ sidebarHeight }) {
 				const chunk = oldPrompt[j - 1];
 				if (!newValue.endsWith(chunk.content))
 					break;
-				end.unshift(chunk);
+				end.push(chunk);
 				newValue = newValue.slice(0, -chunk.content.length);
 			}
+			end.reverse();
 
 			// Merge chunks if they're from the user
 			let mergeUserChunks = (chunks, newContent) => {
