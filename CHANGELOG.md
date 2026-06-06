@@ -1,5 +1,24 @@
 # Changelog
 
+## [2.2.0] - 2026-06-06
+
+### Added
+- Editable context playground with live token counting in ContextModal
+
+### Fixed
+- ReDoS vulnerability in logit bias token ID regex
+- Context playground state syncing only on modal open (not on every prop change)
+- Token count reset to 0 on error for consistency
+- Unnecessary API calls by guarding token counting effect with `isOpen`
+
+### Changed
+- Rename AGENTS.md section header from "Quick Links" to "Documentation"
+
+### Performance
+- Optimize `onInput` for long prompts: O(n²) back-matching → O(n) via push+reverse
+- Add early-exit for append/deletion in cleanToOrig block using startsWith/endsWith
+- Replace string concatenation with array join in affix reconstruction
+
 ## [2.1.0] - 2026-05-31
 
 ### Added
