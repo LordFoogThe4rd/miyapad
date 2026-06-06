@@ -2,7 +2,7 @@
 
 Web-based AI text generation interface. React 19 frontend with optional Node.js/SQLite backend.
 
-## Quick Links
+## Documentation
 
 - [Project Overview](docs/README.md)
 - [Technology Stack](docs/technology-stack.md)
@@ -13,5 +13,5 @@ Web-based AI text generation interface. React 19 frontend with optional Node.js/
 - [Server-Side Tokenization](docs/tokenization.md)
 - [Building & Running](docs/building-and-running.md)
 - [CSS Architecture](docs/css.md)
-- [Development Conventions](docs/development-conventions.md)
+- [Development Conventions](docs/development-conventions.md) (IMPORTANT! READ BEFORE WORKING)
 - [Screenshot Capture](docs/screenshot-capture.md)
