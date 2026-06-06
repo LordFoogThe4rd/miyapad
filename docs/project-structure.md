@@ -16,7 +16,6 @@ miyapad/
 │   │   ├── system.js              # /version, /vacuum, /log
 │   │   ├── tokenizer.js           # /api/v1/tokenizer/* endpoints
 │   │   └── zstd.js                # /zstd_* management endpoints
-│   ├── libsqlite_zstd.so          # Precompiled sqlite-zstd shared library for Linux
 │   ├── server.js                  # Entrypoint: arg parsing, app setup, mount routes, start
 │   ├── package.json               # Backend dependencies
 │   ├── start.sh / start.bat       # Startup scripts
