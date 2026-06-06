@@ -1,8 +1,50 @@
 import { html } from 'htm/react';
+import { useState, useEffect, useRef } from 'react';
 import { Modal } from '../Modal.js';
 import { CollapsibleGroup } from '../controls/CollapsibleGroup.js';
+import { getTokenCount, serverTokenCount } from '../../api/index.js';
+import { API_OPENAI_COMPAT, API_LLAMA_CPP } from '../../constants.js';
 
-export function ContextModal({ isOpen, closeModal, tokens, memoryTokens, authorNoteTokens, handleMemoryTokensChange, finalPromptText, defaultPresets, cancel }) {
+export function ContextModal({ isOpen, closeModal, tokens, memoryTokens, authorNoteTokens, handleMemoryTokensChange, finalPromptText, defaultPresets, cancel, apiConfig }) {
+	const { sessionStorage, endpoint, endpointAPI, endpointAPIKey, isMiyapadEndpoint, useServerTokenization } = apiConfig;
+	const [contextPlayground, setContextPlayground] = useState(finalPromptText);
+	const [playgroundTokens, setPlaygroundTokens] = useState(tokens);
+	const prevIsOpen = useRef(isOpen);
+	useEffect(() => {
+		if (isOpen && !prevIsOpen.current) {
+			setContextPlayground(finalPromptText);
+			setPlaygroundTokens(tokens);
+		}
+		prevIsOpen.current = isOpen;
+	}, [isOpen, finalPromptText, tokens]);
+	useEffect(() => {
+		if (!isOpen) return;
+		const ac = new AbortController();
+		const to = setTimeout(async () => {
+			const content = contextPlayground;
+			try {
+				const count = await (useServerTokenization && isMiyapadEndpoint && sessionStorage?.sessionEndpoint
+					? serverTokenCount({ sessionEndpoint: sessionStorage.sessionEndpoint, content, signal: ac.signal })
+					: getTokenCount({
+						endpoint,
+						endpointAPI,
+						...(endpointAPI == API_OPENAI_COMPAT || endpointAPI == API_LLAMA_CPP ? { endpointAPIKey } : {}),
+						content,
+						signal: ac.signal,
+						...(isMiyapadEndpoint ? { proxyEndpoint: sessionStorage.proxyEndpoint } : {})
+					})
+				);
+				setPlaygroundTokens(count);
+			} catch (e) {
+				if (e.name !== 'AbortError') {
+					reportError(e);
+					setPlaygroundTokens(0);
+				}
+			}
+		}, 500);
+		ac.signal.addEventListener('abort', () => clearTimeout(to));
+		return () => ac.abort();
+	}, [isOpen, contextPlayground, endpoint, endpointAPI, useServerTokenization]);
 	return html`
 		<${Modal} isOpen=${isOpen} onClose=${closeModal}
 			title="Context"
@@ -26,9 +68,9 @@ export function ContextModal({ isOpen, closeModal, tokens, memoryTokens, authorN
 						<td>${memoryTokens.tokens}</td>
 						<td>${memoryTokens.tokensWI}</td>
 						<td>${authorNoteTokens.tokens}</td>
-						<td>${tokens - authorNoteTokens.tokens - memoryTokens.tokensWI - memoryTokens.tokens}</td>
+						<td>${Math.max(0, playgroundTokens - memoryTokens.tokens - memoryTokens.tokensWI - authorNoteTokens.tokens)}</td>
 						<td></td>
-						<td>${tokens}</td>
+						<td>${playgroundTokens}</td>
 					</tr>
 				</tbody>
 			</table>
@@ -80,9 +122,14 @@ export function ContextModal({ isOpen, closeModal, tokens, memoryTokens, authorN
 					id="advanced-context-order-settings"/>
 			</${CollapsibleGroup}>
 			<textarea
-				readOnly
-				value=${finalPromptText}
+				value=${contextPlayground}
+				onInput=${(e) => setContextPlayground(e.target.value)}
 				class="expanded-text-area-settings"
 				id="context-area-settings" />
+			<div class="hbox" style=${{ justifyContent: 'flex-end', marginTop: '8px' }}>
+				<button onClick=${() => setContextPlayground(finalPromptText)}>
+					Reset Context
+				</button>
+			</div>
 		</${Modal}>`;
 }

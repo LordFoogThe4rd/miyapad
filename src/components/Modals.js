@@ -234,7 +234,8 @@ export function Modals({ toggleModal, currentThemeName, setCurrentThemeName, all
 			handleMemoryTokensChange=${handleMemoryTokensChange}
 			finalPromptText=${useChatAPI ? JSON.stringify(convertChatToJSON(finalPromptText, templates[selectedTemplate]), null, 4) : finalPromptText}
 			defaultPresets=${defaultPresets}
-			cancel=${cancel}/>
+			cancel=${cancel}
+			apiConfig=${{ sessionStorage, endpoint, endpointAPI, endpointAPIKey, isMiyapadEndpoint, useServerTokenization }}/>
 
 		<${WorldInfoModal}
 			isOpen=${modalState.wi}
