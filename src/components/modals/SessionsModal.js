@@ -267,7 +267,7 @@ export function SessionsModal({ isOpen, closeModal, sessionStorage, cancel }) {
 						value=${tagFilterQuery}
 						onValueChange=${setTagFilterQuery}
 						placeholder="Filter tags…"
-						title="Filter tags. Use AND (implicit), OR, NOT, and * wildcards. Examples: wip OR writing, NOT archived, wip*"/>
+						tooltip="Filter tags. Use AND (implicit), OR, NOT, and * wildcards. Examples: wip OR writing, NOT archived, wip*"/>
 					<${SelectBox}
 						label="Sort By"
 						value=${sortBy}
