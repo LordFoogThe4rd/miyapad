@@ -8,6 +8,7 @@ miyapad/
 ├── server/                        # Node.js backend server
 │   ├── lib/                       # Core modules (database, auth, utils)
 │   │   ├── auth.js                # Basic Auth middleware factory
+│   │   ├── backup.js              # Auto-backup with VACUUM INTO, data_version check, rotation
 │   │   ├── database.js            # DB connection, migrations, zstd setup, maintenance
 │   │   └── utils.js               # Helpers (column names, compression, header filters)
 │   ├── routes/                    # Express route handlers by concern
