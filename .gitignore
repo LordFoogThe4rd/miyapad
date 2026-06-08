@@ -34,6 +34,9 @@ desktop.ini
 # Scratch / debug scripts
 server/scratch_list_tables.js
 
+# Personal TODO lists
+session-todo.md
+
 # Server-specific
 server/node_modules/
 server/sqlite-zstd/target/
