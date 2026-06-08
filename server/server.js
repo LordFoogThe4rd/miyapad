@@ -17,10 +17,22 @@ const login = args.login || process.env.MIYAPAD_LOGIN || 'anon';
 const password = args.password || process.env.MIYAPAD_PASSWORD || undefined;
 const storagePath = args.storagePath || process.env.MIYAPAD_STORAGE_PATH || './web-session-storage.db';
 
-const noBackup = (args.noBackup !== undefined && args.noBackup) || process.env.MIYAPAD_NO_BACKUP;
-const backupInterval = parseInt(args.backupInterval || process.env.MIYAPAD_BACKUP_INTERVAL, 10) || 30;
+const parseEnvBool = (val) => val && val !== 'false' && val !== '0';
+
+const noBackup = (args.noBackup !== undefined && args.noBackup)
+    || (process.env.MIYAPAD_NO_BACKUP && parseEnvBool(process.env.MIYAPAD_NO_BACKUP));
+
+const rawInterval = args.backupInterval !== undefined
+    ? args.backupInterval
+    : process.env.MIYAPAD_BACKUP_INTERVAL;
+const backupInterval = rawInterval !== undefined ? parseInt(rawInterval, 10) : 30;
+
 const backupDir = args.backupDir || process.env.MIYAPAD_BACKUP_DIR || './backups';
-const backupKeep = parseInt(args.backupKeep || process.env.MIYAPAD_BACKUP_KEEP, 10) || 10;
+
+const rawKeep = args.backupKeep !== undefined
+    ? args.backupKeep
+    : process.env.MIYAPAD_BACKUP_KEEP;
+const backupKeep = rawKeep !== undefined ? parseInt(rawKeep, 10) : 10;
 
 const app = express();
 
@@ -38,7 +50,7 @@ initDatabase(storagePath).then((db) => {
     require('./routes/tokenizer')(app, db);
 
     if (!noBackup) {
-        startAutoBackup(db, {
+        startAutoBackup(db, path.resolve(storagePath), {
             interval: backupInterval,
             dir: backupDir,
             keep: backupKeep
