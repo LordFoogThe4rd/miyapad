@@ -16,3 +16,4 @@ The application features full local browser persistence via IndexedDB or central
 - [CSS Architecture](css.md) — 18 partial files, import order, theming, conventions
 - [Development Conventions](development-conventions.md) — JSX-less components, CSS conventions, storage patterns
 - [Screenshot Capture](screenshot-capture.md) — Native screenshot feature for styled quote PNGs
+- [Session Tags](session-tags.md) — Freeform tags on sessions with inline editing and filtering
