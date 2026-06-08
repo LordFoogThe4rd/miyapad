@@ -52,6 +52,20 @@
 	cursor: pointer;
 	color: var(--color-text-ui);
 	transition: background-color 0.1s;
+	display: flex;
+	align-items: center;
+	gap: 6px;
+}
+.quick-switcher-star {
+	display: inline-flex;
+	align-items: center;
+	line-height: 0;
+	flex-shrink: 0;
+}
+.quick-switcher-star svg {
+	color: var(--color-warning, #f5a623);
+	width: 12px;
+	height: 12px;
 }
 
 .quick-switcher-item:hover,
