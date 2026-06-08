@@ -13,6 +13,55 @@ function formatDate(ts) {
 	return `${d.getFullYear()}-${pad(d.getMonth() + 1)}-${pad(d.getDate())} ${pad(d.getHours())}:${pad(d.getMinutes())}`;
 }
 
+function compileTagRegex(pattern) {
+	if (!pattern.includes('*')) return null;
+	const escaped = pattern.replace(/[.+?^${}()|[\]\\]/g, '\\$&').replace(/\*/g, '.*');
+	return new RegExp('^' + escaped + '$', 'i');
+}
+
+function parseTagFilter(input) {
+	if (!input.trim()) return null;
+	const tokens = input.trim().split(/\s+/);
+	const groups = [[]];
+	let i = 0;
+	while (i < tokens.length) {
+		const t = tokens[i];
+		if (t === 'AND') {
+			i++;
+		} else if (t === 'OR') {
+			if (groups[groups.length - 1].length > 0) groups.push([]);
+			i++;
+		} else if (t === 'NOT') {
+			if (i + 1 < tokens.length) {
+				groups[groups.length - 1].push({ pattern: tokens[i + 1], negate: true, regex: compileTagRegex(tokens[i + 1]) });
+				i += 2;
+			} else {
+				i++;
+			}
+		} else {
+			groups[groups.length - 1].push({ pattern: t, negate: false, regex: compileTagRegex(t) });
+			i++;
+		}
+	}
+	return groups.filter(g => g.length > 0);
+}
+
+function tagMatches(tag, pattern, regex) {
+	if (regex) return regex.test(tag);
+	return tag.toLowerCase() === pattern.toLowerCase();
+}
+
+function sessionMatches(session, groups) {
+	if (!groups) return true;
+	if (groups.length === 0) return true;
+	return groups.some(group =>
+		group.every(({ pattern, negate, regex }) => {
+			const match = (session.tags || []).some(tag => tagMatches(tag, pattern, regex));
+			return negate ? !match : match;
+		})
+	);
+}
+
 export function SessionsModal({ isOpen, closeModal, sessionStorage, cancel }) {
 	const [version, setVersion] = useState(0);
 	const [newSessionName, setNewSessionName] = useState('');
@@ -20,6 +69,9 @@ export function SessionsModal({ isOpen, closeModal, sessionStorage, cancel }) {
 	const [renamingId, setRenamingId] = useState(undefined);
 	const [isCreating, setIsCreating] = useState(false);
 	const [searchQuery, setSearchQuery] = useState('');
+	const [tagFilterQuery, setTagFilterQuery] = useState('');
+	const [editingTagsId, setEditingTagsId] = useState(undefined);
+	const [editTagsValue, setEditTagsValue] = useState('');
 	const [sortBy, setSortByState] = useState(() => localStorage.getItem('miyapad-sessions-sortBy') || 'modified');
 	const [sortAsc, setSortAscState] = useState(() => localStorage.getItem('miyapad-sessions-sortAsc') === 'true');
 
@@ -35,6 +87,9 @@ export function SessionsModal({ isOpen, closeModal, sessionStorage, cancel }) {
 	useEffect(() => {
 		if (isOpen) {
 			setSearchQuery('');
+			setTagFilterQuery('');
+			setEditingTagsId(undefined);
+			setEditTagsValue('');
 			setRenamingId(undefined);
 			setIsCreating(false);
 			setSortByState(localStorage.getItem('miyapad-sessions-sortBy') || 'modified');
@@ -42,14 +97,18 @@ export function SessionsModal({ isOpen, closeModal, sessionStorage, cancel }) {
 		}
 	}, [isOpen]);
 
+	const parsedTagFilter = useMemo(() => parseTagFilter(tagFilterQuery), [tagFilterQuery]);
+
 	const sortedSessions = useMemo(() => {
 		let entries = Object.entries(sessionStorage.sessions);
 
-		// Filter by search query
-		if (searchQuery.trim()) {
-			const q = searchQuery.trim().toLowerCase();
-			entries = entries.filter(([_, s]) => (s.name || '').toLowerCase().includes(q));
-		}
+		// Filter by search query and tags
+		const q = searchQuery.trim().toLowerCase();
+		entries = entries.filter(([_, s]) => {
+			const nameMatch = !q || (s.name || '').toLowerCase().includes(q);
+			const tagMatch = sessionMatches(s, parsedTagFilter);
+			return nameMatch && tagMatch;
+		});
 
 		// Sort comparator
 		const compare = ([idA, a], [idB, b]) => {
@@ -72,7 +131,7 @@ export function SessionsModal({ isOpen, closeModal, sessionStorage, cancel }) {
 		unpinned.sort(compare);
 
 		return [...pinned, ...unpinned];
-	}, [version, searchQuery, sortBy, sortAsc, sessionStorage.sessions]);
+	}, [version, searchQuery, parsedTagFilter, sortBy, sortAsc, sessionStorage.sessions]);
 
 	const switchSession = async (sessionId) => {
 		if (sessionStorage.selectedSession != sessionId) {
@@ -204,6 +263,11 @@ export function SessionsModal({ isOpen, closeModal, sessionStorage, cancel }) {
 						value=${searchQuery}
 						onValueChange=${setSearchQuery}
 						placeholder="Filter sessions…"/>
+					<${InputBox} label="Tags"
+						value=${tagFilterQuery}
+						onValueChange=${setTagFilterQuery}
+						placeholder="Filter tags…"
+						tooltip="Filter tags. Use AND (implicit), OR, NOT, and * wildcards. Examples: wip OR writing, NOT archived, wip*"/>
 					<${SelectBox}
 						label="Sort By"
 						value=${sortBy}
@@ -286,7 +350,41 @@ export function SessionsModal({ isOpen, closeModal, sessionStorage, cancel }) {
 											autoFocus
 										/>
 									` : html`
-										<span className="sessions-modal-name">${session.name}</span>
+										<div className="sessions-modal-name-wrapper">
+											<span className="sessions-modal-name">${session.name}</span>
+											${editingTagsId === sessionId ? html`
+												<input
+													type="text"
+													className="sessions-modal-tag-input"
+													value=${editTagsValue}
+													onChange=${(e) => setEditTagsValue(e.target.value)}
+													onKeyDown=${(e) => {
+														if (e.key === 'Enter') {
+															sessionStorage.setTags(+sessionId, editTagsValue);
+															setEditingTagsId(undefined);
+														} else if (e.key === 'Escape') {
+															setEditingTagsId(undefined);
+														}
+														e.stopPropagation();
+													}}
+													onBlur=${() => {
+															sessionStorage.setTags(+sessionId, editTagsValue);
+															setEditingTagsId(undefined);
+														}}
+													onClick=${(e) => e.stopPropagation()}
+													autoFocus
+													title="Enter comma-separated tags."/>
+											` : html`
+												<span className="sessions-modal-tags ${session.tags && session.tags.length > 0 ? '' : 'sessions-modal-tags-empty'}"
+													onClick=${(e) => {
+														e.stopPropagation();
+														setEditTagsValue(session.tags ? session.tags.join(', ') : '');
+														setEditingTagsId(sessionId);
+													}}>
+													${session.tags && session.tags.length > 0 ? session.tags.join(', ') : '+ add tags'}
+												</span>
+											`}
+										</div>
 									`}
 								</td>
 								<td className="sessions-col-modified">${formatDate(session.modified)}</td>
