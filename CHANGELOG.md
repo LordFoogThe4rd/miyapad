@@ -6,6 +6,10 @@
 - Quick Switcher overlay (`Ctrl+P` / `Cmd+P`) to search and switch sessions via keyboard
 - Pin/star sessions — click the star icon in the sessions modal to pin a session so it always floats to the top of the list; star indicator also shown in the Quick Switcher
 
+### Fixed
+- Session switch no longer updates the last modified date
+- Starring a session no longer updates the last modified date
+
 ## [2.2.0] - 2026-06-06
 
 ### Added
