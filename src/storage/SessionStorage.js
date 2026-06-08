@@ -64,11 +64,11 @@ export class SessionStorage extends AbstractStorage {
 	}
 
 	async saveSessionToDB(sessionId) {
-		const { name, created, modified, pinned, ...sessionData } = this.sessions[sessionId];
+		const { name, created, modified, pinned, tags, ...sessionData } = this.sessions[sessionId];
 		if (!sessionData || sessionData.inactive)
 			return;
 		const db = await this.openDatabase();
-		await this.saveToDatabase(db, sessionId, { name, created, modified, pinned, ...sessionData });
+		await this.saveToDatabase(db, sessionId, { name, created, modified, pinned, tags, ...sessionData });
 	}
 
 	async getNewId() {
