@@ -23,6 +23,7 @@
   * **Chat**: Automatically adds the right delimiters based on your selected template, structuring prompts into messages compatible with the Chat Completions API.
 * **Screenshot Capture**: Select text in the editor, click the camera icon, and render a styled quote PNG with AI vs User color coding. Customize via the gear icon — fonts, colors, background image, avatar, and metadata toggles.
 * **Themes**: Customize your environment with a variety of themes. Token highlight colors (`--color-prob-low`, `--color-prob-mid`, `--color-prob-high`) and erase highlight (`--color-highlight-erase`) are CSS variables, customizable per theme instead of hardcoded.
+* **... and more!**
 
 ### Architecture
 
