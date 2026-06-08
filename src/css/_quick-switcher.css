@@ -1,0 +1,67 @@
+.quick-switcher-overlay {
+	position: fixed;
+	top: 0;
+	left: 0;
+	width: 100%;
+	height: 100%;
+	background: rgba(0, 0, 0, 0.5);
+	display: flex;
+	justify-content: center;
+	z-index: 30;
+}
+
+.quick-switcher-panel {
+	position: relative;
+	top: 30%;
+	width: 100%;
+	max-width: 500px;
+	max-height: 50vh;
+	background: var(--color-bg-ui-1);
+	border-radius: 6px;
+	box-shadow: 0 8px 32px rgba(0, 0, 0, 0.4);
+	display: flex;
+	flex-direction: column;
+	overflow: hidden;
+	animation: slideUp 0.12s ease-out;
+}
+
+.quick-switcher-input {
+	width: 100%;
+	padding: 12px 16px;
+	font: inherit;
+	font-size: 1.1rem;
+	color: var(--color-text-ui);
+	background: var(--color-bg-ui-2);
+	border: none;
+	outline: none;
+	box-sizing: border-box;
+}
+
+.quick-switcher-input::placeholder {
+	color: var(--color-text-hint);
+}
+
+.quick-switcher-list {
+	flex: 1;
+	overflow-y: auto;
+	max-height: 40vh;
+}
+
+.quick-switcher-item {
+	padding: 8px 16px;
+	cursor: pointer;
+	color: var(--color-text-ui);
+	transition: background-color 0.1s;
+}
+
+.quick-switcher-item:hover,
+.quick-switcher-item.selected {
+	background: var(--color-bg-active);
+}
+
+.quick-switcher-empty {
+	padding: 16px;
+	color: var(--color-text-hint);
+	text-align: center;
+	font-style: italic;
+}

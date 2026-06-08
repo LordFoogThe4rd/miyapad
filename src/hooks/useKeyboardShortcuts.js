@@ -12,18 +12,18 @@ export function useKeyboardShortcuts() {
 
 	useEffect(() => {
 		function onKeyDown(e) {
-			const { altKey, ctrlKey, shiftKey, key, defaultPrevented } = e;
+			const { altKey, ctrlKey, metaKey, shiftKey, key, defaultPrevented } = e;
 			if (defaultPrevented)
 				return;
 			if (Object.values(modalState).some((s) => s))
 				return;
 			let preventDefaultAction = true;
-			switch (`${altKey}:${ctrlKey}:${shiftKey}:${key}`) {
-				case 'false:false:true:Enter':
-				case 'false:true:false:Enter':
+		switch (`${altKey}:${ctrlKey}:${metaKey}:${shiftKey}:${key}`) {
+			case 'false:false:false:true:Enter':
+			case 'false:true:false:false:Enter':
 					predict();
 					break;
-				case 'false:false:false:Escape':
+				case 'false:false:false:false:Escape':
 					if (cancel) {
 						cancel();
 					} else if (showPromptPreview && promptPreviewChunks.length !== 0) {
@@ -31,7 +31,7 @@ export function useKeyboardShortcuts() {
 						setPromptPreviewReroll((r) => r + 1);
 					}
 					break;
-				case 'false:false:false:Tab':
+				case 'false:false:false:false:Tab':
 					if (!showPromptPreview || promptPreviewChunks.length === 0)
 						break;
 
@@ -42,13 +42,9 @@ export function useKeyboardShortcuts() {
 					setTokens(t => t + promptPreviewChunks.length);
 					setPromptPreviewChunks([]);
 					break;
-				case 'false:true:false:ArrowRight':
-					// Accept prompt preview word-by-word
-					// by pressing Ctrl+ArrowRight.
-
+				case 'false:true:false:false:ArrowRight':
 					if (!showPromptPreview || promptPreviewChunks.length === 0)
 					{
-						// Fall back to default Ctrl+RightArrow behavior (move right by 1 word)
 						preventDefaultAction = false;
 						break;
 					}
@@ -60,18 +56,12 @@ export function useKeyboardShortcuts() {
 					do {
 						newPromptChunks = newPromptChunks.concat(newPromptPreviewChunks.splice(0, 1));
 					} while (
-						// We still have suggested chunks to go through
 						newPromptPreviewChunks.length > 0 &&
-						// The next suggested chunk does not start with a space
 						newPromptPreviewChunks[0].content[0] != " " &&
 						(
-							// The prompt is empty
 							newPromptChunks.length == 0 ||
-							// Or...
 							(
-								// The prompt is not empty
 								newPromptChunks.length > 0 &&
-								// And the new prompt does not begin with a space 
 								newPromptChunks[newPromptChunks.length - 1].content[newPromptChunks[newPromptChunks.length - 1].content.length - 1] != " "
 							)
 						)
@@ -81,28 +71,32 @@ export function useKeyboardShortcuts() {
 					setPromptPreviewChunks(newPromptPreviewChunks);
 					setTokens(newTokens);
 					break;
-				case 'false:true:false:r':
-				case 'false:false:true:r':
+				case 'false:true:false:false:r':
+				case 'false:false:false:true:r':
 					undoAndPredict();
 					break;
-				case 'false:true:false:z':
-				case 'false:false:true:z':
-					if (showPromptPreview) setPromptPreviewChunks([]); // Discard current preview so that a new one is generated.
+				case 'false:true:false:false:z':
+				case 'false:false:false:true:z':
+					if (showPromptPreview) setPromptPreviewChunks([]);
 					if (cancel || !undo()) return;
 					break;
-				case 'false:true:true:Z':
-				case 'false:true:false:y':
-				case 'false:false:true:y':
-					if (showPromptPreview) setPromptPreviewChunks([]); // Discard current preview so that a new one is generated.
+				case 'false:true:false:true:Z':
+				case 'false:true:false:false:y':
+				case 'false:false:false:true:y':
+					if (showPromptPreview) setPromptPreviewChunks([]);
 					if (cancel || !redo()) return;
 					break;
-				case 'false:true:false:e':
-				case 'false:false:true:e':
+				case 'false:true:false:false:e':
+				case 'false:false:false:true:e':
 					ttsStop();
 					break;
-				case 'false:true:false:f':
-				case 'false:false:true:f':
+				case 'false:true:false:false:f':
+				case 'false:false:false:true:f':
 					toggleModal("searchAndReplace");
+					break;
+				case 'false:false:true:false:p':
+				case 'false:true:false:false:p':
+					toggleModal("quickSwitcher");
 					break;
 				
 				default:
