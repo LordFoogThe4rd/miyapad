@@ -1,6 +1,16 @@
 import { AbstractStorage } from './AbstractStorage.js';
 import { NameStorage } from './NameStorage.js';
 
+function extractMeta(s) {
+	return {
+		name: s.name,
+		created: s.created || null,
+		modified: s.modified || null,
+		pinned: !!s.pinned,
+		tags: Array.isArray(s.tags) ? s.tags : [],
+	};
+}
+
 export class SessionStorage extends AbstractStorage {
 	constructor(dbAdapter) {
 		super('Sessions', dbAdapter);
@@ -29,7 +39,7 @@ export class SessionStorage extends AbstractStorage {
 
 	async saveToDatabase(db, key, data) {
         if (data.hasOwnProperty('name')) {
-            const nameData = { name: data.name, created: data.created || null, modified: data.modified || null, pinned: !!data.pinned, tags: data.tags || [] };
+            const nameData = extractMeta(data);
             await this.nameStorage.saveToDatabase(db, key, nameData);
             const { name, created, modified, pinned, tags, ...sessionData } = data;
             await super.saveToDatabase(db, key, sessionData);
@@ -118,7 +128,7 @@ export class SessionStorage extends AbstractStorage {
 			if (typeof data === 'string') {
 				this.sessions[key] = { name: data === '[object Object]' ? `Session #${key}` : data, created: null, modified: null, pinned: false, tags: [] };
 			} else if (data && typeof data === 'object') {
-				this.sessions[key] = { name: (data.name === '[object Object]' ? `Session #${key}` : data.name) || 'Untitled', created: data.created || null, modified: data.modified || null, pinned: data.pinned === undefined ? false : !!data.pinned, tags: Array.isArray(data.tags) ? data.tags : [] };
+				this.sessions[key] = { name: (data.name === '[object Object]' ? `Session #${key}` : data.name) || 'Untitled', ...extractMeta(data) };
 			} else {
 				this.sessions[key] = { name: 'Untitled', created: null, modified: null, pinned: false, tags: [] };
 			}
@@ -152,7 +162,7 @@ export class SessionStorage extends AbstractStorage {
 
 		//Clear data of old session in order to minimize memory usage.
 		if (this.sessions[this.selectedSession] && this.sessions[this.selectedSession]['name'])
-			this.sessions[this.selectedSession] = { name: this.sessions[this.selectedSession]['name'], created: this.sessions[this.selectedSession].created, modified: this.sessions[this.selectedSession].modified, pinned: !!this.sessions[this.selectedSession]['pinned'], tags: this.sessions[this.selectedSession]?.tags || [], inactive: true };
+			this.sessions[this.selectedSession] = { ...extractMeta(this.sessions[this.selectedSession]), inactive: true };
 
 		const db = await this.openDatabase();
 		await this.saveToDatabase(db, 'selectedSessionId', +sessionId);
@@ -254,7 +264,7 @@ export class SessionStorage extends AbstractStorage {
 
 		//Clear data of the session in order to minimize memory usage.
 		if (this.sessions[newId] && this.sessions[newId]['name'])
-			this.sessions[newId] = { name: this.sessions[newId]['name'], created: now, modified: now, pinned: false, tags: this.sessions[newId].tags || [] };
+			this.sessions[newId] = { ...extractMeta(this.sessions[newId]) };
 
 		onchange?.();
 		return newId;
