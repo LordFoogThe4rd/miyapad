@@ -1,6 +1,6 @@
 # CSS Architecture
 
-Styles are organized into 18 partial files under `src/css/`, imported via `src/styles.css`. Each partial targets a specific component or logical group.
+Styles are organized into 19 partial files under `src/css/`, imported via `src/styles.css`. Each partial targets a specific component or logical group.
 
 ## Import Order
 
@@ -24,6 +24,7 @@ The ordering in `src/styles.css` is intentional — variables and base reset loa
 @import './css/_context-menu.css';      # Right-click context menu
 @import './css/_crash-screen.css';      # Error/ crash overlay
 @import './css/_utilities.css';         # Helper classes (hidden, sr-only, etc.)
+@import './css/_quick-switcher.css';    # Quick Switcher overlay
 @import './css/_responsive.css';        # Global media queries
 ```
 
@@ -48,6 +49,7 @@ The ordering in `src/styles.css` is intentional — variables and base reset loa
 | `_context-menu.css` | Right-click context menu: positioning, item hover, separator. |
 | `_crash-screen.css` | Full-screen error crash overlay with stack trace display. |
 | `_utilities.css` | Simple utility classes (e.g. `.hidden`, `.sr-only`, `.flex`, `.text-muted`). |
+| `_quick-switcher.css` | Quick Switcher overlay: backdrop, floating panel, search input, results list. |
 | `_responsive.css` | Global media queries for layout breakpoints, sidebar collapsing, font sizing on small screens. |
 
 ## Theming

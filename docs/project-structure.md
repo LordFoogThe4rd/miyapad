@@ -27,7 +27,7 @@ miyapad/
     ├── api/                       # API modules for backends (llama.cpp, Horde, OpenAI, etc.)
     ├── components/                # React components (Modals, Sidebar, controls, icons)
     ├── contexts/                  # SettingsContext and GenerationContext
-    ├── css/                       # CSS partials (18 files, imported by styles.css)
+    ├── css/                       # CSS partials (19 files, imported by styles.css)
     ├── defaults/                  # Hardcoded defaults for presets, prompts, themes
     ├── hooks/                     # Custom hooks (generation logic, prompt builders, etc.)
     ├── storage/                   # Storage adapters (IndexedDB, Server REST API, storages)
