@@ -48,7 +48,7 @@ function parseTagFilter(input) {
 
 function tagMatches(tag, pattern, regex) {
 	if (regex) return regex.test(tag);
-	return tag.toLowerCase().includes(pattern.toLowerCase());
+	return tag.toLowerCase() === pattern.toLowerCase();
 }
 
 function sessionMatches(session, groups) {
