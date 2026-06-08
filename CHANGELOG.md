@@ -5,7 +5,7 @@
 ### Added
 - Quick Switcher overlay (`Ctrl+P` / `Cmd+P`) to search and switch sessions via keyboard
 - Pin/star sessions — click the star icon in the sessions modal to pin a session so it always floats to the top of the list; star indicator also shown in the Quick Switcher
-- Automatic database backups — configurable periodic backup of `web-session-storage.db` via `VACUUM INTO`, with change-detection (`PRAGMA data_version`) and automatic rotation
+- Automatic database backups — configurable periodic backup of `web-session-storage.db` via `VACUUM INTO`, with change-detection (file mtime) and automatic rotation
 
 ### Fixed
 - Session switch no longer updates the last modified date
