@@ -44,5 +44,5 @@ The `sqlite-zstd` extension can experience index naming collisions if multiple t
 The server can automatically create periodic backups of the SQLite database using SQLite's `VACUUM INTO` command, which produces a clean, compacted copy without downtime.
 
 - Backups are skipped if the database hasn't changed since the last backup (checked via `PRAGMA data_version`).
-- Backup files are named `web-session-storage.db.<YYYYMMDDHHmmss>.backup`.
+- Backup files are named `web-session-storage.db.<YYYYMMDDHHmmss>.backup.gz` and are gzip-compressed. They can be extracted with any archive tool (7-Zip, Ark, etc.).
 - Old backups beyond the configured keep count are automatically removed.
