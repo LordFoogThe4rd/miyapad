@@ -1,5 +1,10 @@
 # Changelog
 
+## [???] - unreleased
+
+### Added
+- Quick Switcher overlay (`Ctrl+P` / `Cmd+P`) to search and switch sessions via keyboard
+
 ## [2.2.0] - 2026-06-06
 
 ### Added

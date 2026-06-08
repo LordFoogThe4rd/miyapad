@@ -21,6 +21,7 @@ import { ThemeManagerModal } from './modals/ThemeManagerModal.js';
 import { AIHordeSettingsModal } from './modals/AIHordeSettingsModal.js';
 import { CompressionInfoModal } from './modals/CompressionInfoModal.js';
 import { SessionsModal } from './modals/SessionsModal.js';
+import { QuickSwitcher } from './QuickSwitcher.js';
 import { EditorContextMenu } from './EditorContextMenu.js';
 
 export function Modals({ toggleModal, currentThemeName, setCurrentThemeName, allThemes, setAllThemes, applyChatTemplate }) {
@@ -332,6 +333,12 @@ export function Modals({ toggleModal, currentThemeName, setCurrentThemeName, all
 		<${SessionsModal}
 			isOpen=${modalState.sessions}
 			closeModal=${() => closeModal("sessions")}
+			sessionStorage=${sessionStorage}
+			cancel=${cancel}/>
+
+		<${QuickSwitcher}
+			isOpen=${modalState.quickSwitcher}
+			closeModal=${() => closeModal("quickSwitcher")}
 			sessionStorage=${sessionStorage}
 			cancel=${cancel}/>
 
