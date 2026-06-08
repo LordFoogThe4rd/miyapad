@@ -2,6 +2,9 @@
 
 ## [???] - unreleased
 
+### Changed
+- Automatic backups are now gzip-compressed (`.backup.gz` instead of `.backup`); can be opened with any archive tool (7-Zip, Ark, etc.)
+
 ### Added
 - Quick Switcher overlay (`Ctrl+P` / `Cmd+P`) to search and switch sessions via keyboard
 - Pin/star sessions — click the star icon in the sessions modal to pin a session so it always floats to the top of the list; star indicator also shown in the Quick Switcher

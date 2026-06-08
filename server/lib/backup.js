@@ -1,5 +1,7 @@
 const fs = require('fs');
 const path = require('path');
+const zlib = require('zlib');
+const { pipeline } = require('stream');
 
 let backupIntervalId = null;
 
@@ -26,7 +28,7 @@ const rotateBackups = (dir, keep) => {
     let files;
     try {
         files = fs.readdirSync(dir)
-            .filter(f => f.endsWith('.backup'))
+            .filter(f => f.endsWith('.backup.gz'))
             .sort()
             .reverse();
     } catch {
@@ -67,16 +69,34 @@ const runBackup = (db, dbPath, dir, keep, lastMtimeRef) => {
 
     const backupName = `web-session-storage.db.${timestamp()}.backup`;
     const backupPath = path.join(dir, backupName);
+    const tmpPath = backupPath + '.tmp';
 
-    db.run("VACUUM INTO ?", [backupPath], (err) => {
+    db.run("VACUUM INTO ?", [tmpPath], (err) => {
         if (err) {
             console.error("Backup: VACUUM INTO failed:", err.message);
             return;
         }
 
-        lastMtimeRef.current = currentMtime;
-        console.log(`Backup created: ${backupName}`);
-        rotateBackups(dir, keep);
+        const cleanup = () => {
+            try { fs.unlinkSync(tmpPath); } catch { /* ok */ }
+        };
+
+        pipeline(
+            fs.createReadStream(tmpPath),
+            zlib.createGzip(),
+            fs.createWriteStream(backupPath + '.gz'),
+            (err) => {
+                if (err) {
+                    console.error("Backup: compression failed:", err.message);
+                    cleanup();
+                    return;
+                }
+                cleanup();
+                lastMtimeRef.current = currentMtime;
+                console.log(`Backup created: ${backupName}.gz`);
+                rotateBackups(dir, keep);
+            }
+        );
     });
 };
 
