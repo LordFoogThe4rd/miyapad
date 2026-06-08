@@ -10,7 +10,7 @@ The database has five main tables:
 2. **`sessions`**: Stores main session data blobs. Uses column `session_data`.
 3. **`templates`**: Stores template configuration data. Uses column `template_data`.
 4. **`themes`**: Stores custom user CSS themes. Uses column `theme_data`.
-5. **`names`**: Stores lightweight key-to-metadata mapping `{name, created, modified}` (as JSON) for session listing, searching, and sorting.
+5. **`names`**: Stores lightweight key-to-metadata mapping `{name, created, modified, pinned}` (as JSON) for session listing, searching, sorting, and pinning.
 
 ### Schema Column Constraints
 
