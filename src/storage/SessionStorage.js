@@ -47,6 +47,7 @@ export class SessionStorage extends AbstractStorage {
 				data['created'] = null;
 				data['modified'] = null;
 				data['pinned'] = false;
+				data['tags'] = [];
 			} else if (nameData && typeof nameData === 'object') {
 				data['name'] = (nameData.name === '[object Object]' ? `Session #${key}` : nameData.name) || 'Untitled';
 				data['created'] = nameData.created || null;
