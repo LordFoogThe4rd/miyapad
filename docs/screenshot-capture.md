@@ -13,4 +13,4 @@ Stored via `usePersistentState` in `SettingsContext.js` (keyed with `screenshot*
 
 ## Usage
 
-Select text in the editor, click the camera icon. The screenshot opens in a new tab ready to save. Click the gear icon to customize the layout.
+Select text in the editor, then click the camera icon to capture only the selection. If nothing is selected, the entire prompt is captured. The screenshot opens in a new tab ready to save. Click the gear icon to customize the layout.
