@@ -3,7 +3,7 @@ import { useState, useEffect, useMemo } from 'react';
 import { Modal } from '../Modal.js';
 import { InputBox } from '../controls/InputBox.js';
 import { SelectBox } from '../controls/SelectBox.js';
-import { SVG_Confirm, SVG_Cancel, SVG_Rename, SVG_Trash } from '../icons/index.js';
+import { SVG_Confirm, SVG_Cancel, SVG_Rename, SVG_Trash, SVG_Star, SVG_StarOutline } from '../icons/index.js';
 import { exportText } from '../../api/common.js';
 
 function formatDate(ts) {
@@ -51,8 +51,8 @@ export function SessionsModal({ isOpen, closeModal, sessionStorage, cancel }) {
 			entries = entries.filter(([_, s]) => (s.name || '').toLowerCase().includes(q));
 		}
 
-		// Sort
-		entries.sort(([idA, a], [idB, b]) => {
+		// Sort comparator
+		const compare = ([idA, a], [idB, b]) => {
 			let cmp = 0;
 			if (sortBy === 'name') {
 				cmp = (a.name || '').localeCompare(b.name || '');
@@ -63,9 +63,15 @@ export function SessionsModal({ isOpen, closeModal, sessionStorage, cancel }) {
 				cmp = (a.modified || 0) - (b.modified || 0);
 			}
 			return sortAsc ? cmp : -cmp;
-		});
+		};
 
-		return entries;
+		// Pinned sessions always float to the top
+		const pinned = entries.filter(([_, s]) => s.pinned);
+		const unpinned = entries.filter(([_, s]) => !s.pinned);
+		pinned.sort(compare);
+		unpinned.sort(compare);
+
+		return [...pinned, ...unpinned];
 	}, [version, searchQuery, sortBy, sortAsc, sessionStorage.sessions]);
 
 	const switchSession = async (sessionId) => {
@@ -227,6 +233,7 @@ export function SessionsModal({ isOpen, closeModal, sessionStorage, cancel }) {
 				<table className="sessions-modal-table">
 					<thead>
 						<tr>
+							<th className="sessions-col-star"></th>
 							<th className="sessions-col-name">Name</th>
 							<th className="sessions-col-modified">Modified</th>
 							<th className="sessions-col-created">Created</th>
@@ -236,6 +243,7 @@ export function SessionsModal({ isOpen, closeModal, sessionStorage, cancel }) {
 					<tbody>
 						${isCreating && html`
 							<tr key="new" className="sessions-modal-row sessions-modal-row-new">
+								<td></td>
 								<td colSpan="3">
 									<input
 										type="text"
@@ -259,6 +267,13 @@ export function SessionsModal({ isOpen, closeModal, sessionStorage, cancel }) {
 							<tr key=${sessionId}
 								className="sessions-modal-row ${sessionStorage.selectedSession == sessionId ? 'selected' : ''}"
 								onClick=${() => switchSession(+sessionId)}>
+								<td className="sessions-col-star" onClick=${(e) => e.stopPropagation()}>
+									<button className="sessions-action-btn"
+										title=${session.pinned ? "Unpin session" : "Pin session"}
+										onClick=${() => sessionStorage.togglePinSession(+sessionId)}>
+										${session.pinned ? html`<${SVG_Star}/>` : html`<${SVG_StarOutline}/>`}
+									</button>
+								</td>
 								<td className="sessions-col-name">
 									${renamingId == sessionId ? html`
 										<input

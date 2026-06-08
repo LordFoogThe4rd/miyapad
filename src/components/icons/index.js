@@ -178,6 +178,26 @@ export const SVG_Redo = ({...props}) => {
 		...${props}
 		style=${{ 'transform':'scaleX(-1)' }}/>
 `};
+export const SVG_Star = ({...props}) => {
+	return html`
+	<${SVG}
+		...${props}
+		width="14"
+		height="14"
+		viewBox="0 0 24 24">
+		<path d="M12 17.27L18.18 21l-1.64-7.03L22 9.24l-7.19-.61L12 2 9.19 8.63 2 9.24l5.46 4.73L5.82 21z"/>
+	</${SVG}>
+`};
+export const SVG_StarOutline = ({...props}) => {
+	return html`
+	<${SVG}
+		...${props}
+		width="14"
+		height="14"
+		viewBox="0 0 24 24">
+		<path d="M12 2l3.09 6.26L22 9.27l-5 4.87 1.18 6.88L12 17.77l-6.18 3.25L7 14.14 2 9.27l6.91-1.01L12 2zm0 2.89l-2.09 4.23-4.68.68 3.39 3.3-.8 4.67L12 15.85l4.18 2.2-.8-4.67 3.39-3.3-4.68-.68L12 4.89z"/>
+	</${SVG}>
+`};
 export const SVG_SearchAndReplace = ({...props}) => {
 	return html`
 	<${SVG}

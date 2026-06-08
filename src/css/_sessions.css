@@ -44,6 +44,10 @@
 	z-index: 1;
 	white-space: nowrap;
 }
+.sessions-col-star {
+	width: 2em;
+	text-align: center;
+}
 .sessions-col-name { width: auto; }
 .sessions-col-modified,
 .sessions-col-created { width: 10em; }

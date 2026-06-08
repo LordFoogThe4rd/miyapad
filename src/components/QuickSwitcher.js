@@ -1,5 +1,6 @@
 import { html } from 'htm/react';
 import { useState, useEffect, useMemo, useRef } from 'react';
+import { SVG_Star } from './icons/index.js';
 
 export function QuickSwitcher({ isOpen, closeModal, sessionStorage, cancel }) {
 	const [query, setQuery] = useState('');
@@ -26,7 +27,11 @@ export function QuickSwitcher({ isOpen, closeModal, sessionStorage, cancel }) {
 		if (!q) return [];
 		return Object.entries(sessionStorage.sessions)
 			.filter(([_, s]) => (s.name || '').toLowerCase().includes(q))
-			.map(([id, s]) => ({ id: +id, name: s.name }));
+			.map(([id, s]) => ({ id: +id, name: s.name, pinned: !!s.pinned }))
+			.sort((a, b) => {
+				if (a.pinned !== b.pinned) return a.pinned ? -1 : 1;
+				return (a.name || '').localeCompare(b.name || '');
+			});
 	}, [query, version, sessionStorage.sessions]);
 
 	const disabled = !!cancel;
@@ -92,7 +97,7 @@ export function QuickSwitcher({ isOpen, closeModal, sessionStorage, cancel }) {
 									sessionStorage.switchSession(session.id).then(() => closeModal());
 								}
 							}}
-						>${session.name}</div>
+						>${session.pinned ? html`<span className="quick-switcher-star"><${SVG_Star}/></span>` : ''}${session.name}</div>
 					`)}
 				</div>
 			</div>
