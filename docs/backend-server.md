@@ -34,3 +34,15 @@ The `sqlite-zstd` extension can experience index naming collisions if multiple t
 - `--login` / `--password`: Basic authentication login/password. If password is set, prompts standard HTTP Basic Auth on requests.
 - `--storagePath`: Path to the SQLite file (default: `./web-session-storage.db`).
 - `--open` / `MIYAPAD_NO_OPEN`: Controls whether the default web browser auto-opens the UI on server start.
+- `--noBackup` / `MIYAPAD_NO_BACKUP`: Disables automatic database backups.
+- `--backupInterval` / `MIYAPAD_BACKUP_INTERVAL`: Minutes between backups (default: `30`).
+- `--backupDir` / `MIYAPAD_BACKUP_DIR`: Directory for backup files (default: `./backups`).
+- `--backupKeep` / `MIYAPAD_BACKUP_KEEP`: Number of backups to retain (default: `10`).
+
+## Automatic Database Backups
+
+The server can automatically create periodic backups of the SQLite database using SQLite's `VACUUM INTO` command, which produces a clean, compacted copy without downtime.
+
+- Backups are skipped if the database hasn't changed since the last backup (checked via `PRAGMA data_version`).
+- Backup files are named `web-session-storage.db.<YYYYMMDDHHmmss>.backup`.
+- Old backups beyond the configured keep count are automatically removed.

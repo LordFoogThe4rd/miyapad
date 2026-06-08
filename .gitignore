@@ -44,3 +44,4 @@ server/*.so
 server/*.dll
 server/*.dylib
 server/*.exe
+server/backups/
