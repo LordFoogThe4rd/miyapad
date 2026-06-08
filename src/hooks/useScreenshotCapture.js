@@ -40,14 +40,15 @@ export function useScreenshotCapture() {
 		const area = promptArea.current;
 		if (!area) return;
 
-		const storyText = area.value.substring(area.selectionStart, area.selectionEnd);
-		if (!storyText) {
-			alert("Please select some text first!");
-			return;
-		}
+		let start = area.selectionStart;
+		let end = area.selectionEnd;
+		let storyText = area.value.substring(start, end);
 
-		const start = area.selectionStart;
-		const end = area.selectionEnd;
+		if (!storyText) {
+			start = 0;
+			end = area.value.length;
+			storyText = area.value;
+		}
 		let formattedStoryHTML = "";
 		let currentPos = 0;
 
