@@ -41,6 +41,6 @@ CHANGELOG.md is manually curated. After each non-`docs` commit, add an entry und
 
 See [CSS Architecture](css.md) for full documentation. Key points:
 
-- Styles are organized into 18 partial files under `src/css/`, imported by `src/styles.css` via `@import`.
+- Styles are organized into 19 partial files under `src/css/`, imported by `src/styles.css` via `@import`.
 - Component-specific media queries live inside that component's partial; global layout media queries go in `_responsive.css`.
 - When adding new styles, put them in the matching partial or create a new one if none fits.
