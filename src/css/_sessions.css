@@ -122,6 +122,40 @@
 	color: var(--color-text-hint);
 }
 
+.sessions-modal-name-wrapper {
+	display: flex;
+	flex-direction: column;
+	gap: 2px;
+}
+.sessions-modal-tags {
+	font-size: 0.75rem;
+	color: var(--color-text-hint);
+	cursor: text;
+	overflow: hidden;
+	text-overflow: ellipsis;
+	white-space: nowrap;
+	display: block;
+}
+.sessions-modal-tags-empty {
+	font-style: italic;
+	opacity: 0.6;
+}
+.sessions-modal-tags-empty:hover {
+	opacity: 1;
+}
+.sessions-modal-tag-input {
+	appearance: none;
+	border: none;
+	outline: 1px solid var(--color-light);
+	background-color: var(--color-bg-ui-2);
+	font: inherit;
+	font-size: 0.75rem;
+	color: inherit;
+	width: 90%;
+	padding: 1px 4px;
+	margin-top: 1px;
+}
+
 @media (max-width: 600px) {
 	.sessions-col-created {
 		display: none;
