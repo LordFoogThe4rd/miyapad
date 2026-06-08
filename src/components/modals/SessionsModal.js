@@ -367,7 +367,10 @@ export function SessionsModal({ isOpen, closeModal, sessionStorage, cancel }) {
 														}
 														e.stopPropagation();
 													}}
-													onBlur=${() => setEditingTagsId(undefined)}
+													onBlur=${() => {
+															sessionStorage.setTags(+sessionId, editTagsValue);
+															setEditingTagsId(undefined);
+														}}
 													onClick=${(e) => e.stopPropagation()}
 													autoFocus
 													title="Enter comma-separated tags."/>
