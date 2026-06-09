@@ -1,5 +1,16 @@
 # Changelog
 
+## [???] - unreleased
+
+### Changed
+- Replaced `PRAGMA incremental_vacuum` with `zstd_incremental_maintenance` scheduler; added configurable maintenance mode (interval/startup/shutdown), duration, DB load, and optional WAL journal mode
+- Renamed endpoints: `POST /incremental_vacuum` → `/zstd_maintenance`, `GET/POST /vacuum_config` → `/maintenance_config`
+- Second SIGINT during maintenance shutdown now gracefully ignored
+- Input validation on `POST /zstd_maintenance` (duration ≥ 0, dbLoad 0–1)
+- Maintenance config fetch only runs when zstd extension is available
+- WAL mode no longer re-applied on unchanged config saves
+- Failed maintenance config saves now surface errors
+
 ## [2.3.0] - 2026-06-09
 
 ### Removed

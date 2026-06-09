@@ -5,7 +5,7 @@ const path = require('path');
 const minimist = require('minimist');
 const open = require('open');
 
-const { initDatabase } = require('./lib/database');
+const { initDatabase, getMaintenanceConfig, runZstdMaintenance, clearMaintenanceScheduler } = require('./lib/database');
 const { createAuthMiddleware } = require('./lib/auth');
 const { startAutoBackup, stopAutoBackup } = require('./lib/backup');
 
@@ -64,8 +64,16 @@ initDatabase(storagePath).then((db) => {
         }
     });
 
-    process.on('SIGINT', () => {
+    let shuttingDown = false;
+    process.on('SIGINT', async () => {
+        if (shuttingDown) return;
+        shuttingDown = true;
         stopAutoBackup();
+        clearMaintenanceScheduler();
+        const maintConfig = await getMaintenanceConfig(db);
+        if (maintConfig.mode === 'shutdown') {
+            await runZstdMaintenance(db, maintConfig.duration, maintConfig.dbLoad);
+        }
         db.close(() => {
             process.exit(0);
         });
