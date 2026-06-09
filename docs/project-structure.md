@@ -28,7 +28,7 @@ miyapad/
     ├── App.js                     # Root component orchestrating providers
     ├── AppLayout.js               # Core app shell and layout setup
     ├── main.js                    # Entry point; detects database adapter and renders
-    ├── api/                       # API modules for backends (llama.cpp, Horde, OpenAI, etc.)
+    ├── api/                       # API modules for backends (llama.cpp, KoboldCPP, OpenAI, DeepSeek, AI Horde)
     ├── components/                # React components (Modals, Sidebar, controls, icons)
     ├── contexts/                  # SettingsContext and GenerationContext
     ├── css/                       # CSS partials (19 files, imported by styles.css)
