@@ -33,7 +33,7 @@ This refactored fork moves from a single monolithic HTML file to a **modular Par
 
 ## Getting Started
 
-Download the pre-compiled `miyapad.html` from [Releases](https://github.com/LordFoogThe4rd/miyapad/releases/latest) and open it in your browser.
+Open [miyapad on GitHub Pages](https://lordfoogthe4rd.github.io/miyapad/) or download the pre-compiled `miyapad.html` from [Releases](https://github.com/LordFoogThe4rd/miyapad/releases/latest) and open it in your browser.
 
 ### Optional Server
 
