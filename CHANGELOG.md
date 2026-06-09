@@ -1,6 +1,6 @@
 # Changelog
 
-## [???] - unreleased
+## [2.3.0] - 2026-06-09
 
 ### Removed
 - Unused `hideChatTemplates` feature (behind-the-scenes prompt affix-stripping mode that had no UI toggle)
