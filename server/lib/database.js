@@ -196,17 +196,6 @@ const runMigrationToV4 = (db) => {
     });
 };
 
-const startBackgroundMaintenance = (db) => {
-    console.log("Scheduling background zstd incremental maintenance every 5 minutes.");
-    setInterval(() => {
-        db.run("SELECT zstd_incremental_maintenance(null, 1)", (err) => {
-            if (err) {
-                console.error("Error running background zstd_incremental_maintenance:", err.message);
-            }
-        });
-    }, 5 * 60 * 1000);
-};
-
 let maintenanceSchedulerId = null;
 
 const DEFAULT_MAINTENANCE_CONFIG = {
@@ -416,8 +405,6 @@ const initDatabase = (storagePath) => {
                             res();
                         });
                     });
-
-                    startBackgroundMaintenance(db);
 
                     const maintConfig = await getMaintenanceConfig(db);
                     if (maintConfig.walEnabled) {
