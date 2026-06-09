@@ -38,7 +38,7 @@ export function AppLayout() {
 		templates, setTemplates, templateReplacements, setTemplateReplacements, templatesImport, setTemplatesImport,
 		selectedTemplate, setSelectedTemplate, chatMode, setChatMode, templateList, setTemplateList,
 		fontSizeMultiplier, setFontSizeMultiplier, spellCheck, setSpellCheck, attachSidebar, setAttachSidebar,
-		showProbsMode, setShowProbsMode, hideChatTemplates, setHideChatTemplates, systemPromptModeText, setSystemPromptModeText,
+		showProbsMode, setShowProbsMode,
 		editorFont, setEditorFont, uiFont, setUIFont,
 		tokenHighlightMode, setTokenHighlightMode, tokenColorMode, setTokenColorMode,
 		preserveCursorPosition, setPreserveCursorPosition, promptAreaWidth, setPromptAreaWidth, showAPIKey, setShowAPIKey,
@@ -314,7 +314,7 @@ export function AppLayout() {
 	// selection or cursor position during prediction
 	useLayoutEffect(() => {
 		const elem = promptArea.current;
-		const activePromptText = hideChatTemplates ? cleanPromptText : promptText;
+		const activePromptText = promptText;
 		if (elem.value === activePromptText) {
 			return;
 		} else if (elem.value.length && activePromptText.startsWith(elem.value)) {
@@ -343,7 +343,7 @@ export function AppLayout() {
 		} else {
 			elem.value = activePromptText;
 		}
-	}, [promptText, hideChatTemplates, cleanPromptText]);
+	}, [promptText]);
 
 	useLayoutEffect(() => {
 		const elem = promptArea.current;
@@ -438,11 +438,6 @@ export function AppLayout() {
 	useKeyboardShortcuts();
 
 	const applyChatTemplate = () => {
-		if (hideChatTemplates) {
-			alert("Cannot apply chat template while they are hidden. Please show chat templates first.");
-			return;
-		}
-
 		const promptString = promptArea.current.value;
 		if (!promptString.trim()) return;
 

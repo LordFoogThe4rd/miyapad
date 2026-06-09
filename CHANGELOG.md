@@ -2,6 +2,9 @@
 
 ## [???] - unreleased
 
+### Removed
+- Unused `hideChatTemplates` feature (behind-the-scenes prompt affix-stripping mode that had no UI toggle)
+
 ### Changed
 - Automatic backups are now gzip-compressed (`.backup.gz` instead of `.backup`); can be opened with any archive tool (7-Zip, Ark, etc.)
 

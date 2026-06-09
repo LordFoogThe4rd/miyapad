@@ -8,7 +8,7 @@ import { SearchAndReplaceWidget } from './SearchAndReplaceWidget.js';
 import { useScreenshotCapture } from '../hooks/useScreenshotCapture.js';
 
 export function PromptContainer({ sidebarHeight }) {
-	const { showMarkdownPreview, setShowMarkdownPreview, isMobile, tokenHighlightMode, tokenColorMode, showPromptPreview, promptAreaWidth, setPromptAreaWidth, showProbsMode, setShowProbsMode, hideChatTemplates, systemPromptModeText, setSystemPromptModeText } = useSettings();
+	const { showMarkdownPreview, setShowMarkdownPreview, isMobile, tokenHighlightMode, tokenColorMode, showPromptPreview, promptAreaWidth, setPromptAreaWidth, showProbsMode, setShowProbsMode } = useSettings();
 	const { promptArea, promptOverlay, cancel, promptPreviewElement, promptChunks, setPromptChunks, currentPromptChunk, setCurrentPromptChunk, undoHovered, setUndoHovered, undoStack, redoStack, showProbs, setShowProbs, promptPreviewChunks, setPromptPreviewChunks, modalState, closeModal, toggleModal, markdownPreviewRef, isSyncingScroll, setSavedScrollTop, spellCheck, keyState, probsDelayTimer, setTriggerPredict } = useGeneration();
 	const { promptText, displayPromptChunks, cleanPromptText, origToClean, cleanToOrig } = usePromptBuilder();
 	const { takeScreenshot } = useScreenshotCapture();
@@ -113,39 +113,6 @@ export function PromptContainer({ sidebarHeight }) {
 		}
 
 		let nv = target.value;
-		if (hideChatTemplates && cleanToOrig) {
-			let startCount = 0, oldEnd = cleanPromptText.length, newEnd = nv.length;
-
-			if (newEnd >= oldEnd && nv.startsWith(cleanPromptText)) {
-				startCount = oldEnd;
-			} else if (oldEnd >= newEnd && cleanPromptText.startsWith(nv)) {
-				startCount = newEnd;
-				oldEnd = newEnd;
-			} else {
-				while (startCount < oldEnd && startCount < newEnd && cleanPromptText[startCount] === nv[startCount])
-					startCount++;
-				while (oldEnd > startCount && newEnd > startCount && cleanPromptText[oldEnd - 1] === nv[newEnd - 1]) {
-					oldEnd--;
-					newEnd--;
-				}
-			}
-
-			const inserted = nv.slice(startCount, newEnd);
-			const origStart = cleanToOrig[startCount];
-			const origEnd = cleanToOrig[oldEnd];
-
-			let affixesInDeleted = [];
-			let cleanIndex = startCount;
-			for (let k = origStart; k < origEnd; k++) {
-				if (cleanIndex < oldEnd && cleanToOrig[cleanIndex] === k) {
-					cleanIndex++;
-				} else {
-					affixesInDeleted.push(promptText[k]);
-				}
-			}
-
-			nv = promptText.slice(0, origStart) + inserted + affixesInDeleted.join('') + promptText.slice(origEnd);
-		}
 
 		setPromptChunks(oldPrompt => {
 			const start = [];
@@ -367,14 +334,6 @@ export function PromptContainer({ sidebarHeight }) {
 				onClick=${takeScreenshot}>
 				<${SVG_Camera} style=${{ "height": "1.3em" }} />
 			</button>
-			${hideChatTemplates && html`<textarea
-				id="system-prompt-area"
-				className="wi-textarea"
-				style=${{ 'margin-bottom': '1em', 'min-height': '6em', 'flex': 'none' }}
-				placeholder="System Prompt"
-				value=${systemPromptModeText}
-				readOnly=${!!cancel}
-				onInput=${e => setSystemPromptModeText(e.target.value)} />`}
 			<textarea
 				ref=${promptArea}
 				readOnly=${!!cancel}
@@ -389,7 +348,7 @@ export function PromptContainer({ sidebarHeight }) {
 				aria-hidden
 				...${showPromptPreview && { style: { 'padding-bottom': promptPreviewElement.current?.offsetHeight ?? '0px' } }}>
 				${tokenHighlightMode !== -1 ? html`
-					${(hideChatTemplates ? displayPromptChunks : promptChunks).map((chunk, i) => {
+					${promptChunks.map((chunk, i) => {
 		const getRatioColor = (ratio) => {
 			const sRatio = Math.max(0, Math.min(1, ratio));
 			if (sRatio <= 0.5) {
@@ -419,7 +378,7 @@ export function PromptContainer({ sidebarHeight }) {
 								data-promptchunk=${i}
 								style=${bgColor ? { '--bg-color': bgColor } : {}}
 								className=${`${(tokenHighlightMode === 1 && !isCurrent) || chunk.type === 'user' ? 'user' : 'machine'} ${isCurrent ? 'current' : ''} ${isNextUndo ? 'erase' : ''}`}>
-								${(chunk.content === '\n' ? ' \n' : chunk.content) + (i === (hideChatTemplates ? displayPromptChunks : promptChunks).length - 1 && chunk.content.endsWith('\n') && promptPreviewChunks.length === 0 ? '\u00a0' : '')}
+								${(chunk.content === '\n' ? ' \n' : chunk.content) + (i === promptChunks.length - 1 && chunk.content.endsWith('\n') && promptPreviewChunks.length === 0 ? '\u00a0' : '')}
 							</span>`;
 	})}
 					${(showPromptPreview && promptPreviewChunks.length) ? html`
@@ -431,7 +390,7 @@ export function PromptContainer({ sidebarHeight }) {
 				closeWidget=${() => closeModal("searchAndReplace")}
 				id="searchAndReplace"
 				promptArea=${promptArea}
-				promptText=${hideChatTemplates ? cleanPromptText : promptText}
+				promptText=${promptText}
 				cancel=${cancel}/>
 		</div>
 	`;
