@@ -1,5 +1,5 @@
 import { html } from 'htm/react';
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useRef } from 'react';
 import { useSettings } from '../contexts/SettingsContext.js';
 import { useGeneration } from '../contexts/GenerationContext.js';
 import { API_LLAMA_CPP, API_KOBOLD_CPP, API_OPENAI_COMPAT, API_AI_HORDE, API_DEEPSEEK } from '../constants.js';
@@ -53,6 +53,31 @@ export function Sidebar({ sidebarRef, toggleModal, currentThemeName, setCurrentT
 	const [showCustomMaintenance, setShowCustomMaintenance] = useState(false);
 	const [maintenanceDuration, setMaintenanceDuration] = useState('');
 	const [maintenanceDbLoad, setMaintenanceDbLoad] = useState(0.5);
+	const [maintDuration, setMaintDuration] = useState(5);
+	const [maintDbLoad, setMaintDbLoad] = useState(0.5);
+	const [maintMode, setMaintMode] = useState('shutdown');
+	const [maintInterval, setMaintInterval] = useState(60);
+	const [walEnabled, setWalEnabled] = useState(false);
+
+	const maintConfigRef = useRef({ duration: 5, dbLoad: 0.5, mode: 'shutdown', interval: 60, walEnabled: false });
+	const saveTimerRef = useRef(null);
+
+	const saveMaintConfigToServer = (update) => {
+		Object.assign(maintConfigRef.current, update);
+		if (saveTimerRef.current) clearTimeout(saveTimerRef.current);
+		saveTimerRef.current = setTimeout(async () => {
+			try {
+				const res = await fetch('/maintenance_config', {
+					method: 'POST',
+					headers: { 'Content-Type': 'application/json' },
+					body: JSON.stringify(maintConfigRef.current)
+				});
+				if (!res.ok) console.error('Failed to save maintenance config:', await res.text());
+			} catch (err) {
+				console.error('Failed to save maintenance config:', err);
+			}
+		}, 500);
+	};
 
 	useEffect(() => {
 		if (!isMiyapadEndpoint) return;
@@ -66,6 +91,16 @@ export function Sidebar({ sidebarRef, toggleModal, currentThemeName, setCurrentT
 					const configJson = await configRes.json();
 					if (configJson.ok) {
 						setConfigData(configJson.configs);
+					}
+					const maintRes = await fetch('/maintenance_config');
+					if (maintRes.ok) {
+						const maintJson = await maintRes.json();
+						setMaintDuration(maintJson.duration);
+						setMaintDbLoad(maintJson.dbLoad);
+						setMaintMode(maintJson.mode);
+						setMaintInterval(maintJson.interval);
+						setWalEnabled(maintJson.walEnabled);
+						maintConfigRef.current = { ...maintJson };
 					}
 				}
 			} catch (err) {}
@@ -614,6 +649,46 @@ export function Sidebar({ sidebarRef, toggleModal, currentThemeName, setCurrentT
 						Show Configs
 					</button>
 				</div>
+				<div className="horz-separator"></div>
+				<div className="hbox">
+					<${InputBox} label="Duration (sec)" type="number"
+						readOnly=${!!cancel}
+						value=${maintDuration}
+						onValueChange=${(v) => {
+							setMaintDuration(v);
+							saveMaintConfigToServer({ duration: v });
+						}}
+						placeholder="Infinite"/>
+					<${InputSlider} label="DB Load" type="number" step="0.1" max="1"
+						readOnly=${!!cancel} value=${maintDbLoad} onValueChange=${(v) => {
+							setMaintDbLoad(v);
+							saveMaintConfigToServer({ dbLoad: v });
+						}}/>
+				</div>
+				<${SelectBox}
+					label="Maintenance Mode"
+					value=${maintMode}
+					onValueChange=${(v) => {
+						setMaintMode(v);
+						saveMaintConfigToServer({ mode: v });
+					}}
+					options=${[
+						{ name: 'Interval', value: 'interval' },
+						{ name: 'Startup', value: 'startup' },
+						{ name: 'Shutdown', value: 'shutdown' },
+					]}/>
+				${maintMode === 'interval' && html`
+					<${InputBox} label="Interval (min)" type="number" inputmode="numeric"
+						readOnly=${!!cancel} value=${maintInterval} onValueChange=${(v) => {
+							setMaintInterval(v);
+							saveMaintConfigToServer({ interval: v });
+						}}/>`}
+				<${Checkbox} label="Enable WAL Mode"
+					disabled=${!!cancel} value=${walEnabled} onValueChange=${(v) => {
+						setWalEnabled(v);
+						saveMaintConfigToServer({ walEnabled: v });
+					}}/>
+				<div className="horz-separator"></div>
 				<div className="hbox">
 					<${InputSlider} label="Compression Level" type="number" step="1" min="1" max="22"
 						readOnly=${!!cancel} value=${zstdLevel} onValueChange=${setZstdLevel}/>

@@ -3,7 +3,10 @@
 | Route | Method | Description |
 | :--- | :--- | :--- |
 | `/version` | GET | Returns backend API version (`4`) and features. |
-| `/vacuum` | GET | Runs a SQLite `VACUUM` to compact database storage. |
+| `/vacuum` | GET | Runs a full SQLite `VACUUM` to compact database storage. |
+| `/zstd_maintenance` | POST | Runs `SELECT zstd_incremental_maintenance(duration, db_load)` with optional `duration` (sec, ≥0 or null) and `dbLoad` (0.0–1.0) from body. Validates both before passing to SQLite. Manually triggers zstd dictionary maintenance. |
+| `/maintenance_config` | GET | Returns the current scheduler/WAL configuration `{ duration, dbLoad, mode, interval, walEnabled }`. |
+| `/maintenance_config` | POST | Saves scheduler/WAL configuration, applies WAL mode change only when `walEnabled` differs from the previous setting, and re-schedules the interval-based zstd maintenance. |
 | `/load` | POST | Loads record contents for a store name and key. |
 | `/save` | POST | Saves or updates record contents for a store name and key. |
 | `/rename` | POST | Updates a session's entry in the `names` table (merges the new name and updated `modified` timestamp). |

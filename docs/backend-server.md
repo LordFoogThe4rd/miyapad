@@ -22,10 +22,17 @@ The `sqlite-zstd` extension can experience index naming collisions if multiple t
 
 ## Database Compaction & Compression Settings
 
-- **Auto-Vacuum**: The database is initialized with `PRAGMA auto_vacuum = FULL`. Deleted records automatically release database pages back to the operating system, preventing storage inflation.
+- **Auto-Vacuum**: The database is initialized with `PRAGMA auto_vacuum = FULL`. Deleted records automatically release database pages back to the operating system, preventing storage inflation. (The `sqlite-zstd` extension recommends this mode.)
+- **Scheduled zstd Maintenance**: An additional maintenance scheduler calls `SELECT zstd_incremental_maintenance(duration, db_load)` on a configurable schedule to train compression dictionaries and optimize storage. Controlled by config stored in the `meta` table (`maintenance_config`):
+  - **Duration** (seconds): How long each maintenance cycle should run (`null` = unlimited / until idle). Default: `5`.
+  - **DB Load** (0.0–1.0): CPU load target for the maintenance call. Default: `0.5`.
+  - **Mode**: `interval` (periodic timer), `startup` (once on server start), or `shutdown` (once on server stop).
+  - **Interval**: Minutes between cycles when mode is `interval` (default: `60`).
+- **WAL Mode**: Optionally enabled via the `walEnabled` config flag. When on, `PRAGMA journal_mode=WAL` improves concurrent read performance. When off, `PRAGMA journal_mode=DELETE` is used. The mode switch is only applied when `walEnabled` differs from the previously saved setting.
 - **Transparent Compression**: Managed via `zstd_enable_transparent(config)`.
-- **Incremental Maintenance**: A background maintenance task runs every 5 minutes (`zstd_incremental_maintenance(null, 1)`) to train compression dictionaries on table data and optimize storage.
-- **Manual Vacuuming**: Can be triggered via the `/vacuum` endpoint.
+- **Incremental Maintenance**: A separate background maintenance task runs every 5 minutes (`zstd_incremental_maintenance(null, 1)`), on top of the user-configurable scheduler above.
+- **Manual Maintenance**: Full `VACUUM` can be triggered via `GET /vacuum`, zstd maintenance via `POST /zstd_maintenance` (validates `duration ≥ 0` and `dbLoad` in `[0, 1]`). Scheduler config can be read/written via `GET`/`POST /maintenance_config`.
+- **Shutdown Guard**: On SIGINT, a `shuttingDown` flag prevents concurrent execution of shutdown maintenance if a second SIGINT is received before cleanup completes.
 
 ## Server CLI Options & Environment Variables
 

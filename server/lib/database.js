@@ -207,6 +207,16 @@ const startBackgroundMaintenance = (db) => {
     }, 5 * 60 * 1000);
 };
 
+let maintenanceSchedulerId = null;
+
+const DEFAULT_MAINTENANCE_CONFIG = {
+    duration: 5,
+    dbLoad: 0.5,
+    mode: 'shutdown',
+    interval: 60,
+    walEnabled: false
+};
+
 const configureAutoVacuum = (db) => {
     return new Promise((resolve) => {
         db.get('PRAGMA auto_vacuum', (err, row) => {
@@ -228,6 +238,83 @@ const configureAutoVacuum = (db) => {
             });
         });
     });
+};
+
+const runZstdMaintenance = (db, duration, dbLoad) => {
+    return new Promise((resolve) => {
+        const d = duration !== undefined ? duration : null;
+        const l = dbLoad !== undefined ? dbLoad : 1.0;
+        db.run(`SELECT zstd_incremental_maintenance(?, ?)`, [d, l], (err) => {
+            if (err) {
+                resolve({ ok: false, message: 'Error running zstd maintenance: ' + err.message });
+            } else {
+                console.log(`zstd maintenance completed (duration=${d}, db_load=${l}).`);
+                resolve({ ok: true, message: 'zstd maintenance completed.' });
+            }
+        });
+    });
+};
+
+const configureWAL = (db, enabled) => {
+    return new Promise((resolve) => {
+        const mode = enabled ? 'WAL' : 'DELETE';
+        db.run(`PRAGMA journal_mode=${mode}`, (err) => {
+            if (err) {
+                console.error('Error configuring WAL mode:', err.message);
+                resolve({ ok: false, message: err.message });
+            } else {
+                resolve({ ok: true });
+            }
+        });
+    });
+};
+
+const getMaintenanceConfig = (db) => {
+    return new Promise((resolve) => {
+        db.get(`SELECT value FROM meta WHERE key = 'maintenance_config'`, (err, row) => {
+            if (err || !row) {
+                resolve({ ...DEFAULT_MAINTENANCE_CONFIG });
+            } else {
+                try {
+                    const config = JSON.parse(row.value);
+                    resolve({ ...DEFAULT_MAINTENANCE_CONFIG, ...config });
+                } catch {
+                    resolve({ ...DEFAULT_MAINTENANCE_CONFIG });
+                }
+            }
+        });
+    });
+};
+
+const saveMaintenanceConfig = (db, config) => {
+    return new Promise((resolve) => {
+        const merged = { ...DEFAULT_MAINTENANCE_CONFIG, ...config };
+        db.run(`INSERT OR REPLACE INTO meta (key, value) VALUES ('maintenance_config', ?)`, [JSON.stringify(merged)], (err) => {
+            if (err) {
+                resolve({ ok: false, message: err.message });
+            } else {
+                resolve({ ok: true, config: merged });
+            }
+        });
+    });
+};
+
+const clearMaintenanceScheduler = () => {
+    if (maintenanceSchedulerId !== null) {
+        clearInterval(maintenanceSchedulerId);
+        maintenanceSchedulerId = null;
+    }
+};
+
+const scheduleZstdMaintenance = (db, config) => {
+    clearMaintenanceScheduler();
+    if (config.mode === 'interval' && config.interval > 0) {
+        const intervalMs = config.interval * 60 * 1000;
+        console.log(`Scheduling zstd maintenance every ${config.interval} minutes (duration=${config.duration}, db_load=${config.dbLoad}).`);
+        maintenanceSchedulerId = setInterval(() => {
+            runZstdMaintenance(db, config.duration, config.dbLoad);
+        }, intervalMs);
+    }
 };
 
 const initDatabase = (storagePath) => {
@@ -332,6 +419,15 @@ const initDatabase = (storagePath) => {
 
                     startBackgroundMaintenance(db);
 
+                    const maintConfig = await getMaintenanceConfig(db);
+                    if (maintConfig.walEnabled) {
+                        await configureWAL(db, true);
+                    }
+                    if (maintConfig.mode === 'startup') {
+                        await runZstdMaintenance(db, maintConfig.duration, maintConfig.dbLoad);
+                    }
+                    scheduleZstdMaintenance(db, maintConfig);
+
                     resolve(db);
                 } catch (e) {
                     reject(e);
@@ -341,4 +437,4 @@ const initDatabase = (storagePath) => {
     });
 };
 
-module.exports = { initDatabase };
+module.exports = { initDatabase, runZstdMaintenance, configureWAL, getMaintenanceConfig, saveMaintenanceConfig, clearMaintenanceScheduler, scheduleZstdMaintenance };
