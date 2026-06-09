@@ -2,6 +2,9 @@
 
 ```
 miyapad/
+├── .github/workflows/             # GitHub Actions CI/CD
+│   ├── release.yml                # Build & attach to GitHub Release on v* tags
+│   └── pages.yml                  # Deploy to GitHub Pages on v* tags
 ├── dist/                          # Parcel build output (production bundle)
 ├── miyapad.html                   # HTML entry point (loads src/main.js as module)
 ├── package.json                   # Frontend dependencies and run scripts
