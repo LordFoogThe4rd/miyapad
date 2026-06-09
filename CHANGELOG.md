@@ -1,5 +1,10 @@
 # Changelog
 
+## [???] - unreleased
+
+### Fixed
+- Modal tooltips no longer clipped by `.modal-content overflow: hidden` — changed to `overflow: visible` so absolutely-positioned tooltips can appear above input fields
+
 ## [2.3.2] - 2026-06-09
 
 ### Fixed
