@@ -6,7 +6,7 @@ import { joinPrompt, replaceNewlines } from '../utils/strings.js';
 import { regexSplitString, regexIndexOf, prefixMatchLength, createLenientPrefixRegex, createLenientRegex } from '../utils/regex.js';
 
 export function usePromptBuilder() {
-	const { templates, selectedTemplate, worldInfo, memoryTokens, authorNoteTokens, authorNoteDepth, contextLength, templateReplacements, setTemplateReplacements, hideChatTemplates, systemPromptModeText } = useSettings();
+	const { templates, selectedTemplate, worldInfo, memoryTokens, authorNoteTokens, authorNoteDepth, contextLength, templateReplacements, setTemplateReplacements } = useSettings();
 	const { promptChunks, cancel } = useGeneration();
 
 	function replacePlaceholders(string,placeholders) {
@@ -36,61 +36,10 @@ export function usePromptBuilder() {
 	}, [selectedTemplate,templates])
 	const promptText = useMemo(() => joinPrompt(promptChunks), [promptChunks]);
 
-	const { displayPromptChunks, cleanPromptText, origToClean, cleanToOrig } = useMemo(() => {
-		if (!hideChatTemplates) {
-			return { displayPromptChunks: promptChunks, cleanPromptText: promptText, origToClean: null, cleanToOrig: null };
-		}
-
-		const affixes = [
-			templates[selectedTemplate]?.sysPre,
-			templates[selectedTemplate]?.sysSuf,
-			templates[selectedTemplate]?.instPre,
-			templates[selectedTemplate]?.instSuf
-		].filter(x => x).map(x => x.replace(/\\n/g, '\n')).sort((a, b) => b.length - a.length);
-
-		let cText = "";
-		let cToO = [];
-		let oToC = [];
-
-		let chunks = [];
-		let origI = 0;
-
-		for (let chunk of promptChunks) {
-			let origContent = chunk.content;
-			let cContent = "";
-
-			let i = 0;
-			while (i < origContent.length) {
-				let matchedAffix = null;
-				for (const affix of affixes) {
-					if (origContent.startsWith(affix, i)) {
-						matchedAffix = affix;
-						break;
-					}
-				}
-				if (matchedAffix) {
-					for (let j = 0; j < matchedAffix.length; j++) {
-						oToC.push(cText.length + cContent.length);
-					}
-					i += matchedAffix.length;
-				} else {
-					cToO.push(origI + i);
-					oToC.push(cText.length + cContent.length);
-					cContent += origContent[i];
-					i++;
-				}
-			}
-
-			origI += origContent.length;
-			cText += cContent;
-			chunks.push({ ...chunk, content: cContent });
-		}
-
-		cToO.push(origI);
-		oToC.push(cText.length);
-
-		return { displayPromptChunks: chunks, cleanPromptText: cText, origToClean: oToC, cleanToOrig: cToO };
-	}, [promptChunks, promptText, hideChatTemplates, templates, selectedTemplate]);
+	const displayPromptChunks = promptChunks;
+	const cleanPromptText = promptText;
+	const origToClean = null;
+	const cleanToOrig = null;
 
 	const { modifiedPromptText, fimPromptInfo } = useMemo(() => {
 		if (cancel)
@@ -277,15 +226,8 @@ export function usePromptBuilder() {
 
 	const finalPromptText = useMemo(() => {
 		let text = replacePlaceholders(additionalContextPrompt, templateReplacements);
-		if (hideChatTemplates && systemPromptModeText) {
-			const sysPre = templates[selectedTemplate]?.sysPre?.replace(/\\n/g, '\n');
-			const sysSuf = templates[selectedTemplate]?.sysSuf?.replace(/\\n/g, '\n');
-			if (sysPre && sysSuf) {
-				text = sysPre + systemPromptModeText + sysSuf + text;
-			}
-		}
 		return text;
-	}, [additionalContextPrompt, templates, selectedTemplate, hideChatTemplates, systemPromptModeText]);
+	}, [additionalContextPrompt, templates, selectedTemplate]);
 	function convertChatToJSON(chatString, template) {
 		function extractMessage(text, prefix, suffixes, role) {
 			const matches = text.match(createLenientPrefixRegex(prefix));

@@ -27,8 +27,7 @@ export function SettingsProvider({ children, sessionStorage, templateStorage, th
 	const [spellCheck, setSpellCheck] = usePersistentState('spellCheck', false);
 	const [attachSidebar, setAttachSidebar] = usePersistentState('attachSidebar', false);
 	const [showProbsMode, setShowProbsMode] = usePersistentState('showProbsMode', 0);
-	const [hideChatTemplates, setHideChatTemplates] = useSessionState('hideChatTemplates', false);
-	const [systemPromptModeText, setSystemPromptModeText] = useSessionState('systemPromptModeText', "");
+
 	const [editorFont, setEditorFont] = usePersistentState('editorFont', 'Default');
 	const [uiFont, setUIFont] = usePersistentState('uiFont', 'Default');
 	const [__highlightGenTokens, __1] = usePersistentState('highlightGenTokens', true); // obsolete!
@@ -133,7 +132,7 @@ const [screenshotIncludeSessionName, setScreenshotIncludeSessionName] = usePersi
 		templates, setTemplates, templateReplacements, setTemplateReplacements, templatesImport, setTemplatesImport,
 		selectedTemplate, setSelectedTemplate, chatMode, setChatMode, templateList, setTemplateList,
 		fontSizeMultiplier, setFontSizeMultiplier, spellCheck, setSpellCheck, attachSidebar, setAttachSidebar,
-		showProbsMode, setShowProbsMode, hideChatTemplates, setHideChatTemplates, systemPromptModeText, setSystemPromptModeText,
+		showProbsMode, setShowProbsMode,
 		editorFont, setEditorFont, uiFont, setUIFont,
 		tokenHighlightMode, setTokenHighlightMode, tokenColorMode, setTokenColorMode,
 		preserveCursorPosition, setPreserveCursorPosition, promptAreaWidth, setPromptAreaWidth, showAPIKey, setShowAPIKey,
