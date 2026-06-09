@@ -3,7 +3,7 @@ import { useSettings } from '../contexts/SettingsContext.js';
 import { useGeneration } from '../contexts/GenerationContext.js';
 import { usePromptBuilder } from './usePromptBuilder.js';
 import { getTokenCount, serverTokenCount } from '../api/index.js';
-import { API_OPENAI_COMPAT, API_LLAMA_CPP } from '../constants.js';
+import { API_OPENAI_COMPAT, API_LLAMA_CPP, API_DEEPSEEK } from '../constants.js';
 
 export function useTokenCounters() {
 	const { endpoint, endpointAPI, endpointAPIKey, sessionStorage, isMiyapadEndpoint, useServerTokenization, contextLength, authorNoteTokens, setAuthorNoteTokens, memoryTokens, setMemoryTokens, worldInfo } = useSettings();
@@ -19,7 +19,7 @@ export function useTokenCounters() {
 		const assembled = authorNoteTokens.text && authorNoteTokens.text !== ""
 			? order.map(key => authorNoteTokens[key]).join("")
 			: "";	
-		if (assembled == "" || endpointAPI == API_OPENAI_COMPAT) {
+		if (assembled == "" || endpointAPI == API_OPENAI_COMPAT || endpointAPI == API_DEEPSEEK) {
 			setAuthorNoteTokens((prevauthorNoteTokens) => ({ ...prevauthorNoteTokens, "tokens": 0 }))
 			return
 		}
@@ -32,7 +32,7 @@ export function useTokenCounters() {
 					: getTokenCount({
 						endpoint,
 						endpointAPI,
-						...(endpointAPI == API_OPENAI_COMPAT || endpointAPI == API_LLAMA_CPP ? { endpointAPIKey } : {}),
+						...(endpointAPI == API_OPENAI_COMPAT || endpointAPI == API_LLAMA_CPP || endpointAPI == API_DEEPSEEK ? { endpointAPIKey } : {}),
 						content,
 						signal: ac.signal,
 						...(isMiyapadEndpoint ? { proxyEndpoint: sessionStorage.proxyEndpoint } : {})
@@ -63,7 +63,7 @@ export function useTokenCounters() {
 		const assembled = memoryTokens.text && memoryTokens.text !== ""
 			? order.map(key => memoryTokens[key]).join("")
 			: "";	
-		if (assembled == "" || endpointAPI == API_OPENAI_COMPAT){
+		if (assembled == "" || endpointAPI == API_OPENAI_COMPAT || endpointAPI == API_DEEPSEEK){
 			setMemoryTokens((prevMemoryTokens) => ({ ...prevMemoryTokens, "tokens": 0 }));
 			return
 		}
@@ -77,7 +77,7 @@ export function useTokenCounters() {
 					: getTokenCount({
 						endpoint,
 						endpointAPI,
-						...(endpointAPI == API_OPENAI_COMPAT || endpointAPI == API_LLAMA_CPP ? { endpointAPIKey } : {}),
+						...(endpointAPI == API_OPENAI_COMPAT || endpointAPI == API_LLAMA_CPP || endpointAPI == API_DEEPSEEK ? { endpointAPIKey } : {}),
 						content,
 						signal: ac.signal,
 						...(isMiyapadEndpoint ? { proxyEndpoint: sessionStorage.proxyEndpoint } : {})
@@ -103,7 +103,7 @@ export function useTokenCounters() {
 		const assembled = memoryTokens.worldInfo && memoryTokens.worldInfo !== ""
 			? [worldInfo.prefix,memoryTokens.worldInfo,worldInfo.suffix].join("")
 			: "";
-		if (assembled == "" || endpointAPI == API_OPENAI_COMPAT){
+		if (assembled == "" || endpointAPI == API_OPENAI_COMPAT || endpointAPI == API_DEEPSEEK){
 			setMemoryTokens((prevMemoryTokens) => ({ ...prevMemoryTokens, "tokensWI": 0 }));
 			return
 		}
@@ -117,7 +117,7 @@ export function useTokenCounters() {
 					: getTokenCount({
 						endpoint,
 						endpointAPI,
-						...(endpointAPI == API_OPENAI_COMPAT || endpointAPI == API_LLAMA_CPP ? { endpointAPIKey } : {}),
+						...(endpointAPI == API_OPENAI_COMPAT || endpointAPI == API_LLAMA_CPP || endpointAPI == API_DEEPSEEK ? { endpointAPIKey } : {}),
 						content,
 						signal: ac.signal,
 						...(isMiyapadEndpoint ? { proxyEndpoint: sessionStorage.proxyEndpoint } : {})

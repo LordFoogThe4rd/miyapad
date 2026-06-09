@@ -4,7 +4,7 @@ import { useGeneration } from '../contexts/GenerationContext.js';
 import { usePromptBuilder } from './usePromptBuilder.js';
 import { useTTS } from './useTTS.js';
 import { getTokenCount, serverTokenCount, completion, chatCompletion, abortCompletion } from '../api/index.js';
-import { API_LLAMA_CPP, API_KOBOLD_CPP, API_OPENAI_COMPAT, API_AI_HORDE } from '../constants.js';
+import { API_LLAMA_CPP, API_KOBOLD_CPP, API_OPENAI_COMPAT, API_AI_HORDE, API_DEEPSEEK } from '../constants.js';
 import { replaceNewlines } from '../utils/strings.js';
 import { regexLastIndexOf, createLenientRegex } from '../utils/regex.js';
 
@@ -97,7 +97,7 @@ export function useGenerationLogic() {
 					: getTokenCount({
 						endpoint,
 						endpointAPI,
-						...(endpointAPI == API_OPENAI_COMPAT || endpointAPI == API_LLAMA_CPP ? { endpointAPIKey } : {}),
+						...(endpointAPI == API_OPENAI_COMPAT || endpointAPI == API_LLAMA_CPP || endpointAPI == API_DEEPSEEK ? { endpointAPIKey } : {}),
 						content: prompt,
 						signal: ac.signal,
 						...(isMiyapadEndpoint ? { proxyEndpoint: sessionStorage.proxyEndpoint } : {})
@@ -182,7 +182,7 @@ export function useGenerationLogic() {
 			for await (const chunk of (useChatAPI ? chatCompletion : completion)({
 				endpoint,
 				endpointAPI,
-				...(endpointAPI == API_OPENAI_COMPAT || endpointAPI == API_LLAMA_CPP || endpointAPI == API_AI_HORDE ? {
+				...(endpointAPI == API_OPENAI_COMPAT || endpointAPI == API_LLAMA_CPP || endpointAPI == API_AI_HORDE || endpointAPI == API_DEEPSEEK ? {
 					endpointAPIKey,
 					model: endpointModel
 				} : {}),
@@ -243,7 +243,7 @@ export function useGenerationLogic() {
 							dry_base: dryBase,
 							dry_allowed_length: dryAllowedLength,
 							dry_penalty_last_n: dryPenaltyRange,
-							dry_sequence_breakers: endpointAPI == API_OPENAI_COMPAT ? 
+							dry_sequence_breakers: (endpointAPI == API_OPENAI_COMPAT || endpointAPI == API_DEEPSEEK) ? 
 								drySequenceBreakers : 
 								JSON.parse(drySequenceBreakers),
 						}: {}),
@@ -303,10 +303,10 @@ export function useGenerationLogic() {
 			if (e.name !== 'AbortError') {
 				reportError(e);
 				const errStr = e.toString();
-				if ((endpointAPI == API_OPENAI_COMPAT || endpointAPI == API_LLAMA_CPP) && errStr.includes("401")) {
+				if ((endpointAPI == API_OPENAI_COMPAT || endpointAPI == API_LLAMA_CPP || endpointAPI == API_DEEPSEEK) && errStr.includes("401")) {
 					setLastError("Error: Rejected API Key");
 					setRejectedAPIKey(true);
-				} else if (endpointAPI == API_OPENAI_COMPAT && errStr.includes("429")) {
+				} else if ((endpointAPI == API_OPENAI_COMPAT || endpointAPI == API_DEEPSEEK) && errStr.includes("429")) {
 					setLastError("Error: Insufficient Quota");
 				} else {
 					setLastError(errStr);

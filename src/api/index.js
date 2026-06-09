@@ -1,9 +1,10 @@
-import { API_LLAMA_CPP, API_KOBOLD_CPP, API_OPENAI_COMPAT, API_AI_HORDE } from '../constants.js';
+import { API_LLAMA_CPP, API_KOBOLD_CPP, API_OPENAI_COMPAT, API_AI_HORDE, API_DEEPSEEK } from '../constants.js';
 import { normalizeEndpoint } from './common.js';
 import { llamaCppTokenCount, llamaCppTokenize, llamaCppCompletion } from './llamacpp.js';
 import { koboldCppTokenCount, koboldCppTokenize, koboldCppCompletion, koboldCppAbortCompletion } from './koboldcpp.js';
 import { openaiAphroditeTokenCount, openaiOobaTokenCount, openaiTabbyTokenCount, openaiOobaTokenize, openaiTabbyTokenize, openaiModels, openaiCompletion, openaiChatCompletion, openaiOobaAbortCompletion } from './openai.js';
 import { aiHordeModels, aiHordeCompletion, aiHordeAbortCompletion } from './aihorde.js';
+import { deepseekModels, deepseekCompletion, deepseekChatCompletion, deepseekAbortCompletion } from './deepseek.js';
 
 export async function serverTokenCount({ sessionEndpoint, signal, content }) {
 	const res = await fetch(`${sessionEndpoint}/api/v1/token-count`, {
@@ -73,9 +74,10 @@ export async function getTokenCount({ endpoint, endpointAPI, endpointAPIKey, sig
 			return await llamaCppTokenCount({ endpoint, endpointAPIKey, signal, ...options });
 		case API_KOBOLD_CPP:
 			return await koboldCppTokenCount({ endpoint, endpointAPIKey, signal, ...options });
+		case API_DEEPSEEK:
 		case API_OPENAI_COMPAT:
 			// These endpoints don't have a token count endpoint...
-			if (new URL(endpoint).host === 'api.openai.com' || new URL(endpoint).host === 'api.together.xyz')
+			if (endpointAPI === API_OPENAI_COMPAT && (new URL(endpoint).host === 'api.openai.com' || new URL(endpoint).host === 'api.together.xyz'))
 				return 0;
 
 			// Each backend that exposes an OpenAI-compatible API may have a different token count endpoint.
@@ -107,9 +109,10 @@ export async function getTokens({ endpoint, endpointAPI, endpointAPIKey, signal,
 			return await llamaCppTokenize({ endpoint, endpointAPIKey, signal, ...options });
 		case API_KOBOLD_CPP:
 			return await koboldCppTokenize({ endpoint, endpointAPIKey, signal, ...options });
+		case API_DEEPSEEK:
 		case API_OPENAI_COMPAT:
 			// These endpoints don't have a tokenenizer endpoint...
-			if (new URL(endpoint).host === 'api.openai.com' || new URL(endpoint).host === 'api.together.xyz')
+			if (endpointAPI === API_OPENAI_COMPAT && (new URL(endpoint).host === 'api.openai.com' || new URL(endpoint).host === 'api.together.xyz'))
 				return [];
 			
 			// Each backend that exposes an OpenAI-compatible API may have a different tokenizer endpoint.
@@ -130,8 +133,9 @@ export async function getTokens({ endpoint, endpointAPI, endpointAPIKey, signal,
 export async function getModels({ endpoint, endpointAPI, endpointAPIKey, signal, ...options }) {
 	endpoint = normalizeEndpoint(endpoint, endpointAPI);
 	switch (endpointAPI) {
+		case API_DEEPSEEK:
 		case API_OPENAI_COMPAT:
-			return await openaiModels({ endpoint, endpointAPIKey, signal, ...options });
+			return await (endpointAPI === API_DEEPSEEK ? deepseekModels : openaiModels)({ endpoint, endpointAPIKey, signal, ...options });
 		case API_AI_HORDE:
 			return await aiHordeModels({ endpoint, endpointAPIKey, signal, ...options });
 		default:
@@ -146,6 +150,8 @@ export async function* completion({ endpoint, endpointAPI, endpointAPIKey, signa
 			return yield* await llamaCppCompletion({ endpoint, endpointAPIKey, signal, ...options });
 		case API_KOBOLD_CPP:
 			return yield* await koboldCppCompletion({ endpoint, endpointAPIKey, signal, ...options });
+		case API_DEEPSEEK:
+			return yield* await deepseekCompletion({ endpoint, endpointAPIKey, signal, ...options });
 		case API_OPENAI_COMPAT:
 			return yield* await openaiCompletion({ endpoint, endpointAPIKey, signal, ...options });
 		case API_AI_HORDE:
@@ -156,8 +162,9 @@ export async function* completion({ endpoint, endpointAPI, endpointAPIKey, signa
 export async function* chatCompletion({ endpoint, endpointAPI, endpointAPIKey, signal, ...options }) {
 	endpoint = normalizeEndpoint(endpoint, endpointAPI);
 	switch (endpointAPI) {
+		case API_DEEPSEEK:
 		case API_OPENAI_COMPAT:
-			return yield* await openaiChatCompletion({ endpoint, endpointAPIKey, signal, ...options });
+			return yield* await (endpointAPI === API_DEEPSEEK ? deepseekChatCompletion : openaiChatCompletion)({ endpoint, endpointAPIKey, signal, ...options });
 	}
 }
 
@@ -166,8 +173,9 @@ export async function abortCompletion({ endpoint, endpointAPI, ...options }) {
 	switch (endpointAPI) {
 		case API_KOBOLD_CPP:
 			return await koboldCppAbortCompletion({ endpoint, ...options });
+		case API_DEEPSEEK:
 		case API_OPENAI_COMPAT:
-			return await openaiOobaAbortCompletion({ endpoint, ...options });
+			return await (endpointAPI === API_DEEPSEEK ? deepseekAbortCompletion : openaiOobaAbortCompletion)({ endpoint, ...options });
 		case API_AI_HORDE:
 			return await aiHordeAbortCompletion({ endpoint, ...options });
 	}

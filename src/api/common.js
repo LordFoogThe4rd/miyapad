@@ -1,4 +1,4 @@
-import { API_LLAMA_CPP, API_KOBOLD_CPP, API_OPENAI_COMPAT, API_AI_HORDE } from '../constants.js';
+import { API_LLAMA_CPP, API_KOBOLD_CPP, API_OPENAI_COMPAT, API_AI_HORDE, API_DEEPSEEK } from '../constants.js';
 
 export function exportText(filename, text) {
 	const textBlob = new Blob([text], {type: 'text/plain;charset=utf-8'});

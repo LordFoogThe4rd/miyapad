@@ -3,7 +3,7 @@ import { useState, useEffect, useRef } from 'react';
 import { Modal } from '../Modal.js';
 import { CollapsibleGroup } from '../controls/CollapsibleGroup.js';
 import { getTokenCount, serverTokenCount } from '../../api/index.js';
-import { API_OPENAI_COMPAT, API_LLAMA_CPP } from '../../constants.js';
+import { API_OPENAI_COMPAT, API_LLAMA_CPP, API_DEEPSEEK } from '../../constants.js';
 
 export function ContextModal({ isOpen, closeModal, tokens, memoryTokens, authorNoteTokens, handleMemoryTokensChange, finalPromptText, defaultPresets, cancel, apiConfig }) {
 	const { sessionStorage, endpoint, endpointAPI, endpointAPIKey, isMiyapadEndpoint, useServerTokenization } = apiConfig;
@@ -28,7 +28,7 @@ export function ContextModal({ isOpen, closeModal, tokens, memoryTokens, authorN
 					: getTokenCount({
 						endpoint,
 						endpointAPI,
-						...(endpointAPI == API_OPENAI_COMPAT || endpointAPI == API_LLAMA_CPP ? { endpointAPIKey } : {}),
+						...(endpointAPI == API_OPENAI_COMPAT || endpointAPI == API_LLAMA_CPP || endpointAPI == API_DEEPSEEK ? { endpointAPIKey } : {}),
 						content,
 						signal: ac.signal,
 						...(isMiyapadEndpoint ? { proxyEndpoint: sessionStorage.proxyEndpoint } : {})
