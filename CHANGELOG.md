@@ -1,5 +1,10 @@
 # Changelog
 
+## [2.3.2] - 2026-06-09
+
+### Fixed
+- Hardcoded 5-minute `zstd_incremental_maintenance` loop no longer runs unconditionally; the user-configured scheduler (mode, interval) now fully controls periodic maintenance. Default mode `shutdown` means zero automatic maintenance until server stop.
+
 ## [2.3.1] - 2026-06-09
 
 ### Changed

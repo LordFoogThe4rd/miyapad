@@ -30,7 +30,7 @@ The `sqlite-zstd` extension can experience index naming collisions if multiple t
   - **Interval**: Minutes between cycles when mode is `interval` (default: `60`).
 - **WAL Mode**: Optionally enabled via the `walEnabled` config flag. When on, `PRAGMA journal_mode=WAL` improves concurrent read performance. When off, `PRAGMA journal_mode=DELETE` is used. The mode switch is only applied when `walEnabled` differs from the previously saved setting.
 - **Transparent Compression**: Managed via `zstd_enable_transparent(config)`.
-- **Incremental Maintenance**: A separate background maintenance task runs every 5 minutes (`zstd_incremental_maintenance(null, 1)`), on top of the user-configurable scheduler above.
+- **Incremental Maintenance**: Periodic maintenance runs only according to the user's scheduler config (mode `interval`).
 - **Manual Maintenance**: Full `VACUUM` can be triggered via `GET /vacuum`, zstd maintenance via `POST /zstd_maintenance` (validates `duration ≥ 0` and `dbLoad` in `[0, 1]`). Scheduler config can be read/written via `GET`/`POST /maintenance_config`.
 - **Shutdown Guard**: On SIGINT, a `shuttingDown` flag prevents concurrent execution of shutdown maintenance if a second SIGINT is received before cleanup completes.
 
