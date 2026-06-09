@@ -25,7 +25,28 @@ graph TD
 - **`SettingsContext` (`src/contexts/SettingsContext.js`)**: Holds global settings and generation hyperparameters (e.g., Temperature, Top-K, Min-P, Mirostat, Dry Sampler options, selected model endpoints, OpenAI keys, instruction templates, active themes, TTS voice settings).
 - **`GenerationContext` (`src/contexts/GenerationContext.js`)**: Manages runtime generation and prompt state (e.g., prompt text chunks, total token count, generation speed, active abort controllers, undo/redo stacks, open modal states, and UI view toggles).
 
-## 3. Key Custom Hooks
+## 3. LLM Provider API Layer
+
+The `src/api/` directory implements a provider dispatch pattern for interfacing with different LLM backends. Each provider is a dedicated module exporting a consistent set of functions:
+
+| Provider | Module | Completion | Chat Completion | Models | Token Count |
+| :--- | :--- | :--- | :--- | :--- | :--- |
+| **llama.cpp** | `llamacpp.js` | `llamaCppCompletion` | — | — | `llamaCppTokenCount` |
+| **KoboldCPP** | `koboldcpp.js` | `koboldCppCompletion` | — | — | `koboldCppTokenCount` |
+| **OpenAI Compatible** | `openai.js` | `openaiCompletion` | `openaiChatCompletion` | `openaiModels` | host-aware |
+| **DeepSeek** | `deepseek.js` | `deepseekCompletion` | `deepseekChatCompletion` | `deepseekModels` | — |
+| **AI Horde** | `aihorde.js` | `aiHordeCompletion` | — | `aiHordeModels` | — |
+
+The router in `src/api/index.js` dispatches calls based on the `endpointAPI` constant (`src/constants.js`). When a user selects "DeepSeek" in the sidebar (`API_DEEPSEEK = 5`), the endpoint is forced to `https://api.deepseek.com`, the server input becomes read-only, and all generation calls route through `deepseek.js`. DeepSeek-specific behaviors include:
+
+- Endpoints: `GET /models`, `POST /chat/completions`, `POST /beta/completions`
+- Abort is a no-op (no server-side abort endpoint)
+- Token counting is skipped entirely
+- Logit bias uses OpenAI-compatible format
+- Chat completions include `thinking: { type: "disabled" }` to disable reasoning models
+- Default model: `deepseek-v4-flash` (configurable in UI)
+
+## 4. Key Custom Hooks
 
 - **`usePromptBuilder` (`src/hooks/usePromptBuilder.js`)**: Assembles the raw prompt injected into the LLM. It parses text, inserts instruct template tags (e.g. system messages, user instruction blocks, assistant headers), processes World Info (checking prompt text against regex keys), formats memory blocks, injects Author Notes at specified line depths, handles Fill-In-The-Middle (FIM) placeholders `{fill}` / `{predict}`, and converts conversational history to OpenAI-compatible messages.
 - **`useGenerationLogic` (`src/hooks/useGenerationLogic.js`)**: Manages the core prediction loop. It calls API completion engines, streams tokens back to the UI chunk by chunk, calculates generation speeds (tokens/sec), manages cancellation/abort signals, manages undo/redo state histories, and passes completed generation blocks to the Text-To-Speech queue.
