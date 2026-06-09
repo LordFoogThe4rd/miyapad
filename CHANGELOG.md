@@ -1,6 +1,6 @@
 # Changelog
 
-## [???] - unreleased
+## [2.3.1] - 2026-06-09
 
 ### Changed
 - Replaced `PRAGMA incremental_vacuum` with `zstd_incremental_maintenance` scheduler; added configurable maintenance mode (interval/startup/shutdown), duration, DB load, and optional WAL journal mode
