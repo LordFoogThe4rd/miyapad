@@ -1,6 +1,6 @@
 import { html } from 'htm/react';
 import { Modal } from '../Modal.js';
-import { API_OPENAI_COMPAT } from '../../constants.js';
+import { API_OPENAI_COMPAT, API_DEEPSEEK } from '../../constants.js';
 
 export function GrammarModal({ isOpen, closeModal, grammar, setGrammar, endpointAPI, cancel }) {
 	const grammarExample = `# "root" specifies the pattern for the overall output
@@ -40,11 +40,11 @@ eol       ::= "\\n"`;
 	return html`
 		<${Modal} isOpen=${isOpen} onClose=${closeModal}
 			title="Grammar"
-			description=${html`<div>Grammar is a set of rules to generate predictions. Each rule has a name and defines how to create specific text patterns.</div><br/><div>For more information see: ${endpointAPI == API_OPENAI_COMPAT ? grammarEBNFHelpUrl : grammarHelpUrl}</div>`}>
+			description=${html`<div>Grammar is a set of rules to generate predictions. Each rule has a name and defines how to create specific text patterns.</div><br/><div>For more information see: ${endpointAPI == API_OPENAI_COMPAT || endpointAPI == API_DEEPSEEK ? grammarEBNFHelpUrl : grammarHelpUrl}</div>`}>
 			<textarea
 				readOnly=${!!cancel}
 				value=${grammar}
-				placeholder=${endpointAPI == API_OPENAI_COMPAT ? grammarEBNFExample : grammarExample}
+				placeholder=${endpointAPI == API_OPENAI_COMPAT || endpointAPI == API_DEEPSEEK ? grammarEBNFExample : grammarExample}
 				onInput=${(e) => setGrammar(e.target.value)}
 				class="expanded-text-area-settings"/>
 		</${Modal}>`;

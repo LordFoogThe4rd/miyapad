@@ -2,7 +2,7 @@ import { html } from 'htm/react';
 import { useState, useEffect, useMemo } from 'react';
 import { Modal } from '../Modal.js';
 import { InputBox } from '../controls/InputBox.js';
-import { API_LLAMA_CPP, API_KOBOLD_CPP, API_AI_HORDE, API_OPENAI_COMPAT } from '../../constants.js';
+import { API_LLAMA_CPP, API_KOBOLD_CPP, API_AI_HORDE, API_OPENAI_COMPAT, API_DEEPSEEK } from '../../constants.js';
 import { getTokens, serverTokenize } from '../../api/index.js';
 
 export function LogitBiasModal({ isOpen, closeModal, biasState, apiConfig, cancel }) {
@@ -91,7 +91,7 @@ export function LogitBiasModal({ isOpen, closeModal, biasState, apiConfig, cance
 				: getTokens({
 					endpoint,
 					endpointAPI,
-					...(endpointAPI == API_OPENAI_COMPAT || endpointAPI == API_LLAMA_CPP ? { endpointAPIKey } : {}),
+					...(endpointAPI == API_OPENAI_COMPAT || endpointAPI == API_LLAMA_CPP || endpointAPI == API_DEEPSEEK ? { endpointAPIKey } : {}),
 					content: `!==${biasString}`.replace(/\\n/g,'\n'),
 					signal: ac.signal,
 					...(isMiyapadEndpoint ? { proxyEndpoint: sessionStorage.proxyEndpoint } : {})
@@ -106,7 +106,7 @@ export function LogitBiasModal({ isOpen, closeModal, biasState, apiConfig, cance
 				: getTokens({
 					endpoint,
 					endpointAPI,
-					...(endpointAPI == API_OPENAI_COMPAT || endpointAPI == API_LLAMA_CPP ? { endpointAPIKey } : {}),
+					...(endpointAPI == API_OPENAI_COMPAT || endpointAPI == API_LLAMA_CPP || endpointAPI == API_DEEPSEEK ? { endpointAPIKey } : {}),
 					content: `!==`,
 					signal: ac.signal,
 					...(isMiyapadEndpoint ? { proxyEndpoint: sessionStorage.proxyEndpoint } : {})
@@ -139,10 +139,10 @@ export function LogitBiasModal({ isOpen, closeModal, biasState, apiConfig, cance
 			if (e.name !== 'AbortError') {
 				reportError(e);
 				const errStr = e.toString();
-				if ((endpointAPI == API_OPENAI_COMPAT || endpointAPI == API_LLAMA_CPP) && errStr.includes("401")) {
+				if ((endpointAPI == API_OPENAI_COMPAT || endpointAPI == API_LLAMA_CPP || endpointAPI == API_DEEPSEEK) && errStr.includes("401")) {
 					setLastBiasError("Error: Rejected API Key");
 					setRejectedAPIKey(true);
-				} else if (endpointAPI == API_OPENAI_COMPAT && errStr.includes("429")) {
+				} else if ((endpointAPI == API_OPENAI_COMPAT || endpointAPI == API_DEEPSEEK) && errStr.includes("429")) {
 					setLastBiasError("Error: Insufficient Quota");
 				} else {
 					setLastBiasError(errStr);
@@ -202,6 +202,7 @@ export function LogitBiasModal({ isOpen, closeModal, biasState, apiConfig, cance
 				koboldCppSetLogitBiasParams();
 				break;
 			case API_OPENAI_COMPAT:
+		case API_DEEPSEEK:
 				openaiSetLogitBiasParams();
 				break;
 		}
@@ -315,7 +316,7 @@ export function LogitBiasModal({ isOpen, closeModal, biasState, apiConfig, cance
 												onInput=${(e) => handleBiasTempChange(key,"value", index, e.target.value) }
 												/>
 											<div class="lb-modal-tokenized">
-												${endpointAPI == API_LLAMA_CPP && bias.strings != ""
+												${(endpointAPI == API_LLAMA_CPP || endpointAPI == API_DEEPSEEK) && bias.strings != ""
 													? "["+bias.strings.join("|")+"] "
 													: "["+bias.tokens+"]" } 
 

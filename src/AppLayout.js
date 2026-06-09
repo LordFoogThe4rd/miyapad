@@ -12,7 +12,7 @@ import { Sidebar } from './components/Sidebar.js';
 import { Modals } from './components/Modals.js';
 import { PromptContainer } from './components/PromptContainer.js';
 import { SVResizeObserver } from 'scrollview-resize';
-import { API_LLAMA_CPP, API_KOBOLD_CPP, API_OPENAI_COMPAT, API_AI_HORDE } from './constants.js';
+import { API_LLAMA_CPP, API_KOBOLD_CPP, API_OPENAI_COMPAT, API_AI_HORDE, API_DEEPSEEK } from './constants.js';
 import { usePersistentState } from './hooks/usePersistentState.js';
 import { defaultPresets } from './defaults/presets.js';
 import { defaultPrompt } from './defaults/prompt.js';
@@ -389,8 +389,8 @@ export function AppLayout() {
 				: getTokenCount({
 					endpoint,
 					endpointAPI,
-					...(endpointAPI == API_OPENAI_COMPAT || endpointAPI == API_LLAMA_CPP ? { endpointAPIKey } : {}),
-					content: finalPromptText,
+			...(endpointAPI == API_OPENAI_COMPAT || endpointAPI == API_LLAMA_CPP || endpointAPI == API_DEEPSEEK ? { endpointAPIKey } : {}),
+				content: finalPromptText,
 					signal: ac.signal,
 					...(isMiyapadEndpoint ? { proxyEndpoint: sessionStorage.proxyEndpoint } : {})
 				})
@@ -406,7 +406,7 @@ export function AppLayout() {
 	}, [modalState["context"], promptText, endpoint, endpointAPI]);
 
 	useEffect(() => {
-		if (endpointAPI !== API_OPENAI_COMPAT && endpointAPI !== API_AI_HORDE) {
+		if (endpointAPI !== API_OPENAI_COMPAT && endpointAPI !== API_AI_HORDE && endpointAPI !== API_DEEPSEEK) {
 			return;
 		}
 		setRejectedAPIKey(false);
@@ -425,7 +425,7 @@ export function AppLayout() {
 				if (e.name !== 'AbortError') {
 					reportError(e);
 					const errStr = e.toString();
-					if (endpointAPI == API_OPENAI_COMPAT && errStr.includes("401")) {
+					if ((endpointAPI == API_OPENAI_COMPAT || endpointAPI == API_DEEPSEEK) && errStr.includes("401")) {
 						setRejectedAPIKey(true);
 					}
 				}

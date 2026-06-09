@@ -2,7 +2,7 @@ import { html } from 'htm/react';
 import { useState, useEffect } from 'react';
 import { useSettings } from '../contexts/SettingsContext.js';
 import { useGeneration } from '../contexts/GenerationContext.js';
-import { API_LLAMA_CPP, API_KOBOLD_CPP, API_OPENAI_COMPAT, API_AI_HORDE } from '../constants.js';
+import { API_LLAMA_CPP, API_KOBOLD_CPP, API_OPENAI_COMPAT, API_AI_HORDE, API_DEEPSEEK } from '../constants.js';
 import { InputBox } from './controls/InputBox.js';
 import { SelectBox, SelectBoxTemplate } from './controls/SelectBox.js';
 import { Checkbox } from './controls/Checkbox.js';
@@ -92,6 +92,10 @@ export function Sidebar({ sidebarRef, toggleModal, currentThemeName, setCurrentT
 				if (url.protocol != 'http:' && url.protocol != 'https:')
 					url.protocol = "http:";
 				url.port = 5001;
+				break;
+			case API_DEEPSEEK:
+				url = new URL("https://api.deepseek.com");
+				url.pathname = "";
 				break;
 			case API_OPENAI_COMPAT:
 				if (url.protocol != 'http:' && url.protocol != 'https:')
@@ -191,8 +195,8 @@ export function Sidebar({ sidebarRef, toggleModal, currentThemeName, setCurrentT
 				<${InputBox} label="Server"
 					className=${isMixedContent() ? 'mixed-content' : ''}
 					tooltip=${isMixedContent() ? 'This URL might be blocked due to mixed content. If the prediction fails, download miyapad.html and run it locally.' : ''}
-					readOnly=${!!cancel || endpointAPI == API_AI_HORDE}
-					value=${endpointAPI != API_AI_HORDE ? endpoint : 'https://aihorde.net/api'}
+					readOnly=${!!cancel || endpointAPI == API_AI_HORDE || endpointAPI == API_DEEPSEEK}
+					value=${endpointAPI == API_AI_HORDE ? 'https://aihorde.net/api' : endpointAPI == API_DEEPSEEK ? 'https://api.deepseek.com' : endpoint}
 					onValueChange=${setEndpoint}/>
 				<${SelectBox}
 					label="API"
@@ -204,6 +208,7 @@ export function Sidebar({ sidebarRef, toggleModal, currentThemeName, setCurrentT
 						{ name: 'KoboldCpp', value: API_KOBOLD_CPP },
 						{ name: 'OpenAI Compatible', value: API_OPENAI_COMPAT },
 						{ name: 'AI Horde', value: API_AI_HORDE },
+						{ name: 'DeepSeek', value: API_DEEPSEEK },
 					]}/>
 				${(endpointAPI != API_AI_HORDE) && html`
 					<div className="hbox-flex" style=${{"flex-wrap": "unset"}}>
@@ -221,12 +226,12 @@ export function Sidebar({ sidebarRef, toggleModal, currentThemeName, setCurrentT
 							${!showAPIKey ? html`<${SVG_ShowKey}/>` : html`<${SVG_HideKey}/>`}
 						</button>
 					</div>`}
-				${(endpointAPI == API_OPENAI_COMPAT) && html`
-					<${InputBox} label="Model"
-						datalist=${openaiModels.map(model => model.id || model)}
-						readOnly=${!!cancel}
-						value=${endpointModel}
-						onValueChange=${setEndpointModel}/>`}
+			${(endpointAPI == API_OPENAI_COMPAT || endpointAPI == API_DEEPSEEK) && html`
+				<${InputBox} label="Model"
+					datalist=${openaiModels.map(model => model.id || model)}
+					readOnly=${!!cancel}
+					value=${endpointModel}
+					onValueChange=${setEndpointModel}/>`}
 				${endpointAPI == API_AI_HORDE && html`
 					<div className="vbox" style=${{gap: '4px'}}>
 						<${InputBox} label="Selected Model(s)"
@@ -241,7 +246,7 @@ export function Sidebar({ sidebarRef, toggleModal, currentThemeName, setCurrentT
 						<${Checkbox} label="Post Sampling Probs"
 							title="This returns the probabilities after applying the sampling chain. Note that disabling this will significantly reduce generation speed."
 							disabled=${!!cancel} value=${postSamplingProbs} onValueChange=${setPostSamplingProbs}/>`}
-					${endpointAPI == API_OPENAI_COMPAT && html`
+					${(endpointAPI == API_OPENAI_COMPAT || endpointAPI == API_DEEPSEEK) && html`
 						<${Checkbox} label="Strict API"
 							title="If enabled, non-standard fields won't be included in API requests."
 							disabled=${!!cancel} value=${openaiPresets} onValueChange=${setOpenaiPresets}/>
@@ -422,7 +427,7 @@ export function Sidebar({ sidebarRef, toggleModal, currentThemeName, setCurrentT
 				<${InputSlider} label="Temperature" type="number" step="0.01" max="5"
 					hidden=${!enabledSamplers.includes('temperature')}
 					readOnly=${!!cancel} value=${temperature} onValueChange=${setTemperature}/>
-				${(!openaiPresets || endpointAPI != API_OPENAI_COMPAT) && html`
+				${(!openaiPresets || (endpointAPI != API_OPENAI_COMPAT && endpointAPI != API_DEEPSEEK)) && html`
 					${enabledSamplers.includes('dynatemp') && html`
 						<div className="hbox">
 							<${InputSlider} label="DynaTemp Range" type="number" step="0.01"
@@ -451,7 +456,7 @@ export function Sidebar({ sidebarRef, toggleModal, currentThemeName, setCurrentT
 							readOnly=${!!cancel} value=${frequencyPenalty} onValueChange=${setFrequencyPenalty}/>
 					</div>`}
 				${temperature <= 0 ? null : html`
-					${(!openaiPresets || endpointAPI != API_OPENAI_COMPAT) && html`
+					${(!openaiPresets || (endpointAPI != API_OPENAI_COMPAT && endpointAPI != API_DEEPSEEK)) && html`
 						<${SelectBox}
 							label="Mirostat"
 							disabled=${!!cancel}
@@ -463,7 +468,7 @@ export function Sidebar({ sidebarRef, toggleModal, currentThemeName, setCurrentT
 								{ name: 'Mirostat', value: 1 },
 								{ name: 'Mirostat 2.0', value: 2 },
 							]}/>`}
-					${(enabledSamplers.includes('mirostat') && mirostat && (!openaiPresets || endpointAPI != API_OPENAI_COMPAT)) ? html`
+					${(enabledSamplers.includes('mirostat') && mirostat && (!openaiPresets || (endpointAPI != API_OPENAI_COMPAT && endpointAPI != API_DEEPSEEK))) ? html`
 						<div className="hbox">
 							<${InputSlider} label="Mirostat τ" type="number" step="0.01" max="20"
 								readOnly=${!!cancel} value=${mirostatTau} onValueChange=${setMirostatTau}/>
@@ -471,7 +476,7 @@ export function Sidebar({ sidebarRef, toggleModal, currentThemeName, setCurrentT
 								readOnly=${!!cancel} value=${mirostatEta} onValueChange=${setMirostatEta}/>
 						</div>
 					` : html`
-						${(!openaiPresets || endpointAPI != API_OPENAI_COMPAT) && html`
+						${(!openaiPresets || (endpointAPI != API_OPENAI_COMPAT && endpointAPI != API_DEEPSEEK)) && html`
 							${enabledSamplers.includes('xtc') && html`
 								<div className="hbox">
 									<${InputSlider} label="XTC Threshold" type="number" step="0.01" max="0.5"
@@ -499,22 +504,22 @@ export function Sidebar({ sidebarRef, toggleModal, currentThemeName, setCurrentT
 						`}
 					`}
 				`}
-				${(!openaiPresets || endpointAPI != API_OPENAI_COMPAT) && html`
+				${(!openaiPresets || (endpointAPI != API_OPENAI_COMPAT && endpointAPI != API_DEEPSEEK)) && html`
 					${(enabledSamplers.includes('top_k') || enabledSamplers.includes('top_p') || enabledSamplers.includes('min_p')) && html`
 						<div className="hbox">
-							${(!openaiPresets || endpointAPI != API_OPENAI_COMPAT) && html`
+							${(!openaiPresets || (endpointAPI != API_OPENAI_COMPAT && endpointAPI != API_DEEPSEEK)) && html`
 								<${InputSlider} label="Top K" type="number" step="1" max="200"
 									hidden=${!enabledSamplers.includes('top_k')}
 									readOnly=${!!cancel} value=${topK} onValueChange=${setTopK}/>`}
 							<${InputSlider} label="Top P" type="number" step="0.01" max="1"
 								hidden=${!enabledSamplers.includes('top_p')}
 								readOnly=${!!cancel} value=${topP} onValueChange=${setTopP}/>
-							${(!openaiPresets || endpointAPI != API_OPENAI_COMPAT) && html`
+							${(!openaiPresets || (endpointAPI != API_OPENAI_COMPAT && endpointAPI != API_DEEPSEEK)) && html`
 								<${InputSlider} label="Min P" type="number" step="0.01" max="1"
 									hidden=${!enabledSamplers.includes('min_p')}
 									readOnly=${!!cancel} value=${minP} onValueChange=${setMinP}/>`}
 						</div>`}
-					${((enabledSamplers.includes('typical_p') || enabledSamplers.includes('tfs_z')) && (!openaiPresets || endpointAPI != API_OPENAI_COMPAT)) && html`
+					${((enabledSamplers.includes('typical_p') || enabledSamplers.includes('tfs_z')) && (!openaiPresets || (endpointAPI != API_OPENAI_COMPAT && endpointAPI != API_DEEPSEEK))) && html`
 						<div className="hbox">
 							<${InputSlider} label="Typical P" type="number" step="0.01" max="1"
 								hidden=${!enabledSamplers.includes('typical_p')}
@@ -524,7 +529,7 @@ export function Sidebar({ sidebarRef, toggleModal, currentThemeName, setCurrentT
 								readOnly=${!!cancel} value=${tfsZ} onValueChange=${setTfsZ}/>
 						</div>`}
 				`}
-				${(!openaiPresets || endpointAPI != API_OPENAI_COMPAT) && html`
+				${(!openaiPresets || (endpointAPI != API_OPENAI_COMPAT && endpointAPI != API_DEEPSEEK)) && html`
 					${enabledSamplers.includes('ban_tokens') && html`
 						<${InputBox} label="Banned Strings (JSON array)" type="text" pattern="^\\[.*?\\]$"
 							className=${bannedTokensError ? 'rejected' : ''}
@@ -542,7 +547,7 @@ export function Sidebar({ sidebarRef, toggleModal, currentThemeName, setCurrentT
 					onClick=${() => toggleModal("bias")}>
 					Logit Bias
 				</button>
-				${(!openaiPresets || endpointAPI != API_OPENAI_COMPAT) && html`
+				${(!openaiPresets || (endpointAPI != API_OPENAI_COMPAT && endpointAPI != API_DEEPSEEK)) && html`
 					<${Checkbox} label="Ignore <eos>"
 						disabled=${!!cancel} value=${ignoreEos} onValueChange=${setIgnoreEos}/>`}
 			</${CollapsibleGroup}>
