@@ -1,6 +1,6 @@
 # miyapad
 
-**Fork of [mikupad](https://github.com/lmg-anon/mikupad) by lmg-anon** — major architectural overhaul with modern tooling and expanded features.
+Miyapad is a user-friendly, browser-based interface for interacting with language models. It is a fork of [mikupad](https://github.com/lmg-anon/mikupad) by lmg-anon with a major architectural overhaul, modern tooling and expanded features.
 
 ![image](docs/assets/tw76055.png)
 
