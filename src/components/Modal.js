@@ -7,6 +7,7 @@ export function Modal({ isOpen, onClose, title, description, children, ...props 
 	const prevIsOpen = useRef(isOpen);
 	const closeTimerRef = useRef(null);
 	const isClosing = !isOpen && internalVisible;
+	const mouseDownOnBackground = useRef(false);
 
 	useEffect(() => {
 		if (isOpen) {
@@ -47,10 +48,26 @@ export function Modal({ isOpen, onClose, title, description, children, ...props 
 		return null;
 	}
 
+	const handleOverlayMouseDown = (e) => {
+		mouseDownOnBackground.current = true;
+	};
+
+	const handleOverlayClick = (e) => {
+		if (mouseDownOnBackground.current) {
+			onClose();
+		}
+		mouseDownOnBackground.current = false;
+	};
+
 	return html`
-		<div className="modal-overlay ${isClosing ? 'closing' : ''}" onClick=${onClose}>
+		<div className="modal-overlay ${isClosing ? 'closing' : ''}"
+			onMouseDown=${handleOverlayMouseDown}
+			onClick=${handleOverlayClick}>
 			<div className="modal-container">
-				<div className="modal ${isClosing ? 'closing' : ''}" onClick=${(e) => e.stopPropagation()} ...${props}>
+				<div className="modal ${isClosing ? 'closing' : ''}"
+					onClick=${(e) => e.stopPropagation()}
+					onMouseDown=${(e) => { e.stopPropagation(); mouseDownOnBackground.current = false; }}
+					...${props}>
 					<div class="modal-title">${title}</div>
 					${ description=="" ? false : html`<div style=${{ whiteSpace: 'pre-line' }} class='modal-desc'>${description}</div>` }
 					<hr/>

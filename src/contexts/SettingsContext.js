@@ -6,7 +6,7 @@ import { defaultThemes } from '../defaults/themes.js';
 
 export const SettingsContext = createContext(null);
 
-export function SettingsProvider({ children, sessionStorage, templateStorage, themeStorage, useSessionState, useDBTemplates, useDBThemes, isMiyapadEndpoint }) {
+export function SettingsProvider({ children, sessionStorage, templateStorage, themeStorage, connectionStorage, useSessionState, useDBTemplates, useDBThemes, useDBConnections, isMiyapadEndpoint }) {
 	const [templates, setTemplates] = useDBTemplates(defaultPresets.instructTemplates);
 	const [templateReplacements, setTemplateReplacements] = useState(false);
 	const [templatesImport, setTemplatesImport] = useState(false);
@@ -111,10 +111,12 @@ export function SettingsProvider({ children, sessionStorage, templateStorage, th
 	const [ttsSpeakInputs, setTTSSpeakInputs] = usePersistentState('ttsSpeakInputs', true);
 	const [ttsMaxUserInput, setTTSMaxUserInput] = usePersistentState('ttsMaxUserInput', 50);
 
+	const [connections, setConnections] = useDBConnections({});
+	const [selectedConnectionId, setSelectedConnectionId] = useSessionState('connectionId', 'custom');
 	const [useServerTokenization, setUseServerTokenization] = usePersistentState('useServerTokenization', false);
-const [tokenizerModel, setTokenizerModel] = usePersistentState('tokenizerModel', null);
+	const [tokenizerModel, setTokenizerModel] = usePersistentState('tokenizerModel', null);
 
-const [screenshotIncludeSessionName, setScreenshotIncludeSessionName] = usePersistentState('screenshotIncludeSessionName', true);
+	const [screenshotIncludeSessionName, setScreenshotIncludeSessionName] = usePersistentState('screenshotIncludeSessionName', true);
 	const [screenshotIncludeDate, setScreenshotIncludeDate] = usePersistentState('screenshotIncludeDate', true);
 	const [screenshotBackgroundUrl, setScreenshotBackgroundUrl] = usePersistentState('screenshotBackgroundUrl', '');
 	const [screenshotBackgroundColor, setScreenshotBackgroundColor] = usePersistentState('screenshotBackgroundColor', '#121212');
@@ -128,7 +130,8 @@ const [screenshotIncludeSessionName, setScreenshotIncludeSessionName] = usePersi
 	const [screenshotModelAvatarUrl, setScreenshotModelAvatarUrl] = usePersistentState('screenshotModelAvatarUrl', '');
 
 	const state = {
-		sessionStorage, templateStorage, themeStorage, useSessionState, useDBTemplates, useDBThemes, isMiyapadEndpoint,
+		sessionStorage, templateStorage, themeStorage, connectionStorage, useSessionState, useDBTemplates, useDBThemes, useDBConnections, isMiyapadEndpoint,
+		connections, setConnections, selectedConnectionId, setSelectedConnectionId,
 		templates, setTemplates, templateReplacements, setTemplateReplacements, templatesImport, setTemplatesImport,
 		selectedTemplate, setSelectedTemplate, chatMode, setChatMode, templateList, setTemplateList,
 		fontSizeMultiplier, setFontSizeMultiplier, spellCheck, setSpellCheck, attachSidebar, setAttachSidebar,
