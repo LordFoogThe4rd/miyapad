@@ -66,7 +66,7 @@ export function Modal({ isOpen, onClose, title, description, children, ...props 
 			<div className="modal-container">
 				<div className="modal ${isClosing ? 'closing' : ''}"
 					onClick=${(e) => e.stopPropagation()}
-					onMouseDown=${(e) => e.stopPropagation()}
+					onMouseDown=${(e) => { e.stopPropagation(); mouseDownOnBackground.current = false; }}
 					...${props}>
 					<div class="modal-title">${title}</div>
 					${ description=="" ? false : html`<div style=${{ whiteSpace: 'pre-line' }} class='modal-desc'>${description}</div>` }
