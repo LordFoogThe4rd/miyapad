@@ -26,6 +26,7 @@ function GenericConnectionSettings({ connection, updateConnection }) {
 	const fetchModels = async () => {
 		setIsFetching(true);
 		setError(null);
+		if (acRef.current) acRef.current.abort();
 		const ac = new AbortController();
 		acRef.current = ac;
 		try {
@@ -174,6 +175,7 @@ function AIHordeConnectionSettings({ connection, updateConnection }) {
 	const fetchModels = async () => {
 		setIsFetching(true);
 		setError(null);
+		if (acRef.current) acRef.current.abort();
 		const ac = new AbortController();
 		acRef.current = ac;
 		try {
