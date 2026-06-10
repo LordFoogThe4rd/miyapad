@@ -201,7 +201,7 @@ export function Sidebar({ sidebarRef, toggleModal, currentThemeName, setCurrentT
 		if (conn.api === API_LLAMA_CPP) {
 			setPostSamplingProbs(conn.postSamplingProbs ?? true);
 		}
-		if (conn.api === API_OPENAI_COMPAT) {
+		if (conn.api === API_OPENAI_COMPAT || conn.api === API_DEEPSEEK) {
 			setOpenaiPresets(conn.strict ?? false);
 			setUseChatAPI(conn.chatAPI ?? false);
 		}
