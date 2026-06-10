@@ -356,7 +356,9 @@ export function ConnectionManagerModal({ isOpen, closeModal, connections, setCon
 			return;
 		}
 		const newId = crypto.randomUUID();
-		const newConnection = { ...conn, id: newId, name: `${conn.name} (Copy)` };
+		const newConnection = structuredClone(conn);
+		newConnection.id = newId;
+		newConnection.name = `${conn.name} (Copy)`;
 		setConnections(prev => ({ ...prev, [newId]: newConnection }));
 		setSelectedId(newId);
 		setMobileShowDetails(true);
