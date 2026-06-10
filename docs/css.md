@@ -65,3 +65,4 @@ Dynamic themes are injected at runtime via a custom CSS injector element. Themes
 - When adding new styles, put them in the matching partial or create a new one if none fits.
 - Class names use kebab-case.
 - Avoid `!important` — use specificity or utility classes instead.
+- Use `overflow-wrap` over `word-break` for text wrapping — `word-break: break-word` is deprecated.
