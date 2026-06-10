@@ -336,7 +336,7 @@ export function ConnectionManagerModal({ isOpen, closeModal, connections, setCon
 			id: newId,
 			name: newName,
 			api: API_OPENAI_COMPAT,
-			endpoint: "https://127.0.0.1/v1",
+			endpoint: "http://127.0.0.1:8080/v1",
 			key: "",
 			enabled: true,
 			models: [],
