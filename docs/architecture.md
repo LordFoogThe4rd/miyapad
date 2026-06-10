@@ -33,8 +33,8 @@ The `src/api/` directory implements a provider dispatch pattern for interfacing 
 
 | Provider | Module | Completion | Chat Completion | Models | Token Count |
 | :--- | :--- | :--- | :--- | :--- | :--- |
-| **llama.cpp** | `llamacpp.js` | `llamaCppCompletion` | — | `llamaCppModels` | `llamaCppTokenCount` |
-| **KoboldCPP** | `koboldcpp.js` | `koboldCppCompletion` | — | `koboldCppModels` | `koboldCppTokenCount` |
+| **llama.cpp** | `llamacpp.js` | `llamaCppCompletion` | — | — | `llamaCppTokenCount` |
+| **KoboldCPP** | `koboldcpp.js` | `koboldCppCompletion` | — | — | `koboldCppTokenCount` |
 | **OpenAI Compatible** | `openai.js` | `openaiCompletion` | `openaiChatCompletion` | `openaiModels` | host-aware |
 | **DeepSeek** | `deepseek.js` | `deepseekCompletion` | `deepseekChatCompletion` | `deepseekModels` | — |
 | **AI Horde** | `aihorde.js` | `aiHordeCompletion` | — | `aiHordeModels` | — |
