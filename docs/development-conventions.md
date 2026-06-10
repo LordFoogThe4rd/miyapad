@@ -37,6 +37,14 @@ CHANGELOG.md is manually curated. After each non-`docs` or `ci` commit, add an e
 - Problem that was affecting the user's experience
 ```
 
+## Safe Property Checks
+
+Use `Object.hasOwn(obj, prop)` (ES2022+) instead of `obj.hasOwnProperty(prop)` to avoid breakage if the object contains an own property named `hasOwnProperty`.
+
+## Deep Cloning
+
+Use `structuredClone` for deep copying plain data objects instead of shallow spread or `JSON.parse(JSON.stringify(...))`.
+
 ## CSS Conventions
 
 See [CSS Architecture](css.md) for full documentation. Key points:

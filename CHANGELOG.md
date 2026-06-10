@@ -11,6 +11,11 @@
 
 - Modal overlay now requires mousedown on the backdrop before click-to-close, preventing accidental dismissal when dragging text
 - Modal tooltips no longer clipped by the modal content area — they now appear above input fields as intended
+- Connection settings for strict mode and chat API toggle now apply to DeepSeek connections, not just OpenAI Compatible
+- Connection clone now performs a deep copy to prevent shared references between original and duplicate
+- Default endpoint for new connections changed from HTTPS to HTTP to avoid TLS certificate errors on local servers
+- Rapidly clicking "Refresh List" in the connection model browser no longer risks stale data overwriting newer results
+- Storage errors during connection save no longer leave the database and memory in an inconsistent state
 
 ### Changed
 
