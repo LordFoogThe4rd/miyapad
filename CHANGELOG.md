@@ -8,7 +8,7 @@
 
 ### Fixed
 - Modal overlay now requires mousedown on the backdrop before click-to-close, preventing accidental dismissal when dragging text
-- Modal tooltips no longer clipped by `.modal-content overflow: hidden` — changed to `overflow: visible` so absolutely-positioned tooltips can appear above input fields
+- Modal tooltips no longer clipped by the modal content area — they now appear above input fields as intended
 
 ### Changed
 - Session exports no longer include `endpoint` and `endpointAPIKey` fields (credential stripping)
