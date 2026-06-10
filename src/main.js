@@ -8,6 +8,7 @@ import { ServerDBAdapter } from './storage/ServerDBAdapter.js';
 import { SessionStorage } from './storage/SessionStorage.js';
 import { TemplateStorage } from './storage/TemplateStorage.js';
 import { ThemeStorage } from './storage/ThemeStorage.js';
+import { ConnectionStorage } from './storage/ConnectionStorage.js';
 import { useSessionState } from './hooks/useSessionState.js';
 import { useStorageState } from './hooks/useStorageState.js';
 import { CrashScreenFallback } from './components/CrashScreenFallback.js';
@@ -42,15 +43,20 @@ async function main() {
     const themeStorage = new ThemeStorage(dbAdapter);
     await themeStorage.init();
 
+    const connectionStorage = new ConnectionStorage(dbAdapter);
+    await connectionStorage.init();
+
 	createRoot(document.body).render(html`
 		<${ErrorBoundary} FallbackComponent=${CrashScreenFallback}>
 			<${App}
 				sessionStorage=${sessionStorage}
 				templateStorage=${templateStorage}
 				themeStorage=${themeStorage}
+				connectionStorage=${connectionStorage}
 				useSessionState=${(name, initialState) => useSessionState(sessionStorage, name, initialState)}
 				useDBTemplates=${(initialState => useStorageState(templateStorage, initialState))}
 				useDBThemes=${(initialState => useStorageState(themeStorage, initialState))}
+				useDBConnections=${(initialState => useStorageState(connectionStorage, initialState))}
 				isMiyapadEndpoint=${isMiyapadEndpoint}/>
 		</${ErrorBoundary}>`);
 }

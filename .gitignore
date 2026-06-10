@@ -31,9 +31,6 @@ desktop.ini
 *.swp
 *.swo
 
-# Scratch / debug scripts
-server/scratch_list_tables.js
-
 # Personal TODO lists
 session-todo.md
 

@@ -20,6 +20,7 @@ import { InstructModal } from './modals/InstructModal.js';
 import { ThemeManagerModal } from './modals/ThemeManagerModal.js';
 import { AIHordeSettingsModal } from './modals/AIHordeSettingsModal.js';
 import { CompressionInfoModal } from './modals/CompressionInfoModal.js';
+import { ConnectionManagerModal } from './modals/ConnectionManagerModal.js';
 import { SessionsModal } from './modals/SessionsModal.js';
 import { QuickSwitcher } from './QuickSwitcher.js';
 import { EditorContextMenu } from './EditorContextMenu.js';
@@ -38,7 +39,8 @@ export function Modals({ toggleModal, currentThemeName, setCurrentThemeName, all
 		screenshotLineHeight, setScreenshotLineHeight,
 		screenshotFontColor, setScreenshotFontColor,
 		screenshotAiTextColor, setScreenshotAiTextColor,
-		screenshotModelAvatarUrl, setScreenshotModelAvatarUrl
+		screenshotModelAvatarUrl, setScreenshotModelAvatarUrl,
+		connections, setConnections, selectedConnectionId
 	} = useSettings();
 	const { cancel, modalState, closeModal, instructModalState, setInstructModalState, promptArea, predict, lastError, sessionEndpointConnecting, predictStartTokens, tokens, stoppingStringsError, drySequenceBreakersError, bannedTokensError, contextMenuState, setContextMenuState, setTriggerPredict, sessionEndpointError, setRejectedAPIKey } = useGeneration();
 
@@ -329,6 +331,13 @@ export function Modals({ toggleModal, currentThemeName, setCurrentThemeName, all
 		<${CompressionInfoModal}
 			isOpen=${modalState.compression}
 			closeModal=${() => closeModal("compression")}/>
+
+		<${ConnectionManagerModal}
+			isOpen=${modalState.connections}
+			closeModal=${() => closeModal("connections")}
+			connections=${connections}
+			setConnections=${setConnections}
+			activeConnectionId=${selectedConnectionId}/>
 
 		<${SessionsModal}
 			isOpen=${modalState.sessions}

@@ -16,6 +16,7 @@ const getColumnName = (storeName) => {
     if (storeName === 'sessions') return 'session_data';
     if (storeName === 'templates') return 'template_data';
     if (storeName === 'themes') return 'theme_data';
+    if (storeName === 'connections') return 'connection_data';
     return 'data';
 };
 
@@ -24,7 +25,7 @@ const normalizeStoreName = (storeName) => {
         return 'sessions';
     }
     const normalized = storeName.split(' ')[0].toLowerCase();
-    if (['sessions', 'templates', 'names', 'themes'].includes(normalized)) {
+    if (['sessions', 'templates', 'names', 'themes', 'connections'].includes(normalized)) {
         return normalized;
     }
     return null;

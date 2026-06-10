@@ -11,3 +11,4 @@ export { InstructModal } from './InstructModal.js';
 export { ThemeManagerModal } from './ThemeManagerModal.js';
 export { AIHordeSettingsModal } from './AIHordeSettingsModal.js';
 export { CompressionInfoModal } from './CompressionInfoModal.js';
+export { ConnectionManagerModal } from './ConnectionManagerModal.js';

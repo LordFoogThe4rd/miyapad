@@ -184,6 +184,7 @@ const runMigrationToV4 = (db) => {
                 await migrateTableToZstd('sessions');
                 await migrateTableToZstd('templates');
                 await migrateTableToZstd('themes');
+                await migrateTableToZstd('connections');
 
                 console.log("Running initial zstd incremental maintenance (training dictionaries)...");
                 await new Promise((res, rej) => db.run(`SELECT zstd_incremental_maintenance(null, 1)`, (err) => err ? rej(err) : res()));
@@ -342,9 +343,11 @@ const initDatabase = (storagePath) => {
                             const sessionCol = getColumnName('sessions');
                             const templateCol = getColumnName('templates');
                             const themeCol = getColumnName('themes');
+                            const connectionCol = getColumnName('connections');
                             db.run(`CREATE TABLE IF NOT EXISTS sessions (key TEXT PRIMARY KEY, ${sessionCol} BLOB)`);
                             db.run(`CREATE TABLE IF NOT EXISTS templates (key TEXT PRIMARY KEY, ${templateCol} BLOB)`);
                             db.run(`CREATE TABLE IF NOT EXISTS themes (key TEXT PRIMARY KEY, ${themeCol} BLOB)`);
+                            db.run(`CREATE TABLE IF NOT EXISTS connections (key TEXT PRIMARY KEY, ${connectionCol} BLOB)`);
                             db.run(`CREATE TABLE IF NOT EXISTS meta (key TEXT PRIMARY KEY, value TEXT)`, (err) => {
                                 if (err) rej(err);
                                 else res();
@@ -375,7 +378,8 @@ const initDatabase = (storagePath) => {
                     await Promise.all([
                         enableTransparentCompressionIfMissing(db, 'sessions'),
                         enableTransparentCompressionIfMissing(db, 'templates'),
-                        enableTransparentCompressionIfMissing(db, 'themes')
+                        enableTransparentCompressionIfMissing(db, 'themes'),
+                        enableTransparentCompressionIfMissing(db, 'connections')
                     ]);
 
                     await new Promise((res, rej) => {
