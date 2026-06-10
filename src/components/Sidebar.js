@@ -275,7 +275,7 @@ export function Sidebar({ sidebarRef, toggleModal, currentThemeName, setCurrentT
 						<${SVG_Settings} style=${{ 'width':'.95em','transform':'translate(-50%, -45%)' }}/>
 					</button>
 				</div>
-				${(selectedConnectionId == 'custom') && html`
+				${(selectedConnectionId === 'custom') && html`
 				<${InputBox} label="Server"
 					className=${isMixedContent() ? 'mixed-content' : ''}
 					tooltip=${isMixedContent() ? 'This URL might be blocked due to mixed content. If the prediction fails, download miyapad.html and run it locally.' : ''}
