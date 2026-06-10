@@ -207,6 +207,10 @@ export function SessionsModal({ isOpen, closeModal, sessionStorage, cancel }) {
 
 	const exportSession = () => {
 		const sessionObj = { ...sessionStorage.sessions[sessionStorage.selectedSession] };
+
+		delete sessionObj.endpoint;
+		delete sessionObj.endpointAPIKey;
+
 		for (const [key, value] of Object.entries(sessionObj)) {
 			sessionObj[key] = JSON.stringify(value);
 		}
@@ -219,6 +223,8 @@ export function SessionsModal({ isOpen, closeModal, sessionStorage, cancel }) {
 			const sessionKeys = Object.keys(sessionStorage.sessions);
 			for (const sessionKey of sessionKeys) {
 				const processedSession = await sessionStorage.loadFromDatabase(db, sessionKey);
+				delete processedSession.endpoint;
+				delete processedSession.endpointAPIKey;
 				for (const [key, value] of Object.entries(processedSession)) {
 					processedSession[key] = JSON.stringify(value);
 				}

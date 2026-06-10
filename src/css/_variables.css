@@ -40,6 +40,8 @@ html {
 	--color-bg-active: var(--color-base-30);
 	--color-bg-disabled-1: var(--color-base-60);
 	--color-bg-disabled-2: var(--color-base-20);
+	--color-error: #ff8080;
+	--color-error-bg: #4E3534;
 
 	font-family: serif;
 	font-size: 16px;

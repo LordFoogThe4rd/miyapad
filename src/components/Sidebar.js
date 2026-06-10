@@ -33,7 +33,8 @@ export function Sidebar({ sidebarRef, toggleModal, currentThemeName, setCurrentT
 		postSamplingProbs, setPostSamplingProbs, showPromptPreview, setShowPromptPreview,
 		promptPreviewTokens, setPromptPreviewTokens, templates, selectedTemplate, setSelectedTemplate,
 		isMiyapadEndpoint, sessionStorage, chatMode, setChatMode, seed, setSeed, contextLength, setContextLength,
-		memoryTokens, authorNoteTokens, authorNoteDepth, templateList, tokenHighlightMode
+		memoryTokens, authorNoteTokens, authorNoteDepth, templateList, tokenHighlightMode,
+		connections, setConnections, selectedConnectionId, setSelectedConnectionId
 	} = useSettings();
 
 	const {
@@ -190,6 +191,28 @@ export function Sidebar({ sidebarRef, toggleModal, currentThemeName, setCurrentT
 		elem.scrollTop = scrollTop;
 	};
 
+	const handleApplyConnection = (conn) => {
+		setEndpointAPI(conn.api);
+		if (conn.api !== API_AI_HORDE) {
+			setEndpoint(conn.endpoint);
+		}
+		setEndpointAPIKey(conn.key || "");
+		setEndpointModel(conn.model || "");
+		if (conn.api === API_LLAMA_CPP) {
+			setPostSamplingProbs(conn.postSamplingProbs ?? true);
+		}
+		if (conn.api === API_OPENAI_COMPAT) {
+			setOpenaiPresets(conn.strict ?? false);
+			setUseChatAPI(conn.chatAPI ?? false);
+		}
+	};
+
+	useEffect(() => {
+		if (selectedConnectionId !== 'custom' && connections[selectedConnectionId]) {
+			handleApplyConnection(connections[selectedConnectionId]);
+		}
+	}, [selectedConnectionId]);
+
 	function isMixedContent() {
 		const isHttps = window.location.protocol === 'https:';
 		let url;
@@ -227,6 +250,32 @@ export function Sidebar({ sidebarRef, toggleModal, currentThemeName, setCurrentT
 				Manage Sessions
 			</button>
 			<${CollapsibleGroup} label="Parameters" expanded>
+				<div className="buttons instructTemplateSidebar">
+					<${SelectBox}
+						label="Connection Preset"
+						value=${selectedConnectionId}
+						options=${() => [
+							{ name: 'Custom (Inline Edit)', value: 'custom' },
+							...Object.entries(connections)
+							   .filter(([_, c]) => c.enabled)
+							   .map(([id, c]) => ({ name: c.name, value: id }))
+						]}
+						onValueChange=${(val) => {
+							if (val !== 'custom' && connections[val]) {
+								handleApplyConnection(connections[val]);
+							}
+							setSelectedConnectionId(val);
+						}}
+					/>
+					<button
+						onClick=${() => toggleModal("connections")}
+						title="Manage Connections"
+						className="symbol-button"
+						style=${{ padding: 0 }}>
+						<${SVG_Settings} style=${{ 'width':'.95em','transform':'translate(-50%, -45%)' }}/>
+					</button>
+				</div>
+				${(selectedConnectionId == 'custom') && html`
 				<${InputBox} label="Server"
 					className=${isMixedContent() ? 'mixed-content' : ''}
 					tooltip=${isMixedContent() ? 'This URL might be blocked due to mixed content. If the prediction fails, download miyapad.html and run it locally.' : ''}
@@ -288,6 +337,9 @@ export function Sidebar({ sidebarRef, toggleModal, currentThemeName, setCurrentT
 						<${Checkbox} label="Chat Completions API"
 							title="If enabled, the chat API endpoint will be used, and the prompt will be split into chat messages based on the delimiters defined in the selected instruct template."
 							disabled=${!!cancel} value=${useChatAPI} onValueChange=${setUseChatAPI}/>`}
+				`}
+			`}
+				${endpointAPI != API_AI_HORDE && html`
 					<${Checkbox} label="Token Streaming"
 						disabled=${!!cancel} value=${useTokenStreaming} onValueChange=${setUseTokenStreaming}/>
 					<${Checkbox} label="Disable Logprobs"
