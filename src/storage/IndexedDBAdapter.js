@@ -26,7 +26,7 @@ export class IndexedDBAdapter {
 
 	async openDatabase() {
 		return new Promise((resolve, reject) => {
-			const openRequest = indexedDB.open(this.dbName, 4);
+			const openRequest = indexedDB.open(this.dbName, 5);
 
 			openRequest.onerror = () => reject(openRequest.error);
 			openRequest.onsuccess = () => resolve(openRequest.result);
@@ -35,7 +35,7 @@ export class IndexedDBAdapter {
 				const db = event.target.result;
 				const transaction = event.target.transaction;
 
-				for (const storeName of ["Sessions", "Templates", "Names", "Themes"]) {
+				for (const storeName of ["Sessions", "Templates", "Names", "Themes", "Connections"]) {
 					if (!db.objectStoreNames.contains(storeName)) {
 						db.createObjectStore(storeName);
 					}

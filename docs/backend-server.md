@@ -2,15 +2,16 @@
 
 The server (`server/server.js` — entrypoint that loads modules from `lib/` and `routes/`) uses **SQLite3** combined with the precompiled **`sqlite-zstd` extension** to perform transparent, row-level Zstandard compression on database records.
 
-## Database Schema (v4)
+## Database Schema (v5)
 
-The database has five main tables:
+The database has six main tables:
 
-1. **`meta`**: Stores metadata (e.g., database schema `version = 4`).
+1. **`meta`**: Stores metadata (e.g., database schema `version = 5`).
 2. **`sessions`**: Stores main session data blobs. Uses column `session_data`.
 3. **`templates`**: Stores template configuration data. Uses column `template_data`.
 4. **`themes`**: Stores custom user CSS themes. Uses column `theme_data`.
-5. **`names`**: Stores lightweight key-to-metadata mapping `{name, created, modified, pinned}` (as JSON) for session listing, searching, sorting, and pinning.
+5. **`connections`**: Stores connection preset data (endpoint, API type, API key, model, per-API options). Uses column `connection_data`.
+6. **`names`**: Stores lightweight key-to-metadata mapping `{name, created, modified, pinned}` (as JSON) for session listing, searching, sorting, and pinning.
 
 ### Schema Column Constraints
 
@@ -19,6 +20,7 @@ The `sqlite-zstd` extension can experience index naming collisions if multiple t
 - `sessions` table uses **`session_data`**
 - `templates` table uses **`template_data`**
 - `themes` table uses **`theme_data`**
+- `connections` table uses **`connection_data`**
 
 ## Database Compaction & Compression Settings
 
