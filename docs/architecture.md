@@ -12,17 +12,19 @@ graph TD
     SessionStorage[SessionStorage.js] --> AbstractStorage[AbstractStorage.js]
     TemplateStorage[TemplateStorage.js] --> AbstractStorage
     ThemeStorage[ThemeStorage.js] --> AbstractStorage
+    ConnectionStorage[ConnectionStorage.js] --> AbstractStorage
     AbstractStorage -->|calls| DBAdapter
 ```
 
 - **`AbstractStorage` (`src/storage/AbstractStorage.js`)**: Base class that coordinates database requests. It implements a **500ms debounced save queue** (`enqueueSave`) to avoid excessive disk/DB writes during rapid user editing.
-- **`IndexedDBAdapter` (`src/storage/IndexedDBAdapter.js`)**: Communicates with the browser's IndexedDB engine (Database `MiyaPad`, version 4). Handles database upgrades, persistence requests, exports, and imports.
+- **`IndexedDBAdapter` (`src/storage/IndexedDBAdapter.js`)**: Communicates with the browser's IndexedDB engine (Database `MiyaPad`, version 5). Handles database upgrades, persistence requests, exports, and imports.
 - **`ServerDBAdapter` (`src/storage/ServerDBAdapter.js`)**: Converts database calls to HTTP POST requests hitting the Express server REST endpoints.
+- **`ConnectionStorage` (`src/storage/ConnectionStorage.js`)**: Extends `AbstractStorage` to persist named connection presets (endpoint, API type, API key, model, per-API options). Follows the same pattern as `ThemeStorage` — `performFullSave` replaces the entire connections object, and `loadConnections` loads all records on init. The `Connections` store is available in both IndexedDB (v5) and SQLite server-side.
 - **Named Storage Optimization**: To prevent massive performance degradation, session titles and metadata are indexed separately in a `names` table/store as a JSON object `{name, created, modified, pinned, tags}`. This allows the dedicated Sessions Modal to quickly search, list, and sort sessions by creation or modification timestamps (and to float pinned sessions to the top) without pulling heavy compressed session history from the database.
 
 ## 2. Context APIs & State Management
 
-- **`SettingsContext` (`src/contexts/SettingsContext.js`)**: Holds global settings and generation hyperparameters (e.g., Temperature, Top-K, Min-P, Mirostat, Dry Sampler options, selected model endpoints, OpenAI keys, instruction templates, active themes, TTS voice settings).
+- **`SettingsContext` (`src/contexts/SettingsContext.js`)**: Holds global settings and generation hyperparameters (e.g., Temperature, Top-K, Min-P, Mirostat, Dry Sampler options, selected model endpoints, OpenAI keys, instruction templates, active themes, TTS voice settings). Also manages connection presets (`connections` via `useDBConnections`) and per-session connection binding (`selectedConnectionId` via `useSessionState`).
 - **`GenerationContext` (`src/contexts/GenerationContext.js`)**: Manages runtime generation and prompt state (e.g., prompt text chunks, total token count, generation speed, active abort controllers, undo/redo stacks, open modal states, and UI view toggles).
 
 ## 3. LLM Provider API Layer
@@ -31,8 +33,8 @@ The `src/api/` directory implements a provider dispatch pattern for interfacing 
 
 | Provider | Module | Completion | Chat Completion | Models | Token Count |
 | :--- | :--- | :--- | :--- | :--- | :--- |
-| **llama.cpp** | `llamacpp.js` | `llamaCppCompletion` | — | — | `llamaCppTokenCount` |
-| **KoboldCPP** | `koboldcpp.js` | `koboldCppCompletion` | — | — | `koboldCppTokenCount` |
+| **llama.cpp** | `llamacpp.js` | `llamaCppCompletion` | — | `llamaCppModels` | `llamaCppTokenCount` |
+| **KoboldCPP** | `koboldcpp.js` | `koboldCppCompletion` | — | `koboldCppModels` | `koboldCppTokenCount` |
 | **OpenAI Compatible** | `openai.js` | `openaiCompletion` | `openaiChatCompletion` | `openaiModels` | host-aware |
 | **DeepSeek** | `deepseek.js` | `deepseekCompletion` | `deepseekChatCompletion` | `deepseekModels` | — |
 | **AI Horde** | `aihorde.js` | `aiHordeCompletion` | — | `aiHordeModels` | — |

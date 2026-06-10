@@ -2,8 +2,16 @@
 
 ## [???] - unreleased
 
+### Added
+- Connection Manager: save and switch between connection presets (endpoint, API type, model, API key) per session
+- New modal for managing connection presets with model browser and API-specific settings
+
 ### Fixed
+- Modal overlay now requires mousedown on the backdrop before click-to-close, preventing accidental dismissal when dragging text
 - Modal tooltips no longer clipped by `.modal-content overflow: hidden` — changed to `overflow: visible` so absolutely-positioned tooltips can appear above input fields
+
+### Changed
+- Session exports no longer include `endpoint` and `endpointAPIKey` fields (credential stripping)
 
 ## [2.3.2] - 2026-06-09
 

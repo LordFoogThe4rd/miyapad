@@ -1,6 +1,6 @@
 # CSS Architecture
 
-Styles are organized into 19 partial files under `src/css/`, imported via `src/styles.css`. Each partial targets a specific component or logical group.
+Styles are organized into 20 partial files under `src/css/`, imported via `src/styles.css`. Each partial targets a specific component or logical group.
 
 ## Import Order
 
@@ -17,6 +17,7 @@ The ordering in `src/styles.css` is intentional — variables and base reset loa
 @import './css/_world-info.css';        # World Info / lorebook modal
 @import './css/_logit-bias.css';        # Logit bias editor modal
 @import './css/_horde.css';             # AI Horde status/settings
+@import './css/_connections.css';       # Connection Manager presets UI
 @import './css/_sidebar.css';           # Main sidebar layout
 @import './css/_sessions.css';          # Sessions management modal
 @import './css/_form-controls.css';     # Inputs, selects, labels, sliders
@@ -42,6 +43,7 @@ The ordering in `src/styles.css` is intentional — variables and base reset loa
 | `_world-info.css` | World Info entry editor: entry cards, key fields, filtering and search. |
 | `_logit-bias.css` | Logit bias slider and token selector interface. |
 | `_horde.css` | AI Horde integration panel: queue status, worker info, settings. |
+| `_connections.css` | Connection Manager modal: sidebar/detail layout, model list, error messages, mobile-responsive toggle. |
 | `_sidebar.css` | Main sidebar layout: width, collapse states, drag resize, scroll. |
 | `_sessions.css` | Sessions browser modal: session cards, search bar, sort controls, action buttons. |
 | `_form-controls.css` | Shared form element styling: text inputs, selects, checkboxes, radio buttons, range sliders, number inputs. |

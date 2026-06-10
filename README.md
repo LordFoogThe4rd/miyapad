@@ -7,6 +7,7 @@ Miyapad is a user-friendly, browser-based interface for interacting with languag
 ## Features
 
 * **Multiple Backends**: Supports **llama.cpp**, **koboldcpp**, **AI Horde**, and any **OpenAI Compatible** API.
+* **Connection Manager**: Save named connection presets (endpoint, API type, API key, model) and switch between them per-session. Each session remembers its selected connection. Presets include per-API-type settings, a model browser, and CRUD operations (create, clone, delete, enable/disable).
 * **Session Persistence**: Your prompt is automatically saved and restored across multiple sessions. Import and export sessions for sharing or backups. The dedicated Sessions modal provides search, sort by name/created/modified, and a table layout for managing sessions. Database schema v4 with per-table column names avoids compression index collisions, with automatic V2→V3→V4 migration.
 * **Optional Server**: Can be hosted on a local Node.js server for remote or LAN access. Features a modular architecture (`routes/` and `lib/` instead of monolithic `server.js`), **sqlite-zstd** transparent Zstandard compression with auto-vacuum and background dictionary training, and optional **server-side tokenization** — drop a `tokenizer.json` into `server/tokenizers/<name>/` and enable via Preferences → Server.
 * **Persistent Context**:
@@ -27,7 +28,7 @@ Miyapad is a user-friendly, browser-based interface for interacting with languag
 
 ### Architecture
 
-This refactored fork moves from a single monolithic HTML file to a **modular Parcel 2 project** (~60+ files across `src/`). The monolithic `styles.css` is split into 18 component-specific partials under `src/css/`, and global state is managed via **React Context API** (`SettingsContext`, `GenerationContext`) instead of inline global state.
+This refactored fork moves from a single monolithic HTML file to a **modular Parcel 2 project** (~60+ files across `src/`). The monolithic `styles.css` is split into 20 component-specific partials under `src/css/`, and global state is managed via **React Context API** (`SettingsContext`, `GenerationContext`) instead of inline global state.
 
 > **Note:** The server requires the `sqlite-zstd` extension (`libsqlite_zstd.so` / `sqlite_zstd.dll` / `libsqlite_zstd.dylib` depending on platform — the server auto-detects the correct one). Obtain it from [sqlite-zstd releases](https://github.com/phiresky/sqlite-zstd/releases) or build from source, then place it in `server/`.
 
