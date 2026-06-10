@@ -25,16 +25,16 @@ Always run `npm run build` after editing any source file (`src/` or `server/`) a
 
 ## Changelog Maintenance
 
-CHANGELOG.md is manually curated. After each non-`docs` or `ci` commit, add an entry under the `[???]` unreleased heading in `CHANGELOG.md` with the appropriate type subheading (`### Added`, `### Fixed`, `### Changed`, `### Removed`). The `[???]` placeholder is replaced with the actual version number at release time. Only include changes that affect the end user — omit internal changes.
+CHANGELOG.md is manually curated. After each non-`docs` or `ci` commit, add an entry under the `[???]` unreleased heading in `CHANGELOG.md` with the appropriate type subheading (`### Added`, `### Fixed`, `### Changed`, `### Removed`). The `[???]` placeholder is replaced with the actual version number at release time. Only include changes that affect the end user — omit internal changes. Entries should be written in user-friendly language, describing the feature or fix from the user's perspective without technical implementation details.
 
 ```markdown
 ## [???] - unreleased
 
 ### Added
-- New feature description
+- New feature that the user can interact with
 
 ### Fixed
-- Bug fix description
+- Problem that was affecting the user's experience
 ```
 
 ## CSS Conventions
