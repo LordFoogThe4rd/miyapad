@@ -16,7 +16,7 @@ export class ConnectionStorage extends AbstractStorage {
 			const db = await this.openDatabase();
 
 			for (const key of Object.keys(this.connections)) {
-				if (!newConnections.hasOwnProperty(key)) {
+				if (!Object.hasOwn(newConnections, key)) {
 					await this.deleteFromDatabase(db, key);
 				}
 			}
