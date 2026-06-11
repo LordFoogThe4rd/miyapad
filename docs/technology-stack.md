@@ -7,7 +7,7 @@
 - **Bundler & Dev Server**: Parcel.
 - **Markdown Renderer**: `marked`.
 - **State Management**: React Context (`SettingsContext` & `GenerationContext`).
-- **Styling**: Standard vanilla CSS split into 18 partial files under `src/css/` (imported via `src/styles.css`), with dynamic theme swapping via a custom CSS injector element.
+- **Styling**: Standard vanilla CSS split into 20 partial files under `src/css/` (imported via `src/styles.css`), with dynamic theme swapping via a custom CSS injector element.
 
 ## Backend (Optional)
 

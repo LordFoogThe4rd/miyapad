@@ -17,7 +17,6 @@ The ordering in `src/styles.css` is intentional — variables and base reset loa
 @import './css/_world-info.css';        # World Info / lorebook modal
 @import './css/_logit-bias.css';        # Logit bias editor modal
 @import './css/_horde.css';             # AI Horde status/settings
-@import './css/_connections.css';       # Connection Manager presets UI
 @import './css/_sidebar.css';           # Main sidebar layout
 @import './css/_sessions.css';          # Sessions management modal
 @import './css/_form-controls.css';     # Inputs, selects, labels, sliders
@@ -26,6 +25,7 @@ The ordering in `src/styles.css` is intentional — variables and base reset loa
 @import './css/_crash-screen.css';      # Error/ crash overlay
 @import './css/_utilities.css';         # Helper classes (hidden, sr-only, etc.)
 @import './css/_quick-switcher.css';    # Quick Switcher overlay
+@import './css/_connections.css';       # Connection Manager presets UI
 @import './css/_responsive.css';        # Global media queries
 ```
 

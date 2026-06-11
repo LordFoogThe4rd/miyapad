@@ -21,7 +21,7 @@ When modifying session storage columns or tables, preserve the adapter architect
 
 ## Build After Editing
 
-Always run `npm run build` after editing any source file (`src/` or `server/`) and before declaring work complete. The build catches broken imports, missing exports, and syntax errors.
+Always run `npm run build` after editing any source file and before declaring work complete. The build catches broken imports, missing exports, and syntax errors in the frontend. Server changes (`server/`) have no automated validation — there are no tests or linters in this repo.
 
 ## Changelog Maintenance
 
@@ -49,6 +49,6 @@ Use `structuredClone` for deep copying plain data objects instead of shallow spr
 
 See [CSS Architecture](css.md) for full documentation. Key points:
 
-- Styles are organized into 19 partial files under `src/css/`, imported by `src/styles.css` via `@import`.
+- Styles are organized into 20 partial files under `src/css/`, imported by `src/styles.css` via `@import`.
 - Component-specific media queries live inside that component's partial; global layout media queries go in `_responsive.css`.
 - When adding new styles, put them in the matching partial or create a new one if none fits.
