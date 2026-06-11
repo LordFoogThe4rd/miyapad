@@ -2,11 +2,11 @@
 
 The server (`server/server.js` — entrypoint that loads modules from `lib/` and `routes/`) uses **SQLite3** combined with the precompiled **`sqlite-zstd` extension** to perform transparent, row-level Zstandard compression on database records.
 
-## Database Schema (v5)
+## Database Schema (v4)
 
 The database has six main tables:
 
-1. **`meta`**: Stores metadata (e.g., database schema `version = 5`).
+1. **`meta`**: Stores metadata (e.g., database schema `version = 4`).
 2. **`sessions`**: Stores main session data blobs. Uses column `session_data`.
 3. **`templates`**: Stores template configuration data. Uses column `template_data`.
 4. **`themes`**: Stores custom user CSS themes. Uses column `theme_data`.
