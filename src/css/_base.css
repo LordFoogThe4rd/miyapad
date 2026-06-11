@@ -23,6 +23,10 @@ body {
 	--font-size-multiplier: 1.0;
 }
 
+#root {
+	display: contents;
+}
+
 #prompt-container {
 	position: relative;
 	font-size: calc(1.125rem * var(--font-size-multiplier));
