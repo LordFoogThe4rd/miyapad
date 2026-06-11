@@ -46,7 +46,7 @@ async function main() {
     const connectionStorage = new ConnectionStorage(dbAdapter);
     await connectionStorage.init();
 
-	createRoot(document.body).render(html`
+	createRoot(document.getElementById('root')).render(html`
 		<${ErrorBoundary} FallbackComponent=${CrashScreenFallback}>
 			<${App}
 				sessionStorage=${sessionStorage}
