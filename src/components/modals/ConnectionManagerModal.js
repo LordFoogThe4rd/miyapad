@@ -65,6 +65,7 @@ function GenericConnectionSettings({ connection, updateConnection }) {
 
 			<${InputBox} label="Base URL"
 				value=${connection.endpoint}
+				readOnly=${connection.api === API_DEEPSEEK}
 				onValueChange=${(val) => updateConnection('endpoint', val)}
 			/>
 
