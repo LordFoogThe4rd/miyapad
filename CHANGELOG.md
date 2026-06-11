@@ -1,6 +1,6 @@
 # Changelog
 
-## [???] - unreleased
+## [2.4.0] - 2026-06-11
 
 ### Added
 
@@ -16,6 +16,8 @@
 - Default endpoint for new connections changed from HTTPS to HTTP to avoid TLS certificate errors on local servers
 - Rapidly clicking "Refresh List" in the connection model browser no longer risks stale data overwriting newer results
 - Storage errors during connection save no longer leave the database and memory in an inconsistent state
+- Page no longer crashes when deployed to GitHub Pages
+- Sidebar and prompt area layout is no longer broken when opening the page from a local file
 
 ### Changed
 
