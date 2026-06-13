@@ -86,7 +86,13 @@ export function SessionsModal({ isOpen, closeModal, sessionStorage, cancel }: Se
 	const [sortAsc, setSortAscState] = useState(() => localStorage.getItem('miyapad-sessions-sortAsc') === 'true');
 
 	const setSortBy = (v: any) => { setSortByState(v); localStorage.setItem('miyapad-sessions-sortBy', v); };
-	const setSortAsc = (v: any) => { const next = typeof v === 'function' ? v(sortAsc) : v; setSortAscState(next); localStorage.setItem('miyapad-sessions-sortAsc', String(next)); };
+	const setSortAsc = (v: any) => {
+		setSortAscState((prev: boolean) => {
+			const next = typeof v === 'function' ? v(prev) : v;
+			localStorage.setItem('miyapad-sessions-sortAsc', String(next));
+			return next;
+		});
+	};
 
 	useEffect(() => {
 		const incrementVersion = () => setVersion(v => v + 1);
@@ -194,20 +200,28 @@ export function SessionsModal({ isOpen, closeModal, sessionStorage, cancel }: Se
 			const reader = new FileReader();
 			let lastNewId = null;
 
-			for (const file of sortedFiles) {
-				await new Promise<void>((resolve, reject) => {
-					reader.onload = async (e: any) => {
-						lastNewId = await sessionStorage.createSessionFromObject(JSON.parse((e.target as FileReader).result as string), false);
-						resolve();
-					};
-					reader.onerror = (e: any) => {
-						reject(e);
-					};
-					reader.readAsText(file);
-				});
-			}
-			if (lastNewId !== null) {
-				await sessionStorage.switchSession(lastNewId);
+			try {
+				for (const file of sortedFiles) {
+					await new Promise<void>((resolve, reject) => {
+						reader.onload = async (e: any) => {
+							try {
+								lastNewId = await sessionStorage.createSessionFromObject(JSON.parse((e.target as FileReader).result as string), false);
+								resolve();
+							} catch (err) {
+								reject(err);
+							}
+						};
+						reader.onerror = (e: any) => {
+							reject(e);
+						};
+						reader.readAsText(file);
+					});
+				}
+				if (lastNewId !== null) {
+					await sessionStorage.switchSession(lastNewId);
+				}
+			} catch {
+				alert('Failed to import session. Check that the file is valid JSON.');
 			}
 		};
 		document.body.appendChild(fileInput);
