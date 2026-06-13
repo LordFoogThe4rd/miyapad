@@ -63,9 +63,7 @@ export function EditorContextMenu({ isOpen, closeMenu, menuItems, className, ...
 				newLeft = Math.max(newLeft - rect.width, 0);
 
 			menuRef.current.style.top = `${newTop}px`;
-			props.y = newTop;
 			menuRef.current.style.left = `${newLeft}px`;
-			props.x = newLeft;
 		}
 	}, [props.x, props.y]);
 
