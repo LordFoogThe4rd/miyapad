@@ -1,4 +1,4 @@
-import type { Dispatch, RefObject } from 'react';
+import type { Dispatch, RefObject, SetStateAction } from 'react';
 
 interface PromptChunk {
   type?: 'user';
@@ -236,7 +236,7 @@ export interface GenerationState {
   activeGenId: RefObject<number>;
   abortControllerRef: RefObject<AbortController | null>;
   promptChunks: PromptChunk[];
-  setPromptChunks: Dispatch<PromptChunk[]>;
+  setPromptChunks: Dispatch<SetStateAction<PromptChunk[]>>;
   currentPromptChunk: { index: number; top: number; left: number } | undefined;
   setCurrentPromptChunk: Dispatch<{ index: number; top: number; left: number } | undefined>;
   undoHovered: boolean;
@@ -274,7 +274,7 @@ export interface GenerationState {
   hordeProcessing: boolean;
   setHordeProcessing: Dispatch<boolean>;
   promptPreviewChunks: PromptChunk[];
-  setPromptPreviewChunks: Dispatch<PromptChunk[]>;
+  setPromptPreviewChunks: Dispatch<SetStateAction<PromptChunk[]>>;
   promptPreviewReroll: number;
   setPromptPreviewReroll: Dispatch<number>;
   ttsAvailable: boolean;
