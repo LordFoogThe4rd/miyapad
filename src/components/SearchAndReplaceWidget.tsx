@@ -6,13 +6,15 @@ import { InputBox } from './controls/InputBox';
 import { SelectBox } from './controls/SelectBox';
 import { SVG_ArrowUp, SVG_ArrowDown } from './icons/index';
 
-declare function templateFindNext(...args: any[]): any;
-declare function templateFindPrev(...args: any[]): any;
-declare function templateReplace(...args: any[]): any;
-
 export function SearchAndReplaceWidget({ isOpen, closeWidget, id, children, promptArea, promptText, cancel, ...props }: any) {
 	const [searchAndReplaceError, setSearchAndReplaceError] = useState<string | undefined>(undefined);
 	const [searchAndReplaceMode, setSearchAndReplaceMode] = usePersistentState('searchAndReplaceMode', 0);
+	// Normalise persisted value that was removed from the UI
+	useEffect(() => {
+		if (searchAndReplaceMode === 2) {
+			setSearchAndReplaceMode(0);
+		}
+	}, []);
 	const [searchTerm, setSearchTerm] = usePersistentState('searchTerm','');
 	const [searchFlags, setSearchFlags] = usePersistentState('searchFlags','gi');
 	const [replaceTerm, setReplaceTerm] = usePersistentState('replaceTerm','');
@@ -39,9 +41,6 @@ export function SearchAndReplaceWidget({ isOpen, closeWidget, id, children, prom
 			case 1:
 				findNextMatch(mode,search,flags,inputElement)
 				break;
-			case 2:
-				templateFindNext(search,inputElement)
-				break;
 		}
 	}
 	function handleFindPrev(mode: any,search: any,flags: any) {
@@ -54,9 +53,6 @@ export function SearchAndReplaceWidget({ isOpen, closeWidget, id, children, prom
 				break;
 			case 1:
 				findPrevMatch(mode,search,flags,inputElement)
-				break;
-			case 2:
-				templateFindPrev(mode,search,inputElement)
 				break;
 		}
 	}
@@ -163,9 +159,6 @@ export function SearchAndReplaceWidget({ isOpen, closeWidget, id, children, prom
 				break;
 			case 1:
 				regexReplace(search,flags,replace,inputElement)
-				break;
-			case 2:
-				templateReplace(search,replace,inputElement)
 				break;
 		}
 	}
