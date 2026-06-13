@@ -5,6 +5,8 @@ import { InputBox } from '../controls/InputBox';
 import { API_LLAMA_CPP, API_KOBOLD_CPP, API_AI_HORDE, API_OPENAI_COMPAT, API_DEEPSEEK } from '../../constants';
 import { getTokens, serverTokenize } from '../../api/index';
 
+type TokenizeResult = { ids: number[]; str: string | string[] };
+
 export function LogitBiasModal({ isOpen, closeModal, biasState, apiConfig, cancel }: any) {
 	const { logitBias, setLogitBias, logitBiasParam, setLogitBiasParam, setRejectedAPIKey } = biasState;
 	const { sessionStorage, endpoint, endpointAPI, endpointAPIKey, isMiyapadEndpoint, useServerTokenization } = apiConfig;
@@ -61,7 +63,7 @@ export function LogitBiasModal({ isOpen, closeModal, biasState, apiConfig, cance
 
 		const ac = new AbortController();
 		try {
-			let tokens: any;
+			let tokens: TokenizeResult;
 			const isTokenIds = biasString.match(/^(?<!\\)\/\s*\d+(\s*,\s*\d+)*\s*(?<!\\)\/$/g);
 			if ( isTokenIds != null ) {
 				// split by "," and use it as token ids directly
@@ -95,7 +97,7 @@ export function LogitBiasModal({ isOpen, closeModal, biasState, apiConfig, cance
 					signal: ac.signal,
 					...(isMiyapadEndpoint ? { proxyEndpoint: sessionStorage.proxyEndpoint } : {})
 				})
-			)) as any;
+			)) as Promise<TokenizeResult>;
 			if (tokens.length === 0) {
 				setLastBiasError("Error: Tokenizer endpoint unavailable.");
 				return;
@@ -110,7 +112,7 @@ export function LogitBiasModal({ isOpen, closeModal, biasState, apiConfig, cance
 					signal: ac.signal,
 					...(isMiyapadEndpoint ? { proxyEndpoint: sessionStorage.proxyEndpoint } : {})
 				})
-			)) as any;
+			)) as Promise<TokenizeResult>;
 				// Remove however many tokens !== is tokenized as for the workaround
 				tokens.ids = tokens.ids.slice(logitBiasWorkaround.ids.length);
 				if ( Array.isArray(tokens.str) ) {
