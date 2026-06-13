@@ -1,6 +1,8 @@
 import { koboldCppConvertOptions } from './koboldcpp';
 
-export async function aiHordeModels({ endpoint, endpointAPIKey, proxyEndpoint, signal, ...options }: { endpoint: any; endpointAPIKey: any; proxyEndpoint: any; signal: any; [key: string]: any }) {
+type AIHordeRequestParams = Omit<ApiEndpointConfig, 'endpointAPI'> & { [key: string]: any };
+
+export async function aiHordeModels({ endpoint, endpointAPIKey, proxyEndpoint, signal, ...options }: AIHordeRequestParams) {
 	const res = await fetch(`${proxyEndpoint ?? endpoint}/v2/status/models?type=text`, {
 		method: 'GET',
 		headers: {
@@ -16,11 +18,11 @@ export async function aiHordeModels({ endpoint, endpointAPIKey, proxyEndpoint, s
 	const response = await res.json();
 
 	return response
-		.filter((model: any) => model.type === "text")
-		.map((model: any) => model.name);
+		.filter((model: { type?: string }) => model.type === "text")
+		.map((model: { name?: string }) => model.name);
 }
 
-export async function* aiHordeCompletion({ endpoint, endpointAPIKey, proxyEndpoint, signal, ...options }: { endpoint: any; endpointAPIKey: any; proxyEndpoint: any; signal: any; [key: string]: any }): AsyncGenerator<AIHordeChunk, void, unknown> {
+export async function* aiHordeCompletion({ endpoint, endpointAPIKey, proxyEndpoint, signal, ...options }: AIHordeRequestParams): AsyncGenerator<AIHordeChunk, void, unknown> {
 	const { model, prompt, ...params } = options;
 	const submitRes = await fetch(`${proxyEndpoint ?? endpoint}/v2/generate/text/async`, {
 		method: 'POST',
@@ -69,7 +71,7 @@ export async function* aiHordeCompletion({ endpoint, endpointAPIKey, proxyEndpoi
 	}
 }
 
-export async function aiHordeAbortCompletion({ endpoint, proxyEndpoint, hordeTaskId, ...options }: { endpoint: any; proxyEndpoint?: any; hordeTaskId?: any; [key: string]: any }) {
+export async function aiHordeAbortCompletion({ endpoint, proxyEndpoint, hordeTaskId, ...options }: Omit<ApiEndpointConfig, 'endpointAPI' | 'endpointAPIKey' | 'signal'> & { hordeTaskId?: string; [key: string]: any }) {
 	try {
 		await fetch(`${proxyEndpoint ?? endpoint}/v2/generate/text/status/${hordeTaskId}`, {
 			method: 'DELETE',
