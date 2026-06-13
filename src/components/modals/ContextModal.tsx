@@ -5,8 +5,29 @@ import { CollapsibleGroup } from '../controls/CollapsibleGroup';
 import { getTokenCount, serverTokenCount } from '../../api/index';
 import { API_OPENAI_COMPAT, API_LLAMA_CPP, API_DEEPSEEK } from '../../constants';
 import { isAbortError } from '../../utils/errors';
+import type { SessionStorage } from '../../storage/SessionStorage';
 
-export function ContextModal({ isOpen, closeModal, tokens, memoryTokens, authorNoteTokens, handleMemoryTokensChange, finalPromptText, defaultPresets, cancel, apiConfig }: any) {
+interface ContextModalProps {
+	isOpen: boolean;
+	closeModal: () => void;
+	tokens: number;
+	memoryTokens: MemoryTokensData;
+	authorNoteTokens: AuthorNoteData;
+	handleMemoryTokensChange: (key: string, value: string) => void;
+	finalPromptText: string;
+	defaultPresets: DefaultPresets;
+	cancel: (() => void) | null;
+	apiConfig: {
+		sessionStorage: SessionStorage;
+		endpoint: string;
+		endpointAPI: number;
+		endpointAPIKey: string;
+		isMiyapadEndpoint: boolean;
+		useServerTokenization: boolean;
+	};
+}
+
+export function ContextModal({ isOpen, closeModal, tokens, memoryTokens, authorNoteTokens, handleMemoryTokensChange, finalPromptText, defaultPresets, cancel, apiConfig }: ContextModalProps) {
 	const { sessionStorage, endpoint, endpointAPI, endpointAPIKey, isMiyapadEndpoint, useServerTokenization } = apiConfig;
 	const [contextPlayground, setContextPlayground] = useState(finalPromptText);
 	const [playgroundTokens, setPlaygroundTokens] = useState(tokens);
@@ -66,10 +87,10 @@ export function ContextModal({ isOpen, closeModal, tokens, memoryTokens, authorN
 				<tbody>
 					<tr>
 						<th>Tokens</th>
-						<td>${memoryTokens.tokens}</td>
-						<td>${memoryTokens.tokensWI}</td>
-						<td>${authorNoteTokens.tokens}</td>
-						<td>${Math.max(0, playgroundTokens - memoryTokens.tokens - memoryTokens.tokensWI - authorNoteTokens.tokens)}</td>
+						<td>${memoryTokens.tokens ?? 0}</td>
+						<td>${memoryTokens.tokensWI ?? 0}</td>
+						<td>${authorNoteTokens.tokens ?? 0}</td>
+						<td>${Math.max(0, playgroundTokens - (memoryTokens.tokens ?? 0) - (memoryTokens.tokensWI ?? 0) - (authorNoteTokens.tokens ?? 0))}</td>
 						<td></td>
 						<td>${playgroundTokens}</td>
 					</tr>
