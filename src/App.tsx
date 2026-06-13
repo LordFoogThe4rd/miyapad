@@ -13,9 +13,9 @@ interface AppProps {
   themeStorage: ThemeStorage;
   connectionStorage: ConnectionStorage;
   useSessionState: <T>(name: string, initialState: T) => [T, React.Dispatch<React.SetStateAction<T>>];
-  useDBTemplates: <T>(initialState: T) => [Record<string, InstructTemplate>, React.Dispatch<React.SetStateAction<Record<string, InstructTemplate>>>];
-  useDBThemes: <T>(initialState: T) => [Record<string, ThemeData>, React.Dispatch<React.SetStateAction<Record<string, ThemeData>>>];
-  useDBConnections: <T>(initialState: T) => [Record<string, ConnectionData>, React.Dispatch<React.SetStateAction<Record<string, ConnectionData>>>];
+  useDBTemplates: (initialState: unknown) => [Record<string, InstructTemplate>, React.Dispatch<React.SetStateAction<Record<string, InstructTemplate>>>];
+  useDBThemes: (initialState: unknown) => [Record<string, ThemeData>, React.Dispatch<React.SetStateAction<Record<string, ThemeData>>>];
+  useDBConnections: (initialState: unknown) => [Record<string, ConnectionData>, React.Dispatch<React.SetStateAction<Record<string, ConnectionData>>>];
   isMiyapadEndpoint: boolean;
 }
 
