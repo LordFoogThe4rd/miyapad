@@ -49,6 +49,7 @@ export function useTouchGestures() {
 
 			const handleTouchMove = (e: any) => {
 				if (!isTwoFingerGesture) return;
+				if (e.touches.length < 2) return;
 
 				// Cancel gesture if fingers move too far
 				const movedTooFar = startTouches.some((startTouch, index) => {
