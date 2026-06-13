@@ -1,8 +1,16 @@
 import { html } from 'htm/react';
 import { useEffect, useRef, useState } from 'react';
+import type { ModalProps } from '../types/components';
 import { SVG_Close } from './icons/index';
 
-export function Modal({ isOpen, onClose, title, description, children, ...props }: any) {
+export function Modal({
+	isOpen,
+	onClose,
+	title,
+	description,
+	children,
+	...props
+}: ModalProps & Omit<React.HTMLAttributes<HTMLDivElement>, keyof ModalProps>) {
 	const [internalVisible, setInternalVisible] = useState(isOpen);
 	const prevIsOpen = useRef(isOpen);
 	const closeTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
@@ -33,7 +41,7 @@ export function Modal({ isOpen, onClose, title, description, children, ...props 
 
 	useEffect(() => {
 		if (!isOpen) return;
-		const onKeyDown = (event: any) => {
+		const onKeyDown = (event: KeyboardEvent) => {
 			if (event.key === 'Escape') {
 				onClose();
 			}
@@ -48,11 +56,11 @@ export function Modal({ isOpen, onClose, title, description, children, ...props 
 		return null;
 	}
 
-	const handleOverlayMouseDown = (e: any) => {
+	const handleOverlayMouseDown = (e: React.MouseEvent) => {
 		mouseDownOnBackground.current = true;
 	};
 
-	const handleOverlayClick = (e: any) => {
+	const handleOverlayClick = (e: React.MouseEvent) => {
 		if (mouseDownOnBackground.current) {
 			onClose();
 		}
@@ -65,8 +73,8 @@ export function Modal({ isOpen, onClose, title, description, children, ...props 
 			onClick=${handleOverlayClick}>
 			<div className="modal-container">
 				<div className="modal ${isClosing ? 'closing' : ''}"
-					onClick=${(e: any) => e.stopPropagation()}
-					onMouseDown=${(e: any) => { e.stopPropagation(); mouseDownOnBackground.current = false; }}
+					onClick=${(e: React.MouseEvent) => e.stopPropagation()}
+					onMouseDown=${(e: React.MouseEvent) => { e.stopPropagation(); mouseDownOnBackground.current = false; }}
 					...${props}>
 					<div class="modal-title">${title}</div>
 					${ description=="" ? false : html`<div style=${{ whiteSpace: 'pre-line' }} class='modal-desc'>${description}</div>` }

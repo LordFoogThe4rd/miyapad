@@ -14,7 +14,6 @@ export interface ModalProps {
   title: string;
   description?: string;
   children?: ReactNode;
-  [key: string]: any;
 }
 
 export interface PromptContainerProps {
