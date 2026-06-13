@@ -13,9 +13,9 @@ export function SettingsProvider({ children, sessionStorage, templateStorage, th
 	themeStorage: any;
 	connectionStorage: any;
 	useSessionState: <T>(name: string, initialState: T) => [T, Dispatch<SetStateAction<T>>];
-	useDBTemplates: any;
-	useDBThemes: any;
-	useDBConnections: any;
+	useDBTemplates: (initialState: unknown) => [Record<string, InstructTemplate>, Dispatch<SetStateAction<Record<string, InstructTemplate>>>];
+	useDBThemes: (initialState: unknown) => [Record<string, ThemeData>, Dispatch<SetStateAction<Record<string, ThemeData>>>];
+	useDBConnections: (initialState: unknown) => [Record<string, ConnectionData>, Dispatch<SetStateAction<Record<string, ConnectionData>>>];
 	isMiyapadEndpoint: boolean;
 }) {
 	const [templates, setTemplates] = useDBTemplates(defaultPresets.instructTemplates);
