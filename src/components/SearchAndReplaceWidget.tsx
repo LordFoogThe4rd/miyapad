@@ -176,7 +176,8 @@ export function SearchAndReplaceWidget({ isOpen, closeWidget, id, children, prom
 	}
 	function regexReplace(search: any,flags: any,replace: any,elem: any) {
 		try {
-			let re = new RegExp(String.raw`${search}`, String.raw`${flags ?? ""}`);
+			const gFlags = flags && !flags.includes('g') ? flags + 'g' : flags || 'g';
+			let re = new RegExp(String.raw`${search}`, String.raw`${gFlags}`);
 			const newVal = elem.value.replace(re,replace);
 			elem.focus();
 			elem.select();
