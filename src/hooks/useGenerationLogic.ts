@@ -25,8 +25,8 @@ export function useGenerationLogic() {
 			if (myId !== activeGenId.current) return false;
 			fimLeftChunks!.push(chunk);
 			setPromptChunks((p: any) => [
-				...fimLeftChunks!,
-				...fimRightChunks!
+				...fimLeftChunks! as PromptChunk[],
+				...fimRightChunks! as PromptChunk[]
 			]);
 			setTokens((t: any) => t + (chunk?.completion_probabilities?.length ?? 1));
 			return true;
@@ -272,7 +272,7 @@ export function useGenerationLogic() {
 						continue;
 					case 'queue_status':
 						setHordeQueuePos(hordeChunk.position);
-						setHordeProcessing(hordeChunk.processing);
+						setHordeProcessing(hordeChunk.processing ?? false);
 						continue;
 					}
 				}
@@ -369,7 +369,7 @@ export function useGenerationLogic() {
 		activeGenId.current++; // Invalidate any active generation
 		if (showPromptPreview) setPromptPreviewChunks([]); // Discard current preview so that a new one is generated.
 		if (Array.isArray(undoStack.current)) undoStack.current.push(promptChunks.length);
-		setPromptChunks((p: any) => [...p, ...redoStack.current.pop()]);
+		setPromptChunks((p: any) => [...p, ...(redoStack.current.pop() ?? [])]);
 		setUndoHovered(false);
 		return true;
 	}

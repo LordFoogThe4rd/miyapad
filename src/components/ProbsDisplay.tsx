@@ -9,7 +9,8 @@ export function ProbsDisplay() {
 	const { promptChunks, setPromptChunks, currentPromptChunk, showProbs, setTriggerPredict, setRestartedPredict } = useGeneration();
 
 	const probs = useMemo(() => {
-		const rawProbs = showProbs && promptChunks[currentPromptChunk?.index]?.completion_probabilities?.[0]?.probs;
+		const index = currentPromptChunk?.index;
+		const rawProbs = showProbs && index !== undefined && promptChunks[index]?.completion_probabilities?.[0]?.probs;
 		return rawProbs
 			? rawProbs.filter((prob: any) => prob.prob > 0).sort((a: any, b: any) => b.prob - a.prob)
 			: undefined;
@@ -51,7 +52,7 @@ export function ProbsDisplay() {
 			}}>
 			${probs.map((prob: any, i: any) => {
 				const index = currentPromptChunk?.index;
-				const isCurrentToken = promptChunks[index]?.prob == prob.prob;
+				const isCurrentToken = index !== undefined && promptChunks[index]?.prob == prob.prob;
 				return html`<button key=${i} className=${isCurrentToken ? 'current' : ''} onClick=${() => switchCompletion(index, prob)}>
 					<div className="tok">${replaceUnprintableBytes(prob.tok_str.replaceAll(' ', '␣').replaceAll('\t', '⇥').replaceAll('\n', '↵'))}</div>
 					<div className="prob">${(prob.prob * 100).toFixed(2)}%</div>

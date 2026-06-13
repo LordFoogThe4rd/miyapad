@@ -28,7 +28,7 @@ export function useTTS() {
 		if (ttsEnabled && ttsQueue.current.length > 0) {
 			if (window.speechSynthesis.speaking)
 				window.speechSynthesis.cancel();
-			var text = ttsQueue.current.shift().trim();
+			var text = (ttsQueue.current.shift() ?? '').trim();
 			// Remove special tokens (anything between <> and [])
 			text = text.replaceAll(/\<.+?\>/g, "");
 			text = text.replaceAll(/\[.+?\]/g, "");
