@@ -70,3 +70,17 @@ interface LogitBiasState {
   bias: Record<string, number>;
   model: string;
 }
+
+type DbConnection = IDBDatabase | ((route: string, options?: any) => Promise<any>);
+
+interface DatabaseAdapter {
+  sessionEndpoint?: string;
+  init?(): Promise<void>;
+  openDatabase(): Promise<DbConnection>;
+  loadFromDatabase(db: DbConnection, storeName: string, key: string | number): Promise<any>;
+  loadAllFromDatabase(db: DbConnection, storeName: string): Promise<Record<string, any>>;
+  loadSessionInfoFromDatabase(db: DbConnection, storeName: string): Promise<Record<string, any>>;
+  saveToDatabase(db: DbConnection, storeName: string, key: string | number, data: any): Promise<void>;
+  renameSessionInDatabase(db: DbConnection, storeName: string, key: string | number, newName: string): Promise<void>;
+  deleteFromDatabase(db: DbConnection, storeName: string, key: string | number): Promise<void>;
+}

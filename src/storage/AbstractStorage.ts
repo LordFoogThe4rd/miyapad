@@ -1,10 +1,10 @@
 export class AbstractStorage extends EventTarget {
 	storeName: string;
-	dbAdapter: any;
-	pendingSaveKey: any;
-	saveTimer: any;
+	dbAdapter: DatabaseAdapter;
+	pendingSaveKey: string | number | null;
+	saveTimer: ReturnType<typeof setInterval> | undefined;
 
-	constructor(storeName: string, dbAdapter: any) {
+	constructor(storeName: string, dbAdapter: DatabaseAdapter) {
 		super();
 		this.storeName = storeName;
 		this.dbAdapter = dbAdapter;
@@ -16,25 +16,25 @@ export class AbstractStorage extends EventTarget {
 		this.dispatchEvent(new CustomEvent('change'));
 	}
 
-	dispatchErrorEvent(detail: any) {
+	dispatchErrorEvent(detail: unknown) {
 		console.error('[AbstractStorage Error]', this.storeName, detail);
 		fetch('/log', {
 			method: 'POST',
 			headers: { 'Content-Type': 'application/json' },
 			body: JSON.stringify({
 				storeName: this.storeName,
-				error: detail?.message || detail?.toString() || String(detail),
-				stack: detail?.stack || null
+				error: (detail as Error)?.message || String(detail),
+				stack: (detail as Error)?.stack || null
 			})
 		}).catch(() => {});
 		this.dispatchEvent(new CustomEvent('error', { detail }));
 	}
 
-	startSaveTimer(saveCallback: (key: any) => Promise<void>) {
+	startSaveTimer(saveCallback: (key: string | number) => Promise<void>) {
 		this.saveTimer = setInterval(async () => await this.saveTimerHandler(saveCallback), 500);
 	}
 
-	async saveTimerHandler(saveCallback: (key: any) => Promise<void>) {
+	async saveTimerHandler(saveCallback: (key: string | number) => Promise<void>) {
 		const key = this.pendingSaveKey;
 		this.pendingSaveKey = null;
 
@@ -43,19 +43,19 @@ export class AbstractStorage extends EventTarget {
 		}
 	}
 
-	enqueueSave(key: any) {
+	enqueueSave(key: string | number) {
 		this.pendingSaveKey = key;
 	}
 
-	async performFullSave(data: any) {
+	async performFullSave(data: unknown) {
 		throw new Error("Not Implemented");
 	}
 
-	getStorageData(): any {
+	getStorageData(): unknown {
 		throw new Error("Not Implemented");
 	}
 
-	async openDatabase(): Promise<any> {
+	async openDatabase(): Promise<DbConnection> {
 		try {
 			return await this.dbAdapter.openDatabase();
 		} catch (e) {
@@ -64,7 +64,7 @@ export class AbstractStorage extends EventTarget {
 		}
 	}
 
-	async loadFromDatabase(db: any, key: any): Promise<any> {
+	async loadFromDatabase(db: DbConnection, key: string | number): Promise<any> {
 		try {
 			return await this.dbAdapter.loadFromDatabase(db, this.storeName, key);
 		} catch (e) {
@@ -73,7 +73,7 @@ export class AbstractStorage extends EventTarget {
 		}
 	}
 
-	async loadAllFromDatabase(db: any): Promise<any> {
+	async loadAllFromDatabase(db: DbConnection): Promise<Record<string, any>> {
 		try {
 			return await this.dbAdapter.loadAllFromDatabase(db, this.storeName);
 		} catch (e) {
@@ -82,7 +82,7 @@ export class AbstractStorage extends EventTarget {
 		}
 	}
 
-	async loadSessionInfoFromDatabase(db: any): Promise<any> {
+	async loadSessionInfoFromDatabase(db: DbConnection): Promise<Record<string, any>> {
 		try {
 			return await this.dbAdapter.loadSessionInfoFromDatabase(db, this.storeName);
 		} catch (e) {
@@ -91,7 +91,7 @@ export class AbstractStorage extends EventTarget {
 		}
 	}
 
-	async saveToDatabase(db: any, key: any, data: any): Promise<void> {
+	async saveToDatabase(db: DbConnection, key: string | number, data: any): Promise<void> {
 		try {
 			return await this.dbAdapter.saveToDatabase(db, this.storeName, key, data);
 		} catch (e) {
@@ -100,7 +100,7 @@ export class AbstractStorage extends EventTarget {
 		}
 	}
 
-	async renameSessionInDatabase(db: any, key: any, newName: any): Promise<void> {
+	async renameSessionInDatabase(db: DbConnection, key: string | number, newName: string): Promise<void> {
 		try {
 			return await this.dbAdapter.renameSessionInDatabase(db, this.storeName, key, newName);
 		} catch (e) {
@@ -109,7 +109,7 @@ export class AbstractStorage extends EventTarget {
 		}
 	}
 
-	async deleteFromDatabase(db: any, key: any): Promise<void> {
+	async deleteFromDatabase(db: DbConnection, key: string | number): Promise<void> {
 		try {
 			return await this.dbAdapter.deleteFromDatabase(db, this.storeName, key);
 		} catch (e) {

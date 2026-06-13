@@ -3,7 +3,7 @@ import { AbstractStorage } from './AbstractStorage';
 export class TemplateStorage extends AbstractStorage {
 	templates: Record<string, InstructTemplate> = {};
 
-	constructor(dbAdapter: any) {
+	constructor(dbAdapter: DatabaseAdapter) {
 		super('Templates', dbAdapter);
 	}
 
@@ -12,17 +12,15 @@ export class TemplateStorage extends AbstractStorage {
 		await this.loadTemplates(db);
 	}
 
-	async performFullSave(newTemplates: any, writeOnly: any = false) {
+	async performFullSave(newTemplates: Record<string, InstructTemplate>, writeOnly: boolean = false) {
 		const db = await this.openDatabase();
 
-		// Check if the keys exists in input, if not, delete
 		for (const key of Object.keys(this.templates)) {
 			if (Object.keys(newTemplates).includes(key))
 				continue;
 			if (writeOnly)
 				continue;
 			try {
-				// If the key not in input, delete it
 				await this.deleteFromDatabase(db, key);
 				console.warn('Deleted key:', key);
 			} catch {
@@ -30,7 +28,6 @@ export class TemplateStorage extends AbstractStorage {
 			}
 		}
 
-		// put input keys
 		for (const [key, value] of Object.entries(newTemplates)) {
 			if (JSON.stringify(value) === JSON.stringify(this.templates[key]))
 				continue;
@@ -41,11 +38,11 @@ export class TemplateStorage extends AbstractStorage {
         this.dispatchChangeEvent();
 	}
 
-	getStorageData() {
+	getStorageData(): Record<string, InstructTemplate> {
 		return this.templates;
 	}
 
-	async loadTemplates(db: any) {
+	async loadTemplates(db: DbConnection) {
 		this.templates = await this.loadAllFromDatabase(db);
 	}
 }

@@ -1,7 +1,7 @@
 import { AbstractStorage } from './AbstractStorage';
 import { NameStorage } from './NameStorage';
 
-function extractMeta(s: any) {
+function extractMeta(s: Record<string, any>) {
 	return {
 		name: s.name,
 		created: s.created || null,
@@ -28,7 +28,7 @@ export class SessionStorage extends AbstractStorage {
 	proxyEndpoint: string | undefined;
 	private onchange?: () => void;
 
-	constructor(dbAdapter: any) {
+	constructor(dbAdapter: DatabaseAdapter) {
 		super('Sessions', dbAdapter);
 		this.nextId = undefined;
 		this.sessions = {};
@@ -53,7 +53,7 @@ export class SessionStorage extends AbstractStorage {
 		this.startSaveTimer(async (sessionId) => await this.saveSessionToDB(sessionId));
 	}
 
-	async saveToDatabase(db: any, key: any, data: any) {
+	async saveToDatabase(db: DbConnection, key: string | number, data: any) {
         if (data && data.hasOwnProperty('name')) {
             const nameData = extractMeta(data);
             await this.nameStorage!.saveToDatabase(db, key, nameData);
@@ -64,9 +64,9 @@ export class SessionStorage extends AbstractStorage {
         }
 	}
 
-	async loadFromDatabase(db: any, key: any) {
+	async loadFromDatabase(db: DbConnection, key: string | number) {
 		const data = await super.loadFromDatabase(db, key);
-		if(data && !['selectedSessionId', 'nextSessionId'].includes(key)){
+		if(data && !['selectedSessionId', 'nextSessionId'].includes(key as string)){
 			const nameData = await this.nameStorage!.loadFromDatabase(db, key);
 			if (typeof nameData === 'string') {
 				data['name'] = nameData === '[object Object]' ? `Session #${key}` : nameData;
@@ -85,12 +85,12 @@ export class SessionStorage extends AbstractStorage {
 		return data;
 	}
 
-	async deleteFromDatabase(db: any, key: any) {
+	async deleteFromDatabase(db: DbConnection, key: string | number) {
 		await super.deleteFromDatabase(db, key);
 		await this.nameStorage!.deleteFromDatabase(db, key);
 	}
 
-	async saveSessionToDB(sessionId: any) {
+	async saveSessionToDB(sessionId: string | number) {
 		const session = this.sessions[sessionId];
 		if (!session) return;
 		const { name, created, modified, pinned, tags, ...sessionData } = session;
@@ -140,7 +140,7 @@ export class SessionStorage extends AbstractStorage {
 		return true;
 	}
 
-	async loadSessions(db: any) {
+	async loadSessions(db: DbConnection) {
 		const sessions = await this.loadSessionInfoFromDatabase(db);
 		for (const [key, data] of Object.entries(sessions)) {
 			// Handle both legacy string names and new metadata objects
@@ -157,14 +157,16 @@ export class SessionStorage extends AbstractStorage {
 				await this.createSession('MiyaPad #1');
 			}
 		}
-		await this.switchSession(this.selectedSession);
+		if (this.selectedSession !== undefined) {
+			await this.switchSession(this.selectedSession);
+		}
 	}
 
-	getProperty(propertyName: any) {
+	getProperty(propertyName: string) {
 		return this.selectedSession !== undefined ? this.sessions[this.selectedSession]?.[propertyName] : undefined;
 	}
 
-	setProperty(propertyName: any, value: any) {
+	setProperty(propertyName: string, value: unknown) {
 		if (this.selectedSession === undefined) return;
 		if (!this.sessions[this.selectedSession])
 			return;
@@ -173,7 +175,7 @@ export class SessionStorage extends AbstractStorage {
 		this.enqueueSave(this.selectedSession);
 	}
 
-	async switchSession(sessionId: any) {
+	async switchSession(sessionId: string | number) {
 		if (!this.sessions[sessionId])
 			return;
 
@@ -197,7 +199,7 @@ export class SessionStorage extends AbstractStorage {
 		this.dispatchSessionChangeEvent();
 	}
 
-	async renameSession(sessionId: any, renameSessionName: any) {
+	async renameSession(sessionId: string | number, renameSessionName: string) {
 		this.sessions[sessionId]['name'] = renameSessionName;
 		this.sessions[sessionId].modified = Date.now();
 
@@ -207,7 +209,7 @@ export class SessionStorage extends AbstractStorage {
 		this.dispatchChangeEvent();
 	}
 
-	async togglePinSession(sessionId: any) {
+	async togglePinSession(sessionId: string | number) {
 		if (!this.sessions[sessionId])
 			return;
 		this.sessions[sessionId].pinned = !this.sessions[sessionId].pinned;
@@ -215,16 +217,16 @@ export class SessionStorage extends AbstractStorage {
 		this.dispatchChangeEvent();
 	}
 
-	setTags(sessionId: any, rawInput: any) {
+	setTags(sessionId: string | number, rawInput: string) {
 		if (!this.sessions[sessionId]) return;
-		const rawTags = rawInput.split(',').map((t: any) => t.trim().toLowerCase().replace(/\s+/g, ' ')).filter(Boolean);
+		const rawTags = rawInput.split(',').map((t: string) => t.trim().toLowerCase().replace(/\s+/g, ' ')).filter(Boolean);
 		this.sessions[sessionId].tags = [...new Set(rawTags)] as string[];
 		this.sessions[sessionId].modified = Date.now();
 		this.enqueueSave(sessionId);
 		this.dispatchChangeEvent();
 	}
 
-	async deleteSession(sessionId: any) {
+	async deleteSession(sessionId: string | number) {
 		if (Object.keys(this.sessions).length === 1)
 			return;
 		if (!window.confirm("Are you sure you want to delete this session? This action can't be undone."))
@@ -245,7 +247,7 @@ export class SessionStorage extends AbstractStorage {
 		this.dispatchChangeEvent();
 	}
 
-	async createSession(newSessionName: any) {
+	async createSession(newSessionName: string) {
 		const newId = await this.getNewId();
 		const now = Date.now();
 		this.sessions[newId] = { name: newSessionName, created: now, modified: now, pinned: false, tags: [] };
@@ -257,7 +259,7 @@ export class SessionStorage extends AbstractStorage {
 		return newId;
 	}
 
-	async createSessionFromObject(obj: any, cloned: any) {
+	async createSessionFromObject(obj: Record<string, string>, cloned: boolean) {
 		const newId = await this.getNewId();
 		this.sessions[newId] = {};
 

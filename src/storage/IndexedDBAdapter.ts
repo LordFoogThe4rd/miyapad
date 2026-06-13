@@ -70,8 +70,8 @@ export class IndexedDBAdapter {
 		});
 	}
 
-	async loadFromDatabase(db: any, storeName: any, key: any) {
-		return new Promise((resolve, reject) => {
+	async loadFromDatabase(db: IDBDatabase, storeName: string, key: IDBValidKey) {
+		return new Promise<any>((resolve, reject) => {
 			const tx = db.transaction(storeName, 'readonly');
 			const store = tx.objectStore(storeName);
 			const request = store.get(key);
@@ -81,13 +81,13 @@ export class IndexedDBAdapter {
 		});
 	}
 
-	async loadAllFromDatabase(db: any, storeName: any) {
-		return new Promise((resolve, reject) => {
+	async loadAllFromDatabase(db: IDBDatabase, storeName: string) {
+		return new Promise<Record<string, any>>((resolve, reject) => {
 			const tx = db.transaction(storeName, 'readonly');
 			const store = tx.objectStore(storeName);
 			const request = store.openCursor();
 
-			let allTables: Record<string, any> = {};
+			const allTables: Record<string, any> = {};
 
 			request.onsuccess = async (event: Event) => {
 				const cursor = (event.target as IDBRequest<IDBCursorWithValue | null>).result;
@@ -102,13 +102,13 @@ export class IndexedDBAdapter {
 		});
 	}
 
-	async loadSessionInfoFromDatabase(db: any, storeName: any) {
-		return new Promise((resolve, reject) => {
+	async loadSessionInfoFromDatabase(db: IDBDatabase, storeName: string) {
+		return new Promise<Record<string, any>>((resolve, reject) => {
 			const tx = db.transaction("Names", 'readonly');
 			const store = tx.objectStore("Names");
 			const request = store.openCursor();
 
-			let allTables: Record<string, any> = {};
+			const allTables: Record<string, any> = {};
 
 			request.onsuccess = async (event: Event) => {
 				const cursor = (event.target as IDBRequest<IDBCursorWithValue | null>).result;
@@ -126,8 +126,8 @@ export class IndexedDBAdapter {
 	}
 	
 
-	async saveToDatabase(db: any, storeName: any, key: any, data: any) {
-		return new Promise((resolve, reject) => {
+	async saveToDatabase(db: IDBDatabase, storeName: string, key: IDBValidKey, data: any) {
+		return new Promise<void>((resolve, reject) => {
 			const tx = db.transaction(storeName, 'readwrite');
 			const store = tx.objectStore(storeName);
 			const request = store.put(data, key);
@@ -137,14 +137,14 @@ export class IndexedDBAdapter {
 		});
 	}
 
-	async renameSessionInDatabase(db: any, storeName: any, key: any, newName: any) {
-		return new Promise((resolve, reject) => {
+	async renameSessionInDatabase(db: IDBDatabase, storeName: string, key: IDBValidKey, newName: string) {
+		return new Promise<void>((resolve, reject) => {
 			const tx = db.transaction("Names", 'readwrite');
 			const store = tx.objectStore("Names");
 			const getRequest = store.get(key);
 			getRequest.onsuccess = () => {
 				const current = getRequest.result;
-				let dataToPut;
+				let dataToPut: { name: string; created: number | null; modified: number };
 				if (current && typeof current === 'object' && current.name !== undefined) {
 					dataToPut = { ...current, name: newName, modified: Date.now() };
 				} else {
@@ -158,8 +158,8 @@ export class IndexedDBAdapter {
 		});
 	}
 
-	async deleteFromDatabase(db: any, storeName: any, key: any) {
-		return new Promise((resolve, reject) => {
+	async deleteFromDatabase(db: IDBDatabase, storeName: string, key: IDBValidKey) {
+		return new Promise<void>((resolve, reject) => {
 			const tx = db.transaction(storeName, 'readwrite');
 			const store = tx.objectStore(storeName);
 			const request = store.delete(key);

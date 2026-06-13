@@ -4,7 +4,7 @@ import { defaultThemes } from '../defaults/themes';
 export class ThemeStorage extends AbstractStorage {
     themes: Record<string, ThemeData> = {};
 
-    constructor(dbAdapter: any) {
+    constructor(dbAdapter: DatabaseAdapter) {
         super('Themes', dbAdapter);
     }
 
@@ -47,7 +47,7 @@ export class ThemeStorage extends AbstractStorage {
         }
     }
 
-    async performFullSave(newThemes: any) {
+    async performFullSave(newThemes: Record<string, ThemeData>) {
         const db = await this.openDatabase();
 
         for (const key of Object.keys(this.themes)) {
@@ -66,11 +66,11 @@ export class ThemeStorage extends AbstractStorage {
         this.dispatchChangeEvent();
     }
 
-	getStorageData() {
+	getStorageData(): Record<string, ThemeData> {
 		return this.themes;
 	}
 
-    async loadThemes(db: any) {
+    async loadThemes(db: DbConnection) {
         this.themes = await this.loadAllFromDatabase(db);
     }
 }

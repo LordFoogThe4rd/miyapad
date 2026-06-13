@@ -3,7 +3,7 @@ import { AbstractStorage } from './AbstractStorage';
 export class ConnectionStorage extends AbstractStorage {
 	connections: Record<string, ConnectionData> = {};
 
-	constructor(dbAdapter: any) {
+	constructor(dbAdapter: DatabaseAdapter) {
 		super('Connections', dbAdapter);
 	}
 
@@ -12,7 +12,7 @@ export class ConnectionStorage extends AbstractStorage {
 		await this.loadConnections(db);
 	}
 
-	async performFullSave(newConnections: any) {
+	async performFullSave(newConnections: Record<string, ConnectionData>) {
 		try {
 			const db = await this.openDatabase();
 
@@ -35,11 +35,11 @@ export class ConnectionStorage extends AbstractStorage {
 		}
 	}
 
-	getStorageData() {
+	getStorageData(): Record<string, ConnectionData> {
 		return this.connections;
 	}
 
-	async loadConnections(db: any) {
+	async loadConnections(db: DbConnection) {
 		this.connections = await this.loadAllFromDatabase(db);
 	}
 }
