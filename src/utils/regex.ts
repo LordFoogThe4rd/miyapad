@@ -18,12 +18,12 @@ export function regexSplitString(str, separator, limit) {
 	return [result, separators];
 }
 
-export function regexIndexOf(string, regex, startpos) {
+export function regexIndexOf(string, regex, startpos?) {
     var indexOf = string.substring(startpos || 0).search(regex);
     return (indexOf >= 0) ? (indexOf + (startpos || 0)) : indexOf;
 }
 
-export function regexLastIndexOf(string, regex, startpos) {
+export function regexLastIndexOf(string, regex, startpos?) {
     regex = (regex.global) ? regex : new RegExp(regex.source, "g" + (regex.ignoreCase ? "i" : "") + (regex.multiLine ? "m" : ""));
     if(typeof (startpos) == "undefined") {
         startpos = string.length;

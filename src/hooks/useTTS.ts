@@ -65,8 +65,8 @@ export function useTTS() {
 			}
 			// Split string using punctuation
 			var strings = text.split(/(?<=[!\.\?\n])/);
-			for (var s in strings) {
-				if (s == strings.length -1 && !/[!\.\?\n]/.test(strings[s].slice(-1))) {
+		for (var s in strings) {
+			if (Number(s) == strings.length -1 && !/[!\.\?\n]/.test(strings[s].slice(-1))) {
 					// Put unterminated sentence in ttsNewText instead
 					ttsNewText.current += strings[s];
 				} else if (/[0-9a-zÀ-ÿ]/.test(strings[s]))	// Make sure it contains at least one pronounceable character

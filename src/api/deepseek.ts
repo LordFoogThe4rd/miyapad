@@ -17,7 +17,7 @@ export async function deepseekModels({ endpoint, endpointAPIKey, proxyEndpoint, 
 }
 
 function deepseekConvertOptions(options) {
-  const out = {};
+  const out = {} as any;
   if (options.n_predict === -1) {
     out.max_tokens = 1024;
   } else if (options.n_predict !== undefined) {
@@ -32,6 +32,7 @@ function deepseekConvertOptions(options) {
 }
 
 export async function* deepseekChatCompletion({ endpoint, endpointAPIKey, proxyEndpoint, signal, ...options }) {
+  const opts = {...options} as any;
   const finalEndpoint = proxyEndpoint ?? endpoint;
   const res = await fetch(`${finalEndpoint}/chat/completions`, {
     method: 'POST',
@@ -40,10 +41,10 @@ export async function* deepseekChatCompletion({ endpoint, endpointAPIKey, proxyE
       ...(proxyEndpoint ? { 'X-Real-Authorization': `Bearer ${endpointAPIKey}`, 'X-Real-URL': endpoint } : { 'Authorization': `Bearer ${endpointAPIKey}` }),
     },
     body: JSON.stringify({
-      ...deepseekConvertOptions(options),
-      model: options.model || 'deepseek-v4-flash',
-      messages: options.messages,
-      ...(options.n_probs > 0 ? { logprobs: true, top_logprobs: Math.min(options.n_probs, 20) } : {}),
+      ...deepseekConvertOptions(opts),
+      model: opts.model || 'deepseek-v4-flash',
+      messages: opts.messages,
+      ...(opts.n_probs > 0 ? { logprobs: true, top_logprobs: Math.min(opts.n_probs, 20) } : {}),
       thinking: { type: "disabled" },
     }),
     signal,
@@ -68,7 +69,7 @@ export async function* deepseekChatCompletion({ endpoint, endpointAPIKey, proxyE
       let prob;
       if (topLogprobs?.length) {
         const rawProbsArr = topLogprobs.map(({ token: t, logprob }) => ({ tok_str: t, logprob }));
-        const res = applyTemperatureToProbs(rawProbsArr, token, options.temperature);
+        const res = applyTemperatureToProbs(rawProbsArr, token, opts.temperature);
         probs = res.probs;
         prob = res.prob;
       }
@@ -80,7 +81,7 @@ export async function* deepseekChatCompletion({ endpoint, endpointAPIKey, proxyE
     }
   }
 
-  if (options.stream) {
+  if (opts.stream) {
     yield* yieldTokens(parseEventStream(res.body));
   } else {
     const { choices } = await res.json();
@@ -91,6 +92,7 @@ export async function* deepseekChatCompletion({ endpoint, endpointAPIKey, proxyE
 }
 
 export async function* deepseekCompletion({ endpoint, endpointAPIKey, proxyEndpoint, signal, ...options }) {
+  const opts = {...options} as any;
   const finalEndpoint = proxyEndpoint ?? endpoint;
   const res = await fetch(`${finalEndpoint}/beta/completions`, {
     method: 'POST',
@@ -99,10 +101,10 @@ export async function* deepseekCompletion({ endpoint, endpointAPIKey, proxyEndpo
       ...(proxyEndpoint ? { 'X-Real-Authorization': `Bearer ${endpointAPIKey}`, 'X-Real-URL': endpoint } : { 'Authorization': `Bearer ${endpointAPIKey}` }),
     },
     body: JSON.stringify({
-      ...deepseekConvertOptions(options),
-      model: options.model || 'deepseek-v4-flash',
-      prompt: options.prompt,
-      ...(options.n_probs > 0 ? { logprobs: Math.min(options.n_probs, 20) } : {}),
+      ...deepseekConvertOptions(opts),
+      model: opts.model || 'deepseek-v4-flash',
+      prompt: opts.prompt,
+      ...(opts.n_probs > 0 ? { logprobs: Math.min(opts.n_probs, 20) } : {}),
     }),
     signal,
   });
@@ -134,7 +136,7 @@ export async function* deepseekCompletion({ endpoint, endpointAPIKey, proxyEndpo
       }
 
       if (rawProbsArr.length > 0) {
-        const res = applyTemperatureToProbs(rawProbsArr, text, options.temperature);
+        const res = applyTemperatureToProbs(rawProbsArr, text, opts.temperature);
         probs = res.probs;
         prob = res.prob;
       }
@@ -146,7 +148,7 @@ export async function* deepseekCompletion({ endpoint, endpointAPIKey, proxyEndpo
     }
   }
 
-  if (options.stream) {
+  if (opts.stream) {
     yield* yieldTokens(parseEventStream(res.body));
   } else {
     const data = await res.json();

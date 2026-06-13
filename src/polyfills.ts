@@ -1,6 +1,6 @@
 // Polyfill for piece of shit Chromium
 if (!(Symbol.asyncIterator in ReadableStream.prototype)) {
-	ReadableStream.prototype[Symbol.asyncIterator] = async function* () {
+	(ReadableStream.prototype as any)[Symbol.asyncIterator] = async function* () {
 		const reader = this.getReader();
 		try {
 			for (;;) {

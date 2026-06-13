@@ -177,6 +177,6 @@ export async function abortCompletion({ endpoint, endpointAPI, proxyEndpoint, ..
 		case API_OPENAI_COMPAT:
 			return await (endpointAPI === API_DEEPSEEK ? deepseekAbortCompletion : openaiOobaAbortCompletion)({ endpoint, proxyEndpoint, ...options });
 		case API_AI_HORDE:
-			return await aiHordeAbortCompletion({ endpoint, proxyEndpoint, ...options });
+			return await aiHordeAbortCompletion({ endpoint, proxyEndpoint, ...options } as any);
 	}
 }

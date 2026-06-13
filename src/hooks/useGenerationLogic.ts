@@ -65,7 +65,7 @@ export function useGenerationLogic() {
 					endpointAPI,
 					...(endpointAPI == API_AI_HORDE ? { hordeTaskId: hordeTaskId.current } : {}),
 					...(isMiyapadEndpoint ? { proxyEndpoint: sessionStorage.proxyEndpoint } : {})
-				});
+				} as any);
 				ac.abort();
 			};
 			setCancel(() => cancelThis);
@@ -77,7 +77,7 @@ export function useGenerationLogic() {
 					endpointAPI,
 					...(endpointAPI == API_AI_HORDE ? { hordeTaskId: hordeTaskId.current } : {}),
 					...(isMiyapadEndpoint ? { proxyEndpoint: sessionStorage.proxyEndpoint } : {})
-				});
+				} as any);
 			};
 			ac.signal.addEventListener('abort', cancelThis);
 		}
@@ -94,14 +94,14 @@ export function useGenerationLogic() {
 			if (!callback) {
 				const tokenCount = await (useServerTokenization && isMiyapadEndpoint && sessionStorage?.sessionEndpoint
 					? serverTokenCount({ sessionEndpoint: sessionStorage.sessionEndpoint, content: prompt, signal: ac.signal })
-					: getTokenCount({
+				: getTokenCount({
 						endpoint,
 						endpointAPI,
 						...(endpointAPI == API_OPENAI_COMPAT || endpointAPI == API_LLAMA_CPP || endpointAPI == API_DEEPSEEK ? { endpointAPIKey } : {}),
 						content: prompt,
 						signal: ac.signal,
 						...(isMiyapadEndpoint ? { proxyEndpoint: sessionStorage.proxyEndpoint } : {})
-					})
+					} as any)
 				);
 				if (myId !== activeGenId.current) return;
 				setTokens(tokenCount);
@@ -260,23 +260,24 @@ export function useGenerationLogic() {
 				signal: ac.signal,
 				...(isMiyapadEndpoint ? { proxyEndpoint: sessionStorage.proxyEndpoint } : {}),
 				...customParams
-			})) {
+			} as any)) {
 				if (myId !== activeGenId.current) break;
 				ac.signal.throwIfAborted();
-				if (chunk.stopping_word)
-					chunk.content = chunk.stopping_word;
+				const chunkData = chunk as any;
+				if (chunkData.stopping_word)
+					chunkData.content = chunkData.stopping_word;
 				if (endpointAPI === API_AI_HORDE) {
-					switch (chunk.status) {
+					switch (chunkData.status) {
 					case 'queue_init':
-						hordeTaskId.current = chunk.taskId;
+						hordeTaskId.current = chunkData.taskId;
 						continue;
 					case 'queue_status':
-						setHordeQueuePos(chunk.position);
-						setHordeProcessing(chunk.processing);
+						setHordeQueuePos(chunkData.position);
+						setHordeProcessing(chunkData.processing);
 						continue;
 					}
 				}
-				if (!chunk.content) {
+				if (!chunkData.content) {
 					continue;
 				}
 				if (startTime === 0) {
@@ -294,10 +295,10 @@ export function useGenerationLogic() {
 				} else {
 					if (myId !== activeGenId.current) break;
 					setPromptChunks(p => [...p, chunk]);
-					setTokens(t => t + (chunk?.completion_probabilities?.length ?? 1));
+					setTokens(t => t + (chunkData?.completion_probabilities?.length ?? 1));
 				}
 				predictCount += 1;
-				ttsAddChunk(chunk.content);
+				ttsAddChunk(chunkData.content);
 			}
 		} catch (e) {
 			if (e.name !== 'AbortError') {

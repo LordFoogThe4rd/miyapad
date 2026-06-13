@@ -36,7 +36,7 @@ export function useTokenCounters() {
 						content,
 						signal: ac.signal,
 						...(isMiyapadEndpoint ? { proxyEndpoint: sessionStorage.proxyEndpoint } : {})
-					})
+					} as any)
 				);
 				setAuthorNoteTokens((prevauthorNoteTokens) => ({
 					...prevauthorNoteTokens,
@@ -81,7 +81,7 @@ export function useTokenCounters() {
 						content,
 						signal: ac.signal,
 						...(isMiyapadEndpoint ? { proxyEndpoint: sessionStorage.proxyEndpoint } : {})
-					})
+					} as any)
 				);
 				setMemoryTokens((prevMemoryTokens) => ({
 					...prevMemoryTokens,
@@ -121,7 +121,7 @@ export function useTokenCounters() {
 						content,
 						signal: ac.signal,
 						...(isMiyapadEndpoint ? { proxyEndpoint: sessionStorage.proxyEndpoint } : {})
-					})
+					} as any)
 				);
 				setMemoryTokens((prevMemoryTokens) => ({
 					...prevMemoryTokens,

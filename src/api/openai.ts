@@ -88,6 +88,7 @@ export async function openaiOobaTokenize({ endpoint, endpointAPIKey, proxyEndpoi
 		const strings = await Promise.all(tokens.map(token =>
 			openaiOobaDetokenize({
 				endpoint,
+				proxyEndpoint,
 				...(endpointAPIKey ? {
 					endpointAPIKey,
 				} : {}),
@@ -100,7 +101,7 @@ export async function openaiOobaTokenize({ endpoint, endpointAPIKey, proxyEndpoi
 		return null;
 	}
 }
-async function openaiOobaDetokenize({ endpoint, endpointAPIKey, proxyEndpoint, signal, ...options }) {
+async function openaiOobaDetokenize({ endpoint, endpointAPIKey, proxyEndpoint, signal, ...options }: { endpoint: any; endpointAPIKey?: any; proxyEndpoint: any; signal: any; [key: string]: any }) {
 	try {
 		const res = await fetch(`${proxyEndpoint ?? endpoint}/v1/internal/decode`, {
 			method: 'POST',
@@ -141,6 +142,7 @@ export async function openaiTabbyTokenize({ endpoint, endpointAPIKey, proxyEndpo
 		const strings = await Promise.all(tokens.map(token =>
 			openaiTabbyDetokenize({
 				endpoint,
+				proxyEndpoint,
 				...(endpointAPIKey ? {
 					endpointAPIKey,
 				} : {}),
@@ -153,7 +155,7 @@ export async function openaiTabbyTokenize({ endpoint, endpointAPIKey, proxyEndpo
 		return null;
 	}
 }
-async function openaiTabbyDetokenize({ endpoint, endpointAPIKey, proxyEndpoint, signal, ...options }) {
+async function openaiTabbyDetokenize({ endpoint, endpointAPIKey, proxyEndpoint, signal, ...options }: { endpoint: any; endpointAPIKey?: any; proxyEndpoint: any; signal: any; [key: string]: any }) {
 	try {
 		const res = await fetch(`${proxyEndpoint ?? endpoint}/v1/token/decode`, {
 			method: 'POST',
@@ -284,7 +286,7 @@ export async function* openaiCompletion({ endpoint, endpointAPIKey, proxyEndpoin
 			...(proxyEndpoint ? { 'X-Real-URL': endpoint } : {})
 		},
 		body: JSON.stringify({
-			...openaiConvertOptions(options, endpoint)
+			...openaiConvertOptions(options, endpoint, false)
 		}),
 		signal,
 	});

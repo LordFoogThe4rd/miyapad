@@ -15,7 +15,7 @@ import { CrashScreenFallback } from './components/CrashScreenFallback';
 import { App } from './App';
 
 async function main() {
-	let dbAdapter = new IndexedDBAdapter();
+	let dbAdapter: IndexedDBAdapter | ServerDBAdapter = new IndexedDBAdapter();
 	let isMiyapadEndpoint = false;
 
 	if (window.location.protocol != 'file:' && window.location.pathname == '/') {
