@@ -16,8 +16,17 @@ export async function deepseekModels({ endpoint, endpointAPIKey, proxyEndpoint, 
   return data.map((item: any) => item.id);
 }
 
+interface DeepseekConvertedOpts {
+  max_tokens?: number;
+  temperature?: number;
+  top_p?: number;
+  stop?: string[];
+  stream?: boolean;
+  seed?: number;
+}
+
 function deepseekConvertOptions(options: any) {
-  const out = {} as any;
+  const out: DeepseekConvertedOpts = {};
   if (options.n_predict === -1) {
     out.max_tokens = 1024;
   } else if (options.n_predict !== undefined) {

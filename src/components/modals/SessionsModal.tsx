@@ -13,16 +13,18 @@ function formatDate(ts: any) {
 	return `${d.getFullYear()}-${pad(d.getMonth() + 1)}-${pad(d.getDate())} ${pad(d.getHours())}:${pad(d.getMinutes())}`;
 }
 
+type TagGroup = Array<{ pattern: string; negate: boolean; regex: RegExp | null }>;
+
 function compileTagRegex(pattern: any) {
 	if (!pattern.includes('*')) return null;
 	const escaped = pattern.replace(/[.+?^${}()|[\]\\]/g, '\\$&').replace(/\*/g, '.*');
 	return new RegExp('^' + escaped + '$', 'i');
 }
 
-function parseTagFilter(input: any) {
+function parseTagFilter(input: any): TagGroup[] | null {
 	if (!input.trim()) return null;
 	const tokens = input.trim().split(/\s+/);
-	const groups: any = [[]];
+	const groups: TagGroup[] = [[]];
 	let i = 0;
 	while (i < tokens.length) {
 		const t = tokens[i];
@@ -43,7 +45,7 @@ function parseTagFilter(input: any) {
 			i++;
 		}
 	}
-	return groups.filter((g: any) => g.length > 0);
+	return groups.filter((g) => g.length > 0);
 }
 
 function tagMatches(tag: any, pattern: any, regex: any) {
@@ -51,11 +53,11 @@ function tagMatches(tag: any, pattern: any, regex: any) {
 	return tag.toLowerCase() === pattern.toLowerCase();
 }
 
-function sessionMatches(session: any, groups: any) {
+function sessionMatches(session: any, groups: TagGroup[] | null) {
 	if (!groups) return true;
 	if (groups.length === 0) return true;
-	return groups.some((group: any) =>
-		(group as any).every(({ pattern, negate, regex }: any) => {
+	return groups.some((group: TagGroup) =>
+		group.every(({ pattern, negate, regex }) => {
 			const match = (session.tags || []).some((tag: any) => tagMatches(tag, pattern, regex));
 			return negate ? !match : match;
 		})

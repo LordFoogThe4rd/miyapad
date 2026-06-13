@@ -11,6 +11,14 @@ function extractMeta(s: any) {
 	};
 }
 
+interface SessionMeta {
+  name?: string;
+  created?: number | null;
+  modified?: number | null;
+  pinned?: boolean;
+  tags?: string[];
+}
+
 export class SessionStorage extends AbstractStorage {
 	nextId: number | undefined;
 	sessions: Record<string, SessionData> = {};
@@ -139,7 +147,7 @@ export class SessionStorage extends AbstractStorage {
 			if (typeof data === 'string') {
 				this.sessions[key] = { name: data === '[object Object]' ? `Session #${key}` : data, created: null, modified: null, pinned: false, tags: [] };
 			} else if (data && typeof data === 'object') {
-				this.sessions[key] = { ...extractMeta(data), name: ((data as any).name === '[object Object]' ? `Session #${key}` : (data as any).name) || 'Untitled' };
+				this.sessions[key] = { ...extractMeta(data), name: ((data as SessionMeta).name === '[object Object]' ? `Session #${key}` : (data as SessionMeta).name) || 'Untitled' };
 			} else {
 				this.sessions[key] = { name: 'Untitled', created: null, modified: null, pinned: false, tags: [] };
 			}

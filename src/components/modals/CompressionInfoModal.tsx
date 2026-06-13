@@ -2,6 +2,14 @@ import { html } from 'htm/react';
 import { useState, useEffect } from 'react';
 import { Modal } from '../Modal';
 
+interface ZstdCompressionConfig {
+  compression_level?: number;
+  train_dict_samples_ratio?: number;
+  table?: string;
+  column?: string;
+  [key: string]: unknown;
+}
+
 export function CompressionInfoModal({ isOpen, closeModal }: any) {
 	const [compressionData, setCompressionData] = useState<any>(null);
 
@@ -29,7 +37,7 @@ export function CompressionInfoModal({ isOpen, closeModal }: any) {
 		return { id, raw, cfg: cfg && typeof cfg === 'object' ? cfg : null };
 	});
 
-	const first = (entries[0]?.cfg || {}) as any;
+	const first = (entries[0]?.cfg || {}) as ZstdCompressionConfig;
 	const levelNum = Number(first?.compression_level);
 	const levelDisplay = Number.isFinite(levelNum) ? String(levelNum) : 'not set';
 	const ratioNum = Number(first?.train_dict_samples_ratio);
@@ -54,7 +62,7 @@ export function CompressionInfoModal({ isOpen, closeModal }: any) {
 						</thead>
 						<tbody>
 							${entries.map(({ id, cfg }) => {
-								const c = cfg as any;
+								const c = cfg as ZstdCompressionConfig;
 								const tbl = c?.table || `ID: ${id}`;
 								const col = c?.column || 'N/A';
 								const lv = Number(c?.compression_level);
