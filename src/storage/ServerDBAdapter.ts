@@ -39,77 +39,57 @@ export class ServerDBAdapter {
 	}
 
 	async loadFromDatabase(db: ServerDbFn, storeName: string, key: string) {
-		return new Promise<any>(async (resolve, reject) => {
-			const res = await db("/load", { storeName, key });
-			if (!res.ok) {
-				if (res.status == 404) {
-					resolve(undefined);
-				} else {
-					reject(res.status);
-				}
-				return;
+		const res = await db("/load", { storeName, key });
+		if (!res.ok) {
+			if (res.status == 404) {
+				return undefined;
 			}
-			const { result } = await (res as Response).json();
-			resolve(result);
-		});
+			throw res.status;
+		}
+		const { result } = await (res as Response).json();
+		return result;
 	}
 
 	async loadAllFromDatabase(db: ServerDbFn, storeName: string) {
-		return new Promise<Record<string, any>>(async (resolve, reject) => {
-			const res = await db("/all", { storeName });
-			if (!res.ok) {
-				reject(res.status);
-				return;
-			}
-			const { result } = await (res as Response).json();
-			resolve(result);
-		});
+		const res = await db("/all", { storeName });
+		if (!res.ok) {
+			throw res.status;
+		}
+		const { result } = await (res as Response).json();
+		return result;
 	}
 
 	async loadSessionInfoFromDatabase(db: ServerDbFn, storeName: string) {
-		return new Promise<Record<string, any>>(async (resolve, reject) => {
-			const res = await db("/sessions", { storeName });
-			if (!res.ok) {
-				reject(res.status);
-				return;
-			}
-			const { result } = await (res as Response).json();
-			resolve(result);
-		});
+		const res = await db("/sessions", { storeName });
+		if (!res.ok) {
+			throw res.status;
+		}
+		const { result } = await (res as Response).json();
+		return result;
 	}
 
 	async saveToDatabase(db: ServerDbFn, storeName: string, key: string, data: any) {
-		return new Promise<any>(async (resolve, reject) => {
-			const res = await db("/save", { storeName, key, data });
-			if (!res.ok) {
-				reject(res.status);
-				return;
-			}
-			const { result } = await (res as Response).json();
-			resolve(result);
-		});
+		const res = await db("/save", { storeName, key, data });
+		if (!res.ok) {
+			throw res.status;
+		}
+		const { result } = await (res as Response).json();
+		return result;
 	}
 
 	async renameSessionInDatabase(db: ServerDbFn, storeName: string, key: string, newName: string) {
-		return new Promise<any>(async (resolve, reject) => {
-			const res = await db("/rename", { storeName, key, newName });
-			if (!res.ok) {
-				reject(res.status);
-				return;
-			}
-			const { result } = await (res as Response).json();
-			resolve(result);
-		});
+		const res = await db("/rename", { storeName, key, newName });
+		if (!res.ok) {
+			throw res.status;
+		}
+		const { result } = await (res as Response).json();
+		return result;
 	}
 
 	async deleteFromDatabase(db: ServerDbFn, storeName: string, key: string) {
-		return new Promise<void>(async (resolve, reject) => {
-			const res = await db("/delete", { storeName, key });
-			if (!res.ok) {
-				reject(res.status);
-				return;
-			}
-			resolve(undefined);
-		});
+		const res = await db("/delete", { storeName, key });
+		if (!res.ok) {
+			throw res.status;
+		}
 	}
 }
