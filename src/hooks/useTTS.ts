@@ -65,12 +65,13 @@ export function useTTS() {
 			}
 			// Split string using punctuation
 			var strings = text.split(/(?<=[!\.\?\n])/);
-		for (var s in strings) {
-			if (Number(s) == strings.length -1 && !/[!\.\?\n]/.test(strings[s].slice(-1))) {
+		for (let i = 0; i < strings.length; i++) {
+			const str = strings[i];
+			if (i == strings.length - 1 && !/[!\.\?\n]/.test(str.slice(-1))) {
 					// Put unterminated sentence in ttsNewText instead
-					ttsNewText.current += strings[s];
-				} else if (/[0-9a-zÀ-ÿ]/.test(strings[s]))	// Make sure it contains at least one pronounceable character
-					textToRead += strings[s];
+					ttsNewText.current += str;
+				} else if (/[0-9a-zÀ-ÿ]/.test(str))	// Make sure it contains at least one pronounceable character
+					textToRead += str;
 			}
 			if (textToRead.length > 0 && !ttsPaused.current)
 				ttsQueue.current.push(textToRead);
