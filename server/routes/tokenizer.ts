@@ -14,8 +14,8 @@ export default function(app: Express, db: Database): void {
 
     app.post('/api/v1/tokenizer/load', async (req: Request, res: Response) => {
         const { model } = req.body as { model: string };
-        if (!model) {
-            return res.status(400).json({ ok: false, message: 'Missing model parameter' });
+        if (typeof model !== 'string' || !model) {
+            return res.status(400).json({ ok: false, message: 'Missing or invalid model parameter' });
         }
         try {
             await tokenizer.loadTokenizer(model);
@@ -28,8 +28,8 @@ export default function(app: Express, db: Database): void {
 
     app.post('/api/v1/token-count', async (req: Request, res: Response) => {
         const { content } = req.body as { content: string };
-        if (content === undefined || content === null) {
-            return res.status(400).json({ ok: false, message: 'Missing content parameter' });
+        if (typeof content !== 'string') {
+            return res.status(400).json({ ok: false, message: 'Missing or invalid content parameter' });
         }
         if (!tokenizer.isLoaded()) {
             return res.json({ ok: true, count: 0, error: 'No tokenizer loaded' });
@@ -44,8 +44,8 @@ export default function(app: Express, db: Database): void {
 
     app.post('/api/v1/tokenize', async (req: Request, res: Response) => {
         const { content } = req.body as { content: string };
-        if (content === undefined || content === null) {
-            return res.status(400).json({ ok: false, message: 'Missing content parameter' });
+        if (typeof content !== 'string') {
+            return res.status(400).json({ ok: false, message: 'Missing or invalid content parameter' });
         }
         if (!tokenizer.isLoaded()) {
             return res.json({ ok: true, ids: [], strings: [], error: 'No tokenizer loaded' });
@@ -60,7 +60,7 @@ export default function(app: Express, db: Database): void {
 
     app.post('/api/v1/detokenize', async (req: Request, res: Response) => {
         const { tokens: tokenIds } = req.body as { tokens: number[] };
-        if (!tokenIds || !Array.isArray(tokenIds) || tokenIds.length === 0) {
+        if (!Array.isArray(tokenIds) || tokenIds.length === 0 || tokenIds.some(t => typeof t !== 'number')) {
             return res.status(400).json({ ok: false, message: 'Missing or invalid tokens parameter' });
         }
         if (!tokenizer.isLoaded()) {
