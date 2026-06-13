@@ -1,6 +1,6 @@
 import { parseEventStream, applyTemperatureToProbs } from './common';
 
-export async function deepseekModels({ endpoint, endpointAPIKey, proxyEndpoint, signal }: { endpoint: any; endpointAPIKey: any; proxyEndpoint: any; signal: any }) {
+export async function deepseekModels({ endpoint, endpointAPIKey, proxyEndpoint, signal }: ApiProviderParams) {
   const finalEndpoint = proxyEndpoint ?? endpoint;
   const url = `${finalEndpoint}/models`;
   const res = await fetch(url, {
@@ -25,7 +25,7 @@ interface DeepseekConvertedOpts {
   seed?: number;
 }
 
-function deepseekConvertOptions(options: any) {
+function deepseekConvertOptions(options: SamplerOptions): DeepseekConvertedOpts {
   const out: DeepseekConvertedOpts = {};
   if (options.n_predict === -1) {
     out.max_tokens = 1024;
@@ -40,7 +40,7 @@ function deepseekConvertOptions(options: any) {
   return out;
 }
 
-export async function* deepseekChatCompletion({ endpoint, endpointAPIKey, proxyEndpoint, signal, ...options }: { endpoint: any; endpointAPIKey: any; proxyEndpoint: any; signal: any; [key: string]: any }): AsyncGenerator<CompletionChunk, void, unknown> {
+export async function* deepseekChatCompletion({ endpoint, endpointAPIKey, proxyEndpoint, signal, ...options }: ApiProviderParams & SamplerOptions): AsyncGenerator<CompletionChunk, void, unknown> {
   const opts = {...options};
   const finalEndpoint = proxyEndpoint ?? endpoint;
   const res = await fetch(`${finalEndpoint}/chat/completions`, {
@@ -53,7 +53,7 @@ export async function* deepseekChatCompletion({ endpoint, endpointAPIKey, proxyE
       ...deepseekConvertOptions(opts),
       model: opts.model || 'deepseek-v4-flash',
       messages: opts.messages,
-      ...(opts.n_probs > 0 ? { logprobs: true, top_logprobs: Math.min(opts.n_probs, 20) } : {}),
+      ...(opts.n_probs && opts.n_probs > 0 ? { logprobs: true, top_logprobs: Math.min(opts.n_probs, 20) } : {}),
       thinking: { type: "disabled" },
     }),
     signal,
@@ -74,8 +74,8 @@ export async function* deepseekChatCompletion({ endpoint, endpointAPIKey, proxyE
       if (!token) continue;
 
       const topLogprobs = choice.logprobs?.content?.[0]?.top_logprobs;
-      let probs = [];
-      let prob;
+      let probs: ProbItem[] = [];
+      let prob: number | undefined;
       if (topLogprobs?.length) {
         const rawProbsArr = topLogprobs.map(({ token: t, logprob }: { token: any; logprob: any }) => ({ tok_str: t, logprob }));
         const res = applyTemperatureToProbs(rawProbsArr, token, opts.temperature);
@@ -100,7 +100,7 @@ export async function* deepseekChatCompletion({ endpoint, endpointAPIKey, proxyE
   }
 }
 
-export async function* deepseekCompletion({ endpoint, endpointAPIKey, proxyEndpoint, signal, ...options }: { endpoint: any; endpointAPIKey: any; proxyEndpoint: any; signal: any; [key: string]: any }): AsyncGenerator<CompletionChunk, void, unknown> {
+export async function* deepseekCompletion({ endpoint, endpointAPIKey, proxyEndpoint, signal, ...options }: ApiProviderParams & SamplerOptions): AsyncGenerator<CompletionChunk, void, unknown> {
   const opts = {...options};
   const finalEndpoint = proxyEndpoint ?? endpoint;
   const res = await fetch(`${finalEndpoint}/beta/completions`, {
@@ -113,7 +113,7 @@ export async function* deepseekCompletion({ endpoint, endpointAPIKey, proxyEndpo
       ...deepseekConvertOptions(opts),
       model: opts.model || 'deepseek-v4-flash',
       prompt: opts.prompt,
-      ...(opts.n_probs > 0 ? { logprobs: Math.min(opts.n_probs, 20) } : {}),
+      ...(opts.n_probs && opts.n_probs > 0 ? { logprobs: Math.min(opts.n_probs, 20) } : {}),
     }),
     signal,
   });
@@ -133,15 +133,15 @@ export async function* deepseekCompletion({ endpoint, endpointAPIKey, proxyEndpo
       if (!text) continue;
 
       const logprobsData = choice.logprobs;
-      let probs = [];
-      let prob;
-      let rawProbsArr = [];
+      let probs: ProbItem[] = [];
+      let prob: number | undefined;
+      let rawProbsArr: ProbItem[] = [];
 
       if (logprobsData?.content?.[0]?.top_logprobs) {
         rawProbsArr = logprobsData.content[0].top_logprobs.map(({ token, logprob }: { token: any; logprob: any }) => ({ tok_str: token, logprob }));
       } else if (logprobsData?.top_logprobs?.[0]) {
         const top_logprobs_obj = logprobsData.top_logprobs[0];
-        rawProbsArr = Object.entries(top_logprobs_obj).map(([tok, logprob]) => ({ tok_str: tok, logprob }));
+        rawProbsArr = Object.entries(top_logprobs_obj).map(([tok, logprob]) => ({ tok_str: tok, logprob: logprob as number }));
       }
 
       if (rawProbsArr.length > 0) {

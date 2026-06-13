@@ -1,6 +1,6 @@
 import { parseEventStream, applyTemperatureToProbs } from './common';
 
-export async function koboldCppTokenCount({ endpoint, endpointAPIKey, proxyEndpoint, signal, ...options }: { endpoint: any; endpointAPIKey: any; proxyEndpoint: any; signal: any; [key: string]: any }) {
+export async function koboldCppTokenCount({ endpoint, endpointAPIKey, proxyEndpoint, signal, ...options }: TokenCounterParams) {
 	const res = await fetch(`${proxyEndpoint ?? endpoint}/api/extra/tokencount`, {
 		method: 'POST',
 		headers: {
@@ -19,7 +19,7 @@ export async function koboldCppTokenCount({ endpoint, endpointAPIKey, proxyEndpo
 	return value;
 }
 
-export async function koboldCppTokenize({ endpoint, endpointAPIKey, proxyEndpoint, signal, ...options }: { endpoint: any; endpointAPIKey: any; proxyEndpoint: any; signal: any; [key: string]: any }) {
+export async function koboldCppTokenize({ endpoint, endpointAPIKey, proxyEndpoint, signal, ...options }: TokenCounterParams) {
 	const res = await fetch(`${proxyEndpoint ?? endpoint}/api/extra/tokencount`, {
 		method: 'POST',
 		headers: {
@@ -40,7 +40,7 @@ export async function koboldCppTokenize({ endpoint, endpointAPIKey, proxyEndpoin
 
 }
 
-export function koboldCppConvertOptions(options: any, endpoint: any) {
+export function koboldCppConvertOptions(options: SamplerOptions, endpoint: string) {
 	const endpointHost = (() => { try { return new URL(endpoint).hostname; } catch { return ''; } })();
 	const isHorde = endpointHost === "aihorde.net" || endpointHost.endsWith(".aihorde.net");
 	const swapOption = (lhs: any, rhs: any) => {
@@ -49,10 +49,11 @@ export function koboldCppConvertOptions(options: any, endpoint: any) {
 			delete options[lhs];
 		}
 	};
+	options.n_predict ??= isHorde ? 512 : 1024;
 	if (options.n_predict === -1) {
 		options.n_predict = isHorde ? 512 : 1024;
 	}
-	if (options.n_predict < 16 && isHorde) {
+	if ((options.n_predict ?? 0) < 16 && isHorde) {
 		options.n_predict = 16;
 	}
 	swapOption("n_ctx", "max_context_length");
@@ -68,7 +69,7 @@ export function koboldCppConvertOptions(options: any, endpoint: any) {
 	return options;
 }
 
-export async function* koboldCppCompletion({ endpoint, endpointAPIKey, proxyEndpoint, signal, ...options }: { endpoint: any; endpointAPIKey: any; proxyEndpoint: any; signal: any; [key: string]: any }): AsyncGenerator<CompletionChunk, void, unknown> {
+export async function* koboldCppCompletion({ endpoint, endpointAPIKey, proxyEndpoint, signal, ...options }: ApiProviderParams & SamplerOptions): AsyncGenerator<CompletionChunk, void, unknown> {
 	const res = await fetch(`${proxyEndpoint ?? endpoint}/api/${options.stream ? 'extra/generate/stream' : 'v1/generate'}`, {
 		method: 'POST',
 		headers: {
@@ -116,7 +117,7 @@ export async function* koboldCppCompletion({ endpoint, endpointAPIKey, proxyEndp
 	}
 }
 
-export async function koboldCppAbortCompletion({ endpoint, proxyEndpoint, ...options }: { endpoint: any; proxyEndpoint: any; [key: string]: any }) {
+export async function koboldCppAbortCompletion({ endpoint, proxyEndpoint }: AbortParams) {
 	try {
 		await fetch(`${proxyEndpoint ?? endpoint}/api/extra/abort`, {
 			method: 'POST',

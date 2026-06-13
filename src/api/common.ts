@@ -1,6 +1,6 @@
 import { API_LLAMA_CPP, API_KOBOLD_CPP, API_OPENAI_COMPAT, API_AI_HORDE, API_DEEPSEEK } from '../constants';
 
-export function exportText(filename: any, text: any) {
+export function exportText(filename: string, text: string) {
 	const textBlob = new Blob([text], {type: 'text/plain;charset=utf-8'});
 	const textURL = URL.createObjectURL(textBlob);
 	var element = document.createElement('a');
@@ -13,7 +13,7 @@ export function exportText(filename: any, text: any) {
 	document.body.removeChild(element);
 }
 
-export function normalizeEndpoint(endpoint: any, endpointAPI: any) {
+export function normalizeEndpoint(endpoint: string, endpointAPI: number) {
 	const url = new URL(endpoint.trim());
 	url.pathname = url.pathname.replace(/\/+/g, "/"); // normalize consecutive slashes
 
@@ -30,14 +30,14 @@ export function normalizeEndpoint(endpoint: any, endpointAPI: any) {
 }
 
 // Function to parse text/event-stream data and yield JSON objects
-export async function* parseEventStream(eventStream: any) {
+export async function* parseEventStream(eventStream: ReadableStream<Uint8Array> | null): AsyncGenerator<unknown, void, undefined> {
 	if (!eventStream)
 		return;
 
 	let buf = '';
 	let ignoreNextLf = false;
 
-	for await (let chunk of eventStream.pipeThrough(new TextDecoderStream())) {
+	for await (let chunk of (eventStream.pipeThrough(new TextDecoderStream() as ReadableWritablePair<string, Uint8Array>))) {
 		// A CRLF could be split between chunks, so if the last chunk ended in
 		// CR and this chunk started with LF, trim the LF
 		if (ignoreNextLf && /^\n/.test(chunk)) {
@@ -94,7 +94,7 @@ export async function* parseEventStream(eventStream: any) {
 	}
 }
 
-export function applyTemperatureToProbs(probsArr: any, token: any, temperature: any) {
+export function applyTemperatureToProbs(probsArr: ProbItem[], token: string, temperature?: number): { probs: ProbItem[]; prob?: number } {
 	const t = Math.max(0.01, temperature ?? 1);
 	if (t === 1) {
 		let chosenProb;

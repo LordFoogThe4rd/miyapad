@@ -55,5 +55,39 @@ interface TemplateListItem {
 }
 
 interface CompletionOptions extends ApiEndpointConfig {
-  [key: string]: any;
+  [key: string]: unknown;
+}
+
+interface ApiProviderParams {
+  endpoint: string;
+  endpointAPIKey?: string;
+  proxyEndpoint?: string;
+  signal?: AbortSignal;
+}
+
+interface TokenCounterParams extends ApiProviderParams {
+  content: string;
+}
+
+interface AbortParams {
+  endpoint: string;
+  proxyEndpoint?: string;
+  hordeTaskId?: string;
+}
+
+interface SamplerOptions {
+  stream?: boolean;
+  temperature?: number;
+  n_predict?: number;
+  n_probs?: number;
+  stop?: string[];
+  seed?: number;
+  prompt?: string;
+  model?: string;
+  content?: string;
+  messages?: unknown[];
+  grammar?: string;
+  dynatemp_range?: number;
+  top_p?: number;
+  [key: string]: unknown;
 }

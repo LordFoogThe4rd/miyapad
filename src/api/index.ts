@@ -6,7 +6,7 @@ import { openaiAphroditeTokenCount, openaiOobaTokenCount, openaiTabbyTokenCount,
 import { aiHordeModels, aiHordeCompletion, aiHordeAbortCompletion } from './aihorde';
 import { deepseekModels, deepseekCompletion, deepseekChatCompletion, deepseekAbortCompletion } from './deepseek';
 
-export async function serverTokenCount({ sessionEndpoint, signal, content }: { sessionEndpoint: any; signal: any; content: any }) {
+export async function serverTokenCount({ sessionEndpoint, signal, content }: { sessionEndpoint: string; signal: AbortSignal; content: string }) {
 	const res = await fetch(`${sessionEndpoint}/api/v1/token-count`, {
 		method: 'POST',
 		headers: { 'Content-Type': 'application/json' },
@@ -21,7 +21,7 @@ export async function serverTokenCount({ sessionEndpoint, signal, content }: { s
 	return data.count;
 }
 
-export async function serverTokenize({ sessionEndpoint, signal, content }: { sessionEndpoint: any; signal: any; content: any }) {
+export async function serverTokenize({ sessionEndpoint, signal, content }: { sessionEndpoint: string; signal: AbortSignal; content: string }) {
 	const res = await fetch(`${sessionEndpoint}/api/v1/tokenize`, {
 		method: 'POST',
 		headers: { 'Content-Type': 'application/json' },
@@ -34,7 +34,7 @@ export async function serverTokenize({ sessionEndpoint, signal, content }: { ses
 	return { ids: data.ids, str: data.strings };
 }
 
-export async function serverDetokenize({ sessionEndpoint, signal, tokens: tokenIds }: { sessionEndpoint: any; signal: any; tokens: any }) {
+export async function serverDetokenize({ sessionEndpoint, signal, tokens: tokenIds }: { sessionEndpoint: string; signal: AbortSignal; tokens: number[] }) {
 	const res = await fetch(`${sessionEndpoint}/api/v1/detokenize`, {
 		method: 'POST',
 		headers: { 'Content-Type': 'application/json' },
@@ -47,7 +47,7 @@ export async function serverDetokenize({ sessionEndpoint, signal, tokens: tokenI
 	return content;
 }
 
-export async function getServerTokenizers({ sessionEndpoint }: { sessionEndpoint: any }) {
+export async function getServerTokenizers({ sessionEndpoint }: { sessionEndpoint: string }) {
 	const res = await fetch(`${sessionEndpoint}/api/v1/tokenizers`);
 	if (!res.ok)
 		throw new Error(`HTTP ${res.status}`);
@@ -55,7 +55,7 @@ export async function getServerTokenizers({ sessionEndpoint }: { sessionEndpoint
 	return data;
 }
 
-export async function loadServerTokenizer({ sessionEndpoint, model }: { sessionEndpoint: any; model: any }) {
+export async function loadServerTokenizer({ sessionEndpoint, model }: { sessionEndpoint: string; model: string }) {
 	const res = await fetch(`${sessionEndpoint}/api/v1/tokenizer/load`, {
 		method: 'POST',
 		headers: { 'Content-Type': 'application/json' },
@@ -67,7 +67,7 @@ export async function loadServerTokenizer({ sessionEndpoint, model }: { sessionE
 	return data;
 }
 
-export async function getTokenCount({ endpoint, endpointAPI, endpointAPIKey, proxyEndpoint, signal, ...options }: { endpoint: any; endpointAPI: any; endpointAPIKey?: any; proxyEndpoint?: any; signal: any; [key: string]: any }) {
+export async function getTokenCount({ endpoint, endpointAPI, endpointAPIKey, proxyEndpoint, signal, ...options }: ApiEndpointConfig & { content: string }) {
 	endpoint = normalizeEndpoint(endpoint, endpointAPI);
 	switch (endpointAPI) {
 		case API_LLAMA_CPP:
@@ -98,7 +98,7 @@ export async function getTokenCount({ endpoint, endpointAPI, endpointAPIKey, pro
 	}
 }
 
-export async function getTokens({ endpoint, endpointAPI, endpointAPIKey, proxyEndpoint, signal, ...options }: { endpoint: any; endpointAPI: any; endpointAPIKey?: any; proxyEndpoint?: any; signal: any; [key: string]: any }) {
+export async function getTokens({ endpoint, endpointAPI, endpointAPIKey, proxyEndpoint, signal, ...options }: ApiEndpointConfig & { content: string }) {
 	// currently only implemented for llama.cpp and koboldcpp
 	// returns a json object in the format of:
 	// { ids:[ array of token ids ], str:[ array of detokenized ids ] }
@@ -130,7 +130,7 @@ export async function getTokens({ endpoint, endpointAPI, endpointAPIKey, proxyEn
 	}
 }
 
-export async function getModels({ endpoint, endpointAPI, endpointAPIKey, proxyEndpoint, signal, ...options }: { endpoint: any; endpointAPI: any; endpointAPIKey: any; proxyEndpoint?: any; signal: any; [key: string]: any }) {
+export async function getModels({ endpoint, endpointAPI, endpointAPIKey, proxyEndpoint, signal, ...options }: ApiEndpointConfig) {
 	endpoint = normalizeEndpoint(endpoint, endpointAPI);
 	switch (endpointAPI) {
 		case API_DEEPSEEK:
@@ -143,7 +143,7 @@ export async function getModels({ endpoint, endpointAPI, endpointAPIKey, proxyEn
 	}
 }
 
-export async function* completion({ endpoint, endpointAPI, endpointAPIKey, proxyEndpoint, signal, ...options }: { endpoint: any; endpointAPI: any; endpointAPIKey?: any; proxyEndpoint?: any; signal: any; [key: string]: any }): AsyncGenerator<CompletionChunk | AIHordeChunk, void, unknown> {
+export async function* completion({ endpoint, endpointAPI, endpointAPIKey, proxyEndpoint, signal, ...options }: CompletionOptions): AsyncGenerator<CompletionChunk | AIHordeChunk, void, unknown> {
 	endpoint = normalizeEndpoint(endpoint, endpointAPI);
 	switch (endpointAPI) {
 		case API_LLAMA_CPP:
@@ -159,7 +159,7 @@ export async function* completion({ endpoint, endpointAPI, endpointAPIKey, proxy
 	}
 }
 
-export async function* chatCompletion({ endpoint, endpointAPI, endpointAPIKey, proxyEndpoint, signal, ...options }: { endpoint: any; endpointAPI: any; endpointAPIKey?: any; proxyEndpoint?: any; signal: any; [key: string]: any }): AsyncGenerator<CompletionChunk, void, unknown> {
+export async function* chatCompletion({ endpoint, endpointAPI, endpointAPIKey, proxyEndpoint, signal, ...options }: CompletionOptions): AsyncGenerator<CompletionChunk, void, unknown> {
 	endpoint = normalizeEndpoint(endpoint, endpointAPI);
 	switch (endpointAPI) {
 		case API_DEEPSEEK:
@@ -168,7 +168,7 @@ export async function* chatCompletion({ endpoint, endpointAPI, endpointAPIKey, p
 	}
 }
 
-export async function abortCompletion({ endpoint, endpointAPI, proxyEndpoint, ...options }: { endpoint: any; endpointAPI: any; proxyEndpoint?: any; [key: string]: any }) {
+export async function abortCompletion({ endpoint, endpointAPI, proxyEndpoint, ...options }: ApiEndpointConfig) {
 	endpoint = normalizeEndpoint(endpoint, endpointAPI);
 	switch (endpointAPI) {
 		case API_KOBOLD_CPP:

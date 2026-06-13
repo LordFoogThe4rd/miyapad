@@ -1,6 +1,6 @@
 import { parseEventStream, applyTemperatureToProbs } from './common';
 
-export async function llamaCppTokenCount({ endpoint, endpointAPIKey, proxyEndpoint, signal, ...options }: { endpoint: any; endpointAPIKey: any; proxyEndpoint: any; signal: any; [key: string]: any }) {
+export async function llamaCppTokenCount({ endpoint, endpointAPIKey, proxyEndpoint, signal, ...options }: TokenCounterParams) {
 	const res = await fetch(`${proxyEndpoint ?? endpoint}/tokenize`, {
 		method: 'POST',
 		headers: {
@@ -17,7 +17,7 @@ export async function llamaCppTokenCount({ endpoint, endpointAPIKey, proxyEndpoi
 	return tokens.length + 1; // + 1 for BOS, I guess.
 }
 
-export async function llamaCppTokenize({ endpoint, endpointAPIKey, proxyEndpoint, signal, ...options }: { endpoint: any; endpointAPIKey: any; proxyEndpoint: any; signal: any; [key: string]: any }) {
+export async function llamaCppTokenize({ endpoint, endpointAPIKey, proxyEndpoint, signal, ...options }: TokenCounterParams) {
 	const res = await fetch(`${proxyEndpoint ?? endpoint}/tokenize`, {
 		method: 'POST',
 		headers: {
@@ -45,7 +45,7 @@ export async function llamaCppTokenize({ endpoint, endpointAPIKey, proxyEndpoint
 	return { ids: tokens, str: strings };
 }
 
-async function llamaCppDetokenize({ endpoint, endpointAPIKey, proxyEndpoint, signal, ...options }: { endpoint: any; endpointAPIKey: any; proxyEndpoint: any; signal: any; [key: string]: any }) {
+async function llamaCppDetokenize({ endpoint, endpointAPIKey, proxyEndpoint, signal, ...options }: ApiProviderParams & { tokens: number[] }) {
 	const res = await fetch(`${proxyEndpoint ?? endpoint}/detokenize`, {
 		method: 'POST',
 		headers: {
@@ -62,7 +62,7 @@ async function llamaCppDetokenize({ endpoint, endpointAPIKey, proxyEndpoint, sig
 	return content
 }
 
-export async function* llamaCppCompletion({ endpoint, endpointAPIKey, proxyEndpoint, signal, ...options }: { endpoint: any; endpointAPIKey: any; proxyEndpoint: any; signal: any; [key: string]: any }): AsyncGenerator<CompletionChunk, void, unknown> {
+export async function* llamaCppCompletion({ endpoint, endpointAPIKey, proxyEndpoint, signal, ...options }: ApiProviderParams & SamplerOptions): AsyncGenerator<CompletionChunk, void, unknown> {
 	const res = await fetch(`${proxyEndpoint ?? endpoint}/completion`, {
 		method: 'POST',
 		headers: {

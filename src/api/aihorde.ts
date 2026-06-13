@@ -1,6 +1,6 @@
 import { koboldCppConvertOptions } from './koboldcpp';
 
-type AIHordeRequestParams = Omit<ApiEndpointConfig, 'endpointAPI'> & { [key: string]: any };
+type AIHordeRequestParams = ApiProviderParams & SamplerOptions;
 
 export async function aiHordeModels({ endpoint, endpointAPIKey, proxyEndpoint, signal, ...options }: AIHordeRequestParams) {
 	const res = await fetch(`${proxyEndpoint ?? endpoint}/v2/status/models?type=text`, {
@@ -71,7 +71,7 @@ export async function* aiHordeCompletion({ endpoint, endpointAPIKey, proxyEndpoi
 	}
 }
 
-export async function aiHordeAbortCompletion({ endpoint, proxyEndpoint, hordeTaskId, ...options }: Omit<ApiEndpointConfig, 'endpointAPI' | 'endpointAPIKey' | 'signal'> & { hordeTaskId?: string; [key: string]: any }) {
+export async function aiHordeAbortCompletion({ endpoint, proxyEndpoint, hordeTaskId }: AbortParams) {
 	try {
 		await fetch(`${proxyEndpoint ?? endpoint}/v2/generate/text/status/${hordeTaskId}`, {
 			method: 'DELETE',
