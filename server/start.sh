@@ -13,4 +13,4 @@ then
 fi
 
 npm install --no-audit
-npx tsx server.ts "$@"
+exec npx tsx server.ts "$@"
