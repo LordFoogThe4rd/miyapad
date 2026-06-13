@@ -268,7 +268,7 @@ export function PromptContainer({ sidebarHeight }: any) {
 				break;
 			}
 		}
-		const index = +((pc as HTMLElement).dataset.promptchunk as any);
+		const index = Number((pc as HTMLElement).dataset.promptchunk ?? '0');
 		const top = rect.top;
 		const left = rect.left + rect.width / 2;
 		const tokenKey = `${index}-${Math.round(top)}-${Math.round(left)}`;

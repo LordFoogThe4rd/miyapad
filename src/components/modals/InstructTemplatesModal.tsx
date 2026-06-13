@@ -184,6 +184,7 @@ export function InstructTemplatesModal({ isOpen, closeModal, templateStorage, se
 			// a little dirty, but updateTemplateList isn't cooperating
 			return
 		}
+		let onFileLoad: ((text: string) => Promise<void>) | null = null;
 		const fileInput = document.createElement("input");
 		fileInput.type = 'file';
 		fileInput.style.display = 'none';
@@ -194,11 +195,11 @@ export function InstructTemplatesModal({ isOpen, closeModal, templateStorage, se
 			const reader = new FileReader();
 			reader.onload = (e: any) => {
 				const contents = (e.target as FileReader).result as string;
-				(fileInput as any).func(contents);
+				onFileLoad?.(contents);
 			}
 			reader.readAsText(file);
 		}
-		(fileInput as any).func = async (text: any) => {
+		onFileLoad = async (text: any) => {
 			await templateStorage.performFullSave(JSON.parse(text), true)
 			window.location.reload()
 			// a little dirty, but updateTemplateList isn't cooperating

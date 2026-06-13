@@ -18,6 +18,7 @@ export class SessionStorage extends AbstractStorage {
 	nameStorage: NameStorage | undefined;
 	sessionEndpoint: string | undefined;
 	proxyEndpoint: string | undefined;
+	private onchange?: () => void;
 
 	constructor(dbAdapter: any) {
 		super('Sessions', dbAdapter);
@@ -244,7 +245,7 @@ export class SessionStorage extends AbstractStorage {
 		const db = await this.openDatabase();
 		await this.saveToDatabase(db, newId, this.sessions[newId]);
 
-		;(onchange as any)?.();
+		this.onchange?.();
 		return newId;
 	}
 
@@ -278,7 +279,7 @@ export class SessionStorage extends AbstractStorage {
 		if (this.sessions[newId] && this.sessions[newId]['name'])
 			this.sessions[newId] = { ...extractMeta(this.sessions[newId]) };
 
-		;(onchange as any)?.();
+		this.onchange?.();
 		return newId;
 }
 }
