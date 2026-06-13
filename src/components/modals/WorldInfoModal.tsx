@@ -15,15 +15,15 @@ export function WorldInfoModal({ isOpen, closeModal, worldInfo, setWorldInfo, ca
 		});
 	};
 	const handleWorldInfoMove = (index: any,move: any) => {
-		const modEntries = worldInfo.entries;
-		if (index+move < 0 || index+move > modEntries.length-1 ) {
+		if (index+move < 0 || index+move > worldInfo.entries.length-1 ) {
 			return;
 		}
+		const modEntries = [ ...worldInfo.entries ];
 		modEntries.splice(index+move, 0, modEntries.splice(index, 1)[0]);
 		setWorldInfo((prevWorldInfo: any) => {
 			return {
 				...prevWorldInfo,
-				entries: [ ...modEntries ],
+				entries: modEntries,
 			};
 		});
 	};
