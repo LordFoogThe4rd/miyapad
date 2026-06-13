@@ -5,8 +5,22 @@ import { InputBox } from '../controls/InputBox';
 import { SVG_ShowKey, SVG_HideKey } from '../icons/index';
 import { normalizeEndpoint } from '../../api/common';
 import { API_AI_HORDE } from '../../constants';
+import type { SessionStorage } from '../../storage/SessionStorage';
 
-export function AIHordeSettingsModal({ isOpen, closeModal, endpoint, endpointAPIKey, setEndpointAPIKey, isMiyapadEndpoint, sessionStorage, endpointModel, setEndpointModel, cancel }: any) {
+interface AIHordeSettingsModalProps {
+  isOpen: boolean;
+  closeModal: () => void;
+  endpoint: string;
+  endpointAPIKey: string;
+  setEndpointAPIKey: React.Dispatch<React.SetStateAction<string>>;
+  isMiyapadEndpoint: boolean;
+  sessionStorage: SessionStorage;
+  endpointModel: string;
+  setEndpointModel: React.Dispatch<React.SetStateAction<string>>;
+  cancel: unknown;
+}
+
+export function AIHordeSettingsModal({ isOpen, closeModal, endpoint, endpointAPIKey, setEndpointAPIKey, isMiyapadEndpoint, sessionStorage, endpointModel, setEndpointModel, cancel }: AIHordeSettingsModalProps) {
     const [models, setModels] = useState<AIHordeModel[]>([]);
     const [loading, setLoading] = useState(true);
     const [error, setError] = useState<string | null>(null);
