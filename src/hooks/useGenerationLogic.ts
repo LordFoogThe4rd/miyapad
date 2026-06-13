@@ -296,10 +296,10 @@ export function useGenerationLogic() {
 				} else {
 					if (myId !== activeGenId.current) break;
 					setPromptChunks((p: any) => [...p, chunk]);
-					setTokens((t: any) => t + (chunkData?.completion_probabilities?.length ?? 1));
+					setTokens((t: any) => t + (compChunk?.completion_probabilities?.length ?? 1));
 				}
 				predictCount += 1;
-				ttsAddChunk(chunkData.content);
+				ttsAddChunk(compChunk.content);
 			}
 		} catch (e: any) {
 			if (e.name !== 'AbortError') {

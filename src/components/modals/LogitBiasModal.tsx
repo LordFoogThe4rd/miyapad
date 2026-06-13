@@ -14,7 +14,7 @@ type BiasItem = {
   tokens: number[];
   power: number;
 };
-type BiasTempState = { positive: BiasItem[]; negative: BiasItem[] };
+type BiasTempState = { positive: BiasItem[]; negative: BiasItem[]; [key: string]: BiasItem[] };
 
 export function LogitBiasModal({ isOpen, closeModal, biasState, apiConfig, cancel }: any) {
 	const { logitBias, setLogitBias, logitBiasParam, setLogitBiasParam, setRejectedAPIKey } = biasState;
@@ -96,7 +96,7 @@ export function LogitBiasModal({ isOpen, closeModal, biasState, apiConfig, cance
 				// workaround. If anyone can think of a better solution, please let me know.
 			const useServerTk = useServerTokenization && isMiyapadEndpoint && sessionStorage?.sessionEndpoint;
 			const serverEp = sessionStorage?.sessionEndpoint;
-			tokens = (await (useServerTk
+			const tokenResult = await (useServerTk
 				? serverTokenize({ sessionEndpoint: serverEp, content: `!==${biasString}`.replace(/\\n/g,'\n'), signal: ac.signal })
 				: getTokens({
 					endpoint,
@@ -106,11 +106,12 @@ export function LogitBiasModal({ isOpen, closeModal, biasState, apiConfig, cance
 					signal: ac.signal,
 					...(isMiyapadEndpoint ? { proxyEndpoint: sessionStorage.proxyEndpoint } : {})
 				})
-			)) as Promise<TokenizeResult>;
-			if (tokens.length === 0) {
+			) as TokenizeResult | [];
+			if (Array.isArray(tokenResult)) {
 				setLastBiasError("Error: Tokenizer endpoint unavailable.");
 				return;
 			}
+			tokens = tokenResult;
 			const logitBiasWorkaround = (await (useServerTk
 				? serverTokenize({ sessionEndpoint: serverEp, content: `!==`, signal: ac.signal })
 				: getTokens({
@@ -121,7 +122,7 @@ export function LogitBiasModal({ isOpen, closeModal, biasState, apiConfig, cance
 					signal: ac.signal,
 					...(isMiyapadEndpoint ? { proxyEndpoint: sessionStorage.proxyEndpoint } : {})
 				})
-			)) as Promise<TokenizeResult>;
+			)) as TokenizeResult;
 				// Remove however many tokens !== is tokenized as for the workaround
 				tokens.ids = tokens.ids.slice(logitBiasWorkaround.ids.length);
 				if ( Array.isArray(tokens.str) ) {
