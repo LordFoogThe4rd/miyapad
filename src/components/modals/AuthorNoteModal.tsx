@@ -2,8 +2,8 @@ import { html } from 'htm/react';
 import { Modal } from '../Modal';
 import { InputBox } from '../controls/InputBox';
 
-export function AuthorNoteModal({ isOpen, closeModal, authorNoteTokens, handleauthorNoteTokensChange, authorNoteDepth, setAuthorNoteDepth, cancel }) {
-	const handleAuthorNoteDepthChange = (value) => {
+export function AuthorNoteModal({ isOpen, closeModal, authorNoteTokens, handleauthorNoteTokensChange, authorNoteDepth, setAuthorNoteDepth, cancel }: any) {
+	const handleAuthorNoteDepthChange = (value: any) => {
 		setAuthorNoteDepth(!isNaN(+value) && value >= 0 ? value : 0);
 	};
 
@@ -14,9 +14,9 @@ export function AuthorNoteModal({ isOpen, closeModal, authorNoteTokens, handleau
 			Prefix and suffix will be attached at the beginning or end of your author's note respectively. \\n for newlines in pre/suffix.">
 				<div className="hbox">
 					<${InputBox} label="Prefix" type="text" placeholder="[INST]"
-						readOnly=${!!cancel} value=${authorNoteTokens.prefix} onValueChange=${(value) => handleauthorNoteTokensChange("prefix", value)}/>
+						readOnly=${!!cancel} value=${authorNoteTokens.prefix} onValueChange=${(value: any) => handleauthorNoteTokensChange("prefix", value)}/>
 					<${InputBox} label="Suffix" type="text" placeholder="[/INST]"
-						readOnly=${!!cancel} value=${authorNoteTokens.suffix} onValueChange=${(value) => handleauthorNoteTokensChange("suffix", value)}/>
+						readOnly=${!!cancel} value=${authorNoteTokens.suffix} onValueChange=${(value: any) => handleauthorNoteTokensChange("suffix", value)}/>
 					<${InputBox} label="AN Injection Depth (0-N)" type="number" step="1"
 						readOnly=${!!cancel} value=${authorNoteDepth} onValueChange=${handleAuthorNoteDepthChange}/>
 				</div>
@@ -26,7 +26,7 @@ export function AuthorNoteModal({ isOpen, closeModal, authorNoteTokens, handleau
 						placeholder="Anything written here will be injected ${authorNoteDepth} newlines from bottom into context."
 						defaultValue=${authorNoteTokens.text}
 						value=${authorNoteTokens.text}
-						onInput=${(e) => handleauthorNoteTokensChange("text", e.target.value) }
+						onInput=${(e: any) => handleauthorNoteTokensChange("text", e.target.value) }
 						class="expanded-text-area-settings"
 						id="expanded-an-settings"/>
 					<div class="token-counter">

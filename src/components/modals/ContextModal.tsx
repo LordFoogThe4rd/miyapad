@@ -5,7 +5,7 @@ import { CollapsibleGroup } from '../controls/CollapsibleGroup';
 import { getTokenCount, serverTokenCount } from '../../api/index';
 import { API_OPENAI_COMPAT, API_LLAMA_CPP, API_DEEPSEEK } from '../../constants';
 
-export function ContextModal({ isOpen, closeModal, tokens, memoryTokens, authorNoteTokens, handleMemoryTokensChange, finalPromptText, defaultPresets, cancel, apiConfig }) {
+export function ContextModal({ isOpen, closeModal, tokens, memoryTokens, authorNoteTokens, handleMemoryTokensChange, finalPromptText, defaultPresets, cancel, apiConfig }: any) {
 	const { sessionStorage, endpoint, endpointAPI, endpointAPIKey, isMiyapadEndpoint, useServerTokenization } = apiConfig;
 	const [contextPlayground, setContextPlayground] = useState(finalPromptText);
 	const [playgroundTokens, setPlaygroundTokens] = useState(tokens);
@@ -35,7 +35,7 @@ export function ContextModal({ isOpen, closeModal, tokens, memoryTokens, authorN
 					} as any)
 				);
 				setPlaygroundTokens(count);
-			} catch (e) {
+			} catch (e: any) {
 				if (e.name !== 'AbortError') {
 					reportError(e);
 					setPlaygroundTokens(0);
@@ -117,13 +117,13 @@ export function ContextModal({ isOpen, closeModal, tokens, memoryTokens, authorN
 					placeholder=${defaultPresets.memoryTokens.contextOrder}
 					defaultValue=${memoryTokens.contextOrder}
 					value=${memoryTokens.contextOrder}
-					onInput=${(e) => handleMemoryTokensChange("contextOrder", e.target.value)}
+					onInput=${(e: any) => handleMemoryTokensChange("contextOrder", e.target.value)}
 					class="expanded-text-area-settings"
 					id="advanced-context-order-settings"/>
 			</${CollapsibleGroup}>
 			<textarea
 				value=${contextPlayground}
-				onInput=${(e) => setContextPlayground(e.target.value)}
+				onInput=${(e: any) => setContextPlayground(e.target.value)}
 				class="expanded-text-area-settings"
 				id="context-area-settings" />
 			<div class="hbox" style=${{ justifyContent: 'flex-end', marginTop: '8px' }}>

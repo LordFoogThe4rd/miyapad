@@ -5,7 +5,7 @@ import { useSettings } from '../contexts/SettingsContext';
 import { useGeneration } from '../contexts/GenerationContext';
 import { usePromptBuilder } from '../hooks/usePromptBuilder';
 
-export function MarkdownPreview({ sidebarHeight }) {
+export function MarkdownPreview({ sidebarHeight }: any) {
 	const { showMarkdownPreview, isMobile } = useSettings();
 	const { markdownPreviewRef } = useGeneration();
 	const { promptText } = usePromptBuilder();

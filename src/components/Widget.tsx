@@ -2,17 +2,17 @@ import { html } from 'htm/react';
 import { useState, useEffect, useRef } from 'react';
 import { SVG_Close, SVG_Moveable } from './icons/index';
 
-export function Widget({ isOpen, onClose, title, id, children, ...props }) {
+export function Widget({ isOpen, onClose, title, id, children, ...props }: any) {
 	if (!isOpen) {
 		return null;
 	}
 
 	const [position, setPosition] = useState({ x: 0, y: 0 });
   const [isDragging, setIsDragging] = useState(false);
-  const dragRef = useRef(null);
+  const dragRef = useRef<any>(null);
 
   useEffect(() => {
-    const handleMouseMove = (e) => {
+    const handleMouseMove = (e: any) => {
       if (!isDragging) return;
       const deltaX = e.clientX - dragRef.current.startX;
       const deltaY = e.clientY - dragRef.current.startY;
@@ -35,7 +35,7 @@ export function Widget({ isOpen, onClose, title, id, children, ...props }) {
     };
   }, [isDragging]);
 
-  const handleMouseDown = (e) => {
+  const handleMouseDown = (e: any) => {
     setIsDragging(true);
     dragRef.current = {
       startX: e.clientX,
@@ -46,7 +46,7 @@ export function Widget({ isOpen, onClose, title, id, children, ...props }) {
   };
 
 	useEffect(() => {
-		const onKeyDown = (event) => {
+		const onKeyDown = (event: any) => {
 			if (event.key === 'Escape') {
 				onClose();
 			}

@@ -1,6 +1,6 @@
 import { html } from 'htm/react';
 
-export function CrashScreenFallback({ error }) {
+export function CrashScreenFallback({ error }: any) {
   return html`
     <div id="crash-screen" role="alert">
       <h1>Oops! Something went wrong.</h1>

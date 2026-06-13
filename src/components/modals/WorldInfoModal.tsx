@@ -5,37 +5,37 @@ import { CollapsibleGroup } from '../controls/CollapsibleGroup';
 import { SVG_ArrowUp, SVG_ArrowDown } from '../icons/index';
 import { importSillyTavernWorldInfo } from '../../worldinfo';
 
-export function WorldInfoModal({ isOpen, closeModal, worldInfo, setWorldInfo, cancel, toggleModal, setSillyTarvernWorldInfoJSON }) {
+export function WorldInfoModal({ isOpen, closeModal, worldInfo, setWorldInfo, cancel, toggleModal, setSillyTarvernWorldInfoJSON }: any) {
 	const handleWorldInfoNew = () => {
-		setWorldInfo((prevWorldInfo) => {
+		setWorldInfo((prevWorldInfo: any) => {
 			return {
 				...prevWorldInfo,
 				entries: [ { "displayName":"New Entry","text":"","keys":[], "search":"" },...prevWorldInfo.entries ],
 			};
 		});
 	};
-	const handleWorldInfoMove = (index,move) => {
+	const handleWorldInfoMove = (index: any,move: any) => {
 		const modEntries = worldInfo.entries;
 		if (index+move < 0 || index+move > modEntries.length-1 ) {
 			return;
 		}
 		modEntries.splice(index+move, 0, modEntries.splice(index, 1)[0]);
-		setWorldInfo((prevWorldInfo) => {
+		setWorldInfo((prevWorldInfo: any) => {
 			return {
 				...prevWorldInfo,
 				entries: [ ...modEntries ],
 			};
 		});
 	};
-	const handleWorldInfoDel = (index) => {
+	const handleWorldInfoDel = (index: any) => {
 		if (!window.confirm("Are you sure you want to delete the world info entry #" + (index + 1) + ": "+ worldInfo.entries[index].displayName + "?\nThis action cannot be undone."))
 			return;
 		if (index > -1 && index < worldInfo.entries.length) {
-			setWorldInfo((prevWorldInfo) => {
+			setWorldInfo((prevWorldInfo: any) => {
 				console.warn(`Deleting world info entry #${(index + 1)}:`,prevWorldInfo.entries[index])
 				return {
 					...prevWorldInfo,
-					entries: prevWorldInfo.entries.filter((_, i) => i !== index),
+					entries: 		prevWorldInfo.entries.filter((_: any, i: any) => i !== index),
 				};
 			});
 		}
@@ -43,8 +43,8 @@ export function WorldInfoModal({ isOpen, closeModal, worldInfo, setWorldInfo, ca
 			alert("Index " + index + " out of range!");
 		}
 	};
-	const handleWorldInfoChange = (key,index,value) => {
-		setWorldInfo((prevWorldInfo) => {
+	const handleWorldInfoChange = (key: any,index: any,value: any) => {
+		setWorldInfo((prevWorldInfo: any) => {
 			const updatedEntries = [...prevWorldInfo.entries];
 			const updatedEntry = key == "keys"
 				? { ...updatedEntries[index], [key]: value.split(/(?<!\\), ?/) } //.map(item => item.trim())
@@ -57,8 +57,8 @@ export function WorldInfoModal({ isOpen, closeModal, worldInfo, setWorldInfo, ca
 			};
 		});
 	};
-	const handleWorldInfoAffixChange = (key, value) => {
-		setWorldInfo((prevWorldInfo) => ({
+	const handleWorldInfoAffixChange = (key: any, value: any) => {
+		setWorldInfo((prevWorldInfo: any) => ({
 			...prevWorldInfo,
 			[key]: value,
 		}));
@@ -68,13 +68,13 @@ export function WorldInfoModal({ isOpen, closeModal, worldInfo, setWorldInfo, ca
 		const inputElement = document.createElement("input");
 		inputElement.type = "file";
 		inputElement.onchange = () => {
-			const file = inputElement.files[0];
+			const file = inputElement.files?.[0];
 			if (!file)
 				return;
 
 			const reader = new FileReader();
 			
-			reader.onload = (e) => {
+			reader.onload = (e: any) => {
 				try {
 					const contents = (e.target as FileReader).result as string;
 					const json = JSON.parse(contents);
@@ -86,7 +86,7 @@ export function WorldInfoModal({ isOpen, closeModal, worldInfo, setWorldInfo, ca
 					} else {
 						importSillyTavernWorldInfo(json, setWorldInfo, "append");
 					}
-				} catch (e) {
+				} catch (e: any) {
 					alert("The JSON data could not be parsed. Please check that it is valid JSON.");
 					console.error(e);
 				}
@@ -97,9 +97,9 @@ export function WorldInfoModal({ isOpen, closeModal, worldInfo, setWorldInfo, ca
 	};
 
 	const handleWorldInfoExport = () => {
-		const exportedObject = { "entries": {} };
+		const exportedObject: any = { "entries": {} };
 
-		worldInfo.entries.forEach((entry, entryIndex) => {
+		worldInfo.entries.forEach((entry: any, entryIndex: any) => {
 			exportedObject.entries[entryIndex] = {
 				"uid": entryIndex,
 				"key": [...entry.keys],
@@ -162,15 +162,15 @@ export function WorldInfoModal({ isOpen, closeModal, worldInfo, setWorldInfo, ca
 					<br />
 					<div className="hbox">
 						<${InputBox} label="Prefix" type="text" placeholder="\\n"
-							readOnly=${!!cancel} value=${worldInfo.prefix} onValueChange=${(value) => handleWorldInfoAffixChange("prefix", value)}/>
+							readOnly=${!!cancel} value=${worldInfo.prefix} onValueChange=${(value: any) => handleWorldInfoAffixChange("prefix", value)}/>
 						<${InputBox} label="Suffix" type="text" placeholder="\\n"
-							readOnly=${!!cancel} value=${worldInfo.suffix} onValueChange=${(value) => handleWorldInfoAffixChange("suffix", value)}/>
+							readOnly=${!!cancel} value=${worldInfo.suffix} onValueChange=${(value: any) => handleWorldInfoAffixChange("suffix", value)}/>
 					</div>
 				</${CollapsibleGroup}>
 				<button id="button-wi-new" disabled=${!!cancel} onClick=${handleWorldInfoNew}>New Entry</button>
 			</div>
 			<div className="modal-wi-content overflow-container">
-				${!Array.isArray(worldInfo.entries) ? null : worldInfo.entries.map((entry, index) => html`
+				${!Array.isArray(worldInfo.entries) ? null : worldInfo.entries.map((entry: any, index: any) => html`
 					<div class="wi-entry" key=${index}>
 						<div class="wi-entry-controls">
 							<div class="wi-entry-filler" />
@@ -181,7 +181,7 @@ export function WorldInfoModal({ isOpen, closeModal, worldInfo, setWorldInfo, ca
 								readOnly=${!!cancel}
 								placeholder="Name of this entry"
 								value=${entry.displayName}
-								onValueChange=${(value) => handleWorldInfoChange("displayName",index,value)}
+								onValueChange=${(value: any) => handleWorldInfoChange("displayName",index,value)}
 								/>
 							</div>
 							<div class="wi-entry-buttons">
@@ -205,7 +205,7 @@ export function WorldInfoModal({ isOpen, closeModal, worldInfo, setWorldInfo, ca
 										readOnly=${!!cancel}
 										value=${entry.keys.join(',')}
 										placeholder="Required to activate entry"
-										onValueChange=${(value) => handleWorldInfoChange("keys",index,value)}
+										onValueChange=${(value: any) => handleWorldInfoChange("keys",index,value)}
 										/>
 									<${InputBox}
 										label="Search Range (0 = disabled)"
@@ -216,7 +216,7 @@ export function WorldInfoModal({ isOpen, closeModal, worldInfo, setWorldInfo, ca
 										inputmode="numeric"
 										value=${entry.search}
 										placeholder="2048"
-										onValueChange=${(value) => handleWorldInfoChange("search",index,value)}
+										onValueChange=${(value: any) => handleWorldInfoChange("search",index,value)}
 										/>
 								</div>
 								<label class="TextArea">
@@ -226,7 +226,7 @@ export function WorldInfoModal({ isOpen, closeModal, worldInfo, setWorldInfo, ca
 										placeholder="Information to be inserted into context when key is found"
 										value=${entry.text ? entry.text : ""}
 										defaultValue=${entry.text ? entry.text : ""}
-										onInput=${(e) => handleWorldInfoChange("text",index, e.target.value)}
+										onInput=${(e: any) => handleWorldInfoChange("text",index, e.target.value)}
 										class="wi-textarea" />
 								</label>
 							</div>

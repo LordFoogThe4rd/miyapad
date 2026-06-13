@@ -1,9 +1,9 @@
 import { html } from 'htm/react';
 import { useState, useEffect, useRef } from 'react';
 
-export function EditorContextMenu({ isOpen, closeMenu, menuItems, className, ...props }) {
-	const menuRef = useRef(null);
-	const [subMenuOpen, setSubMenuOpen] = useState(null);
+export function EditorContextMenu({ isOpen, closeMenu, menuItems, className, ...props }: any) {
+	const menuRef = useRef<any>(null);
+	const [subMenuOpen, setSubMenuOpen] = useState<any>(null);
 
 	if (className == 'nested') {
 		useEffect(() => {
@@ -36,7 +36,7 @@ export function EditorContextMenu({ isOpen, closeMenu, menuItems, className, ...
 
 		// Close the menu when clicking outside of it
 		useEffect(() => {
-			const handleClickOutside = (e) => {
+			const handleClickOutside = (e: any) => {
 				if (!isOpen)
 					return;
 				if (menuRef.current && !menuRef.current.contains(e.target)) {
@@ -85,17 +85,17 @@ export function EditorContextMenu({ isOpen, closeMenu, menuItems, className, ...
 			}}>
 			<ul>
 				${menuItems.map(
-					(item) => html`
+					(item: any) => html`
 						<li
 							className="MenuItem ${item.disabled ? 'disabled' : ''} ${item.subItems ? 'hasSubItems' : ''}"
-							onClick=${(event) => {
+							onClick=${(event: any) => {
 								if (item.action && !item.disabled && !item.subItems) {
 									item.action();
 									closeMenu();
 									event.stopPropagation();
 								}
 							}}
-							onMouseEnter=${(event) => {
+							onMouseEnter=${(event: any) => {
 								setSubMenuOpen(null);
 								if (item.subItems && !item.disabled) {
 									setSubMenuOpen(item.label);

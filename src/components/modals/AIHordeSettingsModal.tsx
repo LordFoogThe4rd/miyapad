@@ -6,15 +6,15 @@ import { SVG_ShowKey, SVG_HideKey } from '../icons/index';
 import { normalizeEndpoint } from '../../api/common';
 import { API_AI_HORDE } from '../../constants';
 
-export function AIHordeSettingsModal({ isOpen, closeModal, endpoint, endpointAPIKey, setEndpointAPIKey, isMiyapadEndpoint, sessionStorage, endpointModel, setEndpointModel, cancel }) {
-    const [models, setModels] = useState([]);
+export function AIHordeSettingsModal({ isOpen, closeModal, endpoint, endpointAPIKey, setEndpointAPIKey, isMiyapadEndpoint, sessionStorage, endpointModel, setEndpointModel, cancel }: any) {
+    const [models, setModels] = useState<any>([]);
     const [loading, setLoading] = useState(true);
-    const [error, setError] = useState(null);
-    const [localSelected, setLocalSelected] = useState([]);
+    const [error, setError] = useState<any>(null);
+    const [localSelected, setLocalSelected] = useState<any>([]);
     const [searchTerm, setSearchTerm] = useState('');
 	const [showKey, setShowKey] = useState(false);
 
-    const fetchModels = async (acSignal) => {
+    const fetchModels = async (acSignal: any) => {
         setLoading(true);
         setError(null);
         try {
@@ -30,10 +30,10 @@ export function AIHordeSettingsModal({ isOpen, closeModal, endpoint, endpointAPI
 
             if (!res.ok) throw new Error(`HTTP ${res.status}`);
             
-            const modelData = (await res.json()).filter(model => model.type === "text");
-            modelData.sort((a, b) => b.count - a.count || a.eta - b.eta); // Sort by workers, then ETA
+            const modelData = (await res.json()).filter((model: any) => model.type === "text");
+            modelData.sort((a: any, b: any) => b.count - a.count || a.eta - b.eta); // Sort by workers, then ETA
             setModels(modelData);
-        } catch (e) {
+        } catch (e: any) {
             if (e.name !== 'AbortError') {
                 setError(e.toString());
             }
@@ -44,15 +44,15 @@ export function AIHordeSettingsModal({ isOpen, closeModal, endpoint, endpointAPI
 
     useEffect(() => {
         if (isOpen) {
-			setLocalSelected(endpointModel ? endpointModel.split(',').map(s => s.trim()).filter(Boolean) : []);
+			setLocalSelected(endpointModel ? endpointModel.split(',').map((s: any) => s.trim()).filter(Boolean) : []);
             const ac = new AbortController();
             fetchModels(ac.signal);
             return () => ac.abort();
         }
     }, [isOpen]);
 
-    const handleSelect = (modelName) => {
-        setLocalSelected(prev => {
+    const handleSelect = (modelName: any) => {
+        setLocalSelected((prev: any) => {
             const newSelection = new Set(prev);
             if (newSelection.has(modelName)) {
                 newSelection.delete(modelName);
@@ -68,7 +68,7 @@ export function AIHordeSettingsModal({ isOpen, closeModal, endpoint, endpointAPI
         closeModal();
     };
 
-    const filteredModels = models.filter(model => model.name.toLowerCase().includes(searchTerm.toLowerCase()));
+    const filteredModels = models.filter((model: any) => model.name.toLowerCase().includes(searchTerm.toLowerCase()));
 
     return html`
         <${Modal} isOpen=${isOpen} onClose=${closeModal} title="AI Horde Settings" style=${{width: '50em', 'max-height': '90vh'}}>
@@ -104,7 +104,7 @@ export function AIHordeSettingsModal({ isOpen, closeModal, endpoint, endpointAPI
                 ${error && html`<div class="error-text">${error}</div>`}
                 <div className="overflow-container" style=${{maxHeight: '45vh', background: 'var(--color-bg-popover-1)', borderRadius: '4px'}}>
                     ${loading && !models.length ? html`<div style=${{padding: '1em'}}>Loading models...</div>` : ''}
-                    ${filteredModels.map(model => html`
+                    ${filteredModels.map((model: any) => html`
                         <div key=${model.name} className="horde-model-entry" onClick=${() => handleSelect(model.name)}>
 							<div class="model-header">
 								<input type="checkbox" checked=${localSelected.includes(model.name)} readOnly/>

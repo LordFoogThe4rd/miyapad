@@ -2,8 +2,8 @@ import { html } from 'htm/react';
 import { useState, useEffect } from 'react';
 import { Modal } from '../Modal';
 
-export function CompressionInfoModal({ isOpen, closeModal }) {
-	const [compressionData, setCompressionData] = useState(null);
+export function CompressionInfoModal({ isOpen, closeModal }: any) {
+	const [compressionData, setCompressionData] = useState<any>(null);
 
 	useEffect(() => {
 		if (!isOpen) return;

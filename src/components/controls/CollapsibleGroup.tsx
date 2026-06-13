@@ -5,9 +5,9 @@ import { SVG_ArrowUp } from '../icons/index';
 
 const SVResizeObserver = typeof ResizeObserver !== 'undefined' ? ResizeObserver : class { observe() {} disconnect() {} };
 
-export function CollapsibleGroup({ label, stateLabel, menu, expanded, children }) {
-	const contentArea = useRef(null);
-	const menuRef = useRef(null);
+export function CollapsibleGroup({ label, stateLabel, menu, expanded, children }: any) {
+	const contentArea = useRef<any>(null);
+	const menuRef = useRef<any>(null);
 	const [isCollapsed, setIsCollapsed] = usePersistentState(`(${stateLabel ? stateLabel : label}).isCollapsed`, !expanded);
 	const [contentHeight, setContentHeight] = useState(isCollapsed ? 0 : '');
 	const [isMenuVisible, setIsMenuVisible] = useState(false);
@@ -30,7 +30,7 @@ export function CollapsibleGroup({ label, stateLabel, menu, expanded, children }
 	useEffect(() => {
 		if (!menu || !isMenuVisible)
 			return;
-		const handleClickOutside = (e) => {
+		const handleClickOutside = (e: any) => {
 			if (menuRef.current && !menuRef.current.contains(e.target)) {
 				setTimeout(() => {
 					setIsMenuVisible(false);
@@ -78,11 +78,11 @@ export function CollapsibleGroup({ label, stateLabel, menu, expanded, children }
 				${label}
 				<div class="flex-separator"></div>
 				${menu && html`
-					<button style=${{ 'padding': '0px 7px'}} onClick=${(e) => (setIsMenuVisible(!isMenuVisible), e.stopPropagation())}>
+					<button style=${{ 'padding': '0px 7px'}} onClick=${(e: any) => (setIsMenuVisible(!isMenuVisible), e.stopPropagation())}>
 						⋮
 					</button>
 					${isMenuVisible && html`
-						<div ref=${menuRef} className="floating-menu" onClick=${(e) => e.stopPropagation()}>
+						<div ref=${menuRef} className="floating-menu" onClick=${(e: any) => e.stopPropagation()}>
 							${menu}
 						</div>`}
 					`}

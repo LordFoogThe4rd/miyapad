@@ -2,10 +2,10 @@ import { html } from 'htm/react';
 import { useState, useEffect, useMemo, useRef } from 'react';
 import { SVG_Star } from './icons/index';
 
-export function QuickSwitcher({ isOpen, closeModal, sessionStorage, cancel }) {
+export function QuickSwitcher({ isOpen, closeModal, sessionStorage, cancel }: any) {
 	const [query, setQuery] = useState('');
 	const [selectedIndex, setSelectedIndex] = useState(-1);
-	const inputRef = useRef(null);
+	const inputRef = useRef<any>(null);
 	const [version, setVersion] = useState(0);
 
 	useEffect(() => {
@@ -36,7 +36,7 @@ export function QuickSwitcher({ isOpen, closeModal, sessionStorage, cancel }) {
 
 	const disabled = !!cancel;
 
-	function handleKeyDown(e) {
+	function handleKeyDown(e: any) {
 		if (disabled) return;
 		e.stopPropagation();
 
@@ -74,14 +74,14 @@ export function QuickSwitcher({ isOpen, closeModal, sessionStorage, cancel }) {
 
 	return html`
 		<div className="quick-switcher-overlay" onClick=${closeModal}>
-			<div className="quick-switcher-panel" onClick=${(e) => e.stopPropagation()}>
+			<div className="quick-switcher-panel" 			onClick=${(e: any) => e.stopPropagation()}>
 				<input
 					ref=${inputRef}
 					className="quick-switcher-input"
 					type="text"
 					placeholder="Search sessions…"
 					value=${query}
-					onChange=${(e) => { setQuery(e.target.value); setSelectedIndex(-1); }}
+					onChange=${(e: any) => { setQuery(e.target.value); setSelectedIndex(-1); }}
 					onKeyDown=${handleKeyDown}
 					disabled=${disabled}
 				/>

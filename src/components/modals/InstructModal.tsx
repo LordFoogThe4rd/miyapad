@@ -3,12 +3,12 @@ import { useState, useEffect } from 'react';
 import { Modal } from '../Modal';
 import { Checkbox } from '../controls/Checkbox';
 
-export function InstructModal({ isOpen, closeModal, predict, cancel, modalState, templates, selectedTemplate, lastError, ...props }) {
+export function InstructModal({ isOpen, closeModal, predict, cancel, modalState, templates, selectedTemplate, lastError, ...props }: any) {
 	const [prompt, setPrompt] = useState("");
 	const [includeContext, setIncludeContext] = useState(true);
 	const [result, setResult] = useState("");
 
-	const finish = (replace) => {
+	const finish = (replace: any) => {
 		modalState.result = {
 			content: result,
 			replace: replace
@@ -24,10 +24,10 @@ export function InstructModal({ isOpen, closeModal, predict, cancel, modalState,
 		};
 	}
 
-	function replacePlaceholders(string,placeholders) {
+	function replacePlaceholders(string: any, placeholders: any) {
 		// give placeholders as json object
 		// { "placeholder":"replacement" }
-		return string.replace(/\{[^}]+\}/g, function (placeholder) {
+		return string.replace(/\{[^}]+\}/g, function (placeholder: any) {
 			return placeholders.hasOwnProperty(placeholder)
 				? placeholders[placeholder]
 				: placeholder;
@@ -62,7 +62,7 @@ export function InstructModal({ isOpen, closeModal, predict, cancel, modalState,
 				instructPrompt;
 		}
 
-		predict(instructPrompt, 1, (chunk) => {
+		predict(instructPrompt, 1, (chunk: any) => {
 			setResult((r) => r + chunk.content);
 			return true;
 		});
@@ -70,7 +70,7 @@ export function InstructModal({ isOpen, closeModal, predict, cancel, modalState,
 
 	
 	useEffect(() => {
-		function onKeyDown(e) {
+		function onKeyDown(e: any) {
 			const { altKey, ctrlKey, shiftKey, key, defaultPrevented } = e;
 			if (defaultPrevented || !isOpen)
 				return;
@@ -105,14 +105,14 @@ export function InstructModal({ isOpen, closeModal, predict, cancel, modalState,
 						autoFocus
 						style=${{height: "200px"}}
                         value=${prompt}
-                        onChange=${(e) => setPrompt(e.target.value)}
+                        onChange=${(e: any) => setPrompt(e.target.value)}
                         placeholder="Enter your prompt here..."
 						className="wi-textarea"
 						readOnly=${!!cancel}/>
 
 					<${Checkbox} label="Include Context"
 						value=${includeContext}
-						onValueChange=${(v) => setIncludeContext(v)}/>
+						onValueChange=${(v: any) => setIncludeContext(v)}/>
 
                     <div className="vbox">
 						${!cancel && html`
@@ -134,7 +134,7 @@ export function InstructModal({ isOpen, closeModal, predict, cancel, modalState,
 						label="Result"
 						style=${{height: "200px"}}
 						value=${result}
-						onChange=${(e) => setResult(e.target.value)}
+						onChange=${(e: any) => setResult(e.target.value)}
 						readOnly=${!!cancel}
 						className="wi-textarea"/>
 

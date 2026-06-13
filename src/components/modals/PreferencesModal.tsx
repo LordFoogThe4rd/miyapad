@@ -7,7 +7,7 @@ import { InputSlider } from '../controls/InputSlider';
 import { SelectBox } from '../controls/SelectBox';
 import { getServerTokenizers, loadServerTokenizer } from '../../api/index';
 
-const tabStyle = (active) => ({
+const tabStyle = (active: any) => ({
 	flex: 1,
 	padding: '0.5em 1em',
 	borderBottom: active ? '2px solid var(--color-base-70)' : '2px solid transparent',
@@ -19,13 +19,13 @@ const tabStyle = (active) => ({
 	transition: 'color 0.15s, border-color 0.2s'
 });
 
-export function PreferencesModal({ isOpen, closeModal, settings }) {
+export function PreferencesModal({ isOpen, closeModal, settings }: any) {
 	const [activeTab, setActiveTab] = useState('editor');
-	const contentRef = useRef(null);
-	const prevHeightRef = useRef(null);
+	const contentRef = useRef<any>(null);
+	const prevHeightRef = useRef<any>(null);
 
 	// Capture the outgoing tab's height synchronously before React commits the new tab's DOM
-	const switchTab = (tab) => {
+	const switchTab = (tab: any) => {
 		if (tab === activeTab) return;
 		const el = contentRef.current;
 		if (el) {
@@ -54,7 +54,7 @@ export function PreferencesModal({ isOpen, closeModal, settings }) {
 		// Set target height to trigger CSS transition
 		el.style.height = newHeight + 'px';
 
-		const onEnd = (e) => {
+		const onEnd = (e: any) => {
 			if (e.target !== el) return;
 			// Release to auto so the container can adapt if content changes internally
 			el.style.height = '';
@@ -96,7 +96,7 @@ export function PreferencesModal({ isOpen, closeModal, settings }) {
 		screenshotModelAvatarUrl, setScreenshotModelAvatarUrl
 	} = settings;
 
-	const [tokenizerList, setTokenizerList] = useState([]);
+	const [tokenizerList, setTokenizerList] = useState<any>([]);
 	const [tokenizerStatus, setTokenizerStatus] = useState('');
 
 	const refreshTokenizers = useCallback(async () => {
@@ -107,7 +107,7 @@ export function PreferencesModal({ isOpen, closeModal, settings }) {
 			if (data.loaded) {
 				setTokenizerStatus(`Loaded: ${data.loaded}`);
 			}
-		} catch (e) {
+		} catch (e: any) {
 			setTokenizerList([]);
 			setTokenizerStatus('Failed to fetch tokenizers');
 		}
@@ -119,7 +119,7 @@ export function PreferencesModal({ isOpen, closeModal, settings }) {
 		}
 	}, [activeTab, isMiyapadEndpoint, refreshTokenizers]);
 
-	const handleTokenizerChange = useCallback(async (model) => {
+	const handleTokenizerChange = useCallback(async (model: any) => {
 		setTokenizerModel(model);
 		if (!model) {
 			setTokenizerStatus('No tokenizer selected');
@@ -129,7 +129,7 @@ export function PreferencesModal({ isOpen, closeModal, settings }) {
 		try {
 			await loadServerTokenizer({ sessionEndpoint: sessionStorage.sessionEndpoint, model });
 			setTokenizerStatus(`Loaded: ${model}`);
-		} catch (e) {
+		} catch (e: any) {
 			setTokenizerStatus(`Error: ${e.message}`);
 		}
 	}, [sessionStorage, setTokenizerModel]);
@@ -306,7 +306,7 @@ export function PreferencesModal({ isOpen, closeModal, settings }) {
 										onValueChange=${handleTokenizerChange}
 										options=${[
 											{ name: '(none)', value: '' },
-											...tokenizerList.map(t => ({ name: t, value: t }))
+											...tokenizerList.map((t: any) => ({ name: t, value: t }))
 										]}/>
 									<button className="symbol-button" title="Refresh list"
 										onClick=${refreshTokenizers}>

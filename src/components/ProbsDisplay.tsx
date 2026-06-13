@@ -11,16 +11,16 @@ export function ProbsDisplay() {
 	const probs = useMemo(() => {
 		const rawProbs = showProbs && promptChunks[currentPromptChunk?.index]?.completion_probabilities?.[0]?.probs;
 		return rawProbs
-			? rawProbs.filter(prob => prob.prob > 0).sort((a, b) => b.prob - a.prob)
+			? rawProbs.filter((prob: any) => prob.prob > 0).sort((a: any, b: any) => b.prob - a.prob)
 			: undefined;
 	}, [promptChunks, currentPromptChunk, showProbs]);
 
-	async function switchCompletion(i, tok) {
+	async function switchCompletion(i: any, tok: any) {
 		const remainingPrompt = promptChunks.slice(i);
 		const instPre = templates[selectedTemplate]?.instPre?.replace(/\\n/g, '\n');
 		const lastChunk = promptChunks[promptChunks.length - 1];
 
-		const hasRealUserTextAfter = remainingPrompt.some(chunk =>
+		const hasRealUserTextAfter = remainingPrompt.some((chunk: any) =>
 			chunk.type === 'user' &&
 			!(chunk === lastChunk && (chunk.content === instPre || chunk.content.length <= 50))
 		);
@@ -49,7 +49,7 @@ export function ProbsDisplay() {
 			style=${{
 				'display': 'none'
 			}}>
-			${probs.map((prob, i) => {
+			${probs.map((prob: any, i: any) => {
 				const index = currentPromptChunk?.index;
 				const isCurrentToken = promptChunks[index]?.prob == prob.prob;
 				return html`<button key=${i} className=${isCurrentToken ? 'current' : ''} onClick=${() => switchCompletion(index, prob)}>

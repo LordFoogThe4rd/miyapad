@@ -2,7 +2,7 @@ import { html } from 'htm/react';
 import { Modal } from '../Modal';
 import { importSillyTavernWorldInfo } from '../../worldinfo';
 
-export function WorldInfoSelectImportBehaviorModal({ isOpen, closeModal, setWorldInfo, cancel, sillyTarvernWorldInfoJSON }) {
+export function WorldInfoSelectImportBehaviorModal({ isOpen, closeModal, setWorldInfo, cancel, sillyTarvernWorldInfoJSON }: any) {
 	const handleImportReplace = () => {
 		importSillyTavernWorldInfo(sillyTarvernWorldInfoJSON, setWorldInfo, "replace");
 		closeModal();

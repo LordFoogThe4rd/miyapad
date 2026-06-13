@@ -2,7 +2,7 @@ import { html } from 'htm/react';
 import { Modal } from '../Modal';
 import { InputBox } from '../controls/InputBox';
 
-export function MemoryModal({ isOpen, closeModal, memoryTokens, handleMemoryTokensChange, cancel }) {
+export function MemoryModal({ isOpen, closeModal, memoryTokens, handleMemoryTokensChange, cancel }: any) {
 	return html`
 		<${Modal} isOpen=${isOpen} onClose=${closeModal}
 			title="Memory"
@@ -10,9 +10,9 @@ export function MemoryModal({ isOpen, closeModal, memoryTokens, handleMemoryToke
 			Prefix and suffix will be attached at the beginning or end of your memory respectively. \\n for newlines in pre/suffix.">
 				<div className="hbox">
 					<${InputBox} label="Prefix" type="text" placeholder="[INST]"
-						readOnly=${!!cancel} value=${memoryTokens.prefix} onValueChange=${(value) => handleMemoryTokensChange("prefix", value)}/>
+						readOnly=${!!cancel} value=${memoryTokens.prefix} onValueChange=${(value: any) => handleMemoryTokensChange("prefix", value)}/>
 					<${InputBox} label="Suffix" type="text" placeholder="[/INST]"
-						readOnly=${!!cancel} value=${memoryTokens.suffix} onValueChange=${(value) => handleMemoryTokensChange("suffix", value)}/>
+						readOnly=${!!cancel} value=${memoryTokens.suffix} onValueChange=${(value: any) => handleMemoryTokensChange("suffix", value)}/>
 				</div>
 				<div class="relative">
 					<textarea
@@ -20,7 +20,7 @@ export function MemoryModal({ isOpen, closeModal, memoryTokens, handleMemoryToke
 						placeholder="Anything written here will be injected at the head of the prompt. Tokens here DO count towards the Context Limit."
 						defaultValue=${memoryTokens.text}
 						value=${memoryTokens.text}
-						onInput=${(e) => handleMemoryTokensChange("text", e.target.value) }
+						onInput=${(e: any) => handleMemoryTokensChange("text", e.target.value) }
 						class="expanded-text-area-settings"
 						id="memory-area-settings"/>
 					<div class="token-counter">

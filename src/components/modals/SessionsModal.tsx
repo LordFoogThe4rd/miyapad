@@ -6,23 +6,23 @@ import { SelectBox } from '../controls/SelectBox';
 import { SVG_Confirm, SVG_Cancel, SVG_Rename, SVG_Trash, SVG_Star, SVG_StarOutline } from '../icons/index';
 import { exportText } from '../../api/common';
 
-function formatDate(ts) {
+function formatDate(ts: any) {
 	if (!ts) return '—';
 	const d = new Date(ts);
-	const pad = (n) => String(n).padStart(2, '0');
+	const pad = (n: any) => String(n).padStart(2, '0');
 	return `${d.getFullYear()}-${pad(d.getMonth() + 1)}-${pad(d.getDate())} ${pad(d.getHours())}:${pad(d.getMinutes())}`;
 }
 
-function compileTagRegex(pattern) {
+function compileTagRegex(pattern: any) {
 	if (!pattern.includes('*')) return null;
 	const escaped = pattern.replace(/[.+?^${}()|[\]\\]/g, '\\$&').replace(/\*/g, '.*');
 	return new RegExp('^' + escaped + '$', 'i');
 }
 
-function parseTagFilter(input) {
+function parseTagFilter(input: any) {
 	if (!input.trim()) return null;
 	const tokens = input.trim().split(/\s+/);
-	const groups = [[]];
+	const groups: any = [[]];
 	let i = 0;
 	while (i < tokens.length) {
 		const t = tokens[i];
@@ -43,40 +43,40 @@ function parseTagFilter(input) {
 			i++;
 		}
 	}
-	return groups.filter(g => g.length > 0);
+	return groups.filter((g: any) => g.length > 0);
 }
 
-function tagMatches(tag, pattern, regex) {
+function tagMatches(tag: any, pattern: any, regex: any) {
 	if (regex) return regex.test(tag);
 	return tag.toLowerCase() === pattern.toLowerCase();
 }
 
-function sessionMatches(session, groups) {
+function sessionMatches(session: any, groups: any) {
 	if (!groups) return true;
 	if (groups.length === 0) return true;
-	return groups.some(group =>
-		group.every(({ pattern, negate, regex }) => {
-			const match = (session.tags || []).some(tag => tagMatches(tag, pattern, regex));
+	return groups.some((group: any) =>
+		(group as any).every(({ pattern, negate, regex }: any) => {
+			const match = (session.tags || []).some((tag: any) => tagMatches(tag, pattern, regex));
 			return negate ? !match : match;
 		})
 	);
 }
 
-export function SessionsModal({ isOpen, closeModal, sessionStorage, cancel }) {
+export function SessionsModal({ isOpen, closeModal, sessionStorage, cancel }: any) {
 	const [version, setVersion] = useState(0);
 	const [newSessionName, setNewSessionName] = useState('');
 	const [renameSessionName, setRenameSessionName] = useState('');
-	const [renamingId, setRenamingId] = useState(undefined);
+	const [renamingId, setRenamingId] = useState<any>(undefined);
 	const [isCreating, setIsCreating] = useState(false);
 	const [searchQuery, setSearchQuery] = useState('');
 	const [tagFilterQuery, setTagFilterQuery] = useState('');
-	const [editingTagsId, setEditingTagsId] = useState(undefined);
+	const [editingTagsId, setEditingTagsId] = useState<any>(undefined);
 	const [editTagsValue, setEditTagsValue] = useState('');
 	const [sortBy, setSortByState] = useState(() => localStorage.getItem('miyapad-sessions-sortBy') || 'modified');
 	const [sortAsc, setSortAscState] = useState(() => localStorage.getItem('miyapad-sessions-sortAsc') === 'true');
 
-	const setSortBy = (v) => { setSortByState(v); localStorage.setItem('miyapad-sessions-sortBy', v); };
-	const setSortAsc = (v) => { const next = typeof v === 'function' ? v(sortAsc) : v; setSortAscState(next); localStorage.setItem('miyapad-sessions-sortAsc', String(next)); };
+	const setSortBy = (v: any) => { setSortByState(v); localStorage.setItem('miyapad-sessions-sortBy', v); };
+	const setSortAsc = (v: any) => { const next = typeof v === 'function' ? v(sortAsc) : v; setSortAscState(next); localStorage.setItem('miyapad-sessions-sortAsc', String(next)); };
 
 	useEffect(() => {
 		const incrementVersion = () => setVersion(v => v + 1);
@@ -111,7 +111,7 @@ export function SessionsModal({ isOpen, closeModal, sessionStorage, cancel }) {
 		});
 
 		// Sort comparator
-		const compare = ([idA, a], [idB, b]) => {
+		const compare = ([idA, a]: any, [idB, b]: any) => {
 			let cmp = 0;
 			if (sortBy === 'name') {
 				cmp = (a.name || '').localeCompare(b.name || '');
@@ -133,26 +133,26 @@ export function SessionsModal({ isOpen, closeModal, sessionStorage, cancel }) {
 		return [...pinned, ...unpinned];
 	}, [version, searchQuery, parsedTagFilter, sortBy, sortAsc, sessionStorage.sessions]);
 
-	const switchSession = async (sessionId) => {
+	const switchSession = async (sessionId: any) => {
 		if (sessionStorage.selectedSession != sessionId) {
 			await sessionStorage.switchSession(sessionId);
 		}
 		closeModal();
 	};
 
-	const startRenameSession = (sessionId, name) => {
+	const startRenameSession = (sessionId: any, name: any) => {
 		setRenameSessionName(name);
 		setRenamingId(sessionId);
 	};
 
-	const renameSession = async (sessionId) => {
+	const renameSession = async (sessionId: any) => {
 		if (renameSessionName) {
 			await sessionStorage.renameSession(sessionId, renameSessionName);
 			setRenamingId(undefined);
 		}
 	};
 
-	const deleteSession = async (sessionId) => {
+	const deleteSession = async (sessionId: any) => {
 		await sessionStorage.deleteSession(sessionId);
 	};
 
@@ -174,23 +174,23 @@ export function SessionsModal({ isOpen, closeModal, sessionStorage, cancel }) {
 		fileInput.type = 'file';
 		fileInput.multiple = true;
 		fileInput.style.display = 'none';
-		fileInput.onchange = async (e) => {
+		fileInput.onchange = async (e: any) => {
 			const files = (e.target as HTMLInputElement).files;
-			if (files.length === 0)
+			if (!files || files.length === 0)
 				return;
 
-			const sortedFiles = Array.from(files).sort((a, b) => a.lastModified - b.lastModified);
+			const sortedFiles = Array.from(files ?? []).sort((a: any, b: any) => a.lastModified - b.lastModified);
 
 			const reader = new FileReader();
 			let lastNewId = null;
 
 			for (const file of sortedFiles) {
 				await new Promise<void>((resolve, reject) => {
-					reader.onload = async (e) => {
+					reader.onload = async (e: any) => {
 						lastNewId = await sessionStorage.createSessionFromObject(JSON.parse((e.target as FileReader).result as string), false);
 						resolve();
 					};
-					reader.onerror = (e) => {
+					reader.onerror = (e: any) => {
 						reject(e);
 					};
 					reader.readAsText(file);
@@ -242,7 +242,7 @@ export function SessionsModal({ isOpen, closeModal, sessionStorage, cancel }) {
 		await sessionStorage.switchSession(newId);
 	};
 
-	function handleKeyDown(sessionId, e) {
+	function handleKeyDown(sessionId: any, e: any) {
 		if (e.key === 'Enter') {
 			if (isCreating)
 				createSession();
@@ -286,7 +286,7 @@ export function SessionsModal({ isOpen, closeModal, sessionStorage, cancel }) {
 					<button
 						className="sessions-modal-sort-btn"
 						title=${sortAsc ? "Ascending" : "Descending"}
-						onClick=${() => setSortAsc(v => !v)}
+						onClick=${() => setSortAsc((v: any) => !v)}
 						style=${{ transform: sortAsc ? 'rotate(0deg)' : 'rotate(180deg)' }}>
 						↑
 					</button>
@@ -319,11 +319,11 @@ export function SessionsModal({ isOpen, closeModal, sessionStorage, cancel }) {
 										type="text"
 										className="sessions-modal-inline-input"
 										value=${newSessionName}
-										onChange=${(e) => setNewSessionName(e.target.value)}
-										onKeyDown=${(e) => handleKeyDown(undefined, e)}
-										onClick=${(e) => e.stopPropagation()}
-										autoFocus
-									/>
+onChange=${(e: any) => setNewSessionName(e.target.value)}
+onKeyDown=${(e: any) => handleKeyDown(undefined, e)}
+onClick=${(e: any) => e.stopPropagation()}
+													autoFocus
+												/>
 								</td>
 								<td className="sessions-col-actions">
 									<div className="sessions-col-actions-inner">
@@ -337,7 +337,7 @@ export function SessionsModal({ isOpen, closeModal, sessionStorage, cancel }) {
 							<tr key=${sessionId}
 								className="sessions-modal-row ${sessionStorage.selectedSession == sessionId ? 'selected' : ''}"
 								onClick=${() => switchSession(+sessionId)}>
-								<td className="sessions-col-star" onClick=${(e) => e.stopPropagation()}>
+								<td className="sessions-col-star" onClick=${(e: any) => e.stopPropagation()}>
 									<button className="sessions-action-btn"
 										title=${session.pinned ? "Unpin session" : "Pin session"}
 										onClick=${() => sessionStorage.togglePinSession(+sessionId)}>
@@ -350,11 +350,11 @@ export function SessionsModal({ isOpen, closeModal, sessionStorage, cancel }) {
 											type="text"
 											className="sessions-modal-inline-input"
 											value=${renameSessionName}
-											onChange=${(e) => setRenameSessionName(e.target.value)}
-											onKeyDown=${(e) => handleKeyDown(+sessionId, e)}
-											onClick=${(e) => e.stopPropagation()}
-											autoFocus
-										/>
+											onChange=${(e: any) => setRenameSessionName(e.target.value)}
+											onKeyDown=${(e: any) => handleKeyDown(+sessionId, e)}
+onClick=${(e: any) => e.stopPropagation()}
+									autoFocus
+								/>
 									` : html`
 										<div className="sessions-modal-name-wrapper">
 											<span className="sessions-modal-name">${session.name}</span>
@@ -363,8 +363,8 @@ export function SessionsModal({ isOpen, closeModal, sessionStorage, cancel }) {
 													type="text"
 													className="sessions-modal-tag-input"
 													value=${editTagsValue}
-													onChange=${(e) => setEditTagsValue(e.target.value)}
-													onKeyDown=${(e) => {
+onChange=${(e: any) => setEditTagsValue(e.target.value)}
+onKeyDown=${(e: any) => {
 														if (e.key === 'Enter') {
 															sessionStorage.setTags(+sessionId, editTagsValue);
 															setEditingTagsId(undefined);
@@ -377,12 +377,12 @@ export function SessionsModal({ isOpen, closeModal, sessionStorage, cancel }) {
 															sessionStorage.setTags(+sessionId, editTagsValue);
 															setEditingTagsId(undefined);
 														}}
-													onClick=${(e) => e.stopPropagation()}
+													onClick=${(e: any) => e.stopPropagation()}
 													autoFocus
 													title="Enter comma-separated tags."/>
 											` : html`
 												<span className="sessions-modal-tags ${session.tags && session.tags.length > 0 ? '' : 'sessions-modal-tags-empty'}"
-													onClick=${(e) => {
+													onClick=${(e: any) => {
 														e.stopPropagation();
 														setEditTagsValue(session.tags ? session.tags.join(', ') : '');
 														setEditingTagsId(sessionId);
@@ -395,7 +395,7 @@ export function SessionsModal({ isOpen, closeModal, sessionStorage, cancel }) {
 								</td>
 								<td className="sessions-col-modified">${formatDate(session.modified)}</td>
 								<td className="sessions-col-created">${formatDate(session.created)}</td>
-								<td className="sessions-col-actions" onClick=${(e) => e.stopPropagation()}>
+								<td className="sessions-col-actions" onClick=${(e: any) => e.stopPropagation()}>
 									<div className="sessions-col-actions-inner">
 										${renamingId == sessionId ? html`
 											<button className="sessions-action-btn" onClick=${() => renameSession(+sessionId)}><${SVG_Confirm}/></button>

@@ -1,7 +1,7 @@
 import { html } from 'htm/react';
 
-export function InputSlider({ label, value, min = 0, max = 100, step = 1, readOnly, hidden, strict, onValueChange, ...props }) {
-	const handleChange = (newValue) => {
+export function InputSlider({ label, value, min = 0, max = 100, step = 1, readOnly, hidden, strict, onValueChange, ...props }: any) {
+	const handleChange = (newValue: any) => {
 		if (strict) {
 			if (newValue < min) newValue = min;
 			if (newValue > max) newValue = max;
@@ -20,7 +20,7 @@ export function InputSlider({ label, value, min = 0, max = 100, step = 1, readOn
 					max=${max}
 					step=${step}
 					disabled=${readOnly}
-					onInput=${({ target }) => handleChange(Number(target.value))}/>
+					onInput=${({ target }: any) => handleChange(Number(target.value))}/>
 				<input
 					type="number"
 					value=${value}
@@ -28,7 +28,7 @@ export function InputSlider({ label, value, min = 0, max = 100, step = 1, readOn
 					max=${max}
 					step=${step}
 					readOnly=${readOnly}
-					onChange=${({ target }) => handleChange(Number(target.value))}
+					onChange=${({ target }: any) => handleChange(Number(target.value))}
 					...${props}/>
 			</div>
 		</label>`;

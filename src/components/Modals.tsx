@@ -25,7 +25,7 @@ import { SessionsModal } from './modals/SessionsModal';
 import { QuickSwitcher } from './QuickSwitcher';
 import { EditorContextMenu } from './EditorContextMenu';
 
-export function Modals({ toggleModal, currentThemeName, setCurrentThemeName, allThemes, setAllThemes, applyChatTemplate }) {
+export function Modals({ toggleModal, currentThemeName, setCurrentThemeName, allThemes, setAllThemes, applyChatTemplate }: any) {
 	const { endpoint, setEndpointAPIKey, endpointAPIKey, endpointAPI, endpointModel, setEndpointModel, templates, selectedTemplate, setSelectedTemplate, templatesImport, setTemplates, templateStorage, grammar, setGrammar, isMiyapadEndpoint, sessionStorage, fontSizeMultiplier, setFontSizeMultiplier, spellCheck, setSpellCheck, attachSidebar, setAttachSidebar, preserveCursorPosition, setPreserveCursorPosition, tokenHighlightMode, setTokenHighlightMode, tokenColorMode, setTokenColorMode, showProbsMode, setShowProbsMode, ttsEnabled, setTTSEnabled, ttsVoiceId, setTTSVoiceId, ttsPitch, setTTSPitch, ttsRate, setTTSRate, ttsVolume, setTTSVolume, ttsSpeakInputs, setTTSSpeakInputs, ttsMaxUserInput, setTTSMaxUserInput, useChatAPI, setUseChatAPI, memoryTokens, authorNoteTokens, authorNoteDepth, setAuthorNoteDepth, worldInfo, setWorldInfo, sillyTarvernWorldInfoJSON, setSillyTarvernWorldInfoJSON, logitBias, setLogitBias, logitBiasParam, setLogitBiasParam, templateList, setTemplateList,
 		screenshotIncludeSessionName, setScreenshotIncludeSessionName,
 		screenshotIncludeDate, setScreenshotIncludeDate,
@@ -69,14 +69,14 @@ export function Modals({ toggleModal, currentThemeName, setCurrentThemeName, all
 		const fileInput = document.createElement('input');
 		fileInput.type = 'file';
 		fileInput.accept = '.json';
-		fileInput.onchange = async (e) => {
+		fileInput.onchange = async (e: any) => {
 			const file = (e.target as HTMLInputElement).files?.[0];
 			if (!file) {
 				return;
 			}
 
 			const reader = new FileReader();
-			reader.onload = async (event) => {
+			reader.onload = async (event: any) => {
 				try {
 					const data = JSON.parse((event.target as FileReader).result as string);
 					await sessionStorage.dbAdapter.importDatabase(data);
@@ -95,7 +95,7 @@ export function Modals({ toggleModal, currentThemeName, setCurrentThemeName, all
 		exportText(`${sessionStorage.getProperty('name')}.txt`, promptArea.current.value);
 	};
 
-	const insertTemplate = (sysInst) => {
+	const insertTemplate = (sysInst: any) => {
 		let [prefix,suffix] = sysInst == "sys"
 			? [templates[selectedTemplate]?.sysPre  || "", templates[selectedTemplate]?.sysSuf  || ""]
 			: [templates[selectedTemplate]?.instPre || "", templates[selectedTemplate]?.instSuf || ""];

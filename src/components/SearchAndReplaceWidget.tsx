@@ -10,16 +10,16 @@ declare function templateFindNext(...args: any[]): any;
 declare function templateFindPrev(...args: any[]): any;
 declare function templateReplace(...args: any[]): any;
 
-export function SearchAndReplaceWidget({ isOpen, closeWidget, id, children, promptArea, promptText, cancel, ...props }) {
-	const [searchAndReplaceError, setSearchAndReplaceError] = useState(undefined);
+export function SearchAndReplaceWidget({ isOpen, closeWidget, id, children, promptArea, promptText, cancel, ...props }: any) {
+	const [searchAndReplaceError, setSearchAndReplaceError] = useState<any>(undefined);
 	const [searchAndReplaceMode, setSearchAndReplaceMode] = usePersistentState('searchAndReplaceMode', 0);
 	const [searchTerm, setSearchTerm] = usePersistentState('searchTerm','');
 	const [searchFlags, setSearchFlags] = usePersistentState('searchFlags','gi');
 	const [replaceTerm, setReplaceTerm] = usePersistentState('replaceTerm','');
 	const [numMatches, setNumMatches] = useState(0);
-	const [inputElement, setInputElement] = useState(null);
+	const [inputElement, setInputElement] = useState<any>(null);
 	const [replacedTrigger, setReplacedTrigger] = useState(false);
-	const positions = useRef([]);
+	const positions = useRef<any>([]);
 	const [currentIndex, setCurrentIndex] = useState(-1);
 
 	useEffect(() => {
@@ -28,7 +28,7 @@ export function SearchAndReplaceWidget({ isOpen, closeWidget, id, children, prom
 		}
 	}, [promptArea]);
 
-	function handleFindNext(mode,search,flags) {
+	function handleFindNext(mode: any,search: any,flags: any) {
 		setSearchAndReplaceError(undefined)
 		if (!search)
 			return
@@ -44,7 +44,7 @@ export function SearchAndReplaceWidget({ isOpen, closeWidget, id, children, prom
 				break;
 		}
 	}
-	function handleFindPrev(mode,search,flags) {
+	function handleFindPrev(mode: any,search: any,flags: any) {
 		setSearchAndReplaceError(undefined)
 		if (!search)
 			return
@@ -61,7 +61,7 @@ export function SearchAndReplaceWidget({ isOpen, closeWidget, id, children, prom
 		}
 	}
 
-	function findAllMatches(mode, search, flags, elem) {
+	function findAllMatches(mode: any, search: any, flags: any, elem: any) {
 		if (!inputElement)
 			return [];
 		setSearchAndReplaceError(undefined)
@@ -91,7 +91,7 @@ export function SearchAndReplaceWidget({ isOpen, closeWidget, id, children, prom
 					}
 				}
 			}
-			catch (e) {
+			catch (e: any) {
 				reportError(e);
 				const errStr = e.toString();
 				setSearchAndReplaceError(errStr);
@@ -100,7 +100,7 @@ export function SearchAndReplaceWidget({ isOpen, closeWidget, id, children, prom
 		}
 		return positions;
 	}
-	function highlightIndex(elem, index) {
+	function highlightIndex(elem: any, index: any) {
 		if (positions.current.length > 0 && index >= 0 && index < positions.current.length) {
 			const position = positions.current[index];
 			elem.focus();
@@ -115,7 +115,7 @@ export function SearchAndReplaceWidget({ isOpen, closeWidget, id, children, prom
 			elem.setSelectionRange(position.start, position.end);
 		}
 	}
-	function findNextMatch(mode,search,flags,elem) {
+	function findNextMatch(mode: any,search: any,flags: any,elem: any) {
 		if (positions.current.length === 0) {
 			findAndStorePositions(mode,search,flags,elem);
 		}
@@ -126,7 +126,7 @@ export function SearchAndReplaceWidget({ isOpen, closeWidget, id, children, prom
 		}
 	}
 
-	function findPrevMatch(mode,search,flags,elem) {
+	function findPrevMatch(mode: any,search: any,flags: any,elem: any) {
 		if (positions.current.length === 0) {
 			findAndStorePositions(mode,search,flags,elem);
 		}
@@ -137,14 +137,14 @@ export function SearchAndReplaceWidget({ isOpen, closeWidget, id, children, prom
 		}
 	}
 
-	function findAndStorePositions(mode,search,flags,elem) {
+	function findAndStorePositions(mode: any,search: any,flags: any,elem: any) {
 		positions.current = findAllMatches(mode, search, flags, elem);
 		setCurrentIndex(-1); 
 		if (!searchAndReplaceError && positions.current.length === 0)
 			setSearchAndReplaceError(`Warning: No matches found for ${ (mode==0?"Plaintext":mode==1?"RegEx":"Template") } \'${search}\'`)
 	}
 
-	function handleSearchAndReplace(mode,search,flags,replace) {
+	function handleSearchAndReplace(mode: any,search: any,flags: any,replace: any) {
 		// TODO
 		// Add this to undo/redo
 		setSearchAndReplaceError(undefined)
@@ -170,18 +170,18 @@ export function SearchAndReplaceWidget({ isOpen, closeWidget, id, children, prom
 		}
 	}
 
-	function plaintextReplace(search,replace,elem) {
+	function plaintextReplace(search: any,replace: any,elem: any) {
 		try {
 			const newVal = elem.value.replaceAll(search,replace);
 			elem.focus();
 			elem.select();
 			document.execCommand('insertText', false, newVal);
 		}
-		catch (e) {
+		catch (e: any) {
 			reportError(e);
 		}
 	}
-	function regexReplace(search,flags,replace,elem) {
+	function regexReplace(search: any,flags: any,replace: any,elem: any) {
 		try {
 			let re = new RegExp(String.raw`${search}`, String.raw`${flags ?? ""}`);
 			const newVal = elem.value.replace(re,replace);
@@ -189,14 +189,14 @@ export function SearchAndReplaceWidget({ isOpen, closeWidget, id, children, prom
 			elem.select();
 			document.execCommand('insertText', false, newVal);
 		}
-		catch (e) {
+		catch (e: any) {
 			reportError(e);
 			const errStr = e.toString()
 			setSearchAndReplaceError(errStr)
 		}
 	}
 
-	function countMatches(mode, search, flags) {
+	function countMatches(mode: any, search: any, flags: any) {
 		setSearchAndReplaceError(undefined)
 		if (!searchTerm) {
 			setNumMatches(0)

@@ -7,23 +7,23 @@ import { SelectBoxTemplate } from '../controls/SelectBox';
 import { exportText } from '../../api/common';
 import { defaultPresets } from '../../defaults/presets';
 
-export function InstructTemplatesModal({ isOpen, closeModal, templateStorage, selectedTemplate, setSelectedTemplate, templateList, setTemplateList, templates, templatesImport, setTemplates, cancel, applyChatTemplate }) {
+export function InstructTemplatesModal({ isOpen, closeModal, templateStorage, selectedTemplate, setSelectedTemplate, templateList, setTemplateList, templates, templatesImport, setTemplates, cancel, applyChatTemplate }: any) {
 	const [addDeleteTemplate, setAddDeleteTemplate] = useState(false);
 	const [templateDuplicate, setTemplateDuplicate] = useState<any>(false);
-	const [newTemplateName, setNewTemplateName] = useState(undefined);
+	const [newTemplateName, setNewTemplateName] = useState<any>(undefined);
 
-	function getArrObjByName(array,name,getIndex=false) {
-		const index = array.findIndex(obj => obj.name === name)
+	function getArrObjByName(array: any, name: any, getIndex=false) {
+		const index = array.findIndex((obj: any) => obj.name === name)
 		if (getIndex)
 			return index
 		return array[index == -1 ? 0 : index];
 	}
 
-	function handleInstructTemplateChange(templateName,key,value,back="") {
+	function handleInstructTemplateChange(templateName: any, key: any, value: any, back="") {
 		if (key == "name")
 			setNewTemplateName(value);
 
-		setTemplateList((prevState) => {
+		setTemplateList((prevState: any) => {
 			const newState = [
 				...prevState
 			];
@@ -47,9 +47,9 @@ export function InstructTemplatesModal({ isOpen, closeModal, templateStorage, se
 		});
 	}
 
-	async function handleInstructTemplateAdd() {
+	async function handleInstructTemplateAdd(): Promise<any> {
 		await updateTemplateDB()
-		setTemplates((prevState) => {
+		setTemplates((prevState: any) => {
 			var newState = {
 				...prevState
 			}
@@ -64,12 +64,12 @@ export function InstructTemplatesModal({ isOpen, closeModal, templateStorage, se
 		})
 		setAddDeleteTemplate(true)
 	}
-	async function handleInstructTemplateDuplicate() {
-		const index = templateList.findIndex(obj => obj.name === selectedTemplate)
+	async function handleInstructTemplateDuplicate(): Promise<any> {
+		const index = templateList.findIndex((obj: any) => obj.name === selectedTemplate)
 		const reselectTemplate = templateList[index == -1 ? 0 : index]?.nameNew
 		await updateTemplateDB()
 		await setTemplateDuplicate(reselectTemplate + " (Duplicate)")
-		setTemplates((prevState) => {
+		setTemplates((prevState: any) => {
 			var newState = {
 				...prevState
 			}
@@ -84,14 +84,14 @@ export function InstructTemplatesModal({ isOpen, closeModal, templateStorage, se
 		})
 	}
 
-	async function handleInstructTemplateDelete(name) {
+	async function handleInstructTemplateDelete(name: any) {
 		if (Object.keys(templates).length < 2)
 			return
 		if (!window.confirm("Are you sure you want to delete this template? This action can't be undone."))
 			return;
 
 		console.warn("Deleting Template",name,":",templates[name])
-		setTemplates((prevState) => {
+		setTemplates((prevState: any) => {
 			var newState = {
 				...prevState
 			}
@@ -102,7 +102,7 @@ export function InstructTemplatesModal({ isOpen, closeModal, templateStorage, se
 	}
 
 	useEffect(() => {
-		const index = templateList.findIndex(obj => obj.name === selectedTemplate)
+		const index = templateList.findIndex((obj: any) => obj.name === selectedTemplate)
 		const reselectTemplate = templateList[index == -1 ? 0 : index]?.nameNew
 		const list = []
 		let i = 0;
@@ -115,7 +115,7 @@ export function InstructTemplatesModal({ isOpen, closeModal, templateStorage, se
 				affixes: templates[key]
 			})
 		}
-		list.sort((a, b) => {
+		list.sort((a: any, b: any) => {
 			var nameA = a.name.toLowerCase();
 			var nameB = b.name.toLowerCase();
 			return (nameA < nameB) ? -1 : (nameA > nameB) ? 1 : 0;
@@ -138,7 +138,7 @@ export function InstructTemplatesModal({ isOpen, closeModal, templateStorage, se
 
 	const updateTemplateDB = async () => {
 		setNewTemplateName(undefined);
-		setTemplates((prevState) => {
+		setTemplates((prevState: any) => {
 			var newState = {
 				...prevState
 			}
@@ -175,7 +175,7 @@ export function InstructTemplatesModal({ isOpen, closeModal, templateStorage, se
 	const exportTemplates = () => {
 		exportText(`instruct_templates.json`, JSON.stringify(templates));
 	};
-	const importTemplates = async (importDefaults=false) => {
+		const importTemplates = async (importDefaults: any = false) => {
 		if (importDefaults) {
 			if (!window.confirm("This will add all default templates, and overwrite any changes you made to the default templates. This action cannot be undone. Do you wish to continue?"))
 				return;
@@ -187,18 +187,18 @@ export function InstructTemplatesModal({ isOpen, closeModal, templateStorage, se
 		const fileInput = document.createElement("input");
 		fileInput.type = 'file';
 		fileInput.style.display = 'none';
-		fileInput.onchange = (e) => {
+		fileInput.onchange = (e: any) => {
 			const file = (e.target as HTMLInputElement).files?.[0];
 			if (!file)
 				return;
 			const reader = new FileReader();
-			reader.onload = (e) => {
+			reader.onload = (e: any) => {
 				const contents = (e.target as FileReader).result as string;
 				(fileInput as any).func(contents);
 			}
 			reader.readAsText(file);
 		}
-		(fileInput as any).func = async (text) => {
+		(fileInput as any).func = async (text: any) => {
 			await templateStorage.performFullSave(JSON.parse(text), true)
 			window.location.reload()
 			// a little dirty, but updateTemplateList isn't cooperating
@@ -304,7 +304,7 @@ export function InstructTemplatesModal({ isOpen, closeModal, templateStorage, se
 						tooltip=""
 						readOnly=${!!cancel}
 						value=${getArrObjByName(templateList,selectedTemplate)?.nameNew || ""}
-						onInput=${e => handleInstructTemplateChange(selectedTemplate,"name",e.target.value,getArrObjByName(templateList,selectedTemplate)?.nameBack)}
+						onInput=${(e: any) => handleInstructTemplateChange(selectedTemplate,"name",e.target.value,getArrObjByName(templateList,selectedTemplate)?.nameBack)}
 						onValueChange=${() => {}}/>
 
 				<div className="hbox">
@@ -314,7 +314,7 @@ export function InstructTemplatesModal({ isOpen, closeModal, templateStorage, se
 						tooltip=""
 						readOnly=${!!cancel}
 						value=${getArrObjByName(templateList,selectedTemplate)?.affixes?.instPre || ""}
-						onInput=${e => handleInstructTemplateChange(selectedTemplate,"instPre",e.target.value)}
+						onInput=${(e: any) => handleInstructTemplateChange(selectedTemplate,"instPre",e.target.value)}
 						onValueChange=${() => {}}/>
 
 					<${InputBox} label="Instruct Suffix {/inst}"
@@ -323,7 +323,7 @@ export function InstructTemplatesModal({ isOpen, closeModal, templateStorage, se
 						tooltip=""
 						readOnly=${!!cancel}
 						value=${getArrObjByName(templateList,selectedTemplate)?.affixes?.instSuf || ""}
-						onInput=${e => handleInstructTemplateChange(selectedTemplate,"instSuf",e.target.value)}
+						onInput=${(e: any) => handleInstructTemplateChange(selectedTemplate,"instSuf",e.target.value)}
 						onValueChange=${() => {}}/>
 				</div>
 
@@ -334,7 +334,7 @@ export function InstructTemplatesModal({ isOpen, closeModal, templateStorage, se
 						tooltip=""
 						readOnly=${!!cancel}
 						value=${getArrObjByName(templateList,selectedTemplate)?.affixes?.sysPre || ""}
-						onInput=${e => handleInstructTemplateChange(selectedTemplate,"sysPre",e.target.value)}
+						onInput=${(e: any) => handleInstructTemplateChange(selectedTemplate,"sysPre",e.target.value)}
 						onValueChange=${() => {}}/>
 
 					<${InputBox} label="System Prompt Suffix {/sys}"
@@ -343,7 +343,7 @@ export function InstructTemplatesModal({ isOpen, closeModal, templateStorage, se
 						tooltip=""
 						readOnly=${!!cancel}
 						value=${getArrObjByName(templateList,selectedTemplate)?.affixes?.sysSuf || ""}
-						onInput=${e => handleInstructTemplateChange(selectedTemplate,"sysSuf",e.target.value)}
+						onInput=${(e: any) => handleInstructTemplateChange(selectedTemplate,"sysSuf",e.target.value)}
 						onValueChange=${() => {}}/>
 				</div>
 
@@ -351,7 +351,7 @@ export function InstructTemplatesModal({ isOpen, closeModal, templateStorage, se
 					<div className="vbox">
 						<${Checkbox} label="Supports Fill-In-The-Middle"
 								value=${getArrObjByName(templateList,selectedTemplate)?.affixes?.fimTemplate !== undefined}
-								onValueChange=${(value) => handleInstructTemplateChange(selectedTemplate,"fimTemplate", value ? '' : undefined)}/>
+								onValueChange=${(value: any) => handleInstructTemplateChange(selectedTemplate,"fimTemplate", value ? '' : undefined)}/>
 						${getArrObjByName(templateList,selectedTemplate)?.affixes?.fimTemplate !== undefined && html`
 								<${InputBox} label="Fill-In-The-Middle Template"
 								placeholder="[SUFFIX]{suffix}[PREFIX]{prefix}"
@@ -359,7 +359,7 @@ export function InstructTemplatesModal({ isOpen, closeModal, templateStorage, se
 								tooltip=""
 								readOnly=${!!cancel}
 								value=${getArrObjByName(templateList,selectedTemplate)?.affixes?.fimTemplate || ""}
-								onInput=${e => handleInstructTemplateChange(selectedTemplate,"fimTemplate",e.target.value)}
+								onInput=${(e: any) => handleInstructTemplateChange(selectedTemplate,"fimTemplate",e.target.value)}
 								onValueChange=${() => {}}/>`}
 					</div>
 					<div id="advancedContextPlaceholders">

@@ -2,7 +2,7 @@ import { html } from 'htm/react';
 import { Modal } from '../Modal';
 import { API_OPENAI_COMPAT, API_DEEPSEEK } from '../../constants';
 
-export function GrammarModal({ isOpen, closeModal, grammar, setGrammar, endpointAPI, cancel }) {
+export function GrammarModal({ isOpen, closeModal, grammar, setGrammar, endpointAPI, cancel }: any) {
 	const grammarExample = `# "root" specifies the pattern for the overall output
 root ::= (
     # it must start with the characters "1. " followed by a sequence
@@ -45,7 +45,7 @@ eol       ::= "\\n"`;
 				readOnly=${!!cancel}
 				value=${grammar}
 				placeholder=${endpointAPI == API_OPENAI_COMPAT || endpointAPI == API_DEEPSEEK ? grammarEBNFExample : grammarExample}
-				onInput=${(e) => setGrammar(e.target.value)}
+				onInput=${(e: any) => setGrammar(e.target.value)}
 				class="expanded-text-area-settings"/>
 		</${Modal}>`;
 }

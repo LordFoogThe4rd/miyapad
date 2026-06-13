@@ -5,15 +5,15 @@ import { InputBox } from '../controls/InputBox';
 import { API_LLAMA_CPP, API_KOBOLD_CPP, API_AI_HORDE, API_OPENAI_COMPAT, API_DEEPSEEK } from '../../constants';
 import { getTokens, serverTokenize } from '../../api/index';
 
-export function LogitBiasModal({ isOpen, closeModal, biasState, apiConfig, cancel }) {
+export function LogitBiasModal({ isOpen, closeModal, biasState, apiConfig, cancel }: any) {
 	const { logitBias, setLogitBias, logitBiasParam, setLogitBiasParam, setRejectedAPIKey } = biasState;
 	const { sessionStorage, endpoint, endpointAPI, endpointAPIKey, isMiyapadEndpoint, useServerTokenization } = apiConfig;
-	const [lastBiasError, setLastBiasError] = useState(undefined);
+	const [lastBiasError, setLastBiasError] = useState<any>(undefined);
 	const [logitBiasTemp, setLogitBiasTemp] = useState<any>([]);
 	const [logitBiasSorted, setLogitBiasSorted] = useState<any[]>([]);
 	const [logitBiasInput, setLogitBiasInput] = useState({power:"0",string:""});
 
-	const handleLogitBiasInput = (key,value) => {
+	const handleLogitBiasInput = (key: any, value: any) => {
 		setLogitBiasInput((prevLogitBiasInput) => {
 			return {
 				...prevLogitBiasInput,
@@ -22,7 +22,7 @@ export function LogitBiasModal({ isOpen, closeModal, biasState, apiConfig, cance
 		});
 	};
 
-	const logitBiasAdd = async (biasPower="",biasString="",origValue="") => {
+	const logitBiasAdd = async (biasPower: any = "", biasString: any = "", origValue: any = "") => {
 		setLastBiasError(undefined);
 		// abort if no input or power is NaN
 		if(!biasString) {
@@ -43,7 +43,7 @@ export function LogitBiasModal({ isOpen, closeModal, biasState, apiConfig, cance
 				return;
 			}
 			console.log("delete",biasString);
-			setLogitBias((prevLogitBias) => {
+			setLogitBias((prevLogitBias: any) => {
 				delete modBias[biasString];
 				return { 
 					...prevLogitBias,
@@ -61,13 +61,12 @@ export function LogitBiasModal({ isOpen, closeModal, biasState, apiConfig, cance
 
 		const ac = new AbortController();
 		try {
-			// if the string is a comma separated list of numbers wrapped in /
-			var tokens;
+			let tokens: any;
 			const isTokenIds = biasString.match(/^(?<!\\)\/\s*\d+(\s*,\s*\d+)*\s*(?<!\\)\/$/g);
 			if ( isTokenIds != null ) {
 				// split by "," and use it as token ids directly
 				tokens = {
-					ids: isTokenIds[0].replaceAll("/","").split(",").map( item => Number(item.trim()) ),
+					ids: isTokenIds[0].replaceAll("/","").split(",").map( (item: any) => Number(item.trim()) ),
 					str: ""
 				};
 			}
@@ -86,7 +85,7 @@ export function LogitBiasModal({ isOpen, closeModal, biasState, apiConfig, cance
 				// workaround. If anyone can think of a better solution, please let me know.
 			const useServerTk = useServerTokenization && isMiyapadEndpoint && sessionStorage?.sessionEndpoint;
 			const serverEp = sessionStorage?.sessionEndpoint;
-			tokens = await (useServerTk
+			tokens = (await (useServerTk
 				? serverTokenize({ sessionEndpoint: serverEp, content: `!==${biasString}`.replace(/\\n/g,'\n'), signal: ac.signal })
 				: getTokens({
 					endpoint,
@@ -96,12 +95,12 @@ export function LogitBiasModal({ isOpen, closeModal, biasState, apiConfig, cance
 					signal: ac.signal,
 					...(isMiyapadEndpoint ? { proxyEndpoint: sessionStorage.proxyEndpoint } : {})
 				} as any)
-			);
+			)) as any;
 			if (tokens.length === 0) {
 				setLastBiasError("Error: Tokenizer endpoint unavailable.");
 				return;
 			}
-			const logitBiasWorkaround = await (useServerTk
+			const logitBiasWorkaround = (await (useServerTk
 				? serverTokenize({ sessionEndpoint: serverEp, content: `!==`, signal: ac.signal })
 				: getTokens({
 					endpoint,
@@ -111,7 +110,7 @@ export function LogitBiasModal({ isOpen, closeModal, biasState, apiConfig, cance
 					signal: ac.signal,
 					...(isMiyapadEndpoint ? { proxyEndpoint: sessionStorage.proxyEndpoint } : {})
 				} as any)
-			);
+			)) as any;
 				// Remove however many tokens !== is tokenized as for the workaround
 				tokens.ids = tokens.ids.slice(logitBiasWorkaround.ids.length);
 				if ( Array.isArray(tokens.str) ) {
@@ -123,7 +122,7 @@ export function LogitBiasModal({ isOpen, closeModal, biasState, apiConfig, cance
 				Array.isArray(tokens.str) ? "'"+tokens.str.join("|")+"'"
 					: "'"+biasString+"'",
 				"by power",biasPower)
-			await setLogitBias((prevLogitBias) => ({
+			await setLogitBias((prevLogitBias: any) => ({
 				...prevLogitBias,
 				bias: {
 					...modBias,
@@ -135,7 +134,7 @@ export function LogitBiasModal({ isOpen, closeModal, biasState, apiConfig, cance
 				}
 			}));
 		}
-		catch(e) {
+		catch(e: any) {
 			if (e.name !== 'AbortError') {
 				reportError(e);
 				const errStr = e.toString();
@@ -152,39 +151,39 @@ export function LogitBiasModal({ isOpen, closeModal, biasState, apiConfig, cance
 		}
 	};
 
-	const clamp = (num, min = -Infinity, max = Infinity) => {
+	const clamp = (num: any, min = -Infinity, max = Infinity) => {
 		return Math.min(Math.max(num, min), max);
 	};
 
 	const llamaCppSetLogitBiasParams = () => {
-		const param = [];
-		Object.keys(logitBias.bias).forEach(entry => {
+		const param: any[] = [];
+		Object.keys(logitBias.bias).forEach((entry: any) => {
 			// set banned tokens to false, else divide power by 10 to remain within
 			// reasonable range
 			const power = logitBias.bias[entry].power < -99 ? false : Number(logitBias.bias[entry].power) / 10;
-			logitBias.bias[entry].ids.forEach(id => {
+			logitBias.bias[entry].ids.forEach((id: any) => {
 				param.push( [ Number(id), power ] );
 			});
 		});
 		setLogitBiasParam(param);
 	};
 	const koboldCppSetLogitBiasParams = () => {
-		const param = {};
-		Object.keys(logitBias.bias).forEach(entry => {
+		const param: any = {};
+		Object.keys(logitBias.bias).forEach((entry: any) => {
 			// -100 to 100
 			const clampedPower = clamp(Number(logitBias.bias[entry].power),-100,100);
-			logitBias.bias[entry].ids.forEach(id => {
+			logitBias.bias[entry].ids.forEach((id: any) => {
 				param[Number(id)] = clampedPower;
 			});
 		});
 		setLogitBiasParam(param);
 	};
 	const openaiSetLogitBiasParams = () => {
-		const param = {};
-		Object.keys(logitBias.bias).forEach(entry => {
+		const param: any = {};
+		Object.keys(logitBias.bias).forEach((entry: any) => {
 			// -100 to 100
 			const clampedPower = Number(clamp(Number(logitBias.bias[entry].power),-100,100).toFixed(1));
-			logitBias.bias[entry].ids.forEach(id => {
+			logitBias.bias[entry].ids.forEach((id: any) => {
 				param[String(id)] = clampedPower;
 			});
 		});
@@ -210,7 +209,7 @@ export function LogitBiasModal({ isOpen, closeModal, biasState, apiConfig, cance
 
 
 	useEffect(() => {
-		const tempArray = logitBiasSorted.map((string, index) =>  ({
+		const tempArray = logitBiasSorted.map((string: any, index: any) =>  ({
 			value: string,
 			valueBack: string,
 			strings: logitBias.bias[string].strings,
@@ -224,8 +223,8 @@ export function LogitBiasModal({ isOpen, closeModal, biasState, apiConfig, cance
 	},[logitBiasSorted,isOpen]);
 
 
-	const handleBiasTempChange = (posneg, key, index, value) => {
-		setLogitBiasTemp((prevLogitBiasTemp) => {
+	const handleBiasTempChange = (posneg: any, key: any, index: any, value: any) => {
+		setLogitBiasTemp((prevLogitBiasTemp: any) => {
 			const rest = { ...prevLogitBiasTemp };
 			const updatedTemp = [ ...prevLogitBiasTemp[posneg] ];
 
@@ -242,7 +241,7 @@ export function LogitBiasModal({ isOpen, closeModal, biasState, apiConfig, cance
 
 	useMemo(() => {
 		const biasListToSort = Object.entries(logitBias.bias);
-		const sortPowerString = (a, b) => {
+		const sortPowerString = (a: any, b: any) => {
 			const powerDiff = parseInt(b[1].power) - parseInt(a[1].power);
 			if (powerDiff !== 0) {
 				// If powers are different, sort by power
@@ -274,7 +273,7 @@ export function LogitBiasModal({ isOpen, closeModal, biasState, apiConfig, cance
 							<${InputBox} label="Bias" className="logitBiasPower-container"
 								type="enumber"  max=100 min=-100 step=1
 								readOnly=${!!cancel}
-								onValueChange=${(value) => { handleLogitBiasInput("power",value)} }
+								onValueChange=${(value: any) => { handleLogitBiasInput("power",value)} }
 								value=${logitBiasInput.power} 
 								id="logitBiasPower"/>
 						</div>
@@ -284,7 +283,7 @@ export function LogitBiasModal({ isOpen, closeModal, biasState, apiConfig, cance
 							value=${logitBiasInput.string}
 							placeholder="String or /ID,.../"
 							onValueChange=${() => {} }
-							onInput=${(e) => {handleLogitBiasInput("string",e.target.value)} }
+							onInput=${(e: any) => {handleLogitBiasInput("string",e.target.value)} }
 							/>
 						<button disabled=${!!cancel} class="hbox-button" onClick=${() => logitBiasAdd(logitBiasInput.power,logitBiasInput.string)}>
 							+
@@ -294,17 +293,17 @@ export function LogitBiasModal({ isOpen, closeModal, biasState, apiConfig, cance
 						<div style=${{margin:"8px auto"}} className="error-text">${lastBiasError}</div>`}
 				<hr style=${{width:"95%",margin:"8px auto"}} />
 				<div class="lb-modal-biasList" >
-					${Object.keys(logitBiasTemp).map((key) => {
+					${Object.keys(logitBiasTemp).map((key: any) => {
 						return html`
 							<div class="overflow-container lb-modal-grid-column" id="lb-modal-${key}">
-								${logitBiasTemp[key].map((bias, index) => {
+								${logitBiasTemp[key].map((bias: any, index: any) => {
 									return html`
 										<div class="lb-modal-entry lb-modal-grid-row" key=${index}>
 											<${InputBox} label="Bias" class="lb-modal-power"
 												type="enumber" max=100 min=-100 step=1
 												id="lb-modal-power-${index}"
 												readOnly=${!!cancel}
-												onValueChange=${(value) => {handleBiasTempChange(key,"power", index, value)} }
+												onValueChange=${(value: any) => {handleBiasTempChange(key,"power", index, value)} }
 												value=${bias.power}/>
 
 											<${InputBox} label="Token" type="text"
@@ -313,7 +312,7 @@ export function LogitBiasModal({ isOpen, closeModal, biasState, apiConfig, cance
 												value=${bias.value}
 												placeholder="String or /ID,.../"
 												onValueChange=${() => {} }
-												onInput=${(e) => handleBiasTempChange(key,"value", index, e.target.value) }
+												onInput=${(e: any) => handleBiasTempChange(key,"value", index, e.target.value) }
 												/>
 											<div class="lb-modal-tokenized">
 												${(endpointAPI == API_LLAMA_CPP || endpointAPI == API_DEEPSEEK) && bias.strings != ""

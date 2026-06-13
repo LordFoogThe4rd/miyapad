@@ -2,12 +2,12 @@ import { html } from 'htm/react';
 import { useEffect, useRef, useState } from 'react';
 import { SVG_Close } from './icons/index';
 
-export function Modal({ isOpen, onClose, title, description, children, ...props }) {
+export function Modal({ isOpen, onClose, title, description, children, ...props }: any) {
 	const [internalVisible, setInternalVisible] = useState(isOpen);
 	const prevIsOpen = useRef(isOpen);
-	const closeTimerRef = useRef(null);
+	const closeTimerRef = useRef<any>(null);
 	const isClosing = !isOpen && internalVisible;
-	const mouseDownOnBackground = useRef(false);
+	const mouseDownOnBackground = useRef<any>(false);
 
 	useEffect(() => {
 		if (isOpen) {
@@ -33,7 +33,7 @@ export function Modal({ isOpen, onClose, title, description, children, ...props 
 
 	useEffect(() => {
 		if (!isOpen) return;
-		const onKeyDown = (event) => {
+		const onKeyDown = (event: any) => {
 			if (event.key === 'Escape') {
 				onClose();
 			}
@@ -48,11 +48,11 @@ export function Modal({ isOpen, onClose, title, description, children, ...props 
 		return null;
 	}
 
-	const handleOverlayMouseDown = (e) => {
+	const handleOverlayMouseDown = (e: any) => {
 		mouseDownOnBackground.current = true;
 	};
 
-	const handleOverlayClick = (e) => {
+	const handleOverlayClick = (e: any) => {
 		if (mouseDownOnBackground.current) {
 			onClose();
 		}
@@ -65,8 +65,8 @@ export function Modal({ isOpen, onClose, title, description, children, ...props 
 			onClick=${handleOverlayClick}>
 			<div className="modal-container">
 				<div className="modal ${isClosing ? 'closing' : ''}"
-					onClick=${(e) => e.stopPropagation()}
-					onMouseDown=${(e) => { e.stopPropagation(); mouseDownOnBackground.current = false; }}
+					onClick=${(e: any) => e.stopPropagation()}
+					onMouseDown=${(e: any) => { e.stopPropagation(); mouseDownOnBackground.current = false; }}
 					...${props}>
 					<div class="modal-title">${title}</div>
 					${ description=="" ? false : html`<div style=${{ whiteSpace: 'pre-line' }} class='modal-desc'>${description}</div>` }

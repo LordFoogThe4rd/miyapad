@@ -15,7 +15,7 @@ import {
 import { useTokenCounters } from '../hooks/useTokenCounters';
 import { useGenerationLogic } from '../hooks/useGenerationLogic';
 
-export function Sidebar({ sidebarRef, toggleModal, currentThemeName, setCurrentThemeName, allThemes, showAPIKey, setShowAPIKey }) {
+export function Sidebar({ sidebarRef, toggleModal, currentThemeName, setCurrentThemeName, allThemes, showAPIKey, setShowAPIKey }: any) {
 	const {
 		endpoint, setEndpoint, endpointAPI, setEndpointAPI, endpointAPIKey, setEndpointAPIKey,
 		endpointModel, setEndpointModel, maxPredictTokens, setMaxPredictTokens, temperature, setTemperature,
@@ -48,7 +48,7 @@ export function Sidebar({ sidebarRef, toggleModal, currentThemeName, setCurrentT
 	const { handleauthorNoteTokensChange, handleMemoryTokensChange } = useTokenCounters();
 
 	const [extensionLoaded, setExtensionLoaded] = useState(false);
-	const [configData, setConfigData] = useState(null);
+	const [configData, setConfigData] = useState<any>(null);
 	const [zstdLevel, setZstdLevel] = useState(3);
 	const [zstdRatio, setZstdRatio] = useState(100);
 	const [showCustomMaintenance, setShowCustomMaintenance] = useState(false);
@@ -61,9 +61,9 @@ export function Sidebar({ sidebarRef, toggleModal, currentThemeName, setCurrentT
 	const [walEnabled, setWalEnabled] = useState(false);
 
 	const maintConfigRef = useRef({ duration: 5, dbLoad: 0.5, mode: 'shutdown', interval: 60, walEnabled: false });
-	const saveTimerRef = useRef(null);
+	const saveTimerRef = useRef<any>(null);
 
-	const saveMaintConfigToServer = (update) => {
+	const saveMaintConfigToServer = (update: any) => {
 		Object.assign(maintConfigRef.current, update);
 		if (saveTimerRef.current) clearTimeout(saveTimerRef.current);
 		saveTimerRef.current = setTimeout(async () => {
@@ -74,7 +74,7 @@ export function Sidebar({ sidebarRef, toggleModal, currentThemeName, setCurrentT
 					body: JSON.stringify(maintConfigRef.current)
 				});
 				if (!res.ok) console.error('Failed to save maintenance config:', await res.text());
-			} catch (err) {
+			} catch (err: any) {
 				console.error('Failed to save maintenance config:', err);
 			}
 		}, 500);
@@ -104,12 +104,12 @@ export function Sidebar({ sidebarRef, toggleModal, currentThemeName, setCurrentT
 						maintConfigRef.current = { ...maintJson };
 					}
 				}
-			} catch (err) {}
+			} catch (err: any) {}
 		};
 		checkVersion();
 	}, [isMiyapadEndpoint]);
 
-	function switchEndpointAPI(value) {
+	function switchEndpointAPI(value: any) {
 		let url;
 		try {
 			url = new URL(endpoint);
@@ -121,13 +121,13 @@ export function Sidebar({ sidebarRef, toggleModal, currentThemeName, setCurrentT
 				setUseChatAPI(false);
 				if (url.protocol != 'http:' && url.protocol != 'https:')
 					url.protocol = "http:";
-				url.port = 8080;
+				url.port = "8080";
 				break;
 			case API_KOBOLD_CPP:
 				setUseChatAPI(false);
 				if (url.protocol != 'http:' && url.protocol != 'https:')
 					url.protocol = "http:";
-				url.port = 5001;
+				url.port = "5001";
 				break;
 			case API_DEEPSEEK:
 				url = new URL("https://api.deepseek.com");
@@ -145,7 +145,7 @@ export function Sidebar({ sidebarRef, toggleModal, currentThemeName, setCurrentT
 		setEndpointAPI(value);
 	}
 
-	const insertTemplate = (sysInst) => {
+	const insertTemplate = (sysInst: any) => {
 		let [prefix,suffix] = sysInst == "sys"
 			? [templates[selectedTemplate]?.sysPre  || "", templates[selectedTemplate]?.sysSuf  || ""]
 			: [templates[selectedTemplate]?.instPre || "", templates[selectedTemplate]?.instSuf || ""];
@@ -191,7 +191,7 @@ export function Sidebar({ sidebarRef, toggleModal, currentThemeName, setCurrentT
 		elem.scrollTop = scrollTop;
 	};
 
-	const handleApplyConnection = (conn) => {
+	const handleApplyConnection = (conn: any) => {
 		setEndpointAPI(conn.api);
 		if (conn.api !== API_AI_HORDE) {
 			setEndpoint(conn.endpoint);
@@ -260,7 +260,7 @@ export function Sidebar({ sidebarRef, toggleModal, currentThemeName, setCurrentT
 							   .filter(([_, c]) => c.enabled)
 							   .map(([id, c]) => ({ name: c.name, value: id }))
 						]}
-						onValueChange=${(val) => {
+						onValueChange=${(val: any) => {
 							if (val !== 'custom' && connections[val]) {
 								handleApplyConnection(connections[val]);
 							}
@@ -312,7 +312,7 @@ export function Sidebar({ sidebarRef, toggleModal, currentThemeName, setCurrentT
 					</div>`}
 			${(endpointAPI == API_OPENAI_COMPAT || endpointAPI == API_DEEPSEEK) && html`
 				<${InputBox} label="Model"
-					datalist=${openaiModels.map(model => model.id || model)}
+					datalist=${openaiModels.map((model: any) => model.id || model)}
 					readOnly=${!!cancel}
 					value=${endpointModel}
 					onValueChange=${setEndpointModel}/>`}
@@ -382,7 +382,7 @@ export function Sidebar({ sidebarRef, toggleModal, currentThemeName, setCurrentT
 						title="Toggle Chat Mode ${ chatMode ? "Off" : "On"}"
 						disabled=${!!cancel || useChatAPI}
 						className="symbol-button"
-						onClick=${() => setChatMode((prevState) => !prevState)}>
+						onClick=${() => setChatMode((prevState: any) => !prevState)}>
 						${ (chatMode || useChatAPI) ? 
 							html`<${SVG_ChatMode} style=${{ 'width':'.9em' }} />` :
 							html`<${SVG_CompletionMode} style=${{ 'width':'1.05em' }} />`
@@ -420,7 +420,7 @@ export function Sidebar({ sidebarRef, toggleModal, currentThemeName, setCurrentT
 					<button
 						title=${useBasicStoppingMode ? "Switch to Advanced Mode" : "Switch to Basic Mode"}
 						disabled=${!!cancel}
-						onClick=${() => setUseBasicStoppingMode(prev => !prev)}>
+						onClick=${() => setUseBasicStoppingMode((prev: any) => !prev)}>
 						${useBasicStoppingMode ? "A" : "B"}
 					</button>
 				</div>
@@ -429,87 +429,87 @@ export function Sidebar({ sidebarRef, toggleModal, currentThemeName, setCurrentT
 					<${Checkbox} label="Temperature"
 						disabled=${!!cancel}
 						value=${enabledSamplers.includes('temperature')}
-						onValueChange=${(v) => enabledSamplers.indexOf('temperature') === -1
-											  ? setEnabledSamplers((es) => [...es, 'temperature'])
-											  : setEnabledSamplers((es) => es.filter((s) => s !== 'temperature'))}/>
+						onValueChange=${(v: any) => enabledSamplers.indexOf('temperature') === -1
+											  ? setEnabledSamplers((es: any) => [...es, 'temperature'])
+											  : setEnabledSamplers((es: any) => es.filter((s: any) => s !== 'temperature'))}/>
 					<${Checkbox} label="Dynamic Temperature"
 						disabled=${!!cancel}
 						value=${enabledSamplers.includes('dynatemp')}
-						onValueChange=${(v) => enabledSamplers.indexOf('dynatemp') === -1
-											  ? setEnabledSamplers((es) => [...es, 'dynatemp'])
-											  : setEnabledSamplers((es) => es.filter((s) => s !== 'dynatemp'))}/>
+						onValueChange=${(v: any) => enabledSamplers.indexOf('dynatemp') === -1
+											  ? setEnabledSamplers((es: any) => [...es, 'dynatemp'])
+											  : setEnabledSamplers((es: any) => es.filter((s: any) => s !== 'dynatemp'))}/>
 					<${Checkbox} label="Repetition Penalty"
 						disabled=${!!cancel}
 						value=${enabledSamplers.includes('rep_pen')}
-						onValueChange=${(v) => enabledSamplers.indexOf('rep_pen') === -1
-											  ? setEnabledSamplers((es) => [...es, 'rep_pen'])
-											  : setEnabledSamplers((es) => es.filter((s) => s !== 'rep_pen'))}/>
+						onValueChange=${(v: any) => enabledSamplers.indexOf('rep_pen') === -1
+											  ? setEnabledSamplers((es: any) => [...es, 'rep_pen'])
+											  : setEnabledSamplers((es: any) => es.filter((s: any) => s !== 'rep_pen'))}/>
 					<${Checkbox} label="Presence Penalty"
 						disabled=${!!cancel}
 						value=${enabledSamplers.includes('pres_pen')}
-						onValueChange=${(v) => enabledSamplers.indexOf('pres_pen') === -1
-											  ? setEnabledSamplers((es) => [...es, 'pres_pen'])
-											  : setEnabledSamplers((es) => es.filter((s) => s !== 'pres_pen'))}/>
+						onValueChange=${(v: any) => enabledSamplers.indexOf('pres_pen') === -1
+											  ? setEnabledSamplers((es: any) => [...es, 'pres_pen'])
+											  : setEnabledSamplers((es: any) => es.filter((s: any) => s !== 'pres_pen'))}/>
 					<${Checkbox} label="Frequence Penalty"
 						disabled=${!!cancel}
 						value=${enabledSamplers.includes('freq_pen')}
-						onValueChange=${(v) => enabledSamplers.indexOf('freq_pen') === -1
-											  ? setEnabledSamplers((es) => [...es, 'freq_pen'])
-											  : setEnabledSamplers((es) => es.filter((s) => s !== 'freq_pen'))}/>
+						onValueChange=${(v: any) => enabledSamplers.indexOf('freq_pen') === -1
+											  ? setEnabledSamplers((es: any) => [...es, 'freq_pen'])
+											  : setEnabledSamplers((es: any) => es.filter((s: any) => s !== 'freq_pen'))}/>
 					<${Checkbox} label="Mirostat"
 						disabled=${!!cancel}
 						value=${enabledSamplers.includes('mirostat')}
-						onValueChange=${(v) => enabledSamplers.indexOf('mirostat') === -1
-											  ? setEnabledSamplers((es) => [...es, 'mirostat'])
-											  : setEnabledSamplers((es) => es.filter((s) => s !== 'mirostat'))}/>
+						onValueChange=${(v: any) => enabledSamplers.indexOf('mirostat') === -1
+											  ? setEnabledSamplers((es: any) => [...es, 'mirostat'])
+											  : setEnabledSamplers((es: any) => es.filter((s: any) => s !== 'mirostat'))}/>
 					<${Checkbox} label="XTC"
 						disabled=${!!cancel}
 						value=${enabledSamplers.includes('xtc')}
-						onValueChange=${(v) => enabledSamplers.indexOf('xtc') === -1
-											  ? setEnabledSamplers((es) => [...es, 'xtc'])
-											  : setEnabledSamplers((es) => es.filter((s) => s !== 'xtc'))}/>
+						onValueChange=${(v: any) => enabledSamplers.indexOf('xtc') === -1
+											  ? setEnabledSamplers((es: any) => [...es, 'xtc'])
+											  : setEnabledSamplers((es: any) => es.filter((s: any) => s !== 'xtc'))}/>
 					<${Checkbox} label="DRY"
 						disabled=${!!cancel}
 						value=${enabledSamplers.includes('dry')}
-						onValueChange=${(v) => enabledSamplers.indexOf('dry') === -1
-											  ? setEnabledSamplers((es) => [...es, 'dry'])
-											  : setEnabledSamplers((es) => es.filter((s) => s !== 'dry'))}/>
+						onValueChange=${(v: any) => enabledSamplers.indexOf('dry') === -1
+											  ? setEnabledSamplers((es: any) => [...es, 'dry'])
+											  : setEnabledSamplers((es: any) => es.filter((s: any) => s !== 'dry'))}/>
 					<${Checkbox} label="Top K"
 						disabled=${!!cancel}
 						value=${enabledSamplers.includes('top_k')}
-						onValueChange=${(v) => enabledSamplers.indexOf('top_k') === -1
-											  ? setEnabledSamplers((es) => [...es, 'top_k'])
-											  : setEnabledSamplers((es) => es.filter((s) => s !== 'top_k'))}/>
+						onValueChange=${(v: any) => enabledSamplers.indexOf('top_k') === -1
+											  ? setEnabledSamplers((es: any) => [...es, 'top_k'])
+											  : setEnabledSamplers((es: any) => es.filter((s: any) => s !== 'top_k'))}/>
 					<${Checkbox} label="Top P"
 						disabled=${!!cancel}
 						value=${enabledSamplers.includes('top_p')}
-						onValueChange=${(v) => enabledSamplers.indexOf('top_p') === -1
-											  ? setEnabledSamplers((es) => [...es, 'top_p'])
-											  : setEnabledSamplers((es) => es.filter((s) => s !== 'top_p'))}/>
+						onValueChange=${(v: any) => enabledSamplers.indexOf('top_p') === -1
+											  ? setEnabledSamplers((es: any) => [...es, 'top_p'])
+											  : setEnabledSamplers((es: any) => es.filter((s: any) => s !== 'top_p'))}/>
 					<${Checkbox} label="Min P"
 						disabled=${!!cancel}
 						value=${enabledSamplers.includes('min_p')}
-						onValueChange=${(v) => enabledSamplers.indexOf('min_p') === -1
-											  ? setEnabledSamplers((es) => [...es, 'min_p'])
-											  : setEnabledSamplers((es) => es.filter((s) => s !== 'min_p'))}/>
+						onValueChange=${(v: any) => enabledSamplers.indexOf('min_p') === -1
+											  ? setEnabledSamplers((es: any) => [...es, 'min_p'])
+											  : setEnabledSamplers((es: any) => es.filter((s: any) => s !== 'min_p'))}/>
 					<${Checkbox} label="Typical P"
 						disabled=${!!cancel}
 						value=${enabledSamplers.includes('typical_p')}
-						onValueChange=${(v) => enabledSamplers.indexOf('typical_p') === -1
-											  ? setEnabledSamplers((es) => [...es, 'typical_p'])
-											  : setEnabledSamplers((es) => es.filter((s) => s !== 'typical_p'))}/>
+						onValueChange=${(v: any) => enabledSamplers.indexOf('typical_p') === -1
+											  ? setEnabledSamplers((es: any) => [...es, 'typical_p'])
+											  : setEnabledSamplers((es: any) => es.filter((s: any) => s !== 'typical_p'))}/>
 					<${Checkbox} label="TFS z"
 						disabled=${!!cancel}
 						value=${enabledSamplers.includes('tfs_z')}
-						onValueChange=${(v) => enabledSamplers.indexOf('tfs_z') === -1
-											  ? setEnabledSamplers((es) => [...es, 'tfs_z'])
-											  : setEnabledSamplers((es) => es.filter((s) => s !== 'tfs_z'))}/>
+						onValueChange=${(v: any) => enabledSamplers.indexOf('tfs_z') === -1
+											  ? setEnabledSamplers((es: any) => [...es, 'tfs_z'])
+											  : setEnabledSamplers((es: any) => es.filter((s: any) => s !== 'tfs_z'))}/>
 					<${Checkbox} label="Banned Strings"
 						disabled=${!!cancel}
 						value=${enabledSamplers.includes('ban_tokens')}
-						onValueChange=${(v) => enabledSamplers.indexOf('ban_tokens') === -1
-											  ? setEnabledSamplers((es) => [...es, 'ban_tokens'])
-											  : setEnabledSamplers((es) => es.filter((s) => s !== 'ban_tokens'))}/>
+						onValueChange=${(v: any) => enabledSamplers.indexOf('ban_tokens') === -1
+											  ? setEnabledSamplers((es: any) => [...es, 'ban_tokens'])
+											  : setEnabledSamplers((es: any) => es.filter((s: any) => s !== 'ban_tokens'))}/>
 				`}>
 				<${InputSlider} label="Temperature" type="number" step="0.01" max="5"
 					hidden=${!enabledSamplers.includes('temperature')}
@@ -646,7 +646,7 @@ export function Sidebar({ sidebarRef, toggleModal, currentThemeName, setCurrentT
 						placeholder="Anything written here will be injected at the head of the prompt. Tokens here DO count towards the Context Limit."
 						defaultValue=${memoryTokens.text}
 						value=${memoryTokens.text}
-						onInput=${(e) => handleMemoryTokensChange("text", e.target.value)}
+						onInput=${(e: any) => handleMemoryTokensChange("text", e.target.value)}
 						id="memory-area"/>
 					<button
 						className="textAreaSettings"
@@ -662,7 +662,7 @@ export function Sidebar({ sidebarRef, toggleModal, currentThemeName, setCurrentT
 						placeholder="Anything written here will be injected ${authorNoteDepth} newlines from bottom into context."
 						defaultValue=${authorNoteTokens.text}
 						value=${authorNoteTokens.text}
-						onInput=${(e) => handleauthorNoteTokensChange("text", e.target.value)}
+						onInput=${(e: any) => handleauthorNoteTokensChange("text", e.target.value)}
 						id="an-area"/>
 					<button
 						className="textAreaSettings"
@@ -706,13 +706,13 @@ export function Sidebar({ sidebarRef, toggleModal, currentThemeName, setCurrentT
 					<${InputBox} label="Duration (sec)" type="number"
 						readOnly=${!!cancel}
 						value=${maintDuration}
-						onValueChange=${(v) => {
+						onValueChange=${(v: any) => {
 							setMaintDuration(v);
 							saveMaintConfigToServer({ duration: v });
 						}}
 						placeholder="Infinite"/>
 					<${InputSlider} label="DB Load" type="number" step="0.1" max="1"
-						readOnly=${!!cancel} value=${maintDbLoad} onValueChange=${(v) => {
+						readOnly=${!!cancel} value=${maintDbLoad} onValueChange=${(v: any) => {
 							setMaintDbLoad(v);
 							saveMaintConfigToServer({ dbLoad: v });
 						}}/>
@@ -720,7 +720,7 @@ export function Sidebar({ sidebarRef, toggleModal, currentThemeName, setCurrentT
 				<${SelectBox}
 					label="Maintenance Mode"
 					value=${maintMode}
-					onValueChange=${(v) => {
+					onValueChange=${(v: any) => {
 						setMaintMode(v);
 						saveMaintConfigToServer({ mode: v });
 					}}
@@ -731,12 +731,12 @@ export function Sidebar({ sidebarRef, toggleModal, currentThemeName, setCurrentT
 					]}/>
 				${maintMode === 'interval' && html`
 					<${InputBox} label="Interval (min)" type="number" inputmode="numeric"
-						readOnly=${!!cancel} value=${maintInterval} onValueChange=${(v) => {
+						readOnly=${!!cancel} value=${maintInterval} onValueChange=${(v: any) => {
 							setMaintInterval(v);
 							saveMaintConfigToServer({ interval: v });
 						}}/>`}
 				<${Checkbox} label="Enable WAL Mode"
-					disabled=${!!cancel} value=${walEnabled} onValueChange=${(v) => {
+					disabled=${!!cancel} value=${walEnabled} onValueChange=${(v: any) => {
 						setWalEnabled(v);
 						saveMaintConfigToServer({ walEnabled: v });
 					}}/>

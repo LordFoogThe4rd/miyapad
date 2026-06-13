@@ -7,10 +7,10 @@ import { exportText } from '../../api/common';
 import { escapeRegExp } from '../../utils/regex';
 import { defaultThemes } from '../../defaults/themes';
 
-export function ThemeManagerModal({ isOpen, closeModal, allThemes, setAllThemes, currentThemeName, setCurrentThemeName, cancel }) {
+export function ThemeManagerModal({ isOpen, closeModal, allThemes, setAllThemes, currentThemeName, setCurrentThemeName, cancel }: any) {
     const [editingThemeName, setEditingThemeName] = useState(currentThemeName);
-    const [newThemeName, setNewThemeName] = useState(undefined);
-    const [newClassName, setNewClassName] = useState(undefined);
+    const [newThemeName, setNewThemeName] = useState<any>(undefined);
+    const [newClassName, setNewClassName] = useState<any>(undefined);
 
     useEffect(() => {
         if (isOpen) {
@@ -24,7 +24,7 @@ export function ThemeManagerModal({ isOpen, closeModal, allThemes, setAllThemes,
         }
     }, [isOpen, currentThemeName]);
 
-    const handleThemeNameChange = (newName) => {
+    const handleThemeNameChange = (newName: any) => {
         const trimmedNewName = newName.trim();
         if (trimmedNewName === editingThemeName || !trimmedNewName) {
             setNewThemeName(undefined);
@@ -36,7 +36,7 @@ export function ThemeManagerModal({ isOpen, closeModal, allThemes, setAllThemes,
             return;
         }
 
-        setAllThemes(prevThemes => {
+        setAllThemes((prevThemes: any) => {
             const newThemes = { ...prevThemes };
 			const { isDefault, order, ...themeData } = newThemes[editingThemeName]; // remove isDefault and order
             if (!themeData) {
@@ -55,7 +55,7 @@ export function ThemeManagerModal({ isOpen, closeModal, allThemes, setAllThemes,
         setNewThemeName(undefined);
     };
 
-    const handleThemeClassNameChange = (newClassName) => {
+    const handleThemeClassNameChange = (newClassName: any) => {
         const oldClassName = allThemes[editingThemeName]?.className;
         const sanitizedClassName = newClassName.trim().toLowerCase().replace(/[^a-z0-9-]+/g, '-').replace(/^-|-$/g, '');
 
@@ -68,7 +68,7 @@ export function ThemeManagerModal({ isOpen, closeModal, allThemes, setAllThemes,
         const regex = new RegExp(`\\.${escapeRegExp(oldClassName)}(?=[\\s,{]|$)`, 'g');
         const newCss = oldCss.replace(regex, `.${sanitizedClassName}`);
 
-        setAllThemes(prevThemes => {
+        setAllThemes((prevThemes: any) => {
             const newThemes = { ...prevThemes };
 			const { isDefault, ...rest } = newThemes[editingThemeName]; // remove isDefault
             newThemes[editingThemeName] = {
@@ -81,8 +81,8 @@ export function ThemeManagerModal({ isOpen, closeModal, allThemes, setAllThemes,
         setNewClassName(undefined);
     };
 
-    const handleThemeCssChange = (newCss) => {
-        setAllThemes(prevThemes => {
+    const handleThemeCssChange = (newCss: any) => {
+        setAllThemes((prevThemes: any) => {
             const newThemes = { ...prevThemes };
 			const { isDefault, ...rest } = newThemes[editingThemeName]; // remove isDefault
             newThemes[editingThemeName] = { ...rest, css: newCss };
@@ -98,7 +98,7 @@ export function ThemeManagerModal({ isOpen, closeModal, allThemes, setAllThemes,
         }
 		const className = newName.toLowerCase().replace(/[^a-z0-9]+/g, '-').replace(/^-|-$/g, '');
 
-        setAllThemes(prevThemes => ({
+        setAllThemes((prevThemes: any) => ({
             ...prevThemes,
             [newName]: {
                 className: className,
@@ -115,7 +115,7 @@ export function ThemeManagerModal({ isOpen, closeModal, allThemes, setAllThemes,
 			newName = `${editingThemeName} (Copy ${++counter})`;
 		}
 
-		setAllThemes(prevThemes => {
+		setAllThemes((prevThemes: any) => {
 			const { isDefault, order, ...rest } = prevThemes[editingThemeName]; // remove isDefault and order
 			return {
 				...prevThemes,
@@ -130,7 +130,7 @@ export function ThemeManagerModal({ isOpen, closeModal, allThemes, setAllThemes,
             return;
         }
 
-        setAllThemes(prevThemes => {
+        setAllThemes((prevThemes: any) => {
             const newThemes = { ...prevThemes };
             delete newThemes[editingThemeName];
 
@@ -158,15 +158,15 @@ export function ThemeManagerModal({ isOpen, closeModal, allThemes, setAllThemes,
         const fileInput = document.createElement("input");
         fileInput.type = 'file';
         fileInput.accept = '.json';
-        fileInput.onchange = (e) => {
+        fileInput.onchange = (e: any) => {
             const file = (e.target as HTMLInputElement).files?.[0];
             if (!file) return;
             const reader = new FileReader();
-            reader.onload = (e) => {
+            reader.onload = (e: any) => {
                 try {
                     const importedThemes = JSON.parse((e.target as FileReader).result as string);
-                    setAllThemes(prevThemes => ({ ...prevThemes, ...importedThemes }));
-                } catch (err) {
+                    setAllThemes((prevThemes: any) => ({ ...prevThemes, ...importedThemes }));
+                } catch (err: any) {
                     alert("Failed to import themes. Please check if you selected the right file.");
                     console.error(err);
                 }
@@ -180,7 +180,7 @@ export function ThemeManagerModal({ isOpen, closeModal, allThemes, setAllThemes,
         if (!window.confirm("This will restore all default themes and overwrite any of your themes that share the same name. Are you sure?")) {
             return;
         }
-        setAllThemes(prevThemes => ({
+        setAllThemes((prevThemes: any) => ({
             ...prevThemes,
             ...defaultThemes
         }));
@@ -204,7 +204,7 @@ export function ThemeManagerModal({ isOpen, closeModal, allThemes, setAllThemes,
                     label="Theme to Edit"
                     disabled=${!!cancel}
                     value=${editingThemeName}
-                    onValueChange=${(val) => { setEditingThemeName(val); setNewThemeName(undefined); }}
+                    onValueChange=${(val: any) => { setEditingThemeName(val); setNewThemeName(undefined); }}
                     options=${themeOptions}/>
 				<button title="Duplicate Theme" disabled=${!!cancel || editingThemeName === 'Serif Light'} class="hbox-button" onClick=${handleDuplicateTheme}>Duplicate</button>
                 <button title="New Theme" disabled=${!!cancel} class="hbox-button" onClick=${handleNewTheme}>New</button>
@@ -216,18 +216,18 @@ export function ThemeManagerModal({ isOpen, closeModal, allThemes, setAllThemes,
 					id="thememodal-name"
 					readOnly=${!!cancel}
 					value=${newThemeName ?? editingThemeName}
-					onBlur=${(e) => handleThemeNameChange(e.target.value)}
-					onKeyDown=${(e) => { if (e.key === 'Enter') e.target.blur(); }}
-					onInput=${e => setNewThemeName(e.target.value)}
+					onBlur=${(e: any) => handleThemeNameChange(e.target.value)}
+					onKeyDown=${(e: any) => { if (e.key === 'Enter') e.target.blur(); }}
+					onInput=${(e: any) => setNewThemeName(e.target.value)}
 					onValueChange=${() => {}}
 					/>
 				<${InputBox} label="CSS Class Name"
 					id="thememodal-classname"
 					readOnly=${!!cancel}
 					value=${newClassName ?? editingThemeData.className ?? ''}
-					onBlur=${(e) => handleThemeClassNameChange(e.target.value)}
-					onKeyDown=${(e) => { if (e.key === 'Enter') e.target.blur(); }}
-					onInput=${e => setNewClassName(e.target.value)}
+					onBlur=${(e: any) => handleThemeClassNameChange(e.target.value)}
+					onKeyDown=${(e: any) => { if (e.key === 'Enter') e.target.blur(); }}
+					onInput=${(e: any) => setNewClassName(e.target.value)}
 					onValueChange=${() => {}}
 					/>
 				<label class="TextArea">
@@ -235,7 +235,7 @@ export function ThemeManagerModal({ isOpen, closeModal, allThemes, setAllThemes,
 					<textarea
 						readOnly=${!!cancel}
 						value=${editingThemeData.css || ''}
-						onInput=${(e) => handleThemeCssChange(e.target.value)}
+						onInput=${(e: any) => handleThemeCssChange(e.target.value)}
 						class="wi-textarea"
 						style=${{ height: '30vh', fontFamily: 'monospace' }}
 						/>
