@@ -78,7 +78,7 @@ export function useTTS() {
 		}
 	}
 
-	function ttsAddChunk(text) {
+	function ttsAddChunk(text: any) {
 		if (!ttsEnabled)
 			return;
 		ttsNewText.current += text;

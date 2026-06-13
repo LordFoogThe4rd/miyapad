@@ -9,10 +9,10 @@ export function usePromptBuilder() {
 	const { templates, selectedTemplate, worldInfo, memoryTokens, authorNoteTokens, authorNoteDepth, contextLength, templateReplacements, setTemplateReplacements } = useSettings();
 	const { promptChunks, cancel } = useGeneration();
 
-	function replacePlaceholders(string,placeholders) {
+	function replacePlaceholders(string: any, placeholders: any) {
 		// give placeholders as json object
 		// { "placeholder":"replacement" }
-		return string.replace(/\{[^}]+\}/g, function (placeholder) {
+		return string.replace(/\{[^}]+\}/g, function (placeholder: any) {
 			return placeholders.hasOwnProperty(placeholder)
 				? placeholders[placeholder]
 				: placeholder;
@@ -116,11 +116,11 @@ export function usePromptBuilder() {
 	// compute separately as I imagine this can get expensive
 	const assembledWorldInfo = useMemo(() => {
 		// assemble non-empty wi
-		const validWorldInfo = !Array.isArray(worldInfo.entries) ? [] : worldInfo.entries.filter(entry =>
+		const validWorldInfo = !Array.isArray(worldInfo.entries) ? [] : worldInfo.entries.filter((entry: any) =>
 			entry.keys.length > 0 && !(entry.keys.length == 1 && entry.keys[0] == "") && entry.text !== "");
 
 		// search prompt
-		const activeWorldInfo = validWorldInfo.filter(entry => {
+		const activeWorldInfo = validWorldInfo.filter((entry: any) => {
 			if (validWorldInfo.length < 1) { return }
 			// default to 2048
 			const searchRange = isNaN(entry.search) || entry.search === ""
@@ -131,7 +131,7 @@ export function usePromptBuilder() {
 			const searchPrompt = modifiedPromptText.substring(modifiedPromptText.length - searchRange * defaultPresets.tokenRatio);
 
 			// search in range
-			return entry.keys.some((key, index) => {
+			return entry.keys.some((key: any, index: any) => {
 				// don't waste resources on disabled entries
 				if (searchPrompt.length == 0) {
 					return
@@ -142,7 +142,7 @@ export function usePromptBuilder() {
 				try {
 					return new RegExp(key, "i").test(searchPrompt) && key !== "";
 				}
-				catch (error) {
+				catch (error: any) {
 					console.error(`Error in RegEx for key '${key}': ${error.message}`);
 					return false;
 				}
@@ -150,7 +150,7 @@ export function usePromptBuilder() {
 		});
 
 		return activeWorldInfo.length > 0
-			? activeWorldInfo.map(entry => entry.text).join("\n")
+			? activeWorldInfo.map((entry: any) => entry.text).join("\n")
 			: "";
 	}, [modifiedPromptText, worldInfo]);
 
@@ -164,7 +164,7 @@ export function usePromptBuilder() {
 			: "";
 
 		// replacements for the contextOrder string
-		const contextReplacements = {
+		const contextReplacements: Record<string, any> = {
 			"{wiPrefix}": assembledWorldInfo && assembledWorldInfo !== ""
 				? worldInfo.prefix
 				: "", // wi prefix and suffix will be added whenever wi isn't empty
@@ -215,9 +215,9 @@ export function usePromptBuilder() {
 		// the context is (1) split by line, (2) persistent context placeholders are 
 		// replaced, (3) instruct template placeholders are replaced (4) non-empty
 		// lines are joined back together.
-		const permContextPrompt = workingContextOrder.split("\n").map(function (line) {
+		const permContextPrompt = workingContextOrder.split("\n").map(function (line: any) {
 			return replacePlaceholders(line,contextReplacements)
-		}).filter(function (line) {
+		}).filter(function (line: any) {
 			return line.trim() !== "";
 		}).join("\n").replace(/\\n/g, '\n');
 
@@ -228,15 +228,15 @@ export function usePromptBuilder() {
 		let text = replacePlaceholders(additionalContextPrompt, templateReplacements);
 		return text;
 	}, [additionalContextPrompt, templates, selectedTemplate]);
-	function convertChatToJSON(chatString, template) {
-		function extractMessage(text, prefix, suffixes, role) {
+	function convertChatToJSON(chatString: any, template: any) {
+		function extractMessage(text: any, prefix: any, suffixes: any, role: any) {
 			const matches = text.match(createLenientPrefixRegex(prefix));
 			if (matches && matches.length) {
 				text = text.substring(matches[0].length);
 				let endIndex = suffixes[0] ? regexIndexOf(text, createLenientRegex(suffixes[0])) : -1;
 				if (endIndex === -1) {
 					if (suffixes.length > 1) {
-						const indices = suffixes.slice(1).map(suffix => suffix ? regexIndexOf(text, createLenientRegex(suffix)) : -1).filter(index => index !== -1);
+						const indices = suffixes.slice(1).map((suffix: any) => suffix ? regexIndexOf(text, createLenientRegex(suffix)) : -1).filter((index: any) => index !== -1);
 						endIndex = indices.length > 0 ? Math.min(...indices) : text.length;
 					}  else {
 						endIndex = text.length;
@@ -252,7 +252,7 @@ export function usePromptBuilder() {
 			return null;
 		}
 
-		function skipToNextKnownPrefix(text, ...prefixes) {
+		function skipToNextKnownPrefix(text: any, ...prefixes: any[]) {
 			const indices = prefixes.map(prefix => prefix ? regexIndexOf(text, createLenientRegex(prefix)) : -1).filter(index => index !== -1);
 			const minIndex = indices.length > 0 ? Math.min(...indices) : text.length;
 			if (minIndex == 0) {

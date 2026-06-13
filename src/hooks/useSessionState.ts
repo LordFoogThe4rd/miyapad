@@ -1,10 +1,10 @@
 import { useEffect, useMemo, useState } from 'react';
 
-export function useSessionState(sessionStorage, name, initialState) {
+export function useSessionState(sessionStorage: any, name: any, initialState: any) {
 	const savedState = useMemo(() => {
 		try {
 			return sessionStorage.getProperty(name);
-		} catch (e) {
+		} catch (e: any) {
 			console.warn(`Failed to retrieve session state for ${name}:`, e);
 			return null;
 		}
@@ -13,7 +13,7 @@ export function useSessionState(sessionStorage, name, initialState) {
 	const [value, setValue] = useState(savedState ?? initialState);
 
 	useEffect(() => {
-		function deepCopy(value) {
+		function deepCopy(value: any) {
 			if (value === undefined) return undefined;
 			return JSON.parse(JSON.stringify(value));
 		}
@@ -25,8 +25,8 @@ export function useSessionState(sessionStorage, name, initialState) {
 		return () => sessionStorage.removeEventListener('sessionchange', onSessionChange);
 	}, []);
 
-	const updateState = (newValue) => {
-		setValue((prevValue) => {
+	const updateState = (newValue: any) => {
+		setValue((prevValue: any) => {
 			const updatedValue = typeof newValue === 'function' ? newValue(prevValue) : newValue;
 			sessionStorage.setProperty(name, updatedValue);
 			return updatedValue;

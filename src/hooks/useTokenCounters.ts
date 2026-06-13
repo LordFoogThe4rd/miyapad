@@ -10,8 +10,8 @@ export function useTokenCounters() {
 	const { cancel, modalState } = useGeneration();
 	const { templateReplacements, replacePlaceholders } = usePromptBuilder();
 
-	function handleauthorNoteTokensChange(key,value) {
-		setAuthorNoteTokens((prevauthorNoteTokens) => ({ ...prevauthorNoteTokens, [key]: value }));
+	function handleauthorNoteTokensChange(key: any, value: any) {
+		setAuthorNoteTokens((prevauthorNoteTokens: any) => ({ ...prevauthorNoteTokens, [key]: value }));
 	}
 	// token counts for an
 	useEffect(() => {
@@ -20,7 +20,7 @@ export function useTokenCounters() {
 			? order.map(key => authorNoteTokens[key]).join("")
 			: "";	
 		if (assembled == "" || endpointAPI == API_OPENAI_COMPAT || endpointAPI == API_DEEPSEEK) {
-			setAuthorNoteTokens((prevauthorNoteTokens) => ({ ...prevauthorNoteTokens, "tokens": 0 }))
+			setAuthorNoteTokens((prevauthorNoteTokens: any) => ({ ...prevauthorNoteTokens, "tokens": 0 }))
 			return
 		}
 		const ac = new AbortController();
@@ -38,14 +38,14 @@ export function useTokenCounters() {
 						...(isMiyapadEndpoint ? { proxyEndpoint: sessionStorage.proxyEndpoint } : {})
 					} as any)
 				);
-				setAuthorNoteTokens((prevauthorNoteTokens) => ({
+				setAuthorNoteTokens((prevauthorNoteTokens: any) => ({
 					...prevauthorNoteTokens,
 					"tokens": tokenCount - 1 
 				}));
-			} catch (e) {
+			} catch (e: any) {
 				if (e.name !== 'AbortError'){
 					reportError(e);
-					setAuthorNoteTokens((prevauthorNoteTokens) => ({ ...prevauthorNoteTokens, "tokens": 0 }))
+					setAuthorNoteTokens((prevauthorNoteTokens: any) => ({ ...prevauthorNoteTokens, "tokens": 0 }))
 				}	
 			}
 		}, 500);
@@ -54,8 +54,8 @@ export function useTokenCounters() {
 		return () => ac.abort();
 	},[modalState["context"],authorNoteTokens.text,authorNoteTokens.prefix,authorNoteTokens.suffix,contextLength,cancel,endpoint,endpointAPI,useServerTokenization])
 
-	function handleMemoryTokensChange(key,value) {
-		setMemoryTokens((prevMemoryTokens) => ({ ...prevMemoryTokens, [key]: value }));
+	function handleMemoryTokensChange(key: any, value: any) {
+		setMemoryTokens((prevMemoryTokens: any) => ({ ...prevMemoryTokens, [key]: value }));
 	}
 	// token counts for memory
 	useEffect(() => {
@@ -64,7 +64,7 @@ export function useTokenCounters() {
 			? order.map(key => memoryTokens[key]).join("")
 			: "";	
 		if (assembled == "" || endpointAPI == API_OPENAI_COMPAT || endpointAPI == API_DEEPSEEK){
-			setMemoryTokens((prevMemoryTokens) => ({ ...prevMemoryTokens, "tokens": 0 }));
+			setMemoryTokens((prevMemoryTokens: any) => ({ ...prevMemoryTokens, "tokens": 0 }));
 			return
 		}
 
@@ -83,14 +83,14 @@ export function useTokenCounters() {
 						...(isMiyapadEndpoint ? { proxyEndpoint: sessionStorage.proxyEndpoint } : {})
 					} as any)
 				);
-				setMemoryTokens((prevMemoryTokens) => ({
+				setMemoryTokens((prevMemoryTokens: any) => ({
 					...prevMemoryTokens,
 					"tokens": tokenCount - 1 
 				}));
-			} catch (e) {
+			} catch (e: any) {
 				if (e.name !== 'AbortError'){
 					reportError(e);
-					setMemoryTokens((prevMemoryTokens) => ({ ...prevMemoryTokens, "tokens": 0 }));
+					setMemoryTokens((prevMemoryTokens: any) => ({ ...prevMemoryTokens, "tokens": 0 }));
 				}
 			}
 		}, 500);
@@ -104,7 +104,7 @@ export function useTokenCounters() {
 			? [worldInfo.prefix,memoryTokens.worldInfo,worldInfo.suffix].join("")
 			: "";
 		if (assembled == "" || endpointAPI == API_OPENAI_COMPAT || endpointAPI == API_DEEPSEEK){
-			setMemoryTokens((prevMemoryTokens) => ({ ...prevMemoryTokens, "tokensWI": 0 }));
+			setMemoryTokens((prevMemoryTokens: any) => ({ ...prevMemoryTokens, "tokensWI": 0 }));
 			return
 		}
 
@@ -123,14 +123,14 @@ export function useTokenCounters() {
 						...(isMiyapadEndpoint ? { proxyEndpoint: sessionStorage.proxyEndpoint } : {})
 					} as any)
 				);
-				setMemoryTokens((prevMemoryTokens) => ({
+				setMemoryTokens((prevMemoryTokens: any) => ({
 					...prevMemoryTokens,
 					"tokensWI": tokenCount - 1 
 				}));
-			} catch (e) {
+			} catch (e: any) {
 				if (e.name !== 'AbortError'){
 					reportError(e);
-					setMemoryTokens((prevMemoryTokens) => ({ ...prevMemoryTokens, "tokensWI": 0 }));
+					setMemoryTokens((prevMemoryTokens: any) => ({ ...prevMemoryTokens, "tokensWI": 0 }));
 				}
 			}
 		}, 500);

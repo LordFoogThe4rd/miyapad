@@ -11,7 +11,7 @@ export function useKeyboardShortcuts() {
 	const { ttsStop } = useTTS();
 
 	useEffect(() => {
-		function onKeyDown(e) {
+		function onKeyDown(e: any) {
 			const { altKey, ctrlKey, metaKey, shiftKey, key, defaultPrevented } = e;
 			if (defaultPrevented)
 				return;
@@ -28,18 +28,18 @@ export function useKeyboardShortcuts() {
 						cancel();
 					} else if (showPromptPreview && promptPreviewChunks.length !== 0) {
 						setPromptPreviewChunks([]); // Discard current preview so that a new one is generated.
-						setPromptPreviewReroll((r) => r + 1);
+						setPromptPreviewReroll((r: any) => r + 1);
 					}
 					break;
 				case 'false:false:false:false:Tab':
 					if (!showPromptPreview || promptPreviewChunks.length === 0)
 						break;
 
-					setPromptChunks(p => [
+					setPromptChunks((p: any) => [
 						...p,
 						...promptPreviewChunks
 					]);
-					setTokens(t => t + promptPreviewChunks.length);
+					setTokens((t: any) => t + promptPreviewChunks.length);
 					setPromptPreviewChunks([]);
 					break;
 				case 'false:true:false:false:ArrowRight':
@@ -107,7 +107,7 @@ export function useKeyboardShortcuts() {
 			if (preventDefaultAction)
 				e.preventDefault();
 		}
-		function onKeyUp(e) {
+		function onKeyUp(e: any) {
 			const { altKey, ctrlKey, shiftKey, key, defaultPrevented } = e;
 			if (defaultPrevented)
 				return;

@@ -12,7 +12,7 @@ export function useTouchGestures() {
 			return 'ontouchstart' in window || navigator.maxTouchPoints > 0;
 		};
 
-		const showMenu = (x, y) => {
+		const showMenu = (x: any, y: any) => {
 			if (cancel) return;
 			setContextMenuState({
 				visible: true,
@@ -27,9 +27,9 @@ export function useTouchGestures() {
 			const TIME_LENIENCY_MS = 50;  // How long to wait for the second finger lift
 
 			let isTwoFingerGesture = false;
-			let startTouches = [];
+			let startTouches: any[] = [];
 			let firstTouchEndTime = 0;
-			let leniencyTimeout = null;
+			let leniencyTimeout: any = null;
 
 			const resetGestureState = () => {
 				isTwoFingerGesture = false;
@@ -38,7 +38,7 @@ export function useTouchGestures() {
 				clearTimeout(leniencyTimeout);
 			};
 
-			const handleTouchStart = (e) => {
+			const handleTouchStart = (e: any) => {
 				if (e.touches.length === 2) {
 					isTwoFingerGesture = true;
 					startTouches = [e.touches[0], e.touches[1]];
@@ -47,7 +47,7 @@ export function useTouchGestures() {
 				}
 			};
 
-			const handleTouchMove = (e) => {
+			const handleTouchMove = (e: any) => {
 				if (!isTwoFingerGesture) return;
 
 				// Cancel gesture if fingers move too far
@@ -64,7 +64,7 @@ export function useTouchGestures() {
 				}
 			};
 
-			const handleTouchEnd = (e) => {
+			const handleTouchEnd = (e: any) => {
 				if (!isTwoFingerGesture) return;
 
 				if (e.touches.length === 1) {
@@ -103,7 +103,7 @@ export function useTouchGestures() {
 			};
 		} else {
 			// This is a desktop!
-			const handleContextMenu = (e) => {
+			const handleContextMenu = (e: any) => {
 				if (e.ctrlKey) {
 					e.preventDefault();
 					showMenu(e.pageX, e.pageY);

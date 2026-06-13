@@ -15,7 +15,7 @@ export function useScreenshotCapture() {
 
 	const { promptArea, promptChunks } = useGeneration();
 
-	const toDataURL = useCallback(async (url) => {
+	const toDataURL = useCallback(async (url: any) => {
 		if (!url) return '';
 		try {
 			let fetchUrl = url;
@@ -30,7 +30,7 @@ export function useScreenshotCapture() {
 				reader.onerror = reject;
 				reader.readAsDataURL(blob);
 			});
-		} catch (err) {
+		} catch (err: any) {
 			console.error("Failed to convert image to base64", err);
 			return url;
 		}
@@ -199,7 +199,7 @@ export function useScreenshotCapture() {
 				win.document.write('<img src="' + dataUrl + '"/>');
 				win.document.close();
 			}
-		} catch (err) {
+		} catch (err: any) {
 			console.error("Screenshot failed:", err);
 		} finally {
 			staging.removeChild(captureContainer);
