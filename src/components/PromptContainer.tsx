@@ -22,7 +22,8 @@ export function PromptContainer({ sidebarHeight }: any) {
 
 	// textarea resize
 	useEffect(() => {
-		const container = document.querySelector('#prompt-container') as HTMLElement;
+		const container = document.querySelector('#prompt-container') as HTMLElement | null;
+		if (!container) return;
 
 		let isDragging = false;
 		let startX: any;
