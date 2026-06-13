@@ -19,7 +19,12 @@ export default function(app: Express, db: Database): void {
         }
         try {
             await tokenizer.loadTokenizer(model);
-            db.run(`INSERT OR REPLACE INTO meta (key, value) VALUES ('tokenizer_model', ?)`, [model]);
+            await new Promise<void>((resolve, reject) => {
+                db.run(`INSERT OR REPLACE INTO meta (key, value) VALUES ('tokenizer_model', ?)`, [model], (err) => {
+                    if (err) reject(err);
+                    else resolve();
+                });
+            });
             res.json({ ok: true, model });
         } catch (e) {
             res.status(500).json({ ok: false, message: (e as Error).message });
