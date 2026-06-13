@@ -34,13 +34,14 @@ export function Sidebar({ sidebarRef, toggleModal, currentThemeName, setCurrentT
 		promptPreviewTokens, setPromptPreviewTokens, templates, selectedTemplate, setSelectedTemplate,
 		isMiyapadEndpoint, sessionStorage, chatMode, setChatMode, seed, setSeed, contextLength, setContextLength,
 		memoryTokens, authorNoteTokens, authorNoteDepth, templateList, tokenHighlightMode,
-		connections, setConnections, selectedConnectionId, setSelectedConnectionId
+		connections, setConnections, selectedConnectionId, setSelectedConnectionId,
+		stoppingStringsError, drySequenceBreakersError, bannedTokensError
 	} = useSettings();
 
 	const {
 		cancel, openaiModels, hordeQueuePos, hordeProcessing, tokens, tokensPerSec, undoStack, redoStack,
 		undoHovered, setUndoHovered, lastError, sessionEndpointConnecting, predictStartTokens,
-		stoppingStringsError, drySequenceBreakersError, bannedTokensError, modalState, promptArea,
+		modalState, promptArea,
 		rejectedAPIKey
 	} = useGeneration();
 

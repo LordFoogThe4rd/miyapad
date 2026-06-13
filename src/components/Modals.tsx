@@ -5,6 +5,7 @@ import { useGeneration } from '../contexts/GenerationContext';
 import { useTokenCounters } from '../hooks/useTokenCounters';
 import { usePromptBuilder } from '../hooks/usePromptBuilder';
 import { useTTS } from '../hooks/useTTS';
+import { useGenerationLogic } from '../hooks/useGenerationLogic';
 import { exportText } from '../api/common';
 import { defaultPresets } from '../defaults/presets';
 import { PreferencesModal } from './modals/PreferencesModal';
@@ -42,12 +43,13 @@ export function Modals({ toggleModal, currentThemeName, setCurrentThemeName, all
 		screenshotModelAvatarUrl, setScreenshotModelAvatarUrl,
 		connections, setConnections, selectedConnectionId
 	} = useSettings();
-	const { cancel, modalState, closeModal, instructModalState, setInstructModalState, promptArea, predict, lastError, sessionEndpointConnecting, predictStartTokens, tokens, stoppingStringsError, drySequenceBreakersError, bannedTokensError, contextMenuState, setContextMenuState, setTriggerPredict, sessionEndpointError, setRejectedAPIKey } = useGeneration();
+	const { cancel, modalState, closeModal, instructModalState, setInstructModalState, promptArea, lastError, sessionEndpointConnecting, predictStartTokens, tokens, contextMenuState, setContextMenuState, setTriggerPredict, sessionEndpointError, setRejectedAPIKey } = useGeneration();
 
 	const { handleauthorNoteTokensChange, handleMemoryTokensChange } = useTokenCounters();
 	const { finalPromptText, convertChatToJSON } = usePromptBuilder();
 	const { listTTSVoices, ttsStop } = useTTS();
 	const { ttsAvailable } = useGeneration();
+	const { predict } = useGenerationLogic();
 
 
 
@@ -186,8 +188,8 @@ export function Modals({ toggleModal, currentThemeName, setCurrentThemeName, all
 			closeModal=${() => closeModal("preferences")}
 			settings=${{
 				fontSizeMultiplier, setFontSizeMultiplier,
-				spellCheck, setSpellCheck,
-				attachSidebar, setAttachSidebar,
+		spellCheck, setSpellCheck, stoppingStringsError, setStoppingStringsError, drySequenceBreakersError, setDrySequenceBreakersError, bannedTokensError, setBannedTokensError,
+		attachSidebar, setAttachSidebar,
 				preserveCursorPosition, setPreserveCursorPosition,
 				tokenHighlightMode, setTokenHighlightMode,
 				tokenColorMode, setTokenColorMode,

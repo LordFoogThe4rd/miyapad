@@ -8,8 +8,8 @@ import { SearchAndReplaceWidget } from './SearchAndReplaceWidget';
 import { useScreenshotCapture } from '../hooks/useScreenshotCapture';
 
 export function PromptContainer({ sidebarHeight }: any) {
-	const { showMarkdownPreview, setShowMarkdownPreview, isMobile, tokenHighlightMode, tokenColorMode, showPromptPreview, promptAreaWidth, setPromptAreaWidth, showProbsMode, setShowProbsMode } = useSettings();
-	const { promptArea, promptOverlay, cancel, promptPreviewElement, promptChunks, setPromptChunks, currentPromptChunk, setCurrentPromptChunk, undoHovered, setUndoHovered, undoStack, redoStack, showProbs, setShowProbs, promptPreviewChunks, setPromptPreviewChunks, modalState, closeModal, toggleModal, markdownPreviewRef, isSyncingScroll, setSavedScrollTop, spellCheck, keyState, probsDelayTimer, setTriggerPredict } = useGeneration();
+	const { showMarkdownPreview, setShowMarkdownPreview, isMobile, tokenHighlightMode, tokenColorMode, showPromptPreview, promptAreaWidth, setPromptAreaWidth, showProbsMode, setShowProbsMode, spellCheck } = useSettings();
+	const { promptArea, promptOverlay, cancel, promptPreviewElement, promptChunks, setPromptChunks, currentPromptChunk, setCurrentPromptChunk, undoHovered, setUndoHovered, undoStack, redoStack, showProbs, setShowProbs, promptPreviewChunks, setPromptPreviewChunks, modalState, closeModal, toggleModal, markdownPreviewRef, isSyncingScroll, setSavedScrollTop, keyState, probsDelayTimer, setTriggerPredict } = useGeneration();
 	const { promptText, displayPromptChunks, cleanPromptText, origToClean, cleanToOrig } = usePromptBuilder();
 	const { takeScreenshot } = useScreenshotCapture();
 	const lastMouseToken = useRef<string | null>(null);
