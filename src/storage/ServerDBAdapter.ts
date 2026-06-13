@@ -41,10 +41,10 @@ export class ServerDBAdapter {
 	async loadFromDatabase(db: ServerDbFn, storeName: string, key: string) {
 		const res = await db("/load", { storeName, key });
 		if (!res.ok) {
-			if (res.status == 404) {
+			if (res instanceof Response && res.status === 404) {
 				return undefined;
 			}
-			throw res.status;
+			throw new Error(String(res.status));
 		}
 		const { result } = await (res as Response).json();
 		return result;
@@ -53,7 +53,7 @@ export class ServerDBAdapter {
 	async loadAllFromDatabase(db: ServerDbFn, storeName: string) {
 		const res = await db("/all", { storeName });
 		if (!res.ok) {
-			throw res.status;
+			throw new Error(String(res.status));
 		}
 		const { result } = await (res as Response).json();
 		return result;
@@ -62,7 +62,7 @@ export class ServerDBAdapter {
 	async loadSessionInfoFromDatabase(db: ServerDbFn, storeName: string) {
 		const res = await db("/sessions", { storeName });
 		if (!res.ok) {
-			throw res.status;
+			throw new Error(String(res.status));
 		}
 		const { result } = await (res as Response).json();
 		return result;
@@ -71,7 +71,7 @@ export class ServerDBAdapter {
 	async saveToDatabase(db: ServerDbFn, storeName: string, key: string, data: any) {
 		const res = await db("/save", { storeName, key, data });
 		if (!res.ok) {
-			throw res.status;
+			throw new Error(String(res.status));
 		}
 		const { result } = await (res as Response).json();
 		return result;
@@ -80,7 +80,7 @@ export class ServerDBAdapter {
 	async renameSessionInDatabase(db: ServerDbFn, storeName: string, key: string, newName: string) {
 		const res = await db("/rename", { storeName, key, newName });
 		if (!res.ok) {
-			throw res.status;
+			throw new Error(String(res.status));
 		}
 		const { result } = await (res as Response).json();
 		return result;
@@ -89,7 +89,7 @@ export class ServerDBAdapter {
 	async deleteFromDatabase(db: ServerDbFn, storeName: string, key: string) {
 		const res = await db("/delete", { storeName, key });
 		if (!res.ok) {
-			throw res.status;
+			throw new Error(String(res.status));
 		}
 	}
 }
