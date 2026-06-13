@@ -8,7 +8,7 @@ export function useStorageState<T>(storage: { getStorageData(): T; performFullSa
 	const updateState = (newValue: SetStateAction<T>) => {
 		setValue((prevValue) => {
 			const updatedValue = typeof newValue === 'function' ? (newValue as (prev: T) => T)(prevValue) : newValue;
-			storage.performFullSave(updatedValue);
+			storage.performFullSave(updatedValue).catch(() => {});
 			return updatedValue;
 		});
 	};

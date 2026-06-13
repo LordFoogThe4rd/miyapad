@@ -34,6 +34,7 @@ export class TemplateStorage extends AbstractStorage {
 			this.dispatchChangeEvent();
 		} catch (error) {
 			this.dispatchErrorEvent(error);
+			throw error;
 		}
 	}
 

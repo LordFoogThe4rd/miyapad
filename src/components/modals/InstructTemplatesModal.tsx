@@ -195,9 +195,12 @@ export function InstructTemplatesModal({ isOpen, closeModal, templateStorage, se
 		if (importDefaults) {
 			if (!window.confirm("This will add all default templates, and overwrite any changes you made to the default templates. This action cannot be undone. Do you wish to continue?"))
 				return;
-			await templateStorage.performFullSave(defaultPresets.instructTemplates, true)
-			window.location.reload()
-			// a little dirty, but updateTemplateList isn't cooperating
+			try {
+				await templateStorage.performFullSave(defaultPresets.instructTemplates, true)
+				window.location.reload()
+			} catch {
+				alert('Failed to save default templates to database.');
+			}
 			return
 		}
 		let onFileLoad: ((text: string) => Promise<void>) | null = null;
@@ -220,9 +223,12 @@ export function InstructTemplatesModal({ isOpen, closeModal, templateStorage, se
 			reader.readAsText(file);
 		}
 		onFileLoad = async (text: string) => {
-			await templateStorage.performFullSave(JSON.parse(text), true)
-			window.location.reload()
-			// a little dirty, but updateTemplateList isn't cooperating
+			try {
+				await templateStorage.performFullSave(JSON.parse(text), true)
+				window.location.reload()
+			} catch {
+				alert('Failed to import templates. Check that the file is valid JSON.');
+			}
 		};
 		document.body.appendChild(fileInput);
 		fileInput.click();
