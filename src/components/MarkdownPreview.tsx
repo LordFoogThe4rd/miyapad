@@ -1,6 +1,7 @@
 import { html } from 'htm/react';
 import { useMemo, useLayoutEffect } from 'react';
 import { marked } from 'marked';
+import DOMPurify from 'dompurify';
 import { useSettings } from '../contexts/SettingsContext';
 import { useGeneration } from '../contexts/GenerationContext';
 import { usePromptBuilder } from '../hooks/usePromptBuilder';
@@ -23,7 +24,8 @@ export function MarkdownPreview({ sidebarHeight }: any) {
 
 	const markdownHtml = useMemo(() => {
 		if (!showMarkdownPreview) return '';
-		return marked.parse(promptText, { gfm: true, breaks: true });
+		const raw = marked.parse(promptText, { gfm: true, breaks: true });
+		return DOMPurify.sanitize(typeof raw === 'string' ? raw : '');
 	}, [promptText, showMarkdownPreview]);
 
 	return html`

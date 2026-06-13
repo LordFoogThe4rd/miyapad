@@ -9,6 +9,7 @@
     "postbuild": "node scripts/inline-dist.mjs && rm -rf .parcel-cache"
   },
   "dependencies": {
+    "dompurify": "^3.4.10",
     "htm": "^3.1.1",
     "html-to-image": "^1.11.13",
     "marked": "^16.4.1",
@@ -19,6 +20,7 @@
   },
   "devDependencies": {
     "@parcel/transformer-inline-string": "^2.9.3",
+    "@types/dompurify": "^3.0.5",
     "@types/react": "^19.2.17",
     "@types/react-dom": "^19.2.3",
     "parcel": "^2.9.3",
