@@ -166,9 +166,9 @@ export function ThemeManagerModal({ isOpen, closeModal, allThemes, setAllThemes,
                 try {
                     const importedThemes = JSON.parse((e.target as FileReader).result as string);
                     setAllThemes((prevThemes: any) => ({ ...prevThemes, ...importedThemes }));
-                } catch (err: any) {
+                } catch (e: unknown) {
                     alert("Failed to import themes. Please check if you selected the right file.");
-                    console.error(err);
+                    console.error(e);
                 }
             };
             reader.readAsText(file);

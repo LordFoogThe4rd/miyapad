@@ -157,7 +157,7 @@ export function useGenerationLogic() {
 			} else {
 				try {
 					stopParam = JSON.parse(stoppingStrings);
-			} catch (e: any) {
+			} catch (e: unknown) {
 				console.error('Failed to parse stopping strings', stoppingStrings, e);
 				stopParam = [];
 			}
@@ -301,10 +301,10 @@ export function useGenerationLogic() {
 				predictCount += 1;
 				ttsAddChunk(compChunk.content);
 			}
-		} catch (e: any) {
-			if (e.name !== 'AbortError') {
+		} catch (e: unknown) {
+			if ((e as Error).name !== 'AbortError') {
 				reportError(e);
-				const errStr = e.toString();
+				const errStr = String(e);
 				if ((endpointAPI == API_OPENAI_COMPAT || endpointAPI == API_LLAMA_CPP || endpointAPI == API_DEEPSEEK) && errStr.includes("401")) {
 					setLastError("Error: Rejected API Key");
 					setRejectedAPIKey(true);

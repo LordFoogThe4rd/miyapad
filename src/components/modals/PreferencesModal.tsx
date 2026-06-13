@@ -107,7 +107,7 @@ export function PreferencesModal({ isOpen, closeModal, settings }: any) {
 			if (data.loaded) {
 				setTokenizerStatus(`Loaded: ${data.loaded}`);
 			}
-		} catch (e: any) {
+		} catch (e: unknown) {
 			setTokenizerList([]);
 			setTokenizerStatus('Failed to fetch tokenizers');
 		}
@@ -129,8 +129,8 @@ export function PreferencesModal({ isOpen, closeModal, settings }: any) {
 		try {
 			await loadServerTokenizer({ sessionEndpoint: sessionStorage.sessionEndpoint, model });
 			setTokenizerStatus(`Loaded: ${model}`);
-		} catch (e: any) {
-			setTokenizerStatus(`Error: ${e.message}`);
+		} catch (e: unknown) {
+			setTokenizerStatus(`Error: ${(e as Error).message}`);
 		}
 	}, [sessionStorage, setTokenizerModel]);
 

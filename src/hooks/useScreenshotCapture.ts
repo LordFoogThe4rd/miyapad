@@ -30,8 +30,8 @@ export function useScreenshotCapture() {
 				reader.onerror = reject;
 				reader.readAsDataURL(blob);
 			});
-		} catch (err: any) {
-			console.error("Failed to convert image to base64", err);
+		} catch (e: unknown) {
+			console.error("Failed to convert image to base64", e);
 			return url;
 		}
 	}, [sessionStorage]);
@@ -199,8 +199,8 @@ export function useScreenshotCapture() {
 				win.document.write('<img src="' + dataUrl + '"/>');
 				win.document.close();
 			}
-		} catch (err: any) {
-			console.error("Screenshot failed:", err);
+		} catch (e: unknown) {
+			console.error("Screenshot failed:", e);
 		} finally {
 			staging.removeChild(captureContainer);
 		}

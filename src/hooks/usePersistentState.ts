@@ -6,7 +6,7 @@ export function usePersistentState(name: any, initialState: any) {
 			const item = localStorage.getItem(name);
 			if (item === "undefined" || item === null) return undefined;
 			return JSON.parse(item);
-		} catch (e: any) {
+		} catch (e: unknown) {
 			console.warn(`Failed to parse persistent state for ${name}:`, e);
 			return null;
 		}

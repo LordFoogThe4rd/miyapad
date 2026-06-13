@@ -35,8 +35,8 @@ export function ContextModal({ isOpen, closeModal, tokens, memoryTokens, authorN
 					})
 				);
 				setPlaygroundTokens(count);
-			} catch (e: any) {
-				if (e.name !== 'AbortError') {
+			} catch (e: unknown) {
+				if ((e as Error).name !== 'AbortError') {
 					reportError(e);
 					setPlaygroundTokens(0);
 				}

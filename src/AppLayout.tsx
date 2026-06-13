@@ -249,8 +249,8 @@ export function AppLayout() {
 		try {
 			JSON.parse(stoppingStrings);
 			setStoppingStringsError(undefined);
-		} catch (e: any) {
-			setStoppingStringsError(e.toString());
+		} catch (e: unknown) {
+			setStoppingStringsError(String(e));
 		}
 	}, [stoppingStrings]);
 
@@ -258,16 +258,16 @@ export function AppLayout() {
 		try {
 			JSON.parse(drySequenceBreakers);
 			setDrySequenceBreakersError(undefined);
-		} catch (e: any) {
-			setDrySequenceBreakersError(e.toString());
+		} catch (e: unknown) {
+			setDrySequenceBreakersError(String(e));
 		}
 	}, [drySequenceBreakers]);
 
 	useEffect(() => {
 		try {JSON.parse(bannedTokens);
 			setBannedTokensError(undefined);
-		} catch (e: any) {
-			setBannedTokensError(e.toString());
+		} catch (e: unknown) {
+			setBannedTokensError(String(e));
 		}
 	}, [bannedTokens]);
 
@@ -396,8 +396,8 @@ export function AppLayout() {
 				})
 			);
 				setTokens(tokenCount);
-			} catch (e: any) {
-				if (e.name !== 'AbortError')
+			} catch (e: unknown) {
+				if ((e as Error).name !== 'AbortError')
 					reportError(e);
 			}
 		}, 500);
@@ -421,10 +421,10 @@ export function AppLayout() {
 					...(isMiyapadEndpoint ? { proxyEndpoint: sessionStorage.proxyEndpoint } : {})
 				});
 				setOpenaiModels(models);
-			} catch (e: any) {
-				if (e.name !== 'AbortError') {
+			} catch (e: unknown) {
+				if ((e as Error).name !== 'AbortError') {
 					reportError(e);
-					const errStr = e.toString();
+					const errStr = String(e);
 					if ((endpointAPI == API_OPENAI_COMPAT || endpointAPI == API_DEEPSEEK) && errStr.includes("401")) {
 						setRejectedAPIKey(true);
 					}
@@ -492,7 +492,7 @@ export function AppLayout() {
 						setSessionEndpointError(undefined);
 						clearTimeout(sessionReconnectTimer.current);
 						sessionReconnectTimer.current = undefined;
-					} catch (e: any) {
+					} catch (e: unknown) {
 						reportError(e);
 					}
 				}, 1000);
@@ -515,8 +515,8 @@ export function AppLayout() {
 		if (!sessionStorage?.sessionEndpoint) return;
 
 		loadServerTokenizer({ sessionEndpoint: sessionStorage.sessionEndpoint, model: tokenizerModel })
-			.catch((e: any) => {
-				if (e.name !== 'AbortError')
+			.catch((e: unknown) => {
+				if ((e as Error).name !== 'AbortError')
 					reportError(e);
 			});
 	}, []);

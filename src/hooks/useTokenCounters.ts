@@ -42,8 +42,8 @@ export function useTokenCounters() {
 					...prevauthorNoteTokens,
 					"tokens": tokenCount - 1 
 				}));
-			} catch (e: any) {
-				if (e.name !== 'AbortError'){
+			} catch (e: unknown) {
+				if ((e as Error).name !== 'AbortError'){
 					reportError(e);
 					setAuthorNoteTokens((prevauthorNoteTokens: any) => ({ ...prevauthorNoteTokens, "tokens": 0 }))
 				}	
@@ -87,8 +87,8 @@ export function useTokenCounters() {
 					...prevMemoryTokens,
 					"tokens": tokenCount - 1 
 				}));
-			} catch (e: any) {
-				if (e.name !== 'AbortError'){
+			} catch (e: unknown) {
+				if ((e as Error).name !== 'AbortError'){
 					reportError(e);
 					setMemoryTokens((prevMemoryTokens: any) => ({ ...prevMemoryTokens, "tokens": 0 }));
 				}
@@ -127,8 +127,8 @@ export function useTokenCounters() {
 					...prevMemoryTokens,
 					"tokensWI": tokenCount - 1 
 				}));
-			} catch (e: any) {
-				if (e.name !== 'AbortError'){
+			} catch (e: unknown) {
+				if ((e as Error).name !== 'AbortError'){
 					reportError(e);
 					setMemoryTokens((prevMemoryTokens: any) => ({ ...prevMemoryTokens, "tokensWI": 0 }));
 				}

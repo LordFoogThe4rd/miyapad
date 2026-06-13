@@ -86,7 +86,7 @@ export function WorldInfoModal({ isOpen, closeModal, worldInfo, setWorldInfo, ca
 					} else {
 						importSillyTavernWorldInfo(json, setWorldInfo, "append");
 					}
-				} catch (e: any) {
+				} catch (e: unknown) {
 					alert("The JSON data could not be parsed. Please check that it is valid JSON.");
 					console.error(e);
 				}

@@ -33,9 +33,9 @@ export function AIHordeSettingsModal({ isOpen, closeModal, endpoint, endpointAPI
             const modelData = (await res.json()).filter((model: any) => model.type === "text");
             modelData.sort((a: any, b: any) => b.count - a.count || a.eta - b.eta); // Sort by workers, then ETA
             setModels(modelData);
-        } catch (e: any) {
-            if (e.name !== 'AbortError') {
-                setError(e.toString());
+        } catch (e: unknown) {
+            if ((e as Error).name !== 'AbortError') {
+                setError(String(e));
             }
         } finally {
             setLoading(false);

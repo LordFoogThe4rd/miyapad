@@ -40,10 +40,10 @@ function GenericConnectionSettings({ connection, updateConnection }: any) {
 			if (Array.isArray(models)) {
 				updateConnection('models', models);
 			}
-		} catch (e: any) {
-			if (e.name === 'AbortError') return;
+		} catch (e: unknown) {
+			if ((e as Error).name === 'AbortError') return;
 			console.error(e);
-			setError(e.message || e.toString());
+			setError((e as Error).message || String(e));
 		} finally {
 			setIsFetching(false);
 		}
@@ -191,10 +191,10 @@ function AIHordeConnectionSettings({ connection, updateConnection }: any) {
 			const modelData = (await res.json()).filter((model: any) => model.type === "text");
 			modelData.sort((a: any, b: any) => b.count - a.count || a.eta - b.eta);
 			setAvailableModels(modelData);
-		} catch (e: any) {
-			if (e.name === 'AbortError') return;
+		} catch (e: unknown) {
+			if ((e as Error).name === 'AbortError') return;
 			console.error(e);
-			setError(e.message || e.toString());
+			setError((e as Error).message || String(e));
 		} finally {
 			setIsFetching(false);
 		}

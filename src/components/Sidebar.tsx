@@ -74,8 +74,8 @@ export function Sidebar({ sidebarRef, toggleModal, currentThemeName, setCurrentT
 					body: JSON.stringify(maintConfigRef.current)
 				});
 				if (!res.ok) console.error('Failed to save maintenance config:', await res.text());
-			} catch (err: any) {
-				console.error('Failed to save maintenance config:', err);
+			} catch (e: unknown) {
+				console.error('Failed to save maintenance config:', e);
 			}
 		}, 500);
 	};
@@ -104,7 +104,7 @@ export function Sidebar({ sidebarRef, toggleModal, currentThemeName, setCurrentT
 						maintConfigRef.current = { ...maintJson };
 					}
 				}
-			} catch (err: any) {}
+			} catch (e: unknown) {}
 		};
 		checkVersion();
 	}, [isMiyapadEndpoint]);

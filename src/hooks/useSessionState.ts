@@ -4,7 +4,7 @@ export function useSessionState(sessionStorage: any, name: any, initialState: an
 	const savedState = useMemo(() => {
 		try {
 			return sessionStorage.getProperty(name);
-		} catch (e: any) {
+		} catch (e: unknown) {
 			console.warn(`Failed to retrieve session state for ${name}:`, e);
 			return null;
 		}

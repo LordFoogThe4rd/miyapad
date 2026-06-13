@@ -55,8 +55,8 @@ export default function(app: Express): void {
             res.set('Access-Control-Allow-Origin', '*');
             res.set('Cache-Control', 'public, max-age=86400');
             res.send(Buffer.from(response.data as ArrayBuffer));
-        } catch (error: any) {
-            res.status(error.response?.status || 500).send('Failed to fetch image');
+        } catch (e: unknown) {
+            res.status((e as any).response?.status || 500).send('Failed to fetch image');
         }
     });
 
@@ -104,19 +104,20 @@ export default function(app: Express): void {
             res.on('close', () => {
                 (response.data as Readable).destroy();
             });
-        } catch (error: any) {
-            if (error.response) {
-                if (error.response.data?.pipe) {
+        } catch (e: unknown) {
+            const err = e as any;
+            if (err.response) {
+                if (err.response.data?.pipe) {
                     const chunks: Buffer[] = [];
-                    error.response.data.on('data', (c: Buffer) => chunks.push(c));
-                    error.response.data.on('end', () => {
+                    err.response.data.on('data', (c: Buffer) => chunks.push(c));
+                    err.response.data.on('end', () => {
                         const body = Buffer.concat(chunks).toString('utf8');
-                        res.status(error.response.status).json({ error: body });
+                        res.status(err.response.status).json({ error: body });
                     });
                 } else {
-                    res.status(error.response.status).json({ error: error.response.data });
+                    res.status(err.response.status).json({ error: err.response.data });
                 }
-            } else if (error.request) {
+            } else if (err.request) {
                 res.status(504).json({ error: 'No response from target server.' });
             } else {
                 res.status(500).json({ error: 'Error setting up request to target server.' });
@@ -160,10 +161,10 @@ export default function(app: Express): void {
             });
 
             res.send(response.data);
-        } catch (error: any) {
-            if (error.response) {
-                res.status(error.response.status).json({ error: error.response.data });
-            } else if (error.request) {
+        } catch (e: unknown) {
+            if ((e as any).response) {
+                res.status((e as any).response.status).json({ error: (e as any).response.data });
+            } else if ((e as any).request) {
                 res.status(504).json({ error: 'No response from target server.' });
             } else {
                 res.status(500).json({ error: 'Error setting up request to target server.' });
@@ -206,10 +207,10 @@ export default function(app: Express): void {
             });
 
             res.send(response.data);
-        } catch (error: any) {
-            if (error.response) {
-                res.status(error.response.status).json({ error: error.response.data });
-            } else if (error.request) {
+        } catch (e: unknown) {
+            if ((e as any).response) {
+                res.status((e as any).response.status).json({ error: (e as any).response.data });
+            } else if ((e as any).request) {
                 res.status(504).json({ error: 'No response from target server.' });
             } else {
                 res.status(500).json({ error: 'Error setting up request to target server.' });

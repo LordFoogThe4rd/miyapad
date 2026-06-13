@@ -91,9 +91,9 @@ export function SearchAndReplaceWidget({ isOpen, closeWidget, id, children, prom
 					}
 				}
 			}
-			catch (e: any) {
+			catch (e: unknown) {
 				reportError(e);
-				const errStr = e.toString();
+				const errStr = String(e);
 				setSearchAndReplaceError(errStr);
 				return [];
 			}
@@ -177,7 +177,7 @@ export function SearchAndReplaceWidget({ isOpen, closeWidget, id, children, prom
 			elem.select();
 			document.execCommand('insertText', false, newVal);
 		}
-		catch (e: any) {
+		catch (e: unknown) {
 			reportError(e);
 		}
 	}
@@ -189,9 +189,9 @@ export function SearchAndReplaceWidget({ isOpen, closeWidget, id, children, prom
 			elem.select();
 			document.execCommand('insertText', false, newVal);
 		}
-		catch (e: any) {
+		catch (e: unknown) {
 			reportError(e);
-			const errStr = e.toString()
+			const errStr = String(e)
 			setSearchAndReplaceError(errStr)
 		}
 	}

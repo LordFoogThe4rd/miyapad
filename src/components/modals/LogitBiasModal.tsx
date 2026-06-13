@@ -146,10 +146,10 @@ export function LogitBiasModal({ isOpen, closeModal, biasState, apiConfig, cance
 				}
 			}));
 		}
-		catch(e: any) {
-			if (e.name !== 'AbortError') {
+		catch(e: unknown) {
+			if ((e as Error).name !== 'AbortError') {
 				reportError(e);
-				const errStr = e.toString();
+				const errStr = String(e);
 				if ((endpointAPI == API_OPENAI_COMPAT || endpointAPI == API_LLAMA_CPP || endpointAPI == API_DEEPSEEK) && errStr.includes("401")) {
 					setLastBiasError("Error: Rejected API Key");
 					setRejectedAPIKey(true);
