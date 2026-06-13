@@ -7,12 +7,21 @@ import { getTokens, serverTokenize } from '../../api/index';
 
 type TokenizeResult = { ids: number[]; str: string | string[] };
 
+type BiasItem = {
+  value: string;
+  valueBack: string;
+  strings: string[];
+  tokens: number[];
+  power: number;
+};
+type BiasTempState = { positive: BiasItem[]; negative: BiasItem[] };
+
 export function LogitBiasModal({ isOpen, closeModal, biasState, apiConfig, cancel }: any) {
 	const { logitBias, setLogitBias, logitBiasParam, setLogitBiasParam, setRejectedAPIKey } = biasState;
 	const { sessionStorage, endpoint, endpointAPI, endpointAPIKey, isMiyapadEndpoint, useServerTokenization } = apiConfig;
-	const [lastBiasError, setLastBiasError] = useState<any>(undefined);
-	const [logitBiasTemp, setLogitBiasTemp] = useState<any>([]);
-	const [logitBiasSorted, setLogitBiasSorted] = useState<any[]>([]);
+	const [lastBiasError, setLastBiasError] = useState<string | undefined>(undefined);
+	const [logitBiasTemp, setLogitBiasTemp] = useState<BiasTempState>({ positive: [], negative: [] });
+	const [logitBiasSorted, setLogitBiasSorted] = useState<string[]>([]);
 	const [logitBiasInput, setLogitBiasInput] = useState({power:"0",string:""});
 
 	const handleLogitBiasInput = (key: any, value: any) => {
@@ -211,7 +220,7 @@ export function LogitBiasModal({ isOpen, closeModal, biasState, apiConfig, cance
 
 
 	useEffect(() => {
-		const tempArray = logitBiasSorted.map((string: any, index: any) =>  ({
+		const tempArray = logitBiasSorted.map((string, index) =>  ({
 			value: string,
 			valueBack: string,
 			strings: logitBias.bias[string].strings,
@@ -221,7 +230,7 @@ export function LogitBiasModal({ isOpen, closeModal, biasState, apiConfig, cance
 		setLogitBiasTemp({
 			positive: tempArray.filter(item => item.power > 0),
 			negative: tempArray.filter(item => item.power < 0)
-		} as any);
+		});
 	},[logitBiasSorted,isOpen]);
 
 
