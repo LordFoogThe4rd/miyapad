@@ -196,32 +196,23 @@ export function SessionsModal({ isOpen, closeModal, sessionStorage, cancel }: Se
 				return;
 
 			const sortedFiles = Array.from(files ?? []).sort((a: any, b: any) => a.lastModified - b.lastModified);
-
-			const reader = new FileReader();
 			let lastNewId = null;
 
-			try {
-				for (const file of sortedFiles) {
-					await new Promise<void>((resolve, reject) => {
-						reader.onload = async (e: any) => {
-							try {
-								lastNewId = await sessionStorage.createSessionFromObject(JSON.parse((e.target as FileReader).result as string), false);
-								resolve();
-							} catch (err) {
-								reject(err);
-							}
-						};
-						reader.onerror = (e: any) => {
-							reject(e);
-						};
+			for (const file of sortedFiles) {
+				try {
+					const text = await new Promise<string>((resolve, reject) => {
+						const reader = new FileReader();
+						reader.onload = (e: any) => resolve((e.target as FileReader).result as string);
+						reader.onerror = () => reject(new Error(`Failed to read file: ${file.name}`));
 						reader.readAsText(file);
 					});
+					lastNewId = await sessionStorage.createSessionFromObject(JSON.parse(text), false);
+				} catch (err) {
+					console.warn(`Skipped malformed import file "${file.name}":`, err);
 				}
-				if (lastNewId !== null) {
-					await sessionStorage.switchSession(lastNewId);
-				}
-			} catch {
-				alert('Failed to import session. Check that the file is valid JSON.');
+			}
+			if (lastNewId !== null) {
+				await sessionStorage.switchSession(lastNewId);
 			}
 		};
 		document.body.appendChild(fileInput);
