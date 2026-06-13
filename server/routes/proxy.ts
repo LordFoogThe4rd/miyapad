@@ -35,6 +35,24 @@ function isValidProxyUrl(urlString: string): boolean {
     }
 }
 
+function safeFinalUrl(targetBaseUrl: string, path: string): string | null {
+    const finalUrl = path ? new URL(path, targetBaseUrl).href : targetBaseUrl;
+    const baseParsed = new URL(targetBaseUrl);
+    const finalParsed = new URL(finalUrl);
+
+    if (finalParsed.origin !== baseParsed.origin) return null;
+
+    const basePath = baseParsed.pathname;
+    const finalPath = finalParsed.pathname;
+
+    if (finalPath === basePath) return finalUrl;
+
+    const baseDir = basePath.endsWith('/') ? basePath : basePath + '/';
+    if (!finalPath.startsWith(baseDir)) return null;
+
+    return finalUrl;
+}
+
 export default function(app: Express): void {
     app.get('/proxy-image', async (req: Request, res: Response) => {
         const imageUrl = req.query.url as string | undefined;
@@ -76,10 +94,8 @@ export default function(app: Express): void {
             delete req.headers[header.toLowerCase()];
         });
 
-        const finalUrl = path ? new URL(path, targetBaseUrl).href : targetBaseUrl;
-        const baseOrigin = new URL(targetBaseUrl).origin;
-        const basePath = new URL(targetBaseUrl).pathname;
-        if (!finalUrl.startsWith(baseOrigin + basePath)) {
+        const finalUrl = safeFinalUrl(targetBaseUrl, path);
+        if (!finalUrl) {
             return res.status(403).send('Path traversal detected');
         }
 
@@ -141,10 +157,8 @@ export default function(app: Express): void {
             delete req.headers[header.toLowerCase()];
         });
 
-        const finalUrl = path ? new URL(path, targetBaseUrl).href : targetBaseUrl;
-        const baseOrigin = new URL(targetBaseUrl).origin;
-        const basePath = new URL(targetBaseUrl).pathname;
-        if (!finalUrl.startsWith(baseOrigin + basePath)) {
+        const finalUrl = safeFinalUrl(targetBaseUrl, path);
+        if (!finalUrl) {
             return res.status(403).send('Path traversal detected');
         }
 
@@ -188,10 +202,8 @@ export default function(app: Express): void {
             delete req.headers[header.toLowerCase()];
         });
 
-        const finalUrl = path ? new URL(path, targetBaseUrl).href : targetBaseUrl;
-        const baseOrigin = new URL(targetBaseUrl).origin;
-        const basePath = new URL(targetBaseUrl).pathname;
-        if (!finalUrl.startsWith(baseOrigin + basePath)) {
+        const finalUrl = safeFinalUrl(targetBaseUrl, path);
+        if (!finalUrl) {
             return res.status(403).send('Path traversal detected');
         }
 
