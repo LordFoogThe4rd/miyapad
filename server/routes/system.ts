@@ -2,7 +2,6 @@ import path from 'path';
 import { fileURLToPath } from 'url';
 import type { Express, Request, Response } from 'express';
 import type { Database } from 'sqlite3';
-import { getColumnName, normalizeStoreName } from '../lib/utils.js';
 import * as tokenizer from '../tokenizer.js';
 import { runZstdMaintenance, configureWAL, getMaintenanceConfig, saveMaintenanceConfig, clearMaintenanceScheduler, scheduleZstdMaintenance } from '../lib/database.js';
 
