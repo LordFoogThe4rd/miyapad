@@ -10,7 +10,7 @@ export default function(app: Express, db: Database): void {
             return res.status(400).json({ ok: false, message: 'Invalid store name provided' });
         }
         const colName = getColumnName(normStoreName);
-        db.get(`SELECT ${colName} AS data FROM ${normStoreName} WHERE key = ?`, [key], async (err, row: any) => {
+        db.get(`SELECT ${colName} AS data FROM ${normStoreName} WHERE key = ?`, [key], async (err, row: { data: Buffer | string } | undefined) => {
             if (err) {
                 return res.status(500).json({ ok: false, message: 'Error querying the database' });
             }
@@ -23,9 +23,10 @@ export default function(app: Express, db: Database): void {
                     const plainText = typeof row.data === 'string' ? row.data : row.data.toString();
                     res.json({ ok: true, result: JSON.parse(plainText) });
                 } else {
-                    let parsedResult = row.data;
+                    const rowData = typeof row.data === 'string' ? row.data : row.data.toString();
+                    let parsedResult = rowData;
                     try {
-                        const parsed = JSON.parse(row.data);
+                        const parsed = JSON.parse(rowData);
                         if (parsed && typeof parsed === 'object' && parsed.name !== undefined) {
                             parsedResult = parsed;
                         }
@@ -74,7 +75,7 @@ export default function(app: Express, db: Database): void {
         if (normStoreName !== 'sessions') {
             return res.status(400).json({ ok: false, message: 'Renaming is only supported for sessions' });
         }
-        db.get(`SELECT data FROM names WHERE key = ?`, [key], (err, row: any) => {
+        db.get(`SELECT data FROM names WHERE key = ?`, [key], (err, row: { data: string } | undefined) => {
             if (err) {
                 return res.status(500).json({ ok: false, message: 'Error querying the database' });
             }
@@ -114,7 +115,7 @@ export default function(app: Express, db: Database): void {
             return res.status(400).json({ ok: false, message: 'Invalid store name provided' });
         }
         const colName = getColumnName(normStoreName);
-        db.all(`SELECT key, ${colName} AS data FROM ${normStoreName}`, [], async (err, rows: any[]) => {
+        db.all(`SELECT key, ${colName} AS data FROM ${normStoreName}`, [], async (err, rows: { key: string; data: Buffer | string }[]) => {
             if (err) {
                 return res.status(500).json({ ok: false, message: 'Error querying the database' });
             }
@@ -145,7 +146,7 @@ export default function(app: Express, db: Database): void {
             FROM names
             `,
             [],
-            (err, rows: any[]) => {
+            (err, rows: { key: string; name: string }[]) => {
                 if (err) {
                     res.status(500).json({ ok: false, message: 'Error querying the database' });
                 } else {

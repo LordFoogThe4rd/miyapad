@@ -15,7 +15,7 @@ const runMigrationToV3 = (db: sqlite3.Database) => {
               AND NOT EXISTS (SELECT 1 FROM sqlite_master WHERE type = 'table' AND name = 'names');
         `;
 
-        db.get(migrationCheckSql, (err, row: any) => {
+        db.get(migrationCheckSql, (err, row: { status: string } | undefined) => {
             if (err) {
                 return reject(err);
             }
@@ -23,10 +23,10 @@ const runMigrationToV3 = (db: sqlite3.Database) => {
             if (row) {
                 db.serialize(async () => {
                     try {
-                        const migrateTable = async (tableName: string, processRow: (row: any) => Promise<void>) => {
+                        const migrateTable = async (tableName: string, processRow: (row: { key: string; data: string }) => Promise<void>) => {
                             await new Promise<void>((res, rej) => db.run(`ALTER TABLE ${tableName} RENAME TO ${tableName}_old`, (err) => err ? rej(err) : res()));
                             await new Promise<void>((res, rej) => db.run(`CREATE TABLE ${tableName} (key TEXT PRIMARY KEY, data BLOB)`, (err) => err ? rej(err) : res()));
-                            const rows: any[] = await new Promise((res, rej) => db.all(`SELECT key, data FROM ${tableName}_old`, [], (err, rows) => err ? rej(err) : res(rows)));
+                            const rows = await new Promise<{ key: string; data: string }[]>((res, rej) => db.all(`SELECT key, data FROM ${tableName}_old`, [], (err, rows) => err ? rej(err) : res(rows as { key: string; data: string }[])));
                             for (const row of rows) {
                                 await processRow(row);
                             }
@@ -76,7 +76,7 @@ const runMigrationToV3 = (db: sqlite3.Database) => {
 
 const enableTransparentCompressionIfMissing = (db: sqlite3.Database, tableName: string) => {
     return new Promise<void>((resolve, reject) => {
-        db.get(`SELECT name FROM sqlite_master WHERE type='table' AND name=?`, [`_${tableName}_zstd`], (err, row: any) => {
+        db.get(`SELECT name FROM sqlite_master WHERE type='table' AND name=?`, [`_${tableName}_zstd`], (err, row: { name: string } | undefined) => {
             if (err) return reject(err);
             if (row) {
                 return resolve();
@@ -103,7 +103,7 @@ const enableTransparentCompressionIfMissing = (db: sqlite3.Database, tableName: 
 
 const runMigrationToV4 = (db: sqlite3.Database) => {
     return new Promise<boolean>((resolve, reject) => {
-        db.get("SELECT value FROM meta WHERE key = 'version'", async (err, row: any) => {
+        db.get("SELECT value FROM meta WHERE key = 'version'", async (err, row: { value: string } | undefined) => {
             if (err) {
                 return resolve(false);
             }
@@ -120,7 +120,7 @@ const runMigrationToV4 = (db: sqlite3.Database) => {
                     const colName = getColumnName(tableName);
 
                     const tableExists: boolean = await new Promise((res, rej) => {
-                        db.get(`SELECT name FROM sqlite_master WHERE type='table' AND name=?`, [tableName], (err, row: any) => {
+                        db.get(`SELECT name FROM sqlite_master WHERE type='table' AND name=?`, [tableName], (err, row: { name: string } | undefined) => {
                             if (err) rej(err);
                             else res(!!row);
                         });
@@ -132,7 +132,7 @@ const runMigrationToV4 = (db: sqlite3.Database) => {
                     }
 
                     const hasOldColumnName: boolean = await new Promise((res, rej) => {
-                        db.all(`PRAGMA table_info(${tableName})`, [], (err, infoRows: any[]) => {
+                        db.all(`PRAGMA table_info(${tableName})`, [], (err, infoRows: { name: string }[]) => {
                             if (err) return rej(err);
                             const hasOld = infoRows.some(info => info.name === 'data');
                             res(hasOld);
@@ -141,19 +141,20 @@ const runMigrationToV4 = (db: sqlite3.Database) => {
 
                     let oldColName = hasOldColumnName ? 'data' : colName;
 
-                    const rows: any[] = await new Promise((res, rej) => {
-                        db.all(`SELECT key, ${oldColName} FROM ${tableName}`, [], (err, rows) => err ? rej(err) : res(rows));
+                    const rows = await new Promise<{ key: string; [col: string]: unknown }[]>((res, rej) => {
+                        db.all(`SELECT key, ${oldColName} FROM ${tableName}`, [], (err, rows) => err ? rej(err) : res(rows as { key: string; [col: string]: unknown }[]));
                     });
 
                     console.log(`Migrating ${rows.length} rows from table ${tableName}...`);
 
                     const decompressedRows: { key: string; data: string }[] = [];
                     for (const row of rows) {
+                        const colVal = row[oldColName];
                         let decompressed: string;
                         try {
-                            decompressed = await decompressData(row[oldColName]);
+                            decompressed = await decompressData(colVal as Buffer);
                         } catch (e) {
-                            decompressed = row[oldColName] ? row[oldColName].toString() : '';
+                            decompressed = colVal ? String(colVal) : '';
                         }
                         decompressedRows.push({ key: row.key, data: decompressed });
                     }
@@ -212,7 +213,7 @@ const DEFAULT_MAINTENANCE_CONFIG = {
 
 const configureAutoVacuum = (db: sqlite3.Database) => {
     return new Promise<void>((resolve) => {
-        db.get('PRAGMA auto_vacuum', (err, row: any) => {
+        db.get('PRAGMA auto_vacuum', (err, row: { auto_vacuum: number } | undefined) => {
             if (err || !row || row.auto_vacuum !== 0) {
                 return resolve();
             }
@@ -272,7 +273,7 @@ interface MaintenanceConfig {
 
 const getMaintenanceConfig = (db: sqlite3.Database) => {
     return new Promise<MaintenanceConfig>((resolve) => {
-        db.get(`SELECT value FROM meta WHERE key = 'maintenance_config'`, (err, row: any) => {
+        db.get(`SELECT value FROM meta WHERE key = 'maintenance_config'`, (err, row: { value: string } | undefined) => {
             if (err || !row) {
                 resolve({ ...DEFAULT_MAINTENANCE_CONFIG });
             } else {
@@ -339,7 +340,7 @@ const initDatabase = (storagePath: string) => {
 
                 try {
                     const sessionTableExists: boolean = await new Promise((res, rej) => {
-                        db.get("SELECT name FROM sqlite_master WHERE type='table' AND name='sessions'", (err, row: any) => {
+                        db.get("SELECT name FROM sqlite_master WHERE type='table' AND name='sessions'", (err, row: { name: string } | undefined) => {
                             if (err) rej(err);
                             else res(!!row);
                         });
@@ -404,7 +405,7 @@ const initDatabase = (storagePath: string) => {
                     });
 
                     await new Promise<void>((res) => {
-                        db.get(`SELECT value FROM meta WHERE key = 'tokenizer_model'`, async (err, row: any) => {
+                        db.get(`SELECT value FROM meta WHERE key = 'tokenizer_model'`, async (err, row: { value: string } | undefined) => {
                             if (err) {
                                 console.error('Failed to query saved tokenizer:', err.message);
                                 return res();
