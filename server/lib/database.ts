@@ -332,11 +332,11 @@ const initDatabase = (storagePath: string) => {
                 return reject(err);
             }
 
-            const zstdLibName = {
+            const zstdLibName = ({
                 'win32': 'sqlite_zstd.dll',
                 'darwin': 'libsqlite_zstd.dylib',
                 'linux': 'libsqlite_zstd.so'
-            }[process.platform] || 'libsqlite_zstd.so';
+            } as Record<string, string | undefined>)[process.platform] || 'libsqlite_zstd.so';
 
             db.loadExtension(path.join(__dirname, '..', zstdLibName), async (err) => {
                 if (err) {
