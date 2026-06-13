@@ -19,7 +19,7 @@ function ip4ToInt(ip: string): number {
 }
 
 function isPrivateIP(ip: string): boolean {
-    const m = ip.match(/^(\d+)\.(\d+)\.(\d+)\.(\d+)$/);
+    const m = ip.match(/^((?:[0-9]|[1-9][0-9]|1[0-9][0-9]|2[0-4][0-9]|25[0-5]))\.((?:[0-9]|[1-9][0-9]|1[0-9][0-9]|2[0-4][0-9]|25[0-5]))\.((?:[0-9]|[1-9][0-9]|1[0-9][0-9]|2[0-4][0-9]|25[0-5]))\.((?:[0-9]|[1-9][0-9]|1[0-9][0-9]|2[0-4][0-9]|25[0-5]))$/);
     if (!m) return false;
     const num = ip4ToInt(ip);
     return PRIVATE_IP_RANGES.some(r => num >= r.start && num <= r.end);
