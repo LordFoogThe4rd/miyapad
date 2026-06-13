@@ -9,7 +9,7 @@ import { defaultPresets } from '../../defaults/presets';
 
 export function InstructTemplatesModal({ isOpen, closeModal, templateStorage, selectedTemplate, setSelectedTemplate, templateList, setTemplateList, templates, templatesImport, setTemplates, cancel, applyChatTemplate }) {
 	const [addDeleteTemplate, setAddDeleteTemplate] = useState(false);
-	const [templateDuplicate, setTemplateDuplicate] = useState(false);
+	const [templateDuplicate, setTemplateDuplicate] = useState<any>(false);
 	const [newTemplateName, setNewTemplateName] = useState(undefined);
 
 	function getArrObjByName(array,name,getIndex=false) {
@@ -188,17 +188,17 @@ export function InstructTemplatesModal({ isOpen, closeModal, templateStorage, se
 		fileInput.type = 'file';
 		fileInput.style.display = 'none';
 		fileInput.onchange = (e) => {
-			const file = e.target.files[0];
+			const file = (e.target as HTMLInputElement).files?.[0];
 			if (!file)
 				return;
 			const reader = new FileReader();
 			reader.onload = (e) => {
-				const contents = e.target.result;
-				fileInput.func(contents);
+				const contents = (e.target as FileReader).result as string;
+				(fileInput as any).func(contents);
 			}
 			reader.readAsText(file);
 		}
-		fileInput.func = async (text) => {
+		(fileInput as any).func = async (text) => {
 			await templateStorage.performFullSave(JSON.parse(text), true)
 			window.location.reload()
 			// a little dirty, but updateTemplateList isn't cooperating

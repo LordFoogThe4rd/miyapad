@@ -25,7 +25,7 @@ export function QuickSwitcher({ isOpen, closeModal, sessionStorage, cancel }) {
 	const results = useMemo(() => {
 		const q = query.trim().toLowerCase();
 		if (!q) return [];
-		return Object.entries(sessionStorage.sessions)
+		return (Object.entries(sessionStorage.sessions) as [string, SessionData][])
 			.filter(([_, s]) => (s.name || '').toLowerCase().includes(q))
 			.map(([id, s]) => ({ id: +id, name: s.name, pinned: !!s.pinned }))
 			.sort((a, b) => {

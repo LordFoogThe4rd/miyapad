@@ -159,12 +159,12 @@ export function ThemeManagerModal({ isOpen, closeModal, allThemes, setAllThemes,
         fileInput.type = 'file';
         fileInput.accept = '.json';
         fileInput.onchange = (e) => {
-            const file = e.target.files[0];
+            const file = (e.target as HTMLInputElement).files?.[0];
             if (!file) return;
             const reader = new FileReader();
             reader.onload = (e) => {
                 try {
-                    const importedThemes = JSON.parse(e.target.result);
+                    const importedThemes = JSON.parse((e.target as FileReader).result as string);
                     setAllThemes(prevThemes => ({ ...prevThemes, ...importedThemes }));
                 } catch (err) {
                     alert("Failed to import themes. Please check if you selected the right file.");

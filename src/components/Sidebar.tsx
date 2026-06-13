@@ -256,7 +256,7 @@ export function Sidebar({ sidebarRef, toggleModal, currentThemeName, setCurrentT
 						value=${selectedConnectionId}
 						options=${() => [
 							{ name: 'Custom (Inline Edit)', value: 'custom' },
-							...Object.entries(connections)
+							...(Object.entries(connections) as [string, ConnectionData][])
 							   .filter(([_, c]) => c.enabled)
 							   .map(([id, c]) => ({ name: c.name, value: id }))
 						]}

@@ -29,7 +29,7 @@ export function CompressionInfoModal({ isOpen, closeModal }) {
 		return { id, raw, cfg: cfg && typeof cfg === 'object' ? cfg : null };
 	});
 
-	const first = entries[0]?.cfg || {};
+	const first = (entries[0]?.cfg || {}) as any;
 	const levelNum = Number(first?.compression_level);
 	const levelDisplay = Number.isFinite(levelNum) ? String(levelNum) : 'not set';
 	const ratioNum = Number(first?.train_dict_samples_ratio);
@@ -54,11 +54,12 @@ export function CompressionInfoModal({ isOpen, closeModal }) {
 						</thead>
 						<tbody>
 							${entries.map(({ id, cfg }) => {
-								const tbl = cfg?.table || `ID: ${id}`;
-								const col = cfg?.column || 'N/A';
-								const lv = Number(cfg?.compression_level);
+								const c = cfg as any;
+								const tbl = c?.table || `ID: ${id}`;
+								const col = c?.column || 'N/A';
+								const lv = Number(c?.compression_level);
 								const lvDisplay = Number.isFinite(lv) ? String(lv) : 'not set';
-								const r = Number(cfg?.train_dict_samples_ratio);
+								const r = Number(c?.train_dict_samples_ratio);
 								const rDisplay = Number.isFinite(r) ? String(r) : 'not set';
 								return html`
 									<tr key=${id}>

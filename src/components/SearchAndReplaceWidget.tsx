@@ -6,6 +6,10 @@ import { InputBox } from './controls/InputBox';
 import { SelectBox } from './controls/SelectBox';
 import { SVG_ArrowUp, SVG_ArrowDown } from './icons/index';
 
+declare function templateFindNext(...args: any[]): any;
+declare function templateFindPrev(...args: any[]): any;
+declare function templateReplace(...args: any[]): any;
+
 export function SearchAndReplaceWidget({ isOpen, closeWidget, id, children, promptArea, promptText, cancel, ...props }) {
 	const [searchAndReplaceError, setSearchAndReplaceError] = useState(undefined);
 	const [searchAndReplaceMode, setSearchAndReplaceMode] = usePersistentState('searchAndReplaceMode', 0);

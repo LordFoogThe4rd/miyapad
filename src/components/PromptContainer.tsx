@@ -22,7 +22,7 @@ export function PromptContainer({ sidebarHeight }) {
 
 	// textarea resize
 	useEffect(() => {
-		const container = document.querySelector('#prompt-container');
+		const container = document.querySelector('#prompt-container') as HTMLElement;
 
 		let isDragging = false;
 		let startX;
@@ -268,7 +268,7 @@ export function PromptContainer({ sidebarHeight }) {
 				break;
 			}
 		}
-		const index = +pc.dataset.promptchunk;
+		const index = +(pc as HTMLElement).dataset.promptchunk;
 		const top = rect.top;
 		const left = rect.left + rect.width / 2;
 		const tokenKey = `${index}-${Math.round(top)}-${Math.round(left)}`;

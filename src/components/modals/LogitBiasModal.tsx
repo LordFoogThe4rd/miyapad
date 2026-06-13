@@ -9,8 +9,8 @@ export function LogitBiasModal({ isOpen, closeModal, biasState, apiConfig, cance
 	const { logitBias, setLogitBias, logitBiasParam, setLogitBiasParam, setRejectedAPIKey } = biasState;
 	const { sessionStorage, endpoint, endpointAPI, endpointAPIKey, isMiyapadEndpoint, useServerTokenization } = apiConfig;
 	const [lastBiasError, setLastBiasError] = useState(undefined);
-	const [logitBiasTemp, setLogitBiasTemp] = useState([]);
-	const [logitBiasSorted, setLogitBiasSorted] = useState([]);
+	const [logitBiasTemp, setLogitBiasTemp] = useState<any>([]);
+	const [logitBiasSorted, setLogitBiasSorted] = useState<any[]>([]);
 	const [logitBiasInput, setLogitBiasInput] = useState({power:"0",string:""});
 
 	const handleLogitBiasInput = (key,value) => {
@@ -32,12 +32,12 @@ export function LogitBiasModal({ isOpen, closeModal, biasState, apiConfig, cance
 			setLastBiasError("Error: Bias must be a number");
 			return;
 		}
-		biasPower = Number(biasPower);
+		const biasPowerNum = Number(biasPower);
 
 		const modBias = logitBias.bias;
 
 		// delete entry if power 0 or empty
-		if (biasPower == 0) {	
+		if (biasPowerNum == 0) {	
 			if (!logitBias.bias[biasString]) {
 				setLastBiasError("Error: Bias 0 = no Bias");
 				return;
@@ -130,7 +130,7 @@ export function LogitBiasModal({ isOpen, closeModal, biasState, apiConfig, cance
 					[biasString]: { // removed Number() here
 						ids: [ ...tokens.ids ],
 						strings: [ ...tokens.str ],
-						power: biasPower
+						power: biasPowerNum
 					}
 				}
 			}));
@@ -220,7 +220,7 @@ export function LogitBiasModal({ isOpen, closeModal, biasState, apiConfig, cance
 		setLogitBiasTemp({
 			positive: tempArray.filter(item => item.power > 0),
 			negative: tempArray.filter(item => item.power < 0)
-		});
+		} as any);
 	},[logitBiasSorted,isOpen]);
 
 

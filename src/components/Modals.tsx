@@ -69,7 +69,7 @@ export function Modals({ toggleModal, currentThemeName, setCurrentThemeName, all
 		fileInput.type = 'file';
 		fileInput.accept = '.json';
 		fileInput.onchange = async (e) => {
-			const file = e.target.files[0];
+			const file = (e.target as HTMLInputElement).files?.[0];
 			if (!file) {
 				return;
 			}
@@ -77,7 +77,7 @@ export function Modals({ toggleModal, currentThemeName, setCurrentThemeName, all
 			const reader = new FileReader();
 			reader.onload = async (event) => {
 				try {
-					const data = JSON.parse(event.target.result);
+					const data = JSON.parse((event.target as FileReader).result as string);
 					await sessionStorage.dbAdapter.importDatabase(data);
 					window.location.reload();
 				} catch (error) {

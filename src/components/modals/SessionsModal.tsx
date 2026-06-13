@@ -100,7 +100,7 @@ export function SessionsModal({ isOpen, closeModal, sessionStorage, cancel }) {
 	const parsedTagFilter = useMemo(() => parseTagFilter(tagFilterQuery), [tagFilterQuery]);
 
 	const sortedSessions = useMemo(() => {
-		let entries = Object.entries(sessionStorage.sessions);
+		let entries = Object.entries(sessionStorage.sessions) as [string, SessionData][];
 
 		// Filter by search query and tags
 		const q = searchQuery.trim().toLowerCase();
@@ -175,7 +175,7 @@ export function SessionsModal({ isOpen, closeModal, sessionStorage, cancel }) {
 		fileInput.multiple = true;
 		fileInput.style.display = 'none';
 		fileInput.onchange = async (e) => {
-			const files = e.target.files;
+			const files = (e.target as HTMLInputElement).files;
 			if (files.length === 0)
 				return;
 
@@ -187,7 +187,7 @@ export function SessionsModal({ isOpen, closeModal, sessionStorage, cancel }) {
 			for (const file of sortedFiles) {
 				await new Promise((resolve, reject) => {
 					reader.onload = async (e) => {
-						lastNewId = await sessionStorage.createSessionFromObject(JSON.parse(e.target.result), false);
+						lastNewId = await sessionStorage.createSessionFromObject(JSON.parse((e.target as FileReader).result as string), false);
 						resolve();
 					};
 					reader.onerror = (e) => {

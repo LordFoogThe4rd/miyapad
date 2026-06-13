@@ -157,7 +157,7 @@ export function AppLayout() {
 	useLayoutEffect(() => {
 		const editorFontInfo = availableFonts[editorFont];
 		if (editorFontInfo) {
-			let link = document.getElementById('dynamic-editor-font-link');
+			let link = document.getElementById('dynamic-editor-font-link') as HTMLLinkElement | null;
 			if (editorFontInfo.url) {
 				if (!link) {
 					link = document.createElement('link');
@@ -180,7 +180,7 @@ export function AppLayout() {
 
 		const uiFontInfo = availableFonts[uiFont];
 		if (uiFontInfo) {
-			let link = document.getElementById('dynamic-ui-font-link');
+			let link = document.getElementById('dynamic-ui-font-link') as HTMLLinkElement | null;
 			if (uiFontInfo.url) {
 				if (!link) {
 					link = document.createElement('link');
@@ -211,7 +211,7 @@ export function AppLayout() {
 
 	useLayoutEffect(() => {
 		if (promptAreaWidth) {
-			const container = document.querySelector('#prompt-container');
+			const container = document.querySelector('#prompt-container') as HTMLElement;
 			container.style.setProperty('min-width', promptAreaWidth);
 			container.style.setProperty('max-width', promptAreaWidth);
 		}
@@ -219,7 +219,7 @@ export function AppLayout() {
 	
 	useLayoutEffect(() => {
 		const applyTheme = () => {
-			for (const theme of Object.values(allThemes)) {
+			for (const theme of Object.values(allThemes) as ThemeData[]) {
 				document.documentElement.classList.remove(theme.className);
 			}
 

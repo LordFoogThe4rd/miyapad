@@ -76,7 +76,7 @@ export function WorldInfoModal({ isOpen, closeModal, worldInfo, setWorldInfo, ca
 			
 			reader.onload = (e) => {
 				try {
-					const contents = e.target.result;
+					const contents = (e.target as FileReader).result as string;
 					const json = JSON.parse(contents);
 
 					if (Object.values(worldInfo.entries)?.length) {

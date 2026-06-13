@@ -327,7 +327,7 @@ export function ConnectionManagerModal({ isOpen, closeModal, connections, setCon
 
 		let counter = 1;
 		let newName = `New Connection #${counter}`;
-		const existingNames = Object.values(connections).map(c => c.name);
+		const existingNames = (Object.values(connections) as ConnectionData[]).map(c => c.name);
 		while (existingNames.includes(newName)) {
 			counter++;
 			newName = `New Connection #${counter}`;
@@ -402,11 +402,12 @@ export function ConnectionManagerModal({ isOpen, closeModal, connections, setCon
 			return;
 		}
 
-		const updates = {
+		const updates: Record<string, any> = {
 			api: val,
 			models: [],
 			model: "",
-			key: ""
+			key: "",
+			endpoint: "",
 		};
 
 		if (val === API_AI_HORDE) {
@@ -442,7 +443,7 @@ export function ConnectionManagerModal({ isOpen, closeModal, connections, setCon
 						<button onClick=${handleNewConnection} title="Add New">+ New</button>
 					</div>
 					<div className="connection-list">
-						${Object.entries(connections).map(([id, conn]) => html`
+						${(Object.entries(connections) as [string, ConnectionData][]).map(([id, conn]) => html`
 							<div key=${id}
 								className="connection-item ${selectedId === id ? 'selected' : ''} ${conn.enabled ? 'enabled' : ''}"
 								onClick=${() => {
