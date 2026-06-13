@@ -1,6 +1,29 @@
 import { html } from 'htm/react';
 
-export function InputBox({ label, className, tooltip, tooltipSize, value, type, datalist, onValueChange, children, ...props }: any) {
+interface InputBoxProps {
+	label: string;
+	className?: string;
+	tooltip?: string;
+	tooltipSize?: string;
+	value: string | number;
+	type?: string;
+	datalist?: string[];
+	onValueChange: (value: string | number) => void;
+	children?: any;
+}
+
+export function InputBox({
+	label,
+	className,
+	tooltip,
+	tooltipSize,
+	value,
+	type,
+	datalist,
+	onValueChange,
+	children,
+	...props
+}: InputBoxProps & Omit<React.InputHTMLAttributes<HTMLInputElement>, 'value' | 'type' | 'onChange' | 'children' | 'inputMode'> & { inputmode?: string }) {
 	return html`
 		<label className="InputBox ${tooltip ? 'tooltip' : ''}">
 			${label}
@@ -11,14 +34,15 @@ export function InputBox({ label, className, tooltip, tooltipSize, value, type, 
 					list="${datalist ? label + '-datalist' : ''}"
 					value=${value}
 					size="1"
-					onChange=${({ target }: any) => {
+					onChange=${(e: React.ChangeEvent<HTMLInputElement>) => {
+						const target = e.target;
 						let value = type === 'number' ? target.valueAsNumber : target.value;
 						if (props.inputmode === 'numeric') {
 							props.pattern = '^-?[0-9]*$';
 							if (value && !isNaN(+value))
 								value = +target.value;
 						}
-						if (props.pattern && !new RegExp(props.pattern).test(value))
+						if (props.pattern && !new RegExp(props.pattern).test(String(value)))
 							return;
 						onValueChange(value);
 					}}
@@ -27,7 +51,7 @@ export function InputBox({ label, className, tooltip, tooltipSize, value, type, 
 			</div>
 			${datalist && html`
 				<datalist id="${label + '-datalist'}">
-					${datalist.map((opt: any) => html`
+					${datalist.map((opt: string) => html`
 						<option key="${opt}">
 							${opt}
 						</option>`)}
