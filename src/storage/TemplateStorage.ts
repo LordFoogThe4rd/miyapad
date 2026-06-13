@@ -23,8 +23,9 @@ export class TemplateStorage extends AbstractStorage {
 			try {
 				await this.deleteFromDatabase(db, key);
 				console.warn('Deleted key:', key);
-			} catch {
+			} catch (e) {
 				console.error('Error deleting key:', key);
+				throw e;
 			}
 		}
 
