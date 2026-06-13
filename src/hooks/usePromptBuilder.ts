@@ -143,7 +143,7 @@ export function usePromptBuilder() {
 					return new RegExp(key, "i").test(searchPrompt) && key !== "";
 				}
 				catch (e: unknown) {
-					console.error(`Error in RegEx for key '${key}': ${(e as Error).message}`);
+					console.error(`Error in RegEx for key '${key}': ${e instanceof Error ? e.message : String(e)}`);
 					return false;
 				}
 			});
