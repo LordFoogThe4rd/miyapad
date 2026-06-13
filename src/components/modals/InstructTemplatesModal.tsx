@@ -209,9 +209,13 @@ export function InstructTemplatesModal({ isOpen, closeModal, templateStorage, se
 			if (!file)
 				return;
 			const reader = new FileReader();
-			reader.onload = (e: any) => {
-				const contents = (e.target as FileReader).result as string;
-				onFileLoad?.(contents);
+			reader.onload = async (e: ProgressEvent<FileReader>) => {
+				const contents = e.target?.result as string;
+				try {
+					await onFileLoad?.(contents);
+				} catch {
+					alert('Failed to import templates. Check that the file is valid JSON.');
+				}
 			}
 			reader.readAsText(file);
 		}
