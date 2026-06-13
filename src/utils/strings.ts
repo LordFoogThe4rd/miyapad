@@ -15,8 +15,8 @@ export function replaceUnprintableBytes(inputString) {
 	return replacedString;
 }
 
-export function replaceNewlines(template) {
+export function replaceNewlines(template: Record<string, unknown>) {
 	return Object.fromEntries(
-		Object.entries(template).map(([key, value]) => [key, value?.replaceAll("\\n", "\n")])
+		Object.entries(template).map(([key, value]) => [key, (value as string)?.replaceAll("\\n", "\n")])
 	);
 }

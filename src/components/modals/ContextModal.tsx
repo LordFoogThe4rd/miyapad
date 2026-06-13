@@ -32,7 +32,7 @@ export function ContextModal({ isOpen, closeModal, tokens, memoryTokens, authorN
 						content,
 						signal: ac.signal,
 						...(isMiyapadEndpoint ? { proxyEndpoint: sessionStorage.proxyEndpoint } : {})
-					})
+					} as any)
 				);
 				setPlaygroundTokens(count);
 			} catch (e) {

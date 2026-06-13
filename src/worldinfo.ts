@@ -11,7 +11,7 @@ export function importSillyTavernWorldInfo(json, setWorldInfo, importBehavior) {
 			return;
 		}
 
-		Object.values(json.entries)?.forEach(entry => {
+		Object.values(json.entries)?.forEach((entry: any) => {
 			updatedEntries.push({
 				"displayName": entry.comment,
 				"text": entry.content,

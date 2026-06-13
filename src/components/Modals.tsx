@@ -46,7 +46,8 @@ export function Modals({ toggleModal, currentThemeName, setCurrentThemeName, all
 
 	const { handleauthorNoteTokensChange, handleMemoryTokensChange } = useTokenCounters();
 	const { finalPromptText, convertChatToJSON } = usePromptBuilder();
-	const { listTTSVoices, ttsStop, ttsAvailable } = useTTS();
+	const { listTTSVoices, ttsStop } = useTTS();
+	const { ttsAvailable } = useGeneration();
 
 
 

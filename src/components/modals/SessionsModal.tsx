@@ -185,7 +185,7 @@ export function SessionsModal({ isOpen, closeModal, sessionStorage, cancel }) {
 			let lastNewId = null;
 
 			for (const file of sortedFiles) {
-				await new Promise((resolve, reject) => {
+				await new Promise<void>((resolve, reject) => {
 					reader.onload = async (e) => {
 						lastNewId = await sessionStorage.createSessionFromObject(JSON.parse((e.target as FileReader).result as string), false);
 						resolve();
