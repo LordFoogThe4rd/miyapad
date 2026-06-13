@@ -228,7 +228,7 @@ export function usePromptBuilder() {
 		let text = replacePlaceholders(additionalContextPrompt, templateReplacements);
 		return text;
 	}, [additionalContextPrompt, templates, selectedTemplate]);
-	function convertChatToJSON(chatString: any, template: any) {
+	function convertChatToJSON(chatString: string, template: InstructTemplate) {
 		function extractMessage(text: any, prefix: any, suffixes: any, role: any) {
 			const matches = text.match(createLenientPrefixRegex(prefix));
 			if (matches && matches.length) {
