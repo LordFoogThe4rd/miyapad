@@ -1,12 +1,12 @@
-import { useEffect, useMemo, useState } from 'react';
+import { useEffect, useMemo, useState, type Dispatch, type SetStateAction } from 'react';
 
-export function useSessionState(sessionStorage: any, name: any, initialState: any) {
-	const savedState = useMemo(() => {
+export function useSessionState<T>(sessionStorage: any, name: string, initialState: T): [T, Dispatch<SetStateAction<T>>] {
+	const savedState = useMemo<T | undefined>(() => {
 		try {
 			return sessionStorage.getProperty(name);
 		} catch (e: unknown) {
 			console.warn(`Failed to retrieve session state for ${name}:`, e);
-			return null;
+			return undefined;
 		}
 	}, []);
 
@@ -25,9 +25,9 @@ export function useSessionState(sessionStorage: any, name: any, initialState: an
 		return () => sessionStorage.removeEventListener('sessionchange', onSessionChange);
 	}, []);
 
-	const updateState = (newValue: any) => {
-		setValue((prevValue: any) => {
-			const updatedValue = typeof newValue === 'function' ? newValue(prevValue) : newValue;
+	const updateState: Dispatch<SetStateAction<T>> = (newValue) => {
+		setValue((prevValue) => {
+			const updatedValue = typeof newValue === 'function' ? (newValue as (prev: T) => T)(prevValue) : newValue;
 			sessionStorage.setProperty(name, updatedValue);
 			return updatedValue;
 		});

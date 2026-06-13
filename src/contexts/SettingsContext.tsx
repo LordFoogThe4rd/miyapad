@@ -1,5 +1,5 @@
 import { html } from 'htm/react';
-import { createContext, useContext, useState, useEffect } from 'react';
+import { createContext, useContext, useState, useEffect, type Dispatch, type SetStateAction } from 'react';
 import { usePersistentState } from '../hooks/usePersistentState';
 import { defaultPresets } from '../defaults/presets';
 import { defaultThemes } from '../defaults/themes';
@@ -12,7 +12,7 @@ export function SettingsProvider({ children, sessionStorage, templateStorage, th
 	templateStorage: any;
 	themeStorage: any;
 	connectionStorage: any;
-	useSessionState: any;
+	useSessionState: <T>(name: string, initialState: T) => [T, Dispatch<SetStateAction<T>>];
 	useDBTemplates: any;
 	useDBThemes: any;
 	useDBConnections: any;

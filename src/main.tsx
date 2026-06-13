@@ -48,6 +48,8 @@ async function main() {
 
 	const rootEl = document.getElementById('root');
 	if (!rootEl) throw new Error('Root element not found');
+	const boundUseSessionState = <T,>(name: string, initialState: T) => useSessionState(sessionStorage, name, initialState);
+
 	createRoot(rootEl).render(html`
 		<${ErrorBoundary} FallbackComponent=${CrashScreenFallback}>
 			<${App}
@@ -55,7 +57,7 @@ async function main() {
 				templateStorage=${templateStorage}
 				themeStorage=${themeStorage}
 				connectionStorage=${connectionStorage}
-				useSessionState=${(name: string, initialState: any) => useSessionState(sessionStorage, name, initialState)}
+				useSessionState=${boundUseSessionState}
 				useDBTemplates=${(initialState: any) => useStorageState(templateStorage, initialState) as [Record<string, InstructTemplate>, React.Dispatch<React.SetStateAction<Record<string, InstructTemplate>>>]}
 				useDBThemes=${(initialState: any) => useStorageState(themeStorage, initialState) as [Record<string, ThemeData>, React.Dispatch<React.SetStateAction<Record<string, ThemeData>>>]}
 				useDBConnections=${(initialState: any) => useStorageState(connectionStorage, initialState) as [Record<string, ConnectionData>, React.Dispatch<React.SetStateAction<Record<string, ConnectionData>>>]}
