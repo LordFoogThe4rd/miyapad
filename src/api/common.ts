@@ -98,7 +98,7 @@ export function applyTemperatureToProbs(probsArr: ProbItem[], token: string, tem
 	const t = Math.max(0.01, temperature ?? 1);
 	if (t === 1) {
 		let chosenProb;
-	probsArr.forEach((p: any) => {
+	probsArr.forEach((p: ProbItem) => {
 			if (p.logprob !== undefined && p.prob === undefined) {
 				p.prob = Math.exp(p.logprob);
 			}
@@ -109,8 +109,8 @@ export function applyTemperatureToProbs(probsArr: ProbItem[], token: string, tem
 
 	let pSum = 0;
 	let pOrigSum = 0;
-	probsArr.forEach((p: any) => {
-		const orig_p = p.prob !== undefined ? p.prob : Math.exp(p.logprob);
+	probsArr.forEach((p: ProbItem & { temp_p?: number }) => {
+		const orig_p = p.prob !== undefined ? p.prob : Math.exp(p.logprob!);
 		pOrigSum += orig_p;
 		const log_p = p.logprob !== undefined ? p.logprob : Math.log(Math.max(1e-10, orig_p));
 		p.temp_p = Math.exp(log_p / t);
@@ -118,8 +118,8 @@ export function applyTemperatureToProbs(probsArr: ProbItem[], token: string, tem
 	});
 
 	let chosenProb;
-	probsArr.forEach((p: any) => {
-		p.prob = pSum > 0 ? p.temp_p * (pOrigSum / pSum) : 0;
+	probsArr.forEach((p: ProbItem & { temp_p?: number }) => {
+		p.prob = pSum > 0 ? p.temp_p! * (pOrigSum / pSum) : 0;
 		if (p.tok_str === token) chosenProb = p.prob;
 		delete p.temp_p;
 	});
