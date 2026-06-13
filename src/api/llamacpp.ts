@@ -32,7 +32,7 @@ export async function llamaCppTokenize({ endpoint, endpointAPIKey, proxyEndpoint
 		throw new Error(`HTTP ${res.status}`);
 	const { tokens } = await res.json();
 
-	const strings = await Promise.all(tokens.map((token: any) =>
+	const strings = await Promise.all(tokens.map((token: number) =>
 		llamaCppDetokenize({
 			endpoint,
 			endpointAPIKey,
