@@ -1,6 +1,6 @@
 import type { Dispatch, ReactNode, RefObject } from 'react';
 
-interface WidgetProps {
+export interface WidgetProps {
   isOpen: boolean;
   onClose: () => void;
   title: string;
@@ -8,7 +8,7 @@ interface WidgetProps {
   children?: ReactNode;
 }
 
-interface ModalProps {
+export interface ModalProps {
   isOpen: boolean;
   onClose: () => void;
   title: string;
@@ -17,17 +17,17 @@ interface ModalProps {
   [key: string]: any;
 }
 
-interface PromptContainerProps {
+export interface PromptContainerProps {
   sidebarHeight: number;
 }
 
-interface MarkdownPreviewProps {
+export interface MarkdownPreviewProps {
   sidebarHeight: number;
 }
 
-interface ProbsDisplayProps {}
+export interface ProbsDisplayProps {}
 
-interface SidebarProps {
+export interface SidebarProps {
   sidebarRef: RefObject<HTMLDivElement | null>;
   toggleModal: (key: string) => void;
   currentThemeName: string;
@@ -37,11 +37,11 @@ interface SidebarProps {
   setShowAPIKey: Dispatch<boolean>;
 }
 
-interface CrashScreenFallbackProps {
+export interface CrashScreenFallbackProps {
   error: Error;
 }
 
-interface SearchAndReplaceWidgetProps {
+export interface SearchAndReplaceWidgetProps {
   isOpen: boolean;
   closeWidget: () => void;
   id: string;
@@ -51,7 +51,7 @@ interface SearchAndReplaceWidgetProps {
   cancel: (() => void) | null;
 }
 
-interface EditorContextMenuProps {
+export interface EditorContextMenuProps {
   isOpen: boolean;
   closeMenu: () => void;
   menuItems: ContextMenuItem[];
@@ -60,21 +60,21 @@ interface EditorContextMenuProps {
   y?: number;
 }
 
-interface ContextMenuItem {
+export interface ContextMenuItem {
   label: string;
   action?: () => void;
   disabled: boolean;
   subItems?: Array<{ label: string; action: () => void; disabled: boolean }>;
 }
 
-interface QuickSwitcherProps {
+export interface QuickSwitcherProps {
   isOpen: boolean;
   closeModal: () => void;
   sessionStorage: SessionStorage;
   cancel: (() => void) | null;
 }
 
-interface ModalsProps {
+export interface ModalsProps {
   toggleModal: (key: string) => void;
   currentThemeName: string;
   setCurrentThemeName: Dispatch<string>;
@@ -83,7 +83,7 @@ interface ModalsProps {
   applyChatTemplate: () => void;
 }
 
-interface AppProps {
+export interface AppProps {
   sessionStorage: SessionStorage;
   templateStorage: TemplateStorage;
   themeStorage: ThemeStorage;
@@ -95,16 +95,7 @@ interface AppProps {
   isMiyapadEndpoint: boolean;
 }
 
-interface ModalsProps {
-  toggleModal: (key: string) => void;
-  currentThemeName: string;
-  setCurrentThemeName: Dispatch<string>;
-  allThemes: Record<string, ThemeData>;
-  setAllThemes: Dispatch<Record<string, ThemeData>>;
-  applyChatTemplate: () => void;
-}
-
-interface CheckboxProps {
+export interface CheckboxProps {
   label: string;
   value: boolean;
   hidden?: boolean;
@@ -113,7 +104,7 @@ interface CheckboxProps {
   disabled?: boolean;
 }
 
-interface InputBoxProps {
+export interface InputBoxProps {
   label: string;
   className?: string;
   tooltip?: string;
@@ -131,7 +122,7 @@ interface InputBoxProps {
   [key: string]: any;
 }
 
-interface InputSliderProps {
+export interface InputSliderProps {
   label: string;
   value: number;
   min?: number;
@@ -144,7 +135,7 @@ interface InputSliderProps {
   [key: string]: any;
 }
 
-interface SelectBoxProps {
+export interface SelectBoxProps {
   label: string;
   value: any;
   hidden?: boolean;
@@ -154,7 +145,7 @@ interface SelectBoxProps {
   [key: string]: any;
 }
 
-interface CollapsibleGroupProps {
+export interface CollapsibleGroupProps {
   label: string;
   stateLabel?: string;
   menu?: ReactNode;
