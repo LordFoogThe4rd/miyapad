@@ -16,6 +16,9 @@ export function MarkdownPreview({ sidebarHeight }: any) {
 		} else {
 			document.body.classList.remove('markdown-preview-on');
 		}
+		return () => {
+			document.body.classList.remove('markdown-preview-on');
+		};
 	}, [showMarkdownPreview]);
 
 	const markdownHtml = useMemo(() => {
