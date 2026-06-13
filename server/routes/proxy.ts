@@ -92,7 +92,7 @@ export default function(app: Express): void {
             res.set('Cache-Control', 'public, max-age=86400');
             res.send(Buffer.from(response.data as ArrayBuffer));
         } catch (e: unknown) {
-            res.status((e as any).response?.status || 500).send('Failed to fetch image');
+            res.status(axios.isAxiosError(e) ? e.response?.status || 500 : 500).send('Failed to fetch image');
         }
     });
 
@@ -194,9 +194,9 @@ export default function(app: Express): void {
 
             res.send(response.data);
         } catch (e: unknown) {
-            if ((e as any).response) {
-                res.status((e as any).response.status).json({ error: (e as any).response.data });
-            } else if ((e as any).request) {
+            if (axios.isAxiosError(e) && e.response) {
+                res.status(e.response.status).json({ error: e.response.data });
+            } else if (axios.isAxiosError(e) && e.request) {
                 res.status(504).json({ error: 'No response from target server.' });
             } else {
                 res.status(500).json({ error: 'Error setting up request to target server.' });
@@ -238,9 +238,9 @@ export default function(app: Express): void {
 
             res.send(response.data);
         } catch (e: unknown) {
-            if ((e as any).response) {
-                res.status((e as any).response.status).json({ error: (e as any).response.data });
-            } else if ((e as any).request) {
+            if (axios.isAxiosError(e) && e.response) {
+                res.status(e.response.status).json({ error: e.response.data });
+            } else if (axios.isAxiosError(e) && e.request) {
                 res.status(504).json({ error: 'No response from target server.' });
             } else {
                 res.status(500).json({ error: 'Error setting up request to target server.' });
