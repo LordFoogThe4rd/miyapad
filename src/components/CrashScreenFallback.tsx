@@ -1,6 +1,7 @@
 import { html } from 'htm/react';
+import type { FallbackProps } from 'react-error-boundary';
 
-export function CrashScreenFallback({ error }: any) {
+export function CrashScreenFallback({ error }: FallbackProps) {
   return html`
     <div id="crash-screen" role="alert">
       <h1>Oops! Something went wrong.</h1>
