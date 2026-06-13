@@ -9,7 +9,7 @@ interface InputBoxProps {
 	type?: string;
 	datalist?: string[];
 	onValueChange: (value: string | number) => void;
-	children?: any;
+	children?: React.ReactNode;
 }
 
 export function InputBox({
