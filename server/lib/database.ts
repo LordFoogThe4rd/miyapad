@@ -20,56 +20,62 @@ const runMigrationToV3 = (db: sqlite3.Database) => {
                 return reject(err);
             }
 
-            if (row) {
-                db.serialize(async () => {
-                    try {
-                        const migrateTable = async (tableName: string, processRow: (row: { key: string; data: string }) => Promise<void>) => {
-                            await new Promise<void>((res, rej) => db.run(`ALTER TABLE ${tableName} RENAME TO ${tableName}_old`, (err) => err ? rej(err) : res()));
-                            await new Promise<void>((res, rej) => db.run(`CREATE TABLE ${tableName} (key TEXT PRIMARY KEY, data BLOB)`, (err) => err ? rej(err) : res()));
-                            const rows = await new Promise<{ key: string; data: string }[]>((res, rej) => db.all(`SELECT key, data FROM ${tableName}_old`, [], (err, rows) => err ? rej(err) : res(rows as { key: string; data: string }[])));
-                            for (const row of rows) {
-                                await processRow(row);
-                            }
-                            await new Promise<void>((res, rej) => db.run(`DROP TABLE ${tableName}_old`, (err) => err ? rej(err) : res()));
-                        };
-
-                        db.run("BEGIN TRANSACTION;");
-
-                        await new Promise<void>((res, rej) => db.run(`CREATE TABLE names (key TEXT PRIMARY KEY, data TEXT);`, (err) => err ? rej(err) : res()));
-
-                        await migrateTable('sessions', async (row) => {
-                            const sessionData = JSON.parse(row.data);
-                            const sessionName = sessionData.name;
-
-                            if (sessionName) {
-                                await new Promise<void>((res, rej) => db.run("INSERT INTO names (key, data) VALUES (?, ?)", [row.key, sessionName], (err) => err ? rej(err) : res()));
-                                delete sessionData.name;
-                            }
-
-                            const compressedData = await compressData(JSON.stringify(sessionData));
-                            await new Promise<void>((res, rej) => db.run("INSERT INTO sessions (key, data) VALUES (?, ?)", [row.key, compressedData], (err) => err ? rej(err) : res()));
-                        });
-
-                        await migrateTable('templates', async (row) => {
-                            const compressedData = await compressData(row.data);
-                            await new Promise<void>((res, rej) => db.run("INSERT INTO templates (key, data) VALUES (?, ?)", [row.key, compressedData], (err) => err ? rej(err) : res()));
-                        });
-
-                        db.run("COMMIT;", (err) => {
-                            if (err) {
-                                return reject(err);
-                            }
-                            resolve(true);
-                        });
-
-                    } catch (e) {
-                        db.run("ROLLBACK;");
-                        reject(e);
-                    }
-                });
-            } else {
-                resolve(false);
+            if (!row) {
+                return resolve(false);
             }
+
+            const run = (sql: string, params?: any[]) => {
+                return new Promise<void>((res, rej) => {
+                    db.run(sql, params ?? [], (err: Error | null) => err ? rej(err) : res());
+                });
+            };
+            const all = (sql: string, params?: any[]) => {
+                return new Promise<any[]>((res, rej) => {
+                    db.all(sql, params ?? [], (err: Error | null, rows: any[]) => err ? rej(err) : res(rows));
+                });
+            };
+
+            const migrateTable = async (tableName: string, processRow: (row: { key: string; data: string }) => Promise<void>) => {
+                await run(`ALTER TABLE ${tableName} RENAME TO ${tableName}_old`);
+                await run(`CREATE TABLE ${tableName} (key TEXT PRIMARY KEY, data BLOB)`);
+                const rows = await all(`SELECT key, data FROM ${tableName}_old`) as { key: string; data: string }[];
+                for (const row of rows) {
+                    await processRow(row);
+                }
+                await run(`DROP TABLE ${tableName}_old`);
+            };
+
+            (async () => {
+                try {
+                    await run("BEGIN TRANSACTION");
+
+                    await run("CREATE TABLE names (key TEXT PRIMARY KEY, data TEXT)");
+
+                    await migrateTable('sessions', async (row) => {
+                        const sessionData = JSON.parse(row.data);
+                        const sessionName = sessionData.name;
+
+                        if (sessionName) {
+                            await run("INSERT INTO names (key, data) VALUES (?, ?)", [row.key, sessionName]);
+                            delete sessionData.name;
+                        }
+
+                        const compressedData = await compressData(JSON.stringify(sessionData));
+                        await run("INSERT INTO sessions (key, data) VALUES (?, ?)", [row.key, compressedData]);
+                    });
+
+                    await migrateTable('templates', async (row) => {
+                        const compressedData = await compressData(row.data);
+                        await run("INSERT INTO templates (key, data) VALUES (?, ?)", [row.key, compressedData]);
+                    });
+
+                    await run("COMMIT");
+                    resolve(true);
+                } catch (e) {
+                    try { await run("ROLLBACK"); } catch { /* ROLLBACK failed, nothing more to do */ }
+                    reject(e);
+                }
+            })();
         });
     });
 };
