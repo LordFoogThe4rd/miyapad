@@ -219,7 +219,7 @@ export function InstructTemplatesModal({ isOpen, closeModal, templateStorage, se
 			}
 			reader.readAsText(file);
 		}
-		onFileLoad = async (text: any) => {
+		onFileLoad = async (text: string) => {
 			await templateStorage.performFullSave(JSON.parse(text), true)
 			window.location.reload()
 			// a little dirty, but updateTemplateList isn't cooperating
