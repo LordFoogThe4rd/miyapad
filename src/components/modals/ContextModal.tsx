@@ -4,6 +4,7 @@ import { Modal } from '../Modal';
 import { CollapsibleGroup } from '../controls/CollapsibleGroup';
 import { getTokenCount, serverTokenCount } from '../../api/index';
 import { API_OPENAI_COMPAT, API_LLAMA_CPP, API_DEEPSEEK } from '../../constants';
+import { isAbortError } from '../../utils/errors';
 
 export function ContextModal({ isOpen, closeModal, tokens, memoryTokens, authorNoteTokens, handleMemoryTokensChange, finalPromptText, defaultPresets, cancel, apiConfig }: any) {
 	const { sessionStorage, endpoint, endpointAPI, endpointAPIKey, isMiyapadEndpoint, useServerTokenization } = apiConfig;
@@ -36,7 +37,7 @@ export function ContextModal({ isOpen, closeModal, tokens, memoryTokens, authorN
 				);
 				setPlaygroundTokens(count);
 			} catch (e: unknown) {
-				if ((e as Error).name !== 'AbortError') {
+				if (!isAbortError(e)) {
 					reportError(e);
 					setPlaygroundTokens(0);
 				}

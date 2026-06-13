@@ -4,6 +4,7 @@ import { useGeneration } from '../contexts/GenerationContext';
 import { usePromptBuilder } from './usePromptBuilder';
 import { getTokenCount, serverTokenCount } from '../api/index';
 import { API_OPENAI_COMPAT, API_LLAMA_CPP, API_DEEPSEEK } from '../constants';
+import { isAbortError } from '../utils/errors';
 
 export function useTokenCounters() {
 	const { endpoint, endpointAPI, endpointAPIKey, sessionStorage, isMiyapadEndpoint, useServerTokenization, contextLength, authorNoteTokens, setAuthorNoteTokens, memoryTokens, setMemoryTokens, worldInfo } = useSettings();
@@ -43,10 +44,10 @@ export function useTokenCounters() {
 					"tokens": tokenCount - 1 
 				}));
 			} catch (e: unknown) {
-				if ((e as Error).name !== 'AbortError'){
+				if (!isAbortError(e)){
 					reportError(e);
 					setAuthorNoteTokens((prevauthorNoteTokens: any) => ({ ...prevauthorNoteTokens, "tokens": 0 }))
-				}	
+				}
 			}
 		}, 500);
 
@@ -88,7 +89,7 @@ export function useTokenCounters() {
 					"tokens": tokenCount - 1 
 				}));
 			} catch (e: unknown) {
-				if ((e as Error).name !== 'AbortError'){
+				if (!isAbortError(e)){
 					reportError(e);
 					setMemoryTokens((prevMemoryTokens: any) => ({ ...prevMemoryTokens, "tokens": 0 }));
 				}
@@ -128,7 +129,7 @@ export function useTokenCounters() {
 					"tokensWI": tokenCount - 1 
 				}));
 			} catch (e: unknown) {
-				if ((e as Error).name !== 'AbortError'){
+				if (!isAbortError(e)){
 					reportError(e);
 					setMemoryTokens((prevMemoryTokens: any) => ({ ...prevMemoryTokens, "tokensWI": 0 }));
 				}

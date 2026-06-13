@@ -31,10 +31,7 @@ import {
 
 import { useSettings } from './contexts/SettingsContext';
 import { useGeneration } from './contexts/GenerationContext';
-
-function isAbortError(e: unknown): e is Error {
-	return e instanceof Error && e.name === 'AbortError';
-}
+import { isAbortError } from './utils/errors';
 
 export function AppLayout() {
 	const {
