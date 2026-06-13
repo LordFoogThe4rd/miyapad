@@ -237,7 +237,7 @@ export interface GenerationState {
   promptChunks: PromptChunk[];
   setPromptChunks: Dispatch<SetStateAction<PromptChunk[]>>;
   currentPromptChunk: { index: number; top: number; left: number } | undefined;
-  setCurrentPromptChunk: Dispatch<{ index: number; top: number; left: number } | undefined>;
+  setCurrentPromptChunk: Dispatch<SetStateAction<{ index: number; top: number; left: number } | undefined>>;
   undoHovered: boolean;
   setUndoHovered: Dispatch<SetStateAction<boolean>>;
   showProbs: boolean;
@@ -265,11 +265,11 @@ export interface GenerationState {
   modalState: Record<string, boolean>;
   setModalState: Dispatch<SetStateAction<Record<string, boolean>>>;
   contextMenuState: { visible: boolean; x: number; y: number };
-  setContextMenuState: Dispatch<{ visible: boolean; x: number; y: number }>;
+  setContextMenuState: Dispatch<SetStateAction<{ visible: boolean; x: number; y: number }>>;
   instructModalState: Record<string, any>;
   setInstructModalState: Dispatch<SetStateAction<Record<string, any>>>;
   hordeQueuePos: number | undefined;
-  setHordeQueuePos: Dispatch<number | undefined>;
+  setHordeQueuePos: Dispatch<SetStateAction<number | undefined>>;
   hordeProcessing: boolean;
   setHordeProcessing: Dispatch<SetStateAction<boolean>>;
   promptPreviewChunks: PromptChunk[];
