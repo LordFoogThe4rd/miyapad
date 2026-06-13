@@ -146,7 +146,7 @@ export class IndexedDBAdapter {
 				const current = getRequest.result;
 				let dataToPut: { name: string; created: number | null; modified: number };
 				if (current && typeof current === 'object' && current.name !== undefined) {
-					dataToPut = { ...current, name: newName, modified: Date.now() };
+					dataToPut = { name: newName, created: current.created ?? null, modified: Date.now() };
 				} else {
 					dataToPut = { name: newName, created: null, modified: Date.now() };
 				}
