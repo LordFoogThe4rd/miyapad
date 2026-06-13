@@ -100,7 +100,7 @@ export function Modals({ toggleModal, currentThemeName, setCurrentThemeName, all
 		exportText(`${sessionStorage.getProperty('name')}.txt`, elem.value);
 	};
 
-	const insertTemplate = (sysInst: any) => {
+	const insertTemplate = (sysInst: "sys" | "inst") => {
 		let [prefix,suffix] = sysInst === "sys"
 			? [templates[selectedTemplate]?.sysPre  || "", templates[selectedTemplate]?.sysSuf  || ""]
 			: [templates[selectedTemplate]?.instPre || "", templates[selectedTemplate]?.instSuf || ""];
