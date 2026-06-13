@@ -58,9 +58,9 @@ async function main() {
 				themeStorage=${themeStorage}
 				connectionStorage=${connectionStorage}
 				useSessionState=${boundUseSessionState}
-				useDBTemplates=${(initialState: any) => useStorageState(templateStorage, initialState) as [Record<string, InstructTemplate>, React.Dispatch<React.SetStateAction<Record<string, InstructTemplate>>>]}
-				useDBThemes=${(initialState: any) => useStorageState(themeStorage, initialState) as [Record<string, ThemeData>, React.Dispatch<React.SetStateAction<Record<string, ThemeData>>>]}
-				useDBConnections=${(initialState: any) => useStorageState(connectionStorage, initialState) as [Record<string, ConnectionData>, React.Dispatch<React.SetStateAction<Record<string, ConnectionData>>>]}
+				useDBTemplates=${<T,>(initialState: T) => useStorageState(templateStorage, initialState)}
+				useDBThemes=${<T,>(initialState: T) => useStorageState(themeStorage, initialState)}
+				useDBConnections=${<T,>(initialState: T) => useStorageState(connectionStorage, initialState)}
 				isMiyapadEndpoint=${isMiyapadEndpoint}/>
 		</${ErrorBoundary}>`);
 }
