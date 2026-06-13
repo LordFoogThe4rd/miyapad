@@ -38,11 +38,9 @@ export function ThemeManagerModal({ isOpen, closeModal, allThemes, setAllThemes,
 
         setAllThemes((prevThemes: any) => {
             const newThemes = { ...prevThemes };
-			const { isDefault, order, ...themeData } = newThemes[editingThemeName]; // remove isDefault and order
-            if (!themeData) {
-				return prevThemes;
-			}
-
+            const theme = newThemes[editingThemeName];
+            if (!theme) return prevThemes;
+			const { isDefault, order, ...themeData } = theme;
             delete newThemes[editingThemeName];
             newThemes[trimmedNewName] = themeData;
             return newThemes;
@@ -70,7 +68,9 @@ export function ThemeManagerModal({ isOpen, closeModal, allThemes, setAllThemes,
 
         setAllThemes((prevThemes: any) => {
             const newThemes = { ...prevThemes };
-			const { isDefault, ...rest } = newThemes[editingThemeName]; // remove isDefault
+            const theme = newThemes[editingThemeName];
+            if (!theme) return prevThemes;
+			const { isDefault, ...rest } = theme;
             newThemes[editingThemeName] = {
                 ...rest,
                 className: sanitizedClassName,
@@ -84,7 +84,9 @@ export function ThemeManagerModal({ isOpen, closeModal, allThemes, setAllThemes,
     const handleThemeCssChange = (newCss: any) => {
         setAllThemes((prevThemes: any) => {
             const newThemes = { ...prevThemes };
-			const { isDefault, ...rest } = newThemes[editingThemeName]; // remove isDefault
+            const theme = newThemes[editingThemeName];
+            if (!theme) return prevThemes;
+			const { isDefault, ...rest } = theme;
             newThemes[editingThemeName] = { ...rest, css: newCss };
             return newThemes;
         });
@@ -116,7 +118,9 @@ export function ThemeManagerModal({ isOpen, closeModal, allThemes, setAllThemes,
 		}
 
 		setAllThemes((prevThemes: any) => {
-			const { isDefault, order, ...rest } = prevThemes[editingThemeName]; // remove isDefault and order
+			const theme = prevThemes[editingThemeName];
+			if (!theme) return prevThemes;
+			const { isDefault, order, ...rest } = theme;
 			return {
 				...prevThemes,
 				[newName]: { ...rest },
