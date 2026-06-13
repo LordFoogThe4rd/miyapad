@@ -31,6 +31,9 @@ export function normalizeEndpoint(endpoint: any, endpointAPI: any) {
 
 // Function to parse text/event-stream data and yield JSON objects
 export async function* parseEventStream(eventStream: any) {
+	if (!eventStream)
+		return;
+
 	let buf = '';
 	let ignoreNextLf = false;
 
