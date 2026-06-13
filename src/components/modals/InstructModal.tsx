@@ -1,5 +1,5 @@
 import { html } from 'htm/react';
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useRef } from 'react';
 import { Modal } from '../Modal';
 import { Checkbox } from '../controls/Checkbox';
 
@@ -69,18 +69,25 @@ export function InstructModal({ isOpen, closeModal, predict, cancel, modalState,
     };
 
 	
+	const isOpenRef = useRef(isOpen);
+	isOpenRef.current = isOpen;
+	const cancelRef = useRef(cancel);
+	cancelRef.current = cancel;
+	const handlePredictRef = useRef(handlePredictInModal);
+	handlePredictRef.current = handlePredictInModal;
+
 	useEffect(() => {
 		function onKeyDown(e: any) {
 			const { altKey, ctrlKey, shiftKey, key, defaultPrevented } = e;
-			if (defaultPrevented || !isOpen)
+			if (defaultPrevented || !isOpenRef.current)
 				return;
 			switch (`${altKey}:${ctrlKey}:${shiftKey}:${key}`) {
 				case 'false:false:true:Enter':
 				case 'false:true:false:Enter':
-					handlePredictInModal();
+					handlePredictRef.current();
 					break;
 				case 'false:false:false:Escape':
-				if (cancel) cancel();
+				if (cancelRef.current) cancelRef.current();
 				break;
 				default:
 					return;
@@ -92,7 +99,7 @@ export function InstructModal({ isOpen, closeModal, predict, cancel, modalState,
 		return () => {
 			window.removeEventListener('keydown', onKeyDown);
 		};
-	}, [predict, cancel]);
+	}, []);
 
     return html`
         <${Modal} isOpen=${isOpen} onClose=${closeModal}
