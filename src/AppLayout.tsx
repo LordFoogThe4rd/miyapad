@@ -121,7 +121,7 @@ export function AppLayout() {
 			};
 
 			const predicted = await predict(finalPromptText, promptChunks.length, (chunk: any) => {
-				setPromptPreviewChunks((c: any[]) => [...c, chunk]);
+				setPromptPreviewChunks((c) => [...c, chunk]);
 				return true;
 			}, ac, false, customParams);
 		}, 500);
