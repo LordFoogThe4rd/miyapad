@@ -19,7 +19,10 @@
   },
   "devDependencies": {
     "@parcel/transformer-inline-string": "^2.9.3",
+    "@types/react": "^19.2.17",
+    "@types/react-dom": "^19.2.3",
     "parcel": "^2.9.3",
-    "process": "^0.11.10"
+    "process": "^0.11.10",
+    "typescript": "^6.0.3"
   }
 }
