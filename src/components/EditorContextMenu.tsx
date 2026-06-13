@@ -1,15 +1,15 @@
 import { html } from 'htm/react';
-import { useState, useEffect, useRef } from 'react';
+import { useState, useEffect, useRef, useCallback } from 'react';
 
 export function EditorContextMenu({ isOpen, closeMenu, menuItems, className, ...props }: any) {
 	const menuRef = useRef<HTMLDivElement | null>(null);
 	const [subMenuOpen, setSubMenuOpen] = useState<string | null>(null);
 	const isNested = className === 'nested';
 
-	if (!isNested) {
-		const prevCloseMenu = closeMenu;
-		closeMenu = () => { setSubMenuOpen(null); prevCloseMenu(); };
-	}
+	const handleClose = useCallback(() => {
+		if (!isNested) setSubMenuOpen(null);
+		closeMenu();
+	}, [closeMenu, isNested]);
 
 	useEffect(() => {
 		if (!isNested)
@@ -40,11 +40,11 @@ export function EditorContextMenu({ isOpen, closeMenu, menuItems, className, ...
 			if (!isOpen)
 				return;
 			if (menuRef.current && !menuRef.current.contains(e.target))
-				closeMenu();
+				handleClose();
 		};
 		document.addEventListener('mousedown', handleClickOutside);
 		return () => document.removeEventListener('mousedown', handleClickOutside);
-	}, [isOpen]);
+	}, [isOpen, handleClose]);
 
 	useEffect(() => {
 		if (isNested)
@@ -86,7 +86,7 @@ export function EditorContextMenu({ isOpen, closeMenu, menuItems, className, ...
 							onClick=${(event: any) => {
 								if (item.action && !item.disabled && !item.subItems) {
 									item.action();
-									closeMenu();
+									handleClose();
 									event.stopPropagation();
 								}
 							}}
@@ -102,7 +102,7 @@ export function EditorContextMenu({ isOpen, closeMenu, menuItems, className, ...
 									<${EditorContextMenu}
 										isOpen=${item.label === subMenuOpen}
 										menuItems=${item.subItems}
-										closeMenu=${closeMenu}
+										closeMenu=${handleClose}
 										className="nested"
 									/>`
 								: ''}
