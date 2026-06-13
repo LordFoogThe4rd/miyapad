@@ -20,7 +20,7 @@ export class ServerDBAdapter {
 	}
 
 	async openDatabase() {
-		return async (route, options) => {
+		return async (route: any, options: any) => {
 			try {
 				return await fetch(new URL(route, this.sessionEndpoint), {
 					method: 'POST',
@@ -29,7 +29,7 @@ export class ServerDBAdapter {
 					},
 					body: JSON.stringify(options),
 				});
-			} catch (e) {
+			} catch (e: any) {
 				reportError(e);
 				return { ok: false, status: e.toString() };
 			}

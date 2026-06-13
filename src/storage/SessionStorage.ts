@@ -45,9 +45,9 @@ export class SessionStorage extends AbstractStorage {
 	}
 
 	async saveToDatabase(db: any, key: any, data: any) {
-        if (data.hasOwnProperty('name')) {
+        if (data && data.hasOwnProperty('name')) {
             const nameData = extractMeta(data);
-            await this.nameStorage.saveToDatabase(db, key, nameData);
+            await this.nameStorage!.saveToDatabase(db, key, nameData);
             const { name, created, modified, pinned, tags, ...sessionData } = data;
             await super.saveToDatabase(db, key, sessionData);
         } else {
@@ -58,7 +58,7 @@ export class SessionStorage extends AbstractStorage {
 	async loadFromDatabase(db: any, key: any) {
 		const data = await super.loadFromDatabase(db, key);
 		if(data && !['selectedSessionId', 'nextSessionId'].includes(key)){
-			const nameData = await this.nameStorage.loadFromDatabase(db, key);
+			const nameData = await this.nameStorage!.loadFromDatabase(db, key);
 			if (typeof nameData === 'string') {
 				data['name'] = nameData === '[object Object]' ? `Session #${key}` : nameData;
 				data['created'] = null;
@@ -78,11 +78,13 @@ export class SessionStorage extends AbstractStorage {
 
 	async deleteFromDatabase(db: any, key: any) {
 		await super.deleteFromDatabase(db, key);
-		await this.nameStorage.deleteFromDatabase(db, key);
+		await this.nameStorage!.deleteFromDatabase(db, key);
 	}
 
 	async saveSessionToDB(sessionId: any) {
-		const { name, created, modified, pinned, tags, ...sessionData } = this.sessions[sessionId];
+		const session = this.sessions[sessionId];
+		if (!session) return;
+		const { name, created, modified, pinned, tags, ...sessionData } = session;
 		if (!sessionData || sessionData.inactive)
 			return;
 		const db = await this.openDatabase();
@@ -91,27 +93,28 @@ export class SessionStorage extends AbstractStorage {
 
 	async getNewId() {
 		const db = await this.openDatabase();
-		await this.saveToDatabase(db, 'nextSessionId', this.nextId + 1);
-		this.nextId += 1;
-		return this.nextId - 1;
+		await this.saveToDatabase(db, 'nextSessionId', (this.nextId ?? 0) + 1);
+		this.nextId = (this.nextId ?? 0) + 1;
+		return (this.nextId ?? 0) - 1;
 	}
 
 	// We leave the localStorage content untouched for now,
 	// but we might want to erase it in the future.
 	async migrateSessions() {
-		const nextId = +localStorage.getItem('nextSessionId');
+		const nextId = +(localStorage.getItem('nextSessionId') ?? 0);
 		if (nextId == 0)
 			return false;
 		this.nextId = nextId;
-		this.selectedSession = +localStorage.getItem('selectedSessionId');
+		this.selectedSession = +(localStorage.getItem('selectedSessionId') ?? 0);
 		for (const key of Object.keys(localStorage)) {
 			const [sessionId, propertyName] = key.split('/');
 			if (propertyName === undefined) continue;
-			let value = localStorage.getItem(key);
+			const rawValue = localStorage.getItem(key);
+			if (rawValue === null) continue;
+			let value: any;
 			try {
-				value = JSON.parse(value);
+				value = JSON.parse(rawValue);
 			} catch {
-				// This might have been added to the localStorage by a extension rather than us. Let's just skip it.
 				continue;
 			}
 			if (value !== null) {
@@ -135,7 +138,7 @@ export class SessionStorage extends AbstractStorage {
 			if (typeof data === 'string') {
 				this.sessions[key] = { name: data === '[object Object]' ? `Session #${key}` : data, created: null, modified: null, pinned: false, tags: [] };
 			} else if (data && typeof data === 'object') {
-				this.sessions[key] = { name: ((data as any).name === '[object Object]' ? `Session #${key}` : (data as any).name) || 'Untitled', ...extractMeta(data) };
+				this.sessions[key] = { ...extractMeta(data), name: ((data as any).name === '[object Object]' ? `Session #${key}` : (data as any).name) || 'Untitled' };
 			} else {
 				this.sessions[key] = { name: 'Untitled', created: null, modified: null, pinned: false, tags: [] };
 			}
@@ -149,10 +152,11 @@ export class SessionStorage extends AbstractStorage {
 	}
 
 	getProperty(propertyName: any) {
-		return this.sessions[this.selectedSession]?.[propertyName];
+		return this.selectedSession !== undefined ? this.sessions[this.selectedSession]?.[propertyName] : undefined;
 	}
 
 	setProperty(propertyName: any, value: any) {
+		if (this.selectedSession === undefined) return;
 		if (!this.sessions[this.selectedSession])
 			return;
 		this.sessions[this.selectedSession][propertyName] = value;
@@ -165,11 +169,12 @@ export class SessionStorage extends AbstractStorage {
 			return;
 
 		// Flush pending save.
-		await this.saveTimerHandler(async (sessionId) => await this.saveSessionToDB(sessionId));
+		await this.saveTimerHandler(async (sessionId: any) => await this.saveSessionToDB(sessionId));
 
 		//Clear data of old session in order to minimize memory usage.
-		if (this.sessions[this.selectedSession] && this.sessions[this.selectedSession]['name'])
-			this.sessions[this.selectedSession] = { ...extractMeta(this.sessions[this.selectedSession]), inactive: true };
+		const currSel = this.selectedSession;
+		if (currSel !== undefined && this.sessions[currSel] && this.sessions[currSel]['name'])
+			this.sessions[currSel] = { ...extractMeta(this.sessions[currSel]), inactive: true };
 
 		const db = await this.openDatabase();
 		await this.saveToDatabase(db, 'selectedSessionId', +sessionId);
@@ -203,7 +208,7 @@ export class SessionStorage extends AbstractStorage {
 
 	setTags(sessionId: any, rawInput: any) {
 		if (!this.sessions[sessionId]) return;
-		const rawTags = rawInput.split(',').map(t => t.trim().toLowerCase().replace(/\s+/g, ' ')).filter(Boolean);
+		const rawTags = rawInput.split(',').map((t: any) => t.trim().toLowerCase().replace(/\s+/g, ' ')).filter(Boolean);
 		this.sessions[sessionId].tags = [...new Set(rawTags)] as string[];
 		this.sessions[sessionId].modified = Date.now();
 		this.enqueueSave(sessionId);
@@ -253,10 +258,10 @@ export class SessionStorage extends AbstractStorage {
 		}
 
 		if (!this.sessions[newId].hasOwnProperty('name')) {
-			this.sessions[newId]['name'] = `MiyaPad #${this.nextId + 1}`;
+			this.sessions[newId]['name'] = `MiyaPad #${(this.nextId ?? 0) + 1}`;
 		}
 
-		if (cloned && !this.sessions[newId]['name'].startsWith('Cloned')) {
+		if (cloned && !this.sessions[newId]['name']!.startsWith('Cloned')) {
 			this.sessions[newId]['name'] = `Cloned ${this.sessions[newId]['name']}`;
 		}
 

@@ -23,7 +23,7 @@ export class ThemeStorage extends AbstractStorage {
         let themesWereModified = false;
 
         for (const themeName in defaultThemes) {
-            const defaultTheme = defaultThemes[themeName];
+            const defaultTheme = (defaultThemes as Record<string, ThemeData>)[themeName];
             const userTheme = updatedThemes[themeName];
 
             if (!userTheme) {

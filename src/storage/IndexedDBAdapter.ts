@@ -87,7 +87,7 @@ export class IndexedDBAdapter {
 			const store = tx.objectStore(storeName);
 			const request = store.openCursor();
 
-			let allTables = {};
+			let allTables: Record<string, any> = {};
 
 			request.onsuccess = async (event: Event) => {
 				const cursor = (event.target as IDBRequest<IDBCursorWithValue | null>).result;
@@ -108,7 +108,7 @@ export class IndexedDBAdapter {
 			const store = tx.objectStore("Names");
 			const request = store.openCursor();
 
-			let allTables = {};
+			let allTables: Record<string, any> = {};
 
 			request.onsuccess = async (event: Event) => {
 				const cursor = (event.target as IDBRequest<IDBCursorWithValue | null>).result;
@@ -171,7 +171,7 @@ export class IndexedDBAdapter {
 
 	async exportDatabase() {
 		const db = await this.openDatabase();
-		const exportObject = {};
+		const exportObject: Record<string, any> = {};
 		const storeNames = Array.from(db.objectStoreNames);
 
 		const transaction = db.transaction(storeNames, 'readonly');
