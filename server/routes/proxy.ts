@@ -1,34 +1,52 @@
 import axios from 'axios';
 import { URL } from 'url';
 import { Readable } from 'stream';
+import * as dns from 'dns/promises';
 import type { Express, Request, Response } from 'express';
 import { headersToRemove } from '../lib/utils.js';
 
-const BLOCKED_HOSTS = new Set([
-    'localhost', '127.0.0.1', '0.0.0.0', '[::1]',
-    '10.0.0.0', '10.0.0.1',
-    '172.16.0.0', '172.17.0.0', '172.18.0.0', '172.19.0.0',
-    '172.20.0.0', '172.21.0.0', '172.22.0.0', '172.23.0.0',
-    '172.24.0.0', '172.25.0.0', '172.26.0.0', '172.27.0.0',
-    '172.28.0.0', '172.29.0.0', '172.30.0.0', '172.31.0.0',
-    '192.168.0.0', '192.168.0.1',
-]);
+const PRIVATE_IP_RANGES = [
+    { start: 0x0A000000, end: 0x0AFFFFFF },   // 10.0.0.0/8
+    { start: 0x7F000000, end: 0x7FFFFFFF },   // 127.0.0.0/8 (loopback)
+    { start: 0xA9FE0000, end: 0xA9FEFFFF },   // 169.254.0.0/16 (link-local)
+    { start: 0xAC100000, end: 0xAC1FFFFF },   // 172.16.0.0/12
+    { start: 0xC0A80000, end: 0xC0A8FFFF },   // 192.168.0.0/16
+];
+
+function ip4ToInt(ip: string): number {
+    const parts = ip.split('.');
+    return ((+parts[0] << 24) | (+parts[1] << 16) | (+parts[2] << 8) | (+parts[3])) >>> 0;
+}
+
+function isPrivateIP(ip: string): boolean {
+    const m = ip.match(/^(\d+)\.(\d+)\.(\d+)\.(\d+)$/);
+    if (!m) return false;
+    const num = ip4ToInt(ip);
+    return PRIVATE_IP_RANGES.some(r => num >= r.start && num <= r.end);
+}
 
 function isPrivateHostname(hostname: string): boolean {
     const lower = hostname.toLowerCase();
-    if (BLOCKED_HOSTS.has(lower)) return true;
+    if (lower === 'localhost' || lower === '127.0.0.1' || lower === '0.0.0.0' || lower === '[::1]') return true;
     if (lower.endsWith('.internal') || lower.endsWith('.local')) return true;
-    if (/^10\.\d+\.\d+\.\d+$/.test(lower)) return true;
-    if (/^172\.(1[6-9]|2\d|3[01])\.\d+\.\d+$/.test(lower)) return true;
-    if (/^192\.168\.\d+\.\d+$/.test(lower)) return true;
     return false;
 }
 
-function isValidProxyUrl(urlString: string): boolean {
+async function isValidProxyUrl(urlString: string): Promise<boolean> {
     try {
         const parsed = new URL(urlString);
         if (!['http:', 'https:'].includes(parsed.protocol)) return false;
         if (isPrivateHostname(parsed.hostname)) return false;
+
+        const lookup = dns.lookup(parsed.hostname, { all: true });
+        const timeout = new Promise<never>((_, reject) =>
+            setTimeout(() => reject(new Error('DNS timeout')), 5000)
+        );
+        const addresses = await Promise.race([lookup, timeout]);
+        for (const addr of addresses) {
+            if (isPrivateIP(addr.address)) return false;
+        }
+
         return true;
     } catch {
         return false;
@@ -59,7 +77,7 @@ export default function(app: Express): void {
         if (!imageUrl) {
             return res.status(400).send('Missing url query parameter');
         }
-        if (!isValidProxyUrl(imageUrl)) {
+        if (!await isValidProxyUrl(imageUrl)) {
             return res.status(403).send('Invalid or disallowed image URL');
         }
         try {
@@ -83,7 +101,7 @@ export default function(app: Express): void {
         const targetBaseUrl = req.headers['x-real-url'] as string | undefined;
         delete req.headers['x-real-url'];
 
-        if (!targetBaseUrl || !isValidProxyUrl(targetBaseUrl)) {
+        if (!targetBaseUrl || !await isValidProxyUrl(targetBaseUrl)) {
             return res.status(403).send('Invalid or disallowed target URL');
         }
 
@@ -146,7 +164,7 @@ export default function(app: Express): void {
         const targetBaseUrl = req.headers['x-real-url'] as string | undefined;
         delete req.headers['x-real-url'];
 
-        if (!targetBaseUrl || !isValidProxyUrl(targetBaseUrl)) {
+        if (!targetBaseUrl || !await isValidProxyUrl(targetBaseUrl)) {
             return res.status(403).send('Invalid or disallowed target URL');
         }
 
@@ -191,7 +209,7 @@ export default function(app: Express): void {
         const targetBaseUrl = req.headers['x-real-url'] as string | undefined;
         delete req.headers['x-real-url'];
 
-        if (!targetBaseUrl || !isValidProxyUrl(targetBaseUrl)) {
+        if (!targetBaseUrl || !await isValidProxyUrl(targetBaseUrl)) {
             return res.status(403).send('Invalid or disallowed target URL');
         }
 
