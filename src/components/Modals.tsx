@@ -92,7 +92,9 @@ export function Modals({ toggleModal, currentThemeName, setCurrentThemeName, all
 	};
 
 	const exportPrompt = () => {
-		exportText(`${sessionStorage.getProperty('name')}.txt`, promptArea.current.value);
+		const elem = promptArea.current;
+		if (!elem) return;
+		exportText(`${sessionStorage.getProperty('name')}.txt`, elem.value);
 	};
 
 	const insertTemplate = (sysInst: any) => {
@@ -292,8 +294,11 @@ export function Modals({ toggleModal, currentThemeName, setCurrentThemeName, all
 			isOpen=${modalState.instruct}
 			closeModal=${() => {
 				closeModal("instruct");
-				promptArea.current.focus();
-				promptArea.current.setSelectionRange(instructModalState.selectionStart, instructModalState.selectionEnd);
+				const elem = promptArea.current;
+				if (elem) {
+					elem.focus();
+					elem.setSelectionRange(instructModalState.selectionStart, instructModalState.selectionEnd);
+				}
 			}}
 			predict=${predict}
 			cancel=${cancel}

@@ -44,8 +44,11 @@ export function PromptContainer({ sidebarHeight }: any) {
 			const edge = getNearEdge(e);
 			if (!edge) return; // Only drag from edges
 
+			const elem = promptArea.current;
+			if (!elem) return;
+
 			// reset selection
-			promptArea.current.selectionStart = promptArea.current.selectionEnd;
+			elem.selectionStart = elem.selectionEnd;
 
 			isDragging = true;
 
@@ -56,19 +59,21 @@ export function PromptContainer({ sidebarHeight }: any) {
 		}
 
 		function drag(e: any) {
+			const elem = promptArea.current;
+			if (!elem) return;
 			switch (getNearEdge(e)) {
 				case 'right':
-					promptArea.current.style.cursor = 'col-resize';
+					elem.style.cursor = 'col-resize';
 					container.style.cursor = 'col-resize';
 					container.style.borderRight = '2px dotted var(--color-light)';
 					break;
 				case 'left':
-					promptArea.current.style.cursor = 'col-resize';
+					elem.style.cursor = 'col-resize';
 					container.style.cursor = 'col-resize';
 					container.style.borderLeft = '2px dotted var(--color-light)';
 					break;
 				default:
-					promptArea.current.style.cursor = '';
+					elem.style.cursor = '';
 					container.style.cursor = '';
 					container.style.borderRight = '2px dotted transparent';
 					container.style.borderLeft = '2px dotted transparent';
@@ -78,7 +83,7 @@ export function PromptContainer({ sidebarHeight }: any) {
 			if (!isDragging) return;
 
 			// reset selection
-			promptArea.current.selectionStart = promptArea.current.selectionEnd;
+			elem.selectionStart = elem.selectionEnd;
 
 			const minWidth = 200;
 			const invEdgePos = startEdge == 'right' ? container.getBoundingClientRect().left : container.getBoundingClientRect().right;
@@ -189,16 +194,19 @@ export function PromptContainer({ sidebarHeight }: any) {
 		if (target.scrollTop === target.scrollTarget)
 			target.scrollTarget = undefined;
 
+		const overlay = promptOverlay.current;
+		if (!overlay) return;
+
 		const newTop = target.scrollTop;
-		const oldTop = promptOverlay.current.scrollTop;
+		const oldTop = overlay.scrollTop;
 
 		if (newTop < oldTop) {
 			// user scrolled up
 			target.scrollTarget = undefined;
 		}
 
-		promptOverlay.current.scrollTop = target.scrollTop;
-		promptOverlay.current.scrollLeft = target.scrollLeft;
+		overlay.scrollTop = target.scrollTop;
+		overlay.scrollLeft = target.scrollLeft;
 		setSavedScrollTop(newTop);
 
 		if (showProbsMode !== -1) {
@@ -228,11 +236,13 @@ export function PromptContainer({ sidebarHeight }: any) {
 	function onPromptMouseMove({ clientX, clientY }: any) {
 		if (showProbsMode === -1 && tokenHighlightMode === -1)
 			return;
-		promptOverlay.current.style.pointerEvents = 'auto';
+		const overlay = promptOverlay.current;
+		if (!overlay) return;
+		overlay.style.pointerEvents = 'auto';
 		const elem = document.elementFromPoint(clientX, clientY);
 		const pc = elem?.closest?.('[data-promptchunk]');
 		const probs = elem?.closest?.('#probs');
-		promptOverlay.current.style.pointerEvents = 'none';
+		overlay.style.pointerEvents = 'none';
 
 		if (probs) {
 			if (probsDelayTimer.current?.hiding) {

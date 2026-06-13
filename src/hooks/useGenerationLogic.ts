@@ -134,7 +134,8 @@ export function useGenerationLogic() {
 				redoStack.current = [];
 				setUndoHovered(false);
 				setRejectedAPIKey(false);
-				promptArea.current.scrollTarget = undefined;
+				const pa = promptArea.current;
+				if (pa) pa.scrollTarget = undefined;
 				useScrollSmoothing.current = true;
 			}
 
