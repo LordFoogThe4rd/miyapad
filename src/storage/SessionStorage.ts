@@ -54,7 +54,7 @@ export class SessionStorage extends AbstractStorage {
 	}
 
 	async saveToDatabase(db: DbConnection, key: string | number, data: any) {
-        if (data && data.hasOwnProperty('name')) {
+        if (data && Object.hasOwn(data, 'name')) {
             const nameData = extractMeta(data);
             await this.nameStorage!.saveToDatabase(db, key, nameData);
             const { name, created, modified, pinned, tags, ...sessionData } = data;
@@ -268,7 +268,7 @@ export class SessionStorage extends AbstractStorage {
 			this.sessions[newId][propertyName] = JSON.parse(value as string);
 		}
 
-		if (!this.sessions[newId].hasOwnProperty('name')) {
+		if (!Object.hasOwn(this.sessions[newId], 'name')) {
 			this.sessions[newId]['name'] = `MiyaPad #${(this.nextId ?? 0) + 1}`;
 		}
 
