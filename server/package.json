@@ -1,7 +1,6 @@
 {
   "name": "server",
   "type": "module",
-  "main": "server.js",
   "scripts": {
     "start": "tsx server.ts",
     "check": "tsc --noEmit",
