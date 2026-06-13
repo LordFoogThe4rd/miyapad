@@ -140,7 +140,7 @@ export function LogitBiasModal({ isOpen, closeModal, biasState, apiConfig, cance
 					...modBias,
 					[biasString]: { // removed Number() here
 						ids: [ ...tokens.ids ],
-						strings: [ ...tokens.str ],
+						strings: Array.isArray(tokens.str) ? [ ...tokens.str ] : [ tokens.str ],
 						power: biasPowerNum
 					}
 				}
