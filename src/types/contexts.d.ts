@@ -24,8 +24,8 @@ export interface SettingsState {
   setSelectedConnectionId: Dispatch<SetStateAction<string>>;
   templates: Record<string, InstructTemplate>;
   setTemplates: Dispatch<SetStateAction<Record<string, InstructTemplate>>>;
-  templateReplacements: boolean;
-  setTemplateReplacements: Dispatch<SetStateAction<boolean>>;
+  templateReplacements: Record<string, string>;
+  setTemplateReplacements: Dispatch<SetStateAction<Record<string, string>>>;
   templatesImport: boolean;
   setTemplatesImport: Dispatch<SetStateAction<boolean>>;
   selectedTemplate: string;

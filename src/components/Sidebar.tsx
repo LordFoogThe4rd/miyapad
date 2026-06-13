@@ -641,7 +641,7 @@ export function Sidebar({ sidebarRef, toggleModal, currentThemeName, setCurrentT
 			</${CollapsibleGroup}>
 			<${CollapsibleGroup} label="Persistent Context">
 				<label className="TextArea">
-					<div>Memory ${memoryTokens.tokens > 0 ? html`<small>(${memoryTokens.tokens} Tokens)</small>` : ""}</div>
+					<div>Memory ${(memoryTokens.tokens ?? 0) > 0 ? html`<small>(${memoryTokens.tokens} Tokens)</small>` : ""}</div>
 					<textarea
 						readOnly=${!!cancel}
 						placeholder="Anything written here will be injected at the head of the prompt. Tokens here DO count towards the Context Limit."
@@ -657,7 +657,7 @@ export function Sidebar({ sidebarRef, toggleModal, currentThemeName, setCurrentT
 					</button>
 				</label>
 				<label className="TextArea">
-					<div>Author's Note ${authorNoteTokens.tokens > 0 ? html`<small>(${authorNoteTokens.tokens} Tokens)</small>` : ""}</div>
+					<div>Author's Note ${(authorNoteTokens.tokens ?? 0) > 0 ? html`<small>(${authorNoteTokens.tokens} Tokens)</small>` : ""}</div>
 					<textarea
 						readOnly=${!!cancel}
 						placeholder="Anything written here will be injected ${authorNoteDepth} newlines from bottom into context."

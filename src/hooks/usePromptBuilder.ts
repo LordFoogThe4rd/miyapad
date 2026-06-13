@@ -158,7 +158,7 @@ export function usePromptBuilder() {
 		// add world info to memory for easier assembly
 		memoryTokens["worldInfo"] = assembledWorldInfo;
 
-		const order = ["prefix","text","suffix"]
+		const order: (keyof AuthorNoteData)[] = ["prefix","text","suffix"]
 		const assembledAuthorNote = authorNoteTokens.text && authorNoteTokens.text !== ""
 			? order.map(key => authorNoteTokens[key]).join("").replace(/\\n/g,'\n')
 			: "";

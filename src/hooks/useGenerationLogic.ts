@@ -165,13 +165,13 @@ export function useGenerationLogic() {
 			}
 
 			if (useChatAPI && !templates[selectedTemplate]) {
-				const defaultTemplate = templates["Mistral"] || Object.values(templates)[0];
-				if (!defaultTemplate) {
+				const defaultTemplateKey = "Mistral" in templates ? "Mistral" : Object.keys(templates)[0];
+				if (!defaultTemplateKey) {
 					// this is bad...
 					setChatMode(false);
 					setUseChatAPI(false);
 				} else {
-					setSelectedTemplate(defaultTemplate);
+					setSelectedTemplate(defaultTemplateKey);
 				}
 				setTriggerPredict(true);
 				return;

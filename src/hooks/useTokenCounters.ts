@@ -16,7 +16,7 @@ export function useTokenCounters() {
 	}
 	// token counts for an
 	useEffect(() => {
-		const order = ["prefix","text","suffix"]
+		const order: (keyof AuthorNoteData)[] = ["prefix","text","suffix"]
 		const assembled = authorNoteTokens.text && authorNoteTokens.text !== ""
 			? order.map(key => authorNoteTokens[key]).join("")
 			: "";	
@@ -60,7 +60,7 @@ export function useTokenCounters() {
 	}
 	// token counts for memory
 	useEffect(() => {
-		const order = ["prefix","text","suffix"]
+		const order: (keyof MemoryTokensData)[] = ["prefix","text","suffix"]
 		const assembled = memoryTokens.text && memoryTokens.text !== ""
 			? order.map(key => memoryTokens[key]).join("")
 			: "";	

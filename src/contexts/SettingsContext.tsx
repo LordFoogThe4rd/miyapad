@@ -24,7 +24,7 @@ export function SettingsProvider({ children, sessionStorage, templateStorage, th
 	isMiyapadEndpoint: boolean;
 }) {
 	const [templates, setTemplates] = useDBTemplates(defaultPresets.instructTemplates);
-	const [templateReplacements, setTemplateReplacements] = useState(false);
+	const [templateReplacements, setTemplateReplacements] = useState<Record<string, string>>({});
 	const [templatesImport, setTemplatesImport] = useState(false);
 	const [selectedTemplate, setSelectedTemplate] = useSessionState('template', "Mistral");
 	const [chatMode, setChatMode] = useSessionState('chatMode', false);

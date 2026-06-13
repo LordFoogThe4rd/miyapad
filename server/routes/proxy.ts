@@ -141,15 +141,16 @@ export default function(app: Express): void {
         } catch (e: unknown) {
             if (axios.isAxiosError(e) && e.response) {
                 const responseData = e.response.data as Readable | undefined;
+                const status = e.response.status;
                 if (responseData?.pipe) {
                     const chunks: Buffer[] = [];
                     responseData.on('data', (c: Buffer) => chunks.push(c));
                     responseData.on('end', () => {
                         const body = Buffer.concat(chunks).toString('utf8');
-                        res.status(e.response.status).json({ error: body });
+                        res.status(status).json({ error: body });
                     });
                 } else {
-                    res.status(e.response.status).json({ error: e.response.data });
+                    res.status(status).json({ error: e.response.data });
                 }
             } else if (axios.isAxiosError(e) && e.request) {
                 res.status(504).json({ error: 'No response from target server.' });

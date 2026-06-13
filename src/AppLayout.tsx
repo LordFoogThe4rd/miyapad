@@ -146,7 +146,7 @@ export function AppLayout() {
 
 
 	useLayoutEffect(() => {
-		document.body.style.setProperty('--font-size-multiplier', fontSizeMultiplier);
+		document.body.style.setProperty('--font-size-multiplier', String(fontSizeMultiplier));
 	}, [fontSizeMultiplier]);
 
 	const availableFonts: Record<string, { cssValue: string | null; url: string | null }> = {
