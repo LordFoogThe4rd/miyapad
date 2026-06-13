@@ -5,6 +5,7 @@
     "moduleResolution": "bundler",
     "jsx": "react-jsx",
     "jsxImportSource": "react",
+    "ignoreDeprecations": "6.0",
     "strict": false,
     "noEmit": true,
     "allowJs": true,

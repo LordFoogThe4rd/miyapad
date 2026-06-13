@@ -5,17 +5,17 @@ import { defaultPresets } from '../defaults/presets';
 export const GenerationContext = createContext(null);
 
 export function GenerationProvider({ children, useSessionState }) {
-	const promptArea = useRef();
-	const promptOverlay = useRef();
-	const undoStack = useRef([]);
-	const redoStack = useRef([]);
-	const probsDelayTimer = useRef();
-	const keyState = useRef({});
-	const sessionReconnectTimer = useRef();
+	const promptArea = useRef<HTMLTextAreaElement>(null);
+	const promptOverlay = useRef<HTMLDivElement>(null);
+	const undoStack = useRef<number[]>([]);
+	const redoStack = useRef<any[][]>([]);
+	const probsDelayTimer = useRef<any>(null);
+	const keyState = useRef<any>({});
+	const sessionReconnectTimer = useRef<number | undefined>(undefined);
 	const useScrollSmoothing = useRef(true);
-	const hordeTaskId = useRef();
-	const promptPreviewElement = useRef();
-	const markdownPreviewRef = useRef(null);
+	const hordeTaskId = useRef<string | undefined>(undefined);
+	const promptPreviewElement = useRef<HTMLSpanElement>(null);
+	const markdownPreviewRef = useRef<HTMLDivElement>(null);
 	const isSyncingScroll = useRef(false);
 
 	const [promptChunks, setPromptChunks] = useSessionState('prompt', defaultPresets.prompt);
@@ -58,12 +58,12 @@ export function GenerationProvider({ children, useSessionState }) {
 	
 	const ttsNewText = useRef("");
 	const ttsLastChunk = useRef("");
-	const ttsQueue = useRef([]);
-	const ttsVoices = useRef([]);
+	const ttsQueue = useRef<string[]>([]);
+	const ttsVoices = useRef<SpeechSynthesisVoice[]>([]);
 	const ttsPaused = useRef(false);
 
 	const activeGenId = useRef(0);
-	const abortControllerRef = useRef(null);
+	const abortControllerRef = useRef<AbortController | null>(null);
 
 	const [triggerPredict, setTriggerPredict] = useState(false);
 	const [restartedPredict, setRestartedPredict] = useState(false);

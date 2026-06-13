@@ -67,13 +67,13 @@ export async function loadServerTokenizer({ sessionEndpoint, model }) {
 	return data;
 }
 
-export async function getTokenCount({ endpoint, endpointAPI, endpointAPIKey, signal, ...options }) {
+export async function getTokenCount({ endpoint, endpointAPI, endpointAPIKey, proxyEndpoint, signal, ...options }) {
 	endpoint = normalizeEndpoint(endpoint, endpointAPI);
 	switch (endpointAPI) {
 		case API_LLAMA_CPP:
-			return await llamaCppTokenCount({ endpoint, endpointAPIKey, signal, ...options });
+			return await llamaCppTokenCount({ endpoint, endpointAPIKey, proxyEndpoint, signal, ...options });
 		case API_KOBOLD_CPP:
-			return await koboldCppTokenCount({ endpoint, endpointAPIKey, signal, ...options });
+			return await koboldCppTokenCount({ endpoint, endpointAPIKey, proxyEndpoint, signal, ...options });
 		case API_DEEPSEEK:
 		case API_OPENAI_COMPAT:
 			// These endpoints don't have a token count endpoint...
@@ -83,13 +83,13 @@ export async function getTokenCount({ endpoint, endpointAPI, endpointAPIKey, sig
 			// Each backend that exposes an OpenAI-compatible API may have a different token count endpoint.
 			// Instead of asking the user which backend they are using, let's try each one.
 			let tokenCount = 0;
-			tokenCount = await openaiAphroditeTokenCount({ endpoint, endpointAPIKey, signal, ...options });
+			tokenCount = await openaiAphroditeTokenCount({ endpoint, endpointAPIKey, proxyEndpoint, signal, ...options });
 			if (tokenCount != -1)
 				return tokenCount;
-			tokenCount = await openaiOobaTokenCount({ endpoint, signal, ...options });
+			tokenCount = await openaiOobaTokenCount({ endpoint, proxyEndpoint, signal, ...options });
 			if (tokenCount != -1)
 				return tokenCount;
-			tokenCount = await openaiTabbyTokenCount({ endpoint, endpointAPIKey, signal, ...options });
+			tokenCount = await openaiTabbyTokenCount({ endpoint, endpointAPIKey, proxyEndpoint, signal, ...options });
 			if (tokenCount != -1)
 				return tokenCount;
 			return 0;
@@ -98,7 +98,7 @@ export async function getTokenCount({ endpoint, endpointAPI, endpointAPIKey, sig
 	}
 }
 
-export async function getTokens({ endpoint, endpointAPI, endpointAPIKey, signal, ...options }) {
+export async function getTokens({ endpoint, endpointAPI, endpointAPIKey, proxyEndpoint, signal, ...options }) {
 	// currently only implemented for llama.cpp and koboldcpp
 	// returns a json object in the format of:
 	// { ids:[ array of token ids ], str:[ array of detokenized ids ] }
@@ -106,9 +106,9 @@ export async function getTokens({ endpoint, endpointAPI, endpointAPIKey, signal,
 	endpoint = normalizeEndpoint(endpoint, endpointAPI);
 	switch (endpointAPI) {
 		case API_LLAMA_CPP:
-			return await llamaCppTokenize({ endpoint, endpointAPIKey, signal, ...options });
+			return await llamaCppTokenize({ endpoint, endpointAPIKey, proxyEndpoint, signal, ...options });
 		case API_KOBOLD_CPP:
-			return await koboldCppTokenize({ endpoint, endpointAPIKey, signal, ...options });
+			return await koboldCppTokenize({ endpoint, endpointAPIKey, proxyEndpoint, signal, ...options });
 		case API_DEEPSEEK:
 		case API_OPENAI_COMPAT:
 			// These endpoints don't have a tokenenizer endpoint...
@@ -118,10 +118,10 @@ export async function getTokens({ endpoint, endpointAPI, endpointAPIKey, signal,
 			// Each backend that exposes an OpenAI-compatible API may have a different tokenizer endpoint.
 			// Instead of asking the user which backend they are using, let's try each one.
 			let tokens = null;
-			tokens = await openaiOobaTokenize({ endpoint, endpointAPIKey, signal, ...options });
+			tokens = await openaiOobaTokenize({ endpoint, endpointAPIKey, proxyEndpoint, signal, ...options });
 			if (tokens !== null)
 				return tokens;
-			tokens = await openaiTabbyTokenize({ endpoint, endpointAPIKey, signal, ...options });
+			tokens = await openaiTabbyTokenize({ endpoint, endpointAPIKey, proxyEndpoint, signal, ...options });
 			if (tokens !== null)
 				return tokens;
 			return [];
@@ -130,53 +130,53 @@ export async function getTokens({ endpoint, endpointAPI, endpointAPIKey, signal,
 	}
 }
 
-export async function getModels({ endpoint, endpointAPI, endpointAPIKey, signal, ...options }) {
+export async function getModels({ endpoint, endpointAPI, endpointAPIKey, proxyEndpoint, signal, ...options }) {
 	endpoint = normalizeEndpoint(endpoint, endpointAPI);
 	switch (endpointAPI) {
 		case API_DEEPSEEK:
 		case API_OPENAI_COMPAT:
-			return await (endpointAPI === API_DEEPSEEK ? deepseekModels : openaiModels)({ endpoint, endpointAPIKey, signal, ...options });
+			return await (endpointAPI === API_DEEPSEEK ? deepseekModels : openaiModels)({ endpoint, endpointAPIKey, proxyEndpoint, signal, ...options });
 		case API_AI_HORDE:
-			return await aiHordeModels({ endpoint, endpointAPIKey, signal, ...options });
+			return await aiHordeModels({ endpoint, endpointAPIKey, proxyEndpoint, signal, ...options });
 		default:
 			return [];
 	}
 }
 
-export async function* completion({ endpoint, endpointAPI, endpointAPIKey, signal, ...options }) {
+export async function* completion({ endpoint, endpointAPI, endpointAPIKey, proxyEndpoint, signal, ...options }) {
 	endpoint = normalizeEndpoint(endpoint, endpointAPI);
 	switch (endpointAPI) {
 		case API_LLAMA_CPP:
-			return yield* await llamaCppCompletion({ endpoint, endpointAPIKey, signal, ...options });
+			return yield* await llamaCppCompletion({ endpoint, endpointAPIKey, proxyEndpoint, signal, ...options });
 		case API_KOBOLD_CPP:
-			return yield* await koboldCppCompletion({ endpoint, endpointAPIKey, signal, ...options });
+			return yield* await koboldCppCompletion({ endpoint, endpointAPIKey, proxyEndpoint, signal, ...options });
 		case API_DEEPSEEK:
-			return yield* await deepseekCompletion({ endpoint, endpointAPIKey, signal, ...options });
+			return yield* await deepseekCompletion({ endpoint, endpointAPIKey, proxyEndpoint, signal, ...options });
 		case API_OPENAI_COMPAT:
-			return yield* await openaiCompletion({ endpoint, endpointAPIKey, signal, ...options });
+			return yield* await openaiCompletion({ endpoint, endpointAPIKey, proxyEndpoint, signal, ...options });
 		case API_AI_HORDE:
-			return yield* await aiHordeCompletion({ endpoint, endpointAPIKey, signal, ...options });
+			return yield* await aiHordeCompletion({ endpoint, endpointAPIKey, proxyEndpoint, signal, ...options });
 	}
 }
 
-export async function* chatCompletion({ endpoint, endpointAPI, endpointAPIKey, signal, ...options }) {
+export async function* chatCompletion({ endpoint, endpointAPI, endpointAPIKey, proxyEndpoint, signal, ...options }) {
 	endpoint = normalizeEndpoint(endpoint, endpointAPI);
 	switch (endpointAPI) {
 		case API_DEEPSEEK:
 		case API_OPENAI_COMPAT:
-			return yield* await (endpointAPI === API_DEEPSEEK ? deepseekChatCompletion : openaiChatCompletion)({ endpoint, endpointAPIKey, signal, ...options });
+			return yield* await (endpointAPI === API_DEEPSEEK ? deepseekChatCompletion : openaiChatCompletion)({ endpoint, endpointAPIKey, proxyEndpoint, signal, ...options });
 	}
 }
 
-export async function abortCompletion({ endpoint, endpointAPI, ...options }) {
+export async function abortCompletion({ endpoint, endpointAPI, proxyEndpoint, ...options }) {
 	endpoint = normalizeEndpoint(endpoint, endpointAPI);
 	switch (endpointAPI) {
 		case API_KOBOLD_CPP:
-			return await koboldCppAbortCompletion({ endpoint, ...options });
+			return await koboldCppAbortCompletion({ endpoint, proxyEndpoint, ...options });
 		case API_DEEPSEEK:
 		case API_OPENAI_COMPAT:
-			return await (endpointAPI === API_DEEPSEEK ? deepseekAbortCompletion : openaiOobaAbortCompletion)({ endpoint, ...options });
+			return await (endpointAPI === API_DEEPSEEK ? deepseekAbortCompletion : openaiOobaAbortCompletion)({ endpoint, proxyEndpoint, ...options });
 		case API_AI_HORDE:
-			return await aiHordeAbortCompletion({ endpoint, ...options });
+			return await aiHordeAbortCompletion({ endpoint, proxyEndpoint, ...options });
 	}
 }

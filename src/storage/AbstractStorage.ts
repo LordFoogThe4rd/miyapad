@@ -1,5 +1,10 @@
 export class AbstractStorage extends EventTarget {
-	constructor(storeName, dbAdapter) {
+	storeName: string;
+	dbAdapter: any;
+	pendingSaveKey: any;
+	saveTimer: any;
+
+	constructor(storeName: string, dbAdapter: any) {
 		super();
 		this.storeName = storeName;
 		this.dbAdapter = dbAdapter;
@@ -11,7 +16,7 @@ export class AbstractStorage extends EventTarget {
 		this.dispatchEvent(new CustomEvent('change'));
 	}
 
-	dispatchErrorEvent(detail) {
+	dispatchErrorEvent(detail: any) {
 		console.error('[AbstractStorage Error]', this.storeName, detail);
 		fetch('/log', {
 			method: 'POST',
@@ -25,11 +30,11 @@ export class AbstractStorage extends EventTarget {
 		this.dispatchEvent(new CustomEvent('error', { detail }));
 	}
 
-	startSaveTimer(saveCallback) {
+	startSaveTimer(saveCallback: (key: any) => Promise<void>) {
 		this.saveTimer = setInterval(async () => await this.saveTimerHandler(saveCallback), 500);
 	}
 
-	async saveTimerHandler(saveCallback) {
+	async saveTimerHandler(saveCallback: (key: any) => Promise<void>) {
 		const key = this.pendingSaveKey;
 		this.pendingSaveKey = null;
 
@@ -38,19 +43,19 @@ export class AbstractStorage extends EventTarget {
 		}
 	}
 
-	enqueueSave(key) {
+	enqueueSave(key: any) {
 		this.pendingSaveKey = key;
 	}
 
-	async performFullSave(data) {
+	async performFullSave(data: any) {
 		throw new Error("Not Implemented");
 	}
 
-	getStorageData() {
+	getStorageData(): any {
 		throw new Error("Not Implemented");
 	}
 
-	async openDatabase() {
+	async openDatabase(): Promise<any> {
 		try {
 			return await this.dbAdapter.openDatabase();
 		} catch (e) {
@@ -59,7 +64,7 @@ export class AbstractStorage extends EventTarget {
 		}
 	}
 
-	async loadFromDatabase(db, key) {
+	async loadFromDatabase(db: any, key: any): Promise<any> {
 		try {
 			return await this.dbAdapter.loadFromDatabase(db, this.storeName, key);
 		} catch (e) {
@@ -68,7 +73,7 @@ export class AbstractStorage extends EventTarget {
 		}
 	}
 
-	async loadAllFromDatabase(db) {
+	async loadAllFromDatabase(db: any): Promise<any> {
 		try {
 			return await this.dbAdapter.loadAllFromDatabase(db, this.storeName);
 		} catch (e) {
@@ -77,7 +82,7 @@ export class AbstractStorage extends EventTarget {
 		}
 	}
 
-	async loadSessionInfoFromDatabase(db) {
+	async loadSessionInfoFromDatabase(db: any): Promise<any> {
 		try {
 			return await this.dbAdapter.loadSessionInfoFromDatabase(db, this.storeName);
 		} catch (e) {
@@ -86,7 +91,7 @@ export class AbstractStorage extends EventTarget {
 		}
 	}
 
-	async saveToDatabase(db, key, data) {
+	async saveToDatabase(db: any, key: any, data: any): Promise<void> {
 		try {
 			return await this.dbAdapter.saveToDatabase(db, this.storeName, key, data);
 		} catch (e) {
@@ -95,7 +100,7 @@ export class AbstractStorage extends EventTarget {
 		}
 	}
 
-	async renameSessionInDatabase(db, key, newName) {
+	async renameSessionInDatabase(db: any, key: any, newName: any): Promise<void> {
 		try {
 			return await this.dbAdapter.renameSessionInDatabase(db, this.storeName, key, newName);
 		} catch (e) {
@@ -104,7 +109,7 @@ export class AbstractStorage extends EventTarget {
 		}
 	}
 
-	async deleteFromDatabase(db, key) {
+	async deleteFromDatabase(db: any, key: any): Promise<void> {
 		try {
 			return await this.dbAdapter.deleteFromDatabase(db, this.storeName, key);
 		} catch (e) {
