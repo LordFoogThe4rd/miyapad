@@ -1,14 +1,16 @@
-const { getColumnName, normalizeStoreName } = require('../lib/utils');
+import type { Express, Request, Response } from 'express';
+import type { Database } from 'sqlite3';
+import { getColumnName, normalizeStoreName } from '../lib/utils.js';
 
-module.exports = function(app, db) {
-    app.post('/load', (req, res) => {
-        const { storeName, key } = req.body;
+export default function(app: Express, db: Database): void {
+    app.post('/load', (req: Request, res: Response) => {
+        const { storeName, key } = req.body as { storeName: string; key: string };
         const normStoreName = normalizeStoreName(storeName);
         if (!normStoreName) {
             return res.status(400).json({ ok: false, message: 'Invalid store name provided' });
         }
         const colName = getColumnName(normStoreName);
-        db.get(`SELECT ${colName} AS data FROM ${normStoreName} WHERE key = ?`, [key], async (err, row) => {
+        db.get(`SELECT ${colName} AS data FROM ${normStoreName} WHERE key = ?`, [key], async (err, row: any) => {
             if (err) {
                 return res.status(500).json({ ok: false, message: 'Error querying the database' });
             }
@@ -38,15 +40,15 @@ module.exports = function(app, db) {
         });
     });
 
-    app.post('/save', async (req, res) => {
-        const { storeName, key, data } = req.body;
+    app.post('/save', async (req: Request, res: Response) => {
+        const { storeName, key, data } = req.body as { storeName: string; key: string; data: any };
         const normStoreName = normalizeStoreName(storeName);
         if (!normStoreName) {
             return res.status(400).json({ ok: false, message: 'Invalid store name provided' });
         }
 
         try {
-            let dataToStore;
+            let dataToStore: string;
             if (normStoreName !== "names") {
                 dataToStore = JSON.stringify(data);
             } else {
@@ -66,17 +68,17 @@ module.exports = function(app, db) {
         }
     });
 
-    app.post('/rename', (req, res) => {
-        const { storeName, key, newName } = req.body;
+    app.post('/rename', (req: Request, res: Response) => {
+        const { storeName, key, newName } = req.body as { storeName: string; key: string; newName: string };
         const normStoreName = normalizeStoreName(storeName);
         if (normStoreName !== 'sessions') {
             return res.status(400).json({ ok: false, message: 'Renaming is only supported for sessions' });
         }
-        db.get(`SELECT data FROM names WHERE key = ?`, [key], (err, row) => {
+        db.get(`SELECT data FROM names WHERE key = ?`, [key], (err, row: any) => {
             if (err) {
                 return res.status(500).json({ ok: false, message: 'Error querying the database' });
             }
-            let nameData;
+            let nameData: { name: string; created: number | null; modified: number };
             if (row && row.data) {
                 try {
                     const parsed = JSON.parse(row.data);
@@ -105,20 +107,20 @@ module.exports = function(app, db) {
         });
     });
 
-    app.post('/all', (req, res) => {
-        const { storeName } = req.body;
+    app.post('/all', (req: Request, res: Response) => {
+        const { storeName } = req.body as { storeName: string };
         const normStoreName = normalizeStoreName(storeName);
         if (!normStoreName) {
             return res.status(400).json({ ok: false, message: 'Invalid store name provided' });
         }
         const colName = getColumnName(normStoreName);
-        db.all(`SELECT key, ${colName} AS data FROM ${normStoreName}`, [], async (err, rows) => {
+        db.all(`SELECT key, ${colName} AS data FROM ${normStoreName}`, [], async (err, rows: any[]) => {
             if (err) {
                 return res.status(500).json({ ok: false, message: 'Error querying the database' });
             }
 
             try {
-                const all = {};
+                const all: Record<string, any> = {};
                 if (normStoreName !== "names") {
                     rows.forEach((row) => {
                         const plainText = typeof row.data === 'string' ? row.data : row.data.toString();
@@ -136,18 +138,18 @@ module.exports = function(app, db) {
         });
     });
 
-    app.post('/sessions', (req, res) => {
+    app.post('/sessions', (req: Request, res: Response) => {
         db.all(
             `
             SELECT key, data AS name
             FROM names
             `,
             [],
-            (err, rows) => {
+            (err, rows: any[]) => {
                 if (err) {
                     res.status(500).json({ ok: false, message: 'Error querying the database' });
                 } else {
-                    const sessions = {};
+                    const sessions: Record<string, any> = {};
                     rows.forEach((row) => {
                         try {
                             const parsed = JSON.parse(row.name);
@@ -166,8 +168,8 @@ module.exports = function(app, db) {
         );
     });
 
-    app.post('/delete', (req, res) => {
-        const { storeName, key } = req.body;
+    app.post('/delete', (req: Request, res: Response) => {
+        const { storeName, key } = req.body as { storeName: string; key: string };
         const normStoreName = normalizeStoreName(storeName);
         if (!normStoreName) {
             return res.status(400).json({ ok: false, message: 'Invalid store name provided' });

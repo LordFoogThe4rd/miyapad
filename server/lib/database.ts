@@ -1,10 +1,13 @@
-const sqlite3 = require('sqlite3');
-const path = require('path');
-const { getColumnName, compressData, decompressData } = require('./utils');
-const tokenizer = require('../tokenizer');
+import sqlite3 from 'sqlite3';
+import path from 'path';
+import { fileURLToPath } from 'url';
+import { getColumnName, compressData, decompressData } from './utils.js';
+import * as tokenizer from '../tokenizer.js';
 
-const runMigrationToV3 = (db) => {
-    return new Promise((resolve, reject) => {
+const __dirname = path.dirname(fileURLToPath(import.meta.url));
+
+const runMigrationToV3 = (db: sqlite3.Database) => {
+    return new Promise<boolean>((resolve, reject) => {
         const migrationCheckSql = `
             SELECT 'migration_needed' as status
             FROM sqlite_master
@@ -12,7 +15,7 @@ const runMigrationToV3 = (db) => {
               AND NOT EXISTS (SELECT 1 FROM sqlite_master WHERE type = 'table' AND name = 'names');
         `;
 
-        db.get(migrationCheckSql, (err, row) => {
+        db.get(migrationCheckSql, (err, row: any) => {
             if (err) {
                 return reject(err);
             }
@@ -20,36 +23,36 @@ const runMigrationToV3 = (db) => {
             if (row) {
                 db.serialize(async () => {
                     try {
-                        const migrateTable = async (tableName, processRow) => {
-                            await new Promise((res, rej) => db.run(`ALTER TABLE ${tableName} RENAME TO ${tableName}_old`, (err) => err ? rej(err) : res()));
-                            await new Promise((res, rej) => db.run(`CREATE TABLE ${tableName} (key TEXT PRIMARY KEY, data BLOB)`, (err) => err ? rej(err) : res()));
-                            const rows = await new Promise((res, rej) => db.all(`SELECT key, data FROM ${tableName}_old`, [], (err, rows) => err ? rej(err) : res(rows)));
+                        const migrateTable = async (tableName: string, processRow: (row: any) => Promise<void>) => {
+                            await new Promise<void>((res, rej) => db.run(`ALTER TABLE ${tableName} RENAME TO ${tableName}_old`, (err) => err ? rej(err) : res()));
+                            await new Promise<void>((res, rej) => db.run(`CREATE TABLE ${tableName} (key TEXT PRIMARY KEY, data BLOB)`, (err) => err ? rej(err) : res()));
+                            const rows: any[] = await new Promise((res, rej) => db.all(`SELECT key, data FROM ${tableName}_old`, [], (err, rows) => err ? rej(err) : res(rows)));
                             for (const row of rows) {
                                 await processRow(row);
                             }
-                            await new Promise((res, rej) => db.run(`DROP TABLE ${tableName}_old`, (err) => err ? rej(err) : res()));
+                            await new Promise<void>((res, rej) => db.run(`DROP TABLE ${tableName}_old`, (err) => err ? rej(err) : res()));
                         };
 
                         db.run("BEGIN TRANSACTION;");
 
-                        await new Promise((res, rej) => db.run(`CREATE TABLE names (key TEXT PRIMARY KEY, data TEXT);`, (err) => err ? rej(err) : res()));
+                        await new Promise<void>((res, rej) => db.run(`CREATE TABLE names (key TEXT PRIMARY KEY, data TEXT);`, (err) => err ? rej(err) : res()));
 
                         await migrateTable('sessions', async (row) => {
                             const sessionData = JSON.parse(row.data);
                             const sessionName = sessionData.name;
 
                             if (sessionName) {
-                                await new Promise((res, rej) => db.run("INSERT INTO names (key, data) VALUES (?, ?)", [row.key, sessionName], (err) => err ? rej(err) : res()));
+                                await new Promise<void>((res, rej) => db.run("INSERT INTO names (key, data) VALUES (?, ?)", [row.key, sessionName], (err) => err ? rej(err) : res()));
                                 delete sessionData.name;
                             }
 
                             const compressedData = await compressData(JSON.stringify(sessionData));
-                            await new Promise((res, rej) => db.run("INSERT INTO sessions (key, data) VALUES (?, ?)", [row.key, compressedData], (err) => err ? rej(err) : res()));
+                            await new Promise<void>((res, rej) => db.run("INSERT INTO sessions (key, data) VALUES (?, ?)", [row.key, compressedData], (err) => err ? rej(err) : res()));
                         });
 
                         await migrateTable('templates', async (row) => {
                             const compressedData = await compressData(row.data);
-                            await new Promise((res, rej) => db.run("INSERT INTO templates (key, data) VALUES (?, ?)", [row.key, compressedData], (err) => err ? rej(err) : res()));
+                            await new Promise<void>((res, rej) => db.run("INSERT INTO templates (key, data) VALUES (?, ?)", [row.key, compressedData], (err) => err ? rej(err) : res()));
                         });
 
                         db.run("COMMIT;", (err) => {
@@ -71,9 +74,9 @@ const runMigrationToV3 = (db) => {
     });
 };
 
-const enableTransparentCompressionIfMissing = (db, tableName) => {
-    return new Promise((resolve, reject) => {
-        db.get(`SELECT name FROM sqlite_master WHERE type='table' AND name=?`, [`_${tableName}_zstd`], (err, row) => {
+const enableTransparentCompressionIfMissing = (db: sqlite3.Database, tableName: string) => {
+    return new Promise<void>((resolve, reject) => {
+        db.get(`SELECT name FROM sqlite_master WHERE type='table' AND name=?`, [`_${tableName}_zstd`], (err, row: any) => {
             if (err) return reject(err);
             if (row) {
                 return resolve();
@@ -98,9 +101,9 @@ const enableTransparentCompressionIfMissing = (db, tableName) => {
     });
 };
 
-const runMigrationToV4 = (db) => {
-    return new Promise((resolve, reject) => {
-        db.get("SELECT value FROM meta WHERE key = 'version'", async (err, row) => {
+const runMigrationToV4 = (db: sqlite3.Database) => {
+    return new Promise<boolean>((resolve, reject) => {
+        db.get("SELECT value FROM meta WHERE key = 'version'", async (err, row: any) => {
             if (err) {
                 return resolve(false);
             }
@@ -113,23 +116,23 @@ const runMigrationToV4 = (db) => {
             console.log(`Migrating database from version ${version} to 4 (sqlite-zstd transparent compression)...`);
 
             try {
-                const migrateTableToZstd = async (tableName) => {
+                const migrateTableToZstd = async (tableName: string) => {
                     const colName = getColumnName(tableName);
 
-                    const tableExists = await new Promise((res, rej) => {
-                        db.get(`SELECT name FROM sqlite_master WHERE type='table' AND name=?`, [tableName], (err, row) => {
+                    const tableExists: boolean = await new Promise((res, rej) => {
+                        db.get(`SELECT name FROM sqlite_master WHERE type='table' AND name=?`, [tableName], (err, row: any) => {
                             if (err) rej(err);
                             else res(!!row);
                         });
                     });
 
                     if (!tableExists) {
-                        await new Promise((res, rej) => db.run(`CREATE TABLE IF NOT EXISTS ${tableName} (key TEXT PRIMARY KEY, ${colName} BLOB)`, (err) => err ? rej(err) : res()));
+                        await new Promise<void>((res, rej) => db.run(`CREATE TABLE IF NOT EXISTS ${tableName} (key TEXT PRIMARY KEY, ${colName} BLOB)`, (err) => err ? rej(err) : res()));
                         return;
                     }
 
-                    const hasOldColumnName = await new Promise((res, rej) => {
-                        db.all(`PRAGMA table_info(${tableName})`, [], (err, infoRows) => {
+                    const hasOldColumnName: boolean = await new Promise((res, rej) => {
+                        db.all(`PRAGMA table_info(${tableName})`, [], (err, infoRows: any[]) => {
                             if (err) return rej(err);
                             const hasOld = infoRows.some(info => info.name === 'data');
                             res(hasOld);
@@ -138,15 +141,15 @@ const runMigrationToV4 = (db) => {
 
                     let oldColName = hasOldColumnName ? 'data' : colName;
 
-                    const rows = await new Promise((res, rej) => {
+                    const rows: any[] = await new Promise((res, rej) => {
                         db.all(`SELECT key, ${oldColName} FROM ${tableName}`, [], (err, rows) => err ? rej(err) : res(rows));
                     });
 
                     console.log(`Migrating ${rows.length} rows from table ${tableName}...`);
 
-                    const decompressedRows = [];
+                    const decompressedRows: { key: string; data: string }[] = [];
                     for (const row of rows) {
-                        let decompressed;
+                        let decompressed: string;
                         try {
                             decompressed = await decompressData(row[oldColName]);
                         } catch (e) {
@@ -155,9 +158,9 @@ const runMigrationToV4 = (db) => {
                         decompressedRows.push({ key: row.key, data: decompressed });
                     }
 
-                    await new Promise((res, rej) => db.run(`DROP TABLE ${tableName}`, (err) => err ? rej(err) : res()));
+                    await new Promise<void>((res, rej) => db.run(`DROP TABLE ${tableName}`, (err) => err ? rej(err) : res()));
 
-                    await new Promise((res, rej) => db.run(`CREATE TABLE ${tableName} (key TEXT PRIMARY KEY, ${colName} BLOB)`, (err) => err ? rej(err) : res()));
+                    await new Promise<void>((res, rej) => db.run(`CREATE TABLE ${tableName} (key TEXT PRIMARY KEY, ${colName} BLOB)`, (err) => err ? rej(err) : res()));
 
                     const config = JSON.stringify({
                         table: tableName,
@@ -165,17 +168,17 @@ const runMigrationToV4 = (db) => {
                         compression_level: 3,
                         dict_chooser: "'a'"
                     });
-                    await new Promise((res, rej) => db.run(`SELECT zstd_enable_transparent(?)`, [config], (err) => err ? rej(err) : res()));
+                    await new Promise<void>((res, rej) => db.run(`SELECT zstd_enable_transparent(?)`, [config], (err) => err ? rej(err) : res()));
 
                     if (decompressedRows.length > 0) {
-                        await new Promise((res, rej) => db.run("BEGIN TRANSACTION", (err) => err ? rej(err) : res()));
+                        await new Promise<void>((res, rej) => db.run("BEGIN TRANSACTION", (err) => err ? rej(err) : res()));
                         try {
                             for (const row of decompressedRows) {
-                                await new Promise((res, rej) => db.run(`INSERT INTO ${tableName} (key, ${colName}) VALUES (?, ?)`, [row.key, row.data], (err) => err ? rej(err) : res()));
+                                await new Promise<void>((res, rej) => db.run(`INSERT INTO ${tableName} (key, ${colName}) VALUES (?, ?)`, [row.key, row.data], (err) => err ? rej(err) : res()));
                             }
-                            await new Promise((res, rej) => db.run("COMMIT", (err) => err ? rej(err) : res()));
+                            await new Promise<void>((res, rej) => db.run("COMMIT", (err) => err ? rej(err) : res()));
                         } catch (insertErr) {
-                            await new Promise((res) => db.run("ROLLBACK", () => res()));
+                            await new Promise<void>((res) => db.run("ROLLBACK", () => res()));
                             throw insertErr;
                         }
                     }
@@ -187,7 +190,7 @@ const runMigrationToV4 = (db) => {
                 await migrateTableToZstd('connections');
 
                 console.log("Running initial zstd incremental maintenance (training dictionaries)...");
-                await new Promise((res, rej) => db.run(`SELECT zstd_incremental_maintenance(null, 1)`, (err) => err ? rej(err) : res()));
+                await new Promise<void>((res, rej) => db.run(`SELECT zstd_incremental_maintenance(null, 1)`, (err) => err ? rej(err) : res()));
 
                 resolve(true);
             } catch (e) {
@@ -197,7 +200,7 @@ const runMigrationToV4 = (db) => {
     });
 };
 
-let maintenanceSchedulerId = null;
+let maintenanceSchedulerId: ReturnType<typeof setInterval> | null = null;
 
 const DEFAULT_MAINTENANCE_CONFIG = {
     duration: 5,
@@ -205,11 +208,11 @@ const DEFAULT_MAINTENANCE_CONFIG = {
     mode: 'shutdown',
     interval: 60,
     walEnabled: false
-};
+} as const;
 
-const configureAutoVacuum = (db) => {
-    return new Promise((resolve) => {
-        db.get('PRAGMA auto_vacuum', (err, row) => {
+const configureAutoVacuum = (db: sqlite3.Database) => {
+    return new Promise<void>((resolve) => {
+        db.get('PRAGMA auto_vacuum', (err, row: any) => {
             if (err || !row || row.auto_vacuum !== 0) {
                 return resolve();
             }
@@ -230,8 +233,8 @@ const configureAutoVacuum = (db) => {
     });
 };
 
-const runZstdMaintenance = (db, duration, dbLoad) => {
-    return new Promise((resolve) => {
+const runZstdMaintenance = (db: sqlite3.Database, duration?: number, dbLoad?: number) => {
+    return new Promise<{ ok: boolean; message: string }>((resolve) => {
         const d = duration !== undefined ? duration : null;
         const l = dbLoad !== undefined ? dbLoad : 1.0;
         db.run(`SELECT zstd_incremental_maintenance(?, ?)`, [d, l], (err) => {
@@ -245,8 +248,8 @@ const runZstdMaintenance = (db, duration, dbLoad) => {
     });
 };
 
-const configureWAL = (db, enabled) => {
-    return new Promise((resolve) => {
+const configureWAL = (db: sqlite3.Database, enabled: boolean) => {
+    return new Promise<{ ok: boolean; message?: string }>((resolve) => {
         const mode = enabled ? 'WAL' : 'DELETE';
         db.run(`PRAGMA journal_mode=${mode}`, (err) => {
             if (err) {
@@ -259,9 +262,17 @@ const configureWAL = (db, enabled) => {
     });
 };
 
-const getMaintenanceConfig = (db) => {
-    return new Promise((resolve) => {
-        db.get(`SELECT value FROM meta WHERE key = 'maintenance_config'`, (err, row) => {
+interface MaintenanceConfig {
+    duration: number;
+    dbLoad: number;
+    mode: string;
+    interval: number;
+    walEnabled: boolean;
+}
+
+const getMaintenanceConfig = (db: sqlite3.Database) => {
+    return new Promise<MaintenanceConfig>((resolve) => {
+        db.get(`SELECT value FROM meta WHERE key = 'maintenance_config'`, (err, row: any) => {
             if (err || !row) {
                 resolve({ ...DEFAULT_MAINTENANCE_CONFIG });
             } else {
@@ -276,8 +287,8 @@ const getMaintenanceConfig = (db) => {
     });
 };
 
-const saveMaintenanceConfig = (db, config) => {
-    return new Promise((resolve) => {
+const saveMaintenanceConfig = (db: sqlite3.Database, config: Partial<MaintenanceConfig>) => {
+    return new Promise<{ ok: boolean; message?: string; config?: MaintenanceConfig }>((resolve) => {
         const merged = { ...DEFAULT_MAINTENANCE_CONFIG, ...config };
         db.run(`INSERT OR REPLACE INTO meta (key, value) VALUES ('maintenance_config', ?)`, [JSON.stringify(merged)], (err) => {
             if (err) {
@@ -296,7 +307,7 @@ const clearMaintenanceScheduler = () => {
     }
 };
 
-const scheduleZstdMaintenance = (db, config) => {
+const scheduleZstdMaintenance = (db: sqlite3.Database, config: MaintenanceConfig) => {
     clearMaintenanceScheduler();
     if (config.mode === 'interval' && config.interval > 0) {
         const intervalMs = config.interval * 60 * 1000;
@@ -307,8 +318,8 @@ const scheduleZstdMaintenance = (db, config) => {
     }
 };
 
-const initDatabase = (storagePath) => {
-    return new Promise((resolve, reject) => {
+const initDatabase = (storagePath: string) => {
+    return new Promise<sqlite3.Database>((resolve, reject) => {
         const db = new sqlite3.Database(storagePath, (err) => {
             if (err) {
                 return reject(err);
@@ -327,8 +338,8 @@ const initDatabase = (storagePath) => {
                 console.log('sqlite-zstd extension loaded successfully.');
 
                 try {
-                    const sessionTableExists = await new Promise((res, rej) => {
-                        db.get("SELECT name FROM sqlite_master WHERE type='table' AND name='sessions'", (err, row) => {
+                    const sessionTableExists: boolean = await new Promise((res, rej) => {
+                        db.get("SELECT name FROM sqlite_master WHERE type='table' AND name='sessions'", (err, row: any) => {
                             if (err) rej(err);
                             else res(!!row);
                         });
@@ -338,7 +349,7 @@ const initDatabase = (storagePath) => {
 
                     await configureAutoVacuum(db);
 
-                    await new Promise((res, rej) => {
+                    await new Promise<void>((res, rej) => {
                         db.serialize(() => {
                             const sessionCol = getColumnName('sessions');
                             const templateCol = getColumnName('templates');
@@ -364,7 +375,7 @@ const initDatabase = (storagePath) => {
                         const didMigrateV4 = await runMigrationToV4(db);
                         if (didMigrateV4) {
                             console.log('Running VACUUM after migration to compact database...');
-                            await new Promise((res) => {
+                            await new Promise<void>((res) => {
                                 db.run('VACUUM', (err) => {
                                     if (err) console.error('Failed to run post-migration VACUUM:', err.message);
                                     res();
@@ -382,7 +393,7 @@ const initDatabase = (storagePath) => {
                         enableTransparentCompressionIfMissing(db, 'connections')
                     ]);
 
-                    await new Promise((res, rej) => {
+                    await new Promise<void>((res, rej) => {
                         db.serialize(() => {
                             db.run(`CREATE TABLE IF NOT EXISTS names (key TEXT PRIMARY KEY, data TEXT)`);
                             db.run(`INSERT OR REPLACE INTO meta (key, value) VALUES ('version', 4)`, (err) => {
@@ -392,8 +403,8 @@ const initDatabase = (storagePath) => {
                         });
                     });
 
-                    await new Promise((res) => {
-                        db.get(`SELECT value FROM meta WHERE key = 'tokenizer_model'`, async (err, row) => {
+                    await new Promise<void>((res) => {
+                        db.get(`SELECT value FROM meta WHERE key = 'tokenizer_model'`, async (err, row: any) => {
                             if (err) {
                                 console.error('Failed to query saved tokenizer:', err.message);
                                 return res();
@@ -403,7 +414,7 @@ const initDatabase = (storagePath) => {
                                     await tokenizer.loadTokenizer(row.value);
                                     console.log(`Auto-restored saved tokenizer: ${row.value}`);
                                 } catch (e) {
-                                    console.error(`Failed to auto-restore tokenizer "${row.value}":`, e.message);
+                                    console.error(`Failed to auto-restore tokenizer "${row.value}":`, (e as Error).message);
                                 }
                             }
                             res();
@@ -428,4 +439,4 @@ const initDatabase = (storagePath) => {
     });
 };
 
-module.exports = { initDatabase, runZstdMaintenance, configureWAL, getMaintenanceConfig, saveMaintenanceConfig, clearMaintenanceScheduler, scheduleZstdMaintenance };
+export { initDatabase, runZstdMaintenance, configureWAL, getMaintenanceConfig, saveMaintenanceConfig, clearMaintenanceScheduler, scheduleZstdMaintenance };

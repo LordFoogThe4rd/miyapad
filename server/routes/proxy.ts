@@ -1,6 +1,7 @@
-const axios = require('axios');
-const { URL } = require('url');
-const { headersToRemove } = require('../lib/utils');
+import axios from 'axios';
+import { URL } from 'url';
+import type { Express, Request, Response } from 'express';
+import { headersToRemove } from '../lib/utils.js';
 
 const BLOCKED_HOSTS = new Set([
     'localhost', '127.0.0.1', '0.0.0.0', '[::1]',
@@ -12,7 +13,7 @@ const BLOCKED_HOSTS = new Set([
     '192.168.0.0', '192.168.0.1',
 ]);
 
-function isPrivateHostname(hostname) {
+function isPrivateHostname(hostname: string): boolean {
     const lower = hostname.toLowerCase();
     if (BLOCKED_HOSTS.has(lower)) return true;
     if (lower.endsWith('.internal') || lower.endsWith('.local')) return true;
@@ -22,7 +23,7 @@ function isPrivateHostname(hostname) {
     return false;
 }
 
-function isValidProxyUrl(urlString) {
+function isValidProxyUrl(urlString: string): boolean {
     try {
         const parsed = new URL(urlString);
         if (!['http:', 'https:'].includes(parsed.protocol)) return false;
@@ -33,9 +34,9 @@ function isValidProxyUrl(urlString) {
     }
 }
 
-module.exports = function(app) {
-    app.get('/proxy-image', async (req, res) => {
-        const imageUrl = req.query.url;
+export default function(app: Express): void {
+    app.get('/proxy-image', async (req: Request, res: Response) => {
+        const imageUrl = req.query.url as string | undefined;
         if (!imageUrl) {
             return res.status(400).send('Missing url query parameter');
         }
@@ -49,25 +50,25 @@ module.exports = function(app) {
                     'User-Agent': 'Mozilla/5.0',
                 }
             });
-            res.set('Content-Type', response.headers['content-type']);
+            res.set('Content-Type', response.headers['content-type'] as string);
             res.set('Access-Control-Allow-Origin', '*');
             res.set('Cache-Control', 'public, max-age=86400');
-            res.send(Buffer.from(response.data));
-        } catch (error) {
+            res.send(Buffer.from(response.data as ArrayBuffer));
+        } catch (error: any) {
             res.status(error.response?.status || 500).send('Failed to fetch image');
         }
     });
 
-    const proxyPost = async (req, res) => {
-        const path = req.params[0] || '';
-        const targetBaseUrl = req.headers['x-real-url'];
+    const proxyPost = async (req: Request, res: Response) => {
+        const path = (req.params as any)[0] || '';
+        const targetBaseUrl = req.headers['x-real-url'] as string | undefined;
         delete req.headers['x-real-url'];
 
         if (!targetBaseUrl || !isValidProxyUrl(targetBaseUrl)) {
             return res.status(403).send('Invalid or disallowed target URL');
         }
 
-        const authorization = req.headers['x-real-authorization'];
+        const authorization = req.headers['x-real-authorization'] as string | undefined;
         delete req.headers['x-real-authorization'];
 
         headersToRemove.forEach(header => {
@@ -96,17 +97,17 @@ module.exports = function(app) {
                 responseType: 'stream'
             });
 
-            res.set(response.headers);
-            response.data.pipe(res);
+            res.set(response.headers as Record<string, string>);
+            (response.data as any).pipe(res);
 
             res.on('close', () => {
-                response.data.destroy();
+                (response.data as any).destroy();
             });
-        } catch (error) {
+        } catch (error: any) {
             if (error.response) {
                 if (error.response.data?.pipe) {
-                    const chunks = [];
-                    error.response.data.on('data', c => chunks.push(c));
+                    const chunks: Buffer[] = [];
+                    error.response.data.on('data', (c: Buffer) => chunks.push(c));
                     error.response.data.on('end', () => {
                         const body = Buffer.concat(chunks).toString('utf8');
                         res.status(error.response.status).json({ error: body });
@@ -122,16 +123,16 @@ module.exports = function(app) {
         }
     };
 
-    const proxyGet = async (req, res) => {
-        const path = req.params[0] || '';
-        const targetBaseUrl = req.headers['x-real-url'];
+    const proxyGet = async (req: Request, res: Response) => {
+        const path = (req.params as any)[0] || '';
+        const targetBaseUrl = req.headers['x-real-url'] as string | undefined;
         delete req.headers['x-real-url'];
 
         if (!targetBaseUrl || !isValidProxyUrl(targetBaseUrl)) {
             return res.status(403).send('Invalid or disallowed target URL');
         }
 
-        const authorization = req.headers['x-real-authorization'];
+        const authorization = req.headers['x-real-authorization'] as string | undefined;
         delete req.headers['x-real-authorization'];
 
         headersToRemove.forEach(header => {
@@ -158,7 +159,7 @@ module.exports = function(app) {
             });
 
             res.send(response.data);
-        } catch (error) {
+        } catch (error: any) {
             if (error.response) {
                 res.status(error.response.status).json({ error: error.response.data });
             } else if (error.request) {
@@ -169,16 +170,16 @@ module.exports = function(app) {
         }
     };
 
-    const proxyDelete = async (req, res) => {
-        const path = req.params[0] || '';
-        const targetBaseUrl = req.headers['x-real-url'];
+    const proxyDelete = async (req: Request, res: Response) => {
+        const path = (req.params as any)[0] || '';
+        const targetBaseUrl = req.headers['x-real-url'] as string | undefined;
         delete req.headers['x-real-url'];
 
         if (!targetBaseUrl || !isValidProxyUrl(targetBaseUrl)) {
             return res.status(403).send('Invalid or disallowed target URL');
         }
 
-        const authorization = req.headers['x-real-authorization'];
+        const authorization = req.headers['x-real-authorization'] as string | undefined;
         delete req.headers['x-real-authorization'];
 
         headersToRemove.forEach(header => {
@@ -204,7 +205,7 @@ module.exports = function(app) {
             });
 
             res.send(response.data);
-        } catch (error) {
+        } catch (error: any) {
             if (error.response) {
                 res.status(error.response.status).json({ error: error.response.data });
             } else if (error.request) {

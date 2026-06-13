@@ -1,4 +1,4 @@
-const zlib = require('zlib');
+import zlib from 'zlib';
 
 const headersToRemove = [
     'content-length',
@@ -12,7 +12,7 @@ const headersToRemove = [
     'x-forwarded-proto'
 ];
 
-const getColumnName = (storeName) => {
+const getColumnName = (storeName: string): string => {
     if (storeName === 'sessions') return 'session_data';
     if (storeName === 'templates') return 'template_data';
     if (storeName === 'themes') return 'theme_data';
@@ -20,7 +20,7 @@ const getColumnName = (storeName) => {
     return 'data';
 };
 
-const normalizeStoreName = (storeName) => {
+const normalizeStoreName = (storeName: string): string | null => {
     if (!storeName) {
         return 'sessions';
     }
@@ -31,7 +31,7 @@ const normalizeStoreName = (storeName) => {
     return null;
 };
 
-const compressData = (data) => {
+const compressData = (data: string): Promise<Buffer> => {
     return new Promise((resolve, reject) => {
         zlib.gzip(data, (err, buffer) => {
             if (err) return reject(err);
@@ -40,7 +40,7 @@ const compressData = (data) => {
     });
 };
 
-const decompressData = (buffer) => {
+const decompressData = (buffer: Buffer): Promise<string> => {
     return new Promise((resolve, reject) => {
         zlib.gunzip(buffer, (err, decompressed) => {
             if (err) return reject(err);
@@ -49,7 +49,7 @@ const decompressData = (buffer) => {
     });
 };
 
-module.exports = {
+export {
     headersToRemove,
     getColumnName,
     normalizeStoreName,

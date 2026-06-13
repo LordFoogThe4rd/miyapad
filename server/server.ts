@@ -1,15 +1,23 @@
-const express = require('express');
-const cors = require('cors');
-const bodyParser = require('body-parser');
-const path = require('path');
-const minimist = require('minimist');
-const open = require('open');
+import express from 'express';
+import cors from 'cors';
+import bodyParser from 'body-parser';
+import path from 'path';
+import minimist from 'minimist';
+import open from 'open';
+import { fileURLToPath } from 'url';
 
-const { initDatabase, getMaintenanceConfig, runZstdMaintenance, clearMaintenanceScheduler } = require('./lib/database');
-const { createAuthMiddleware } = require('./lib/auth');
-const { startAutoBackup, stopAutoBackup } = require('./lib/backup');
+import { initDatabase, getMaintenanceConfig, runZstdMaintenance, clearMaintenanceScheduler } from './lib/database.js';
+import { createAuthMiddleware } from './lib/auth.js';
+import { startAutoBackup, stopAutoBackup } from './lib/backup.js';
+import systemRoutes from './routes/system.js';
+import dataRoutes from './routes/data.js';
+import proxyRoutes from './routes/proxy.js';
+import zstdRoutes from './routes/zstd.js';
+import tokenizerRoutes from './routes/tokenizer.js';
 
-const args = minimist(process.argv.slice(2));
+const __dirname = path.dirname(fileURLToPath(import.meta.url));
+
+const args = minimist(process.argv.slice(2)) as Record<string, any>;
 const port = args.port || process.env.MIYAPAD_PORT || 3000;
 const host = args.host || process.env.MIYAPAD_HOST || '0.0.0.0';
 const noOpen = (args.open !== undefined && !args.open) || process.env.MIYAPAD_NO_OPEN;
@@ -17,7 +25,7 @@ const login = args.login || process.env.MIYAPAD_LOGIN || 'anon';
 const password = args.password || process.env.MIYAPAD_PASSWORD || undefined;
 const storagePath = args.storagePath || process.env.MIYAPAD_STORAGE_PATH || './web-session-storage.db';
 
-const parseEnvBool = (val) => val && val !== 'false' && val !== '0';
+const parseEnvBool = (val: string | undefined | null) => val && val !== 'false' && val !== '0';
 
 const noBackup = (args.noBackup !== undefined && args.noBackup)
     || (process.env.MIYAPAD_NO_BACKUP && parseEnvBool(process.env.MIYAPAD_NO_BACKUP));
@@ -43,11 +51,11 @@ app.use(createAuthMiddleware(login, password));
 app.use(express.static(path.join(__dirname, '..', 'dist')));
 
 initDatabase(storagePath).then((db) => {
-    require('./routes/system')(app, db);
-    require('./routes/data')(app, db);
-    require('./routes/proxy')(app);
-    require('./routes/zstd')(app, db);
-    require('./routes/tokenizer')(app, db);
+    systemRoutes(app, db);
+    dataRoutes(app, db);
+    proxyRoutes(app);
+    zstdRoutes(app, db);
+    tokenizerRoutes(app, db);
 
     if (!noBackup) {
         startAutoBackup(db, path.resolve(storagePath), {
@@ -78,7 +86,7 @@ initDatabase(storagePath).then((db) => {
             process.exit(0);
         });
     });
-}).catch((err) => {
+}).catch((err: Error) => {
     console.error('Failed to initialize database:', err.message);
     process.exit(1);
 });

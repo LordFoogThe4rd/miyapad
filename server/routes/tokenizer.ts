@@ -1,17 +1,19 @@
-const tokenizer = require('../tokenizer');
+import type { Express, Request, Response } from 'express';
+import type { Database } from 'sqlite3';
+import * as tokenizer from '../tokenizer.js';
 
-module.exports = function(app, db) {
-    app.get('/api/v1/tokenizers', (req, res) => {
+export default function(app: Express, db: Database): void {
+    app.get('/api/v1/tokenizers', (req: Request, res: Response) => {
         try {
             const available = tokenizer.getAvailableTokenizers();
             res.json({ ok: true, tokenizers: available, loaded: tokenizer.getLoadedModel() });
         } catch (e) {
-            res.status(500).json({ ok: false, message: e.message });
+            res.status(500).json({ ok: false, message: (e as Error).message });
         }
     });
 
-    app.post('/api/v1/tokenizer/load', async (req, res) => {
-        const { model } = req.body;
+    app.post('/api/v1/tokenizer/load', async (req: Request, res: Response) => {
+        const { model } = req.body as { model: string };
         if (!model) {
             return res.status(400).json({ ok: false, message: 'Missing model parameter' });
         }
@@ -20,12 +22,12 @@ module.exports = function(app, db) {
             db.run(`INSERT OR REPLACE INTO meta (key, value) VALUES ('tokenizer_model', ?)`, [model]);
             res.json({ ok: true, model });
         } catch (e) {
-            res.status(500).json({ ok: false, message: e.message });
+            res.status(500).json({ ok: false, message: (e as Error).message });
         }
     });
 
-    app.post('/api/v1/token-count', async (req, res) => {
-        const { content } = req.body;
+    app.post('/api/v1/token-count', async (req: Request, res: Response) => {
+        const { content } = req.body as { content: string };
         if (content === undefined || content === null) {
             return res.status(400).json({ ok: false, message: 'Missing content parameter' });
         }
@@ -36,12 +38,12 @@ module.exports = function(app, db) {
             const count = await tokenizer.tokenCount(content);
             res.json({ ok: true, count });
         } catch (e) {
-            res.status(500).json({ ok: false, message: e.message });
+            res.status(500).json({ ok: false, message: (e as Error).message });
         }
     });
 
-    app.post('/api/v1/tokenize', async (req, res) => {
-        const { content } = req.body;
+    app.post('/api/v1/tokenize', async (req: Request, res: Response) => {
+        const { content } = req.body as { content: string };
         if (content === undefined || content === null) {
             return res.status(400).json({ ok: false, message: 'Missing content parameter' });
         }
@@ -52,12 +54,12 @@ module.exports = function(app, db) {
             const { ids, tokens } = await tokenizer.tokenize(content);
             res.json({ ok: true, ids, strings: tokens });
         } catch (e) {
-            res.status(500).json({ ok: false, message: e.message });
+            res.status(500).json({ ok: false, message: (e as Error).message });
         }
     });
 
-    app.post('/api/v1/detokenize', async (req, res) => {
-        const { tokens: tokenIds } = req.body;
+    app.post('/api/v1/detokenize', async (req: Request, res: Response) => {
+        const { tokens: tokenIds } = req.body as { tokens: number[] };
         if (!tokenIds || !Array.isArray(tokenIds) || tokenIds.length === 0) {
             return res.status(400).json({ ok: false, message: 'Missing or invalid tokens parameter' });
         }
@@ -68,7 +70,7 @@ module.exports = function(app, db) {
             const content = await tokenizer.detokenize(tokenIds);
             res.json({ ok: true, content });
         } catch (e) {
-            res.status(500).json({ ok: false, message: e.message });
+            res.status(500).json({ ok: false, message: (e as Error).message });
         }
     });
 };

@@ -1,5 +1,7 @@
-const createAuthMiddleware = (login, password) => {
-    return (req, res, next) => {
+import type { Request, Response, NextFunction } from 'express';
+
+const createAuthMiddleware = (login: string, password?: string) => {
+    return (req: Request, res: Response, next: NextFunction) => {
         if (!password) {
             return next();
         }
@@ -16,4 +18,4 @@ const createAuthMiddleware = (login, password) => {
     };
 };
 
-module.exports = { createAuthMiddleware };
+export { createAuthMiddleware };

@@ -1,13 +1,16 @@
-const path = require('path');
-const fs = require('fs');
+import path from 'path';
+import fs from 'fs';
+import { fileURLToPath } from 'url';
 
-let TokenizerClass;
-let loadedTokenizer = null;
-let loadedModel = null;
+const __dirname = path.dirname(fileURLToPath(import.meta.url));
+
+let TokenizerClass: any;
+let loadedTokenizer: any = null;
+let loadedModel: string | null = null;
 
 const TOKENIZERS_DIR = path.join(__dirname, 'tokenizers');
 
-function getAvailableTokenizers() {
+function getAvailableTokenizers(): string[] {
 	if (!fs.existsSync(TOKENIZERS_DIR)) {
 		fs.mkdirSync(TOKENIZERS_DIR, { recursive: true });
 		return [];
@@ -20,12 +23,12 @@ function getAvailableTokenizers() {
 
 async function ensureTokenizerModule() {
 	if (!TokenizerClass) {
-		const mod = await import('@huggingface/tokenizers');
+		const mod = await import('@huggingface/tokenizers') as any;
 		TokenizerClass = mod.Tokenizer;
 	}
 }
 
-async function loadTokenizer(model) {
+async function loadTokenizer(model: string) {
 	await ensureTokenizerModule();
 
 	const modelDir = path.resolve(TOKENIZERS_DIR, model);
@@ -47,15 +50,15 @@ async function loadTokenizer(model) {
 	loadedModel = model;
 }
 
-function isLoaded() {
+function isLoaded(): boolean {
 	return loadedTokenizer !== null;
 }
 
-function getLoadedModel() {
+function getLoadedModel(): string | null {
 	return loadedModel;
 }
 
-function tokenCount(content) {
+function tokenCount(content: string): number {
 	if (!loadedTokenizer) {
 		throw new Error('No tokenizer loaded');
 	}
@@ -63,7 +66,7 @@ function tokenCount(content) {
 	return encoded.ids.length;
 }
 
-function tokenize(content) {
+function tokenize(content: string): { ids: number[]; tokens: string[] } {
 	if (!loadedTokenizer) {
 		throw new Error('No tokenizer loaded');
 	}
@@ -72,7 +75,7 @@ function tokenize(content) {
 	return { ids: encoded.ids, tokens };
 }
 
-function detokenize(tokenIds) {
+function detokenize(tokenIds: number[]): string {
 	if (!loadedTokenizer) {
 		throw new Error('No tokenizer loaded');
 	}
@@ -84,7 +87,7 @@ function unload() {
 	loadedModel = null;
 }
 
-module.exports = {
+export {
 	getAvailableTokenizers,
 	loadTokenizer,
 	isLoaded,

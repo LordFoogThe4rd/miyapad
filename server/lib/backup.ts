@@ -1,9 +1,9 @@
-const fs = require('fs');
-const path = require('path');
-const zlib = require('zlib');
-const { pipeline } = require('stream');
+import fs from 'fs';
+import path from 'path';
+import zlib from 'zlib';
+import { pipeline } from 'stream';
 
-let backupIntervalId = null;
+let backupIntervalId: ReturnType<typeof setInterval> | null = null;
 
 const timestamp = () => {
     const now = new Date();
@@ -16,7 +16,7 @@ const timestamp = () => {
     return `${Y}${M}${D}${h}${m}${s}`;
 };
 
-const getDbFileMtime = (dbPath) => {
+const getDbFileMtime = (dbPath: string): number | null => {
     try {
         return fs.statSync(dbPath).mtimeMs;
     } catch {
@@ -24,8 +24,8 @@ const getDbFileMtime = (dbPath) => {
     }
 };
 
-const rotateBackups = (dir, keep) => {
-    let files;
+const rotateBackups = (dir: string, keep: number) => {
+    let files: string[];
     try {
         files = fs.readdirSync(dir)
             .filter(f => f.endsWith('.backup.gz'))
@@ -42,12 +42,12 @@ const rotateBackups = (dir, keep) => {
             fs.unlinkSync(path.join(dir, file));
             console.log(`Removed old backup: ${file}`);
         } catch (err) {
-            console.error(`Failed to remove old backup ${file}:`, err.message);
+            console.error(`Failed to remove old backup ${file}:`, (err as Error).message);
         }
     }
 };
 
-const runBackup = (db, dbPath, dir, keep, lastMtimeRef) => {
+const runBackup = (db: import('sqlite3').Database, dbPath: string, dir: string, keep: number, lastMtimeRef: { current: number | null }) => {
     const currentMtime = getDbFileMtime(dbPath);
 
     if (currentMtime === null) {
@@ -63,7 +63,7 @@ const runBackup = (db, dbPath, dir, keep, lastMtimeRef) => {
     try {
         fs.mkdirSync(dir, { recursive: true });
     } catch (err) {
-        console.error("Backup: failed to create backup directory:", err.message);
+        console.error("Backup: failed to create backup directory:", (err as Error).message);
         return;
     }
 
@@ -85,7 +85,7 @@ const runBackup = (db, dbPath, dir, keep, lastMtimeRef) => {
             fs.createReadStream(tmpPath),
             zlib.createGzip(),
             fs.createWriteStream(backupPath + '.gz'),
-            (err) => {
+            (err: Error | null) => {
                 if (err) {
                     console.error("Backup: compression failed:", err.message);
                     cleanup();
@@ -100,7 +100,7 @@ const runBackup = (db, dbPath, dir, keep, lastMtimeRef) => {
     });
 };
 
-const startAutoBackup = (db, dbPath, { interval = 30, dir = './backups', keep = 10 } = {}) => {
+const startAutoBackup = (db: import('sqlite3').Database, dbPath: string, { interval = 30, dir = './backups', keep = 10 } = {}) => {
     if (backupIntervalId) {
         console.log("Auto-backup is already running.");
         return;
@@ -108,7 +108,7 @@ const startAutoBackup = (db, dbPath, { interval = 30, dir = './backups', keep = 
 
     const dirAbsolute = path.resolve(dir);
 
-    const lastMtimeRef = { current: null };
+    const lastMtimeRef: { current: number | null } = { current: null };
 
     runBackup(db, dbPath, dirAbsolute, keep, lastMtimeRef);
 
@@ -127,4 +127,4 @@ const stopAutoBackup = () => {
     }
 };
 
-module.exports = { startAutoBackup, stopAutoBackup };
+export { startAutoBackup, stopAutoBackup };
