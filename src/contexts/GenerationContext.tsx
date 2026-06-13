@@ -2,9 +2,9 @@ import { html } from 'htm/react';
 import { createContext, useContext, useState, useRef } from 'react';
 import { defaultPresets } from '../defaults/presets';
 
-export const GenerationContext = createContext(null);
+export const GenerationContext = createContext<Record<string, any> | null>(null);
 
-export function GenerationProvider({ children, useSessionState }) {
+export function GenerationProvider({ children, useSessionState }: { children: any; useSessionState: any }) {
 	const promptArea = useRef<HTMLTextAreaElement>(null);
 	const promptOverlay = useRef<HTMLDivElement>(null);
 	const undoStack = useRef<number[]>([]);
@@ -32,7 +32,7 @@ export function GenerationProvider({ children, useSessionState }) {
 	const [predictStartTokens, setPredictStartTokens] = useState(0);
 	const [lastError, setLastError] = useState(undefined);
 	const [savedScrollTop, setSavedScrollTop] = useSessionState('scrollTop', defaultPresets.scrollTop);
-	const [modalState, setModalState] = useState({});
+	const [modalState, setModalState] = useState<Record<string, any>>({});
 	const [contextMenuState, setContextMenuState] = useState({ visible: false, x: 0, y: 0 });
 	const [instructModalState, setInstructModalState] = useState({});
 	const [hordeQueuePos, setHordeQueuePos] = useState(undefined);
@@ -41,7 +41,7 @@ export function GenerationProvider({ children, useSessionState }) {
 	const [promptPreviewReroll, setPromptPreviewReroll] = useState(0);
 	const [ttsAvailable, setTTSAvailable] = useState(true);
 	
-	const toggleModal = (modalKey) => {
+	const toggleModal = (modalKey: any) => {
 		setShowProbs(false);
 		setModalState((prevState) => ({
 			...prevState,
@@ -49,7 +49,7 @@ export function GenerationProvider({ children, useSessionState }) {
 		}));
 	};
 
-	const closeModal = (modalKey) => {
+	const closeModal = (modalKey: any) => {
 		setModalState((prevState) => ({
 			...prevState,
 			[modalKey]: false,
@@ -89,4 +89,8 @@ export function GenerationProvider({ children, useSessionState }) {
 	`;
 }
 
-export const useGeneration = () => useContext(GenerationContext);
+export const useGeneration = () => {
+  const ctx = useContext(GenerationContext);
+  if (!ctx) throw new Error('useGeneration must be used within a GenerationProvider');
+  return ctx;
+};

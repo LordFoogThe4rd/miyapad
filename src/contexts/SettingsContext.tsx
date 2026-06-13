@@ -4,15 +4,26 @@ import { usePersistentState } from '../hooks/usePersistentState';
 import { defaultPresets } from '../defaults/presets';
 import { defaultThemes } from '../defaults/themes';
 
-export const SettingsContext = createContext(null);
+export const SettingsContext = createContext<Record<string, any> | null>(null);
 
-export function SettingsProvider({ children, sessionStorage, templateStorage, themeStorage, connectionStorage, useSessionState, useDBTemplates, useDBThemes, useDBConnections, isMiyapadEndpoint }) {
+export function SettingsProvider({ children, sessionStorage, templateStorage, themeStorage, connectionStorage, useSessionState, useDBTemplates, useDBThemes, useDBConnections, isMiyapadEndpoint }: {
+	children: any;
+	sessionStorage: any;
+	templateStorage: any;
+	themeStorage: any;
+	connectionStorage: any;
+	useSessionState: any;
+	useDBTemplates: any;
+	useDBThemes: any;
+	useDBConnections: any;
+	isMiyapadEndpoint: boolean;
+}) {
 	const [templates, setTemplates] = useDBTemplates(defaultPresets.instructTemplates);
 	const [templateReplacements, setTemplateReplacements] = useState(false);
 	const [templatesImport, setTemplatesImport] = useState(false);
 	const [selectedTemplate, setSelectedTemplate] = useSessionState('template', "Mistral");
 	const [chatMode, setChatMode] = useSessionState('chatMode', false);
-	const [templateList, setTemplateList] = useState([]);
+	const [templateList, setTemplateList] = useState<any>([]);
 
 	useEffect(() => {
 		setTemplateList(Object.keys(templates).sort((a, b) => a.localeCompare(b)).map(name => ({
@@ -172,4 +183,8 @@ export function SettingsProvider({ children, sessionStorage, templateStorage, th
 	`;
 }
 
-export const useSettings = () => useContext(SettingsContext);
+export const useSettings = () => {
+  const ctx = useContext(SettingsContext);
+  if (!ctx) throw new Error('useSettings must be used within a SettingsProvider');
+  return ctx;
+};
