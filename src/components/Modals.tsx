@@ -101,7 +101,7 @@ export function Modals({ toggleModal, currentThemeName, setCurrentThemeName, all
 	};
 
 	const insertTemplate = (sysInst: any) => {
-		let [prefix,suffix] = sysInst == "sys"
+		let [prefix,suffix] = sysInst === "sys"
 			? [templates[selectedTemplate]?.sysPre  || "", templates[selectedTemplate]?.sysSuf  || ""]
 			: [templates[selectedTemplate]?.instPre || "", templates[selectedTemplate]?.instSuf || ""];
 		if (!(prefix || suffix))
