@@ -8,6 +8,14 @@ import { SVG_Trash, SVG_ShowKey, SVG_HideKey, SVG_Regen, SVG_CheckOn, SVG_CheckO
 import { API_LLAMA_CPP, API_KOBOLD_CPP, API_OPENAI_COMPAT, API_AI_HORDE, API_DEEPSEEK } from '../../constants';
 import { getModels } from '../../api/index';
 
+interface ConnectionManagerModalProps {
+  isOpen: boolean;
+  closeModal: () => void;
+  connections: Record<string, ConnectionData>;
+  setConnections: React.Dispatch<React.SetStateAction<Record<string, ConnectionData>>>;
+  activeConnectionId: string;
+}
+
 function GenericConnectionSettings({ connection, updateConnection }: any) {
 	const [showKey, setShowKey] = useState(false);
 	const [isFetching, setIsFetching] = useState(false);
@@ -307,7 +315,7 @@ function AIHordeConnectionSettings({ connection, updateConnection }: any) {
 	`;
 }
 
-export function ConnectionManagerModal({ isOpen, closeModal, connections, setConnections, activeConnectionId }: any) {
+export function ConnectionManagerModal({ isOpen, closeModal, connections, setConnections, activeConnectionId }: ConnectionManagerModalProps) {
 	const [selectedId, setSelectedId] = useState<string | null>(null);
 	const [mobileShowDetails, setMobileShowDetails] = useState(false);
 

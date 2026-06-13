@@ -24,12 +24,14 @@ interface ThemeData {
 }
 
 interface ConnectionData {
+  id: string;
   name: string;
   enabled: boolean;
   api: number;
   endpoint: string;
   key?: string;
   model?: string;
+  models?: string[];
   strict?: boolean;
   chatAPI?: boolean;
   postSamplingProbs?: boolean;

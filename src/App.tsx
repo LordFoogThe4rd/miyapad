@@ -2,18 +2,24 @@ import { html } from 'htm/react';
 import { SettingsProvider } from './contexts/SettingsContext';
 import { GenerationProvider } from './contexts/GenerationContext';
 import { AppLayout } from './AppLayout';
+import type { SessionStorage } from './storage/SessionStorage';
+import type { TemplateStorage } from './storage/TemplateStorage';
+import type { ThemeStorage } from './storage/ThemeStorage';
+import type { ConnectionStorage } from './storage/ConnectionStorage';
 
-export function App({ sessionStorage, templateStorage, themeStorage, connectionStorage, useSessionState, useDBTemplates, useDBThemes, useDBConnections, isMiyapadEndpoint }: {
-	sessionStorage: any;
-	templateStorage: any;
-	themeStorage: any;
-	connectionStorage: any;
-	useSessionState: any;
-	useDBTemplates: any;
-	useDBThemes: any;
-	useDBConnections: any;
-	isMiyapadEndpoint: boolean;
-}) {
+interface AppProps {
+  sessionStorage: SessionStorage;
+  templateStorage: TemplateStorage;
+  themeStorage: ThemeStorage;
+  connectionStorage: ConnectionStorage;
+  useSessionState: <T>(name: string, initialState: T) => [T, React.Dispatch<React.SetStateAction<T>>];
+  useDBTemplates: <T>(initialState: T) => [Record<string, InstructTemplate>, React.Dispatch<React.SetStateAction<Record<string, InstructTemplate>>>];
+  useDBThemes: <T>(initialState: T) => [Record<string, ThemeData>, React.Dispatch<React.SetStateAction<Record<string, ThemeData>>>];
+  useDBConnections: <T>(initialState: T) => [Record<string, ConnectionData>, React.Dispatch<React.SetStateAction<Record<string, ConnectionData>>>];
+  isMiyapadEndpoint: boolean;
+}
+
+export function App({ sessionStorage, templateStorage, themeStorage, connectionStorage, useSessionState, useDBTemplates, useDBThemes, useDBConnections, isMiyapadEndpoint }: AppProps) {
 	return html`
 		<${SettingsProvider}
 			sessionStorage=${sessionStorage}

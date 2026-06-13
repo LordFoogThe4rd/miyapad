@@ -6,8 +6,24 @@ import { Checkbox } from '../controls/Checkbox';
 import { SelectBoxTemplate } from '../controls/SelectBox';
 import { exportText } from '../../api/common';
 import { defaultPresets } from '../../defaults/presets';
+import type { TemplateStorage } from '../../storage/TemplateStorage';
 
-export function InstructTemplatesModal({ isOpen, closeModal, templateStorage, selectedTemplate, setSelectedTemplate, templateList, setTemplateList, templates, templatesImport, setTemplates, cancel, applyChatTemplate }: any) {
+interface InstructTemplatesModalProps {
+  isOpen: boolean;
+  closeModal: () => void;
+  templateList: TemplateListItem[];
+  setTemplateList: React.Dispatch<React.SetStateAction<TemplateListItem[]>>;
+  selectedTemplate: string;
+  setSelectedTemplate: React.Dispatch<React.SetStateAction<string>>;
+  templatesImport: boolean;
+  templates: Record<string, InstructTemplate>;
+  setTemplates: React.Dispatch<React.SetStateAction<Record<string, InstructTemplate>>>;
+  templateStorage: TemplateStorage;
+  cancel: (() => void) | null;
+  applyChatTemplate: () => void;
+}
+
+export function InstructTemplatesModal({ isOpen, closeModal, templateStorage, selectedTemplate, setSelectedTemplate, templateList, setTemplateList, templates, templatesImport, setTemplates, cancel, applyChatTemplate }: InstructTemplatesModalProps) {
 	const [addDeleteTemplate, setAddDeleteTemplate] = useState(false);
 	const [templateDuplicate, setTemplateDuplicate] = useState<string | false>(false);
 	const [newTemplateName, setNewTemplateName] = useState<string | undefined>(undefined);

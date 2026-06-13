@@ -5,6 +5,14 @@ import { InputBox } from '../controls/InputBox';
 import { SelectBox } from '../controls/SelectBox';
 import { SVG_Confirm, SVG_Cancel, SVG_Rename, SVG_Trash, SVG_Star, SVG_StarOutline } from '../icons/index';
 import { exportText } from '../../api/common';
+import type { SessionStorage } from '../../storage/SessionStorage';
+
+interface SessionsModalProps {
+  isOpen: boolean;
+  closeModal: () => void;
+  sessionStorage: SessionStorage;
+  cancel: (() => void) | null;
+}
 
 function formatDate(ts: any) {
 	if (!ts) return '—';
@@ -64,7 +72,7 @@ function sessionMatches(session: any, groups: TagGroup[] | null) {
 	);
 }
 
-export function SessionsModal({ isOpen, closeModal, sessionStorage, cancel }: any) {
+export function SessionsModal({ isOpen, closeModal, sessionStorage, cancel }: SessionsModalProps) {
 	const [version, setVersion] = useState(0);
 	const [newSessionName, setNewSessionName] = useState('');
 	const [renameSessionName, setRenameSessionName] = useState('');
@@ -159,7 +167,7 @@ export function SessionsModal({ isOpen, closeModal, sessionStorage, cancel }: an
 	};
 
 	const startCreateSession = () => {
-		setNewSessionName(`MiyaPad #${sessionStorage.nextId + 1}`);
+		setNewSessionName(`MiyaPad #${(sessionStorage.nextId ?? 0) + 1}`);
 		setIsCreating(true);
 	};
 
@@ -208,7 +216,7 @@ export function SessionsModal({ isOpen, closeModal, sessionStorage, cancel }: an
 	};
 
 	const exportSession = () => {
-		const sessionObj = { ...sessionStorage.sessions[sessionStorage.selectedSession] };
+		const sessionObj = { ...sessionStorage.sessions[sessionStorage.selectedSession!] };
 
 		delete sessionObj.endpoint;
 		delete sessionObj.endpointAPIKey;
@@ -236,7 +244,7 @@ export function SessionsModal({ isOpen, closeModal, sessionStorage, cancel }: an
 	};
 
 	const cloneSession = async () => {
-		const sessionObj = { ...sessionStorage.sessions[sessionStorage.selectedSession] };
+		const sessionObj = { ...sessionStorage.sessions[sessionStorage.selectedSession!] };
 		for (const [key, value] of Object.entries(sessionObj)) {
 			sessionObj[key] = JSON.stringify(value);
 		}
@@ -337,7 +345,7 @@ onClick=${(e: any) => e.stopPropagation()}
 						`}
 						${sortedSessions.map(([sessionId, session]) => html`
 							<tr key=${sessionId}
-								className="sessions-modal-row ${sessionStorage.selectedSession == sessionId ? 'selected' : ''}"
+								className="sessions-modal-row ${sessionStorage.selectedSession === +sessionId ? 'selected' : ''}"
 								onClick=${() => switchSession(+sessionId)}>
 								<td className="sessions-col-star" onClick=${(e: any) => e.stopPropagation()}>
 									<button className="sessions-action-btn"
