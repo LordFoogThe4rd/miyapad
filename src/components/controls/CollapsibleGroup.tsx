@@ -6,8 +6,8 @@ import { SVG_ArrowUp } from '../icons/index';
 const SVResizeObserver = typeof ResizeObserver !== 'undefined' ? ResizeObserver : class { observe() {} disconnect() {} };
 
 export function CollapsibleGroup({ label, stateLabel, menu, expanded, children }: any) {
-	const contentArea = useRef<any>(null);
-	const menuRef = useRef<any>(null);
+	const contentArea = useRef<HTMLDivElement | null>(null);
+	const menuRef = useRef<HTMLDivElement | null>(null);
 	const [isCollapsed, setIsCollapsed] = usePersistentState(`(${stateLabel ? stateLabel : label}).isCollapsed`, !expanded);
 	const [contentHeight, setContentHeight] = useState(isCollapsed ? 0 : '');
 	const [isMenuVisible, setIsMenuVisible] = useState(false);
@@ -19,10 +19,10 @@ export function CollapsibleGroup({ label, stateLabel, menu, expanded, children }
 		const observer = new SVResizeObserver(() => {
 			// Only update if expanded and NOT in the middle of a manual animation/toggle
 			if (!isCollapsed && !isAnimating.current && contentHeight !== 'none') {
-				setContentHeight(contentArea.current.scrollHeight);
+				setContentHeight(contentArea.current!.scrollHeight);
 			}
 		});
-		observer.observe(contentArea.current);
+		observer.observe(contentArea.current!);
 		return () => observer.disconnect();
 	}, [isCollapsed, contentHeight]);
 
@@ -45,7 +45,7 @@ export function CollapsibleGroup({ label, stateLabel, menu, expanded, children }
 		if (isCollapsed) {
 			// Opening: set to scrollHeight first
 			isAnimating.current = true;
-			setContentHeight(contentArea.current.scrollHeight);
+			setContentHeight(contentArea.current!.scrollHeight);
 			setIsCollapsed(false);
 			// After animation, set to none to allow dynamic growth (nested groups)
 			setTimeout(() => {
@@ -55,10 +55,9 @@ export function CollapsibleGroup({ label, stateLabel, menu, expanded, children }
 		} else {
 			// Closing: must set to scrollHeight from 'none' first to animate
 			isAnimating.current = true;
-			const currentHeight = contentArea.current.scrollHeight;
+			const currentHeight = contentArea.current!.scrollHeight;
 			setContentHeight(currentHeight);
-			// Force reflow to ensure the browser registers the pixel height before we set it to 0
-			void contentArea.current.offsetHeight;
+			void contentArea.current!.offsetHeight;
 			
 			// Use requestAnimationFrame to ensure the next state change happens after reflow
 			requestAnimationFrame(() => {

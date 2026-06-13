@@ -9,8 +9,8 @@ import { defaultThemes } from '../../defaults/themes';
 
 export function ThemeManagerModal({ isOpen, closeModal, allThemes, setAllThemes, currentThemeName, setCurrentThemeName, cancel }: any) {
     const [editingThemeName, setEditingThemeName] = useState(currentThemeName);
-    const [newThemeName, setNewThemeName] = useState<any>(undefined);
-    const [newClassName, setNewClassName] = useState<any>(undefined);
+    const [newThemeName, setNewThemeName] = useState<string | undefined>(undefined);
+    const [newClassName, setNewClassName] = useState<string | undefined>(undefined);
 
     useEffect(() => {
         if (isOpen) {

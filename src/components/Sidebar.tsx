@@ -48,7 +48,7 @@ export function Sidebar({ sidebarRef, toggleModal, currentThemeName, setCurrentT
 	const { handleauthorNoteTokensChange, handleMemoryTokensChange } = useTokenCounters();
 
 	const [extensionLoaded, setExtensionLoaded] = useState(false);
-	const [configData, setConfigData] = useState<any>(null);
+	const [configData, setConfigData] = useState<Record<string, unknown> | null>(null);
 	const [zstdLevel, setZstdLevel] = useState(3);
 	const [zstdRatio, setZstdRatio] = useState(100);
 	const [showCustomMaintenance, setShowCustomMaintenance] = useState(false);
@@ -61,7 +61,7 @@ export function Sidebar({ sidebarRef, toggleModal, currentThemeName, setCurrentT
 	const [walEnabled, setWalEnabled] = useState(false);
 
 	const maintConfigRef = useRef({ duration: 5, dbLoad: 0.5, mode: 'shutdown', interval: 60, walEnabled: false });
-	const saveTimerRef = useRef<any>(null);
+	const saveTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
 
 	const saveMaintConfigToServer = (update: any) => {
 		Object.assign(maintConfigRef.current, update);
@@ -759,7 +759,7 @@ export function Sidebar({ sidebarRef, toggleModal, currentThemeName, setCurrentT
 										train_dict_samples_ratio: zstdRatio
 									})
 								});
-								setConfigData(true);
+								setConfigData({});
 							}}>
 							Enable
 						</button>

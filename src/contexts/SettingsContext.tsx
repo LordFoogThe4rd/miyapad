@@ -23,7 +23,7 @@ export function SettingsProvider({ children, sessionStorage, templateStorage, th
 	const [templatesImport, setTemplatesImport] = useState(false);
 	const [selectedTemplate, setSelectedTemplate] = useSessionState('template', "Mistral");
 	const [chatMode, setChatMode] = useSessionState('chatMode', false);
-	const [templateList, setTemplateList] = useState<any>([]);
+	const [templateList, setTemplateList] = useState<TemplateListItem[]>([]);
 
 	useEffect(() => {
 		setTemplateList(Object.keys(templates).sort((a, b) => a.localeCompare(b)).map(name => ({

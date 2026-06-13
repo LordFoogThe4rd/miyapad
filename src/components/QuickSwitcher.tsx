@@ -5,7 +5,7 @@ import { SVG_Star } from './icons/index';
 export function QuickSwitcher({ isOpen, closeModal, sessionStorage, cancel }: any) {
 	const [query, setQuery] = useState('');
 	const [selectedIndex, setSelectedIndex] = useState(-1);
-	const inputRef = useRef<any>(null);
+	const inputRef = useRef<HTMLInputElement | null>(null);
 	const [version, setVersion] = useState(0);
 
 	useEffect(() => {

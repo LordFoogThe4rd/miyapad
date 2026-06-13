@@ -7,10 +7,10 @@ import { normalizeEndpoint } from '../../api/common';
 import { API_AI_HORDE } from '../../constants';
 
 export function AIHordeSettingsModal({ isOpen, closeModal, endpoint, endpointAPIKey, setEndpointAPIKey, isMiyapadEndpoint, sessionStorage, endpointModel, setEndpointModel, cancel }: any) {
-    const [models, setModels] = useState<any>([]);
+    const [models, setModels] = useState<AIHordeModel[]>([]);
     const [loading, setLoading] = useState(true);
-    const [error, setError] = useState<any>(null);
-    const [localSelected, setLocalSelected] = useState<any>([]);
+    const [error, setError] = useState<string | null>(null);
+    const [localSelected, setLocalSelected] = useState<string[]>([]);
     const [searchTerm, setSearchTerm] = useState('');
 	const [showKey, setShowKey] = useState(false);
 
@@ -59,7 +59,7 @@ export function AIHordeSettingsModal({ isOpen, closeModal, endpoint, endpointAPI
             } else {
                 newSelection.add(modelName);
             }
-            return Array.from(newSelection);
+            return Array.from(newSelection) as string[];
         });
     };
 

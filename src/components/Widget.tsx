@@ -9,16 +9,16 @@ export function Widget({ isOpen, onClose, title, id, children, ...props }: any) 
 
 	const [position, setPosition] = useState({ x: 0, y: 0 });
   const [isDragging, setIsDragging] = useState(false);
-  const dragRef = useRef<any>(null);
+  const dragRef = useRef<{ startX: number; startY: number; initialX: number; initialY: number } | null>(null);
 
   useEffect(() => {
     const handleMouseMove = (e: any) => {
       if (!isDragging) return;
-      const deltaX = e.clientX - dragRef.current.startX;
-      const deltaY = e.clientY - dragRef.current.startY;
+      const deltaX = e.clientX - dragRef.current!.startX;
+      const deltaY = e.clientY - dragRef.current!.startY;
       setPosition({
-        x: dragRef.current.initialX + deltaX,
-        y: dragRef.current.initialY + deltaY,
+        x: dragRef.current!.initialX + deltaX,
+        y: dragRef.current!.initialY + deltaY,
       });
     };
 

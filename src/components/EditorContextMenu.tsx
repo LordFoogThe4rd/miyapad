@@ -2,8 +2,8 @@ import { html } from 'htm/react';
 import { useState, useEffect, useRef } from 'react';
 
 export function EditorContextMenu({ isOpen, closeMenu, menuItems, className, ...props }: any) {
-	const menuRef = useRef<any>(null);
-	const [subMenuOpen, setSubMenuOpen] = useState<any>(null);
+	const menuRef = useRef<HTMLDivElement | null>(null);
+	const [subMenuOpen, setSubMenuOpen] = useState<string | null>(null);
 
 	if (className == 'nested') {
 		useEffect(() => {

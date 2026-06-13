@@ -68,11 +68,11 @@ export function SessionsModal({ isOpen, closeModal, sessionStorage, cancel }: an
 	const [version, setVersion] = useState(0);
 	const [newSessionName, setNewSessionName] = useState('');
 	const [renameSessionName, setRenameSessionName] = useState('');
-	const [renamingId, setRenamingId] = useState<any>(undefined);
+	const [renamingId, setRenamingId] = useState<string | number | undefined>(undefined);
 	const [isCreating, setIsCreating] = useState(false);
 	const [searchQuery, setSearchQuery] = useState('');
 	const [tagFilterQuery, setTagFilterQuery] = useState('');
-	const [editingTagsId, setEditingTagsId] = useState<any>(undefined);
+	const [editingTagsId, setEditingTagsId] = useState<string | number | undefined>(undefined);
 	const [editTagsValue, setEditTagsValue] = useState('');
 	const [sortBy, setSortByState] = useState(() => localStorage.getItem('miyapad-sessions-sortBy') || 'modified');
 	const [sortAsc, setSortAscState] = useState(() => localStorage.getItem('miyapad-sessions-sortAsc') === 'true');

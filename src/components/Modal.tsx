@@ -5,9 +5,9 @@ import { SVG_Close } from './icons/index';
 export function Modal({ isOpen, onClose, title, description, children, ...props }: any) {
 	const [internalVisible, setInternalVisible] = useState(isOpen);
 	const prevIsOpen = useRef(isOpen);
-	const closeTimerRef = useRef<any>(null);
+	const closeTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
 	const isClosing = !isOpen && internalVisible;
-	const mouseDownOnBackground = useRef<any>(false);
+	const mouseDownOnBackground = useRef<boolean>(false);
 
 	useEffect(() => {
 		if (isOpen) {

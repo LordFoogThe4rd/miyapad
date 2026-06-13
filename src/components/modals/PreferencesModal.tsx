@@ -21,8 +21,8 @@ const tabStyle = (active: any) => ({
 
 export function PreferencesModal({ isOpen, closeModal, settings }: any) {
 	const [activeTab, setActiveTab] = useState('editor');
-	const contentRef = useRef<any>(null);
-	const prevHeightRef = useRef<any>(null);
+	const contentRef = useRef<HTMLDivElement | null>(null);
+	const prevHeightRef = useRef<number | null>(null);
 
 	// Capture the outgoing tab's height synchronously before React commits the new tab's DOM
 	const switchTab = (tab: any) => {
@@ -96,7 +96,7 @@ export function PreferencesModal({ isOpen, closeModal, settings }: any) {
 		screenshotModelAvatarUrl, setScreenshotModelAvatarUrl
 	} = settings;
 
-	const [tokenizerList, setTokenizerList] = useState<any>([]);
+	const [tokenizerList, setTokenizerList] = useState<string[]>([]);
 	const [tokenizerStatus, setTokenizerStatus] = useState('');
 
 	const refreshTokenizers = useCallback(async () => {

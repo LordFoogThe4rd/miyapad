@@ -38,6 +38,22 @@ interface ApiEndpointConfig {
   proxyEndpoint?: string;
 }
 
+interface AIHordeModel {
+  name: string;
+  count: number;
+  eta: number;
+  queued?: number;
+  type?: string;
+}
+
+interface TemplateListItem {
+  name: string;
+  nameNew: string;
+  value: string;
+  nameBack: string;
+  affixes: InstructTemplate;
+}
+
 interface CompletionOptions extends ApiEndpointConfig {
   [key: string]: any;
 }

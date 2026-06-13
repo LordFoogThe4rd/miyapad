@@ -12,7 +12,7 @@ export function PromptContainer({ sidebarHeight }: any) {
 	const { promptArea, promptOverlay, cancel, promptPreviewElement, promptChunks, setPromptChunks, currentPromptChunk, setCurrentPromptChunk, undoHovered, setUndoHovered, undoStack, redoStack, showProbs, setShowProbs, promptPreviewChunks, setPromptPreviewChunks, modalState, closeModal, toggleModal, markdownPreviewRef, isSyncingScroll, setSavedScrollTop, spellCheck, keyState, probsDelayTimer, setTriggerPredict } = useGeneration();
 	const { promptText, displayPromptChunks, cleanPromptText, origToClean, cleanToOrig } = usePromptBuilder();
 	const { takeScreenshot } = useScreenshotCapture();
-	const lastMouseToken = useRef<any>(null);
+	const lastMouseToken = useRef<string | null>(null);
 
 	useEffect(() => {
 		if (promptArea.current) {

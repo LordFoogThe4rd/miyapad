@@ -9,8 +9,8 @@ import { defaultPresets } from '../../defaults/presets';
 
 export function InstructTemplatesModal({ isOpen, closeModal, templateStorage, selectedTemplate, setSelectedTemplate, templateList, setTemplateList, templates, templatesImport, setTemplates, cancel, applyChatTemplate }: any) {
 	const [addDeleteTemplate, setAddDeleteTemplate] = useState(false);
-	const [templateDuplicate, setTemplateDuplicate] = useState<any>(false);
-	const [newTemplateName, setNewTemplateName] = useState<any>(undefined);
+	const [templateDuplicate, setTemplateDuplicate] = useState<string | false>(false);
+	const [newTemplateName, setNewTemplateName] = useState<string | undefined>(undefined);
 
 	function getArrObjByName(array: any, name: any, getIndex=false) {
 		const index = array.findIndex((obj: any) => obj.name === name)

@@ -11,15 +11,15 @@ declare function templateFindPrev(...args: any[]): any;
 declare function templateReplace(...args: any[]): any;
 
 export function SearchAndReplaceWidget({ isOpen, closeWidget, id, children, promptArea, promptText, cancel, ...props }: any) {
-	const [searchAndReplaceError, setSearchAndReplaceError] = useState<any>(undefined);
+	const [searchAndReplaceError, setSearchAndReplaceError] = useState<string | undefined>(undefined);
 	const [searchAndReplaceMode, setSearchAndReplaceMode] = usePersistentState('searchAndReplaceMode', 0);
 	const [searchTerm, setSearchTerm] = usePersistentState('searchTerm','');
 	const [searchFlags, setSearchFlags] = usePersistentState('searchFlags','gi');
 	const [replaceTerm, setReplaceTerm] = usePersistentState('replaceTerm','');
 	const [numMatches, setNumMatches] = useState(0);
-	const [inputElement, setInputElement] = useState<any>(null);
+	const [inputElement, setInputElement] = useState<HTMLElement | null>(null);
 	const [replacedTrigger, setReplacedTrigger] = useState(false);
-	const positions = useRef<any>([]);
+	const positions = useRef<{ start: number; end: number }[]>([]);
 	const [currentIndex, setCurrentIndex] = useState(-1);
 
 	useEffect(() => {

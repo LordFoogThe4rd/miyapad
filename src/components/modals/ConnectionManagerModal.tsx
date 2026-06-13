@@ -11,9 +11,9 @@ import { getModels } from '../../api/index';
 function GenericConnectionSettings({ connection, updateConnection }: any) {
 	const [showKey, setShowKey] = useState(false);
 	const [isFetching, setIsFetching] = useState(false);
-	const [error, setError] = useState<any>(null);
+	const [error, setError] = useState<string | null>(null);
 	const [search, setSearch] = useState("");
-	const acRef = useRef<any>(null);
+	const acRef = useRef<AbortController | null>(null);
 
 	useEffect(() => {
 		return () => {
@@ -158,10 +158,10 @@ ${(connection.api === API_OPENAI_COMPAT || connection.api === API_DEEPSEEK) && h
 function AIHordeConnectionSettings({ connection, updateConnection }: any) {
 	const [showKey, setShowKey] = useState(false);
 	const [isFetching, setIsFetching] = useState(false);
-	const [error, setError] = useState<any>(null);
+	const [error, setError] = useState<string | null>(null);
 	const [search, setSearch] = useState("");
-	const [availableModels, setAvailableModels] = useState<any>([]);
-	const acRef = useRef<any>(null);
+	const [availableModels, setAvailableModels] = useState<AIHordeModel[]>([]);
+	const acRef = useRef<AbortController | null>(null);
 
 	useEffect(() => {
 		return () => {
@@ -308,7 +308,7 @@ function AIHordeConnectionSettings({ connection, updateConnection }: any) {
 }
 
 export function ConnectionManagerModal({ isOpen, closeModal, connections, setConnections, activeConnectionId }: any) {
-	const [selectedId, setSelectedId] = useState<any>(null);
+	const [selectedId, setSelectedId] = useState<string | null>(null);
 	const [mobileShowDetails, setMobileShowDetails] = useState(false);
 
 	useLayoutEffect(() => {
@@ -426,7 +426,7 @@ export function ConnectionManagerModal({ isOpen, closeModal, connections, setCon
 		}));
 	}
 
-	const currentConn = connections[selectedId];
+	const currentConn = selectedId ? connections[selectedId] : undefined;
 	const isActiveConnection = selectedId === activeConnectionId;
 
 	const iconBack = html`<svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M15 18l-6-6 6-6"/></svg>`;

@@ -11,7 +11,7 @@ interface ZstdCompressionConfig {
 }
 
 export function CompressionInfoModal({ isOpen, closeModal }: any) {
-	const [compressionData, setCompressionData] = useState<any>(null);
+	const [compressionData, setCompressionData] = useState<Record<string, unknown> | null>(null);
 
 	useEffect(() => {
 		if (!isOpen) return;

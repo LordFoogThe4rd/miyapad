@@ -9,8 +9,8 @@ export function GenerationProvider({ children, useSessionState }: { children: an
 	const promptOverlay = useRef<HTMLDivElement>(null);
 	const undoStack = useRef<number[]>([]);
 	const redoStack = useRef<any[][]>([]);
-	const probsDelayTimer = useRef<any>(null);
-	const keyState = useRef<any>({});
+	const probsDelayTimer = useRef<ReturnType<typeof setTimeout> | null>(null);
+	const keyState = useRef<Record<string, boolean>>({});
 	const sessionReconnectTimer = useRef<number | undefined>(undefined);
 	const useScrollSmoothing = useRef(true);
 	const hordeTaskId = useRef<string | undefined>(undefined);
