@@ -1,6 +1,6 @@
 import { parseEventStream, applyTemperatureToProbs } from './common';
 
-export async function openaiAphroditeTokenCount({ endpoint, endpointAPIKey, proxyEndpoint, signal, ...options }) {
+export async function openaiAphroditeTokenCount({ endpoint, endpointAPIKey, proxyEndpoint, signal, ...options }: { endpoint: any; endpointAPIKey: any; proxyEndpoint: any; signal: any; [key: string]: any }) {
 	try {
 		const res = await fetch(`${proxyEndpoint ?? endpoint}/v1/token/encode`, {
 			method: 'POST',
@@ -23,7 +23,7 @@ export async function openaiAphroditeTokenCount({ endpoint, endpointAPIKey, prox
 	}
 }
 
-export async function openaiOobaTokenCount({ endpoint, proxyEndpoint, signal, ...options }) {
+export async function openaiOobaTokenCount({ endpoint, proxyEndpoint, signal, ...options }: { endpoint: any; proxyEndpoint: any; signal: any; [key: string]: any }) {
 	try {
 		const res = await fetch(`${proxyEndpoint ?? endpoint}/v1/internal/token-count`, {
 			method: 'POST',
@@ -45,7 +45,7 @@ export async function openaiOobaTokenCount({ endpoint, proxyEndpoint, signal, ..
 	}
 }
 
-export async function openaiTabbyTokenCount({ endpoint, endpointAPIKey, proxyEndpoint, signal, ...options }) {
+export async function openaiTabbyTokenCount({ endpoint, endpointAPIKey, proxyEndpoint, signal, ...options }: { endpoint: any; endpointAPIKey: any; proxyEndpoint: any; signal: any; [key: string]: any }) {
 	try {
 		const res = await fetch(`${proxyEndpoint ?? endpoint}/v1/token/encode`, {
 			method: 'POST',
@@ -68,7 +68,7 @@ export async function openaiTabbyTokenCount({ endpoint, endpointAPIKey, proxyEnd
 	}
 }
 
-export async function openaiOobaTokenize({ endpoint, endpointAPIKey, proxyEndpoint, signal, ...options }) {
+export async function openaiOobaTokenize({ endpoint, endpointAPIKey, proxyEndpoint, signal, ...options }: { endpoint: any; endpointAPIKey: any; proxyEndpoint: any; signal: any; [key: string]: any }) {
 	try {
 		const res = await fetch(`${proxyEndpoint ?? endpoint}/v1/internal/encode`, {
 			method: 'POST',
@@ -85,7 +85,7 @@ export async function openaiOobaTokenize({ endpoint, endpointAPIKey, proxyEndpoi
 			throw new Error(`HTTP ${res.status}`);
 		const { tokens } = await res.json();
 
-		const strings = await Promise.all(tokens.map(token =>
+		const strings = await Promise.all(tokens.map((token: any) =>
 			openaiOobaDetokenize({
 				endpoint,
 				proxyEndpoint,
@@ -122,7 +122,7 @@ async function openaiOobaDetokenize({ endpoint, endpointAPIKey, proxyEndpoint, s
 	}
 }
 
-export async function openaiTabbyTokenize({ endpoint, endpointAPIKey, proxyEndpoint, signal, ...options }) {
+export async function openaiTabbyTokenize({ endpoint, endpointAPIKey, proxyEndpoint, signal, ...options }: { endpoint: any; endpointAPIKey: any; proxyEndpoint: any; signal: any; [key: string]: any }) {
 	try {
 		const res = await fetch(`${proxyEndpoint ?? endpoint}/v1/token/encode`, {
 			method: 'POST',
@@ -139,7 +139,7 @@ export async function openaiTabbyTokenize({ endpoint, endpointAPIKey, proxyEndpo
 			throw new Error(`HTTP ${res.status}`);
 		const { tokens } = await res.json();
 
-		const strings = await Promise.all(tokens.map(token =>
+		const strings = await Promise.all(tokens.map((token: any) =>
 			openaiTabbyDetokenize({
 				endpoint,
 				proxyEndpoint,
@@ -176,7 +176,7 @@ async function openaiTabbyDetokenize({ endpoint, endpointAPIKey, proxyEndpoint, 
 	}
 }
 
-export async function openaiModels({ endpoint, endpointAPIKey, proxyEndpoint, signal, ...options }) {
+export async function openaiModels({ endpoint, endpointAPIKey, proxyEndpoint, signal, ...options }: { endpoint: any; endpointAPIKey: any; proxyEndpoint: any; signal: any; [key: string]: any }) {
 	const endpointHost = (() => { try { return new URL(endpoint).hostname; } catch { return ''; } })();
 	const isTogetherAI = endpointHost === "api.together.xyz";
 
@@ -201,15 +201,15 @@ export async function openaiModels({ endpoint, endpointAPIKey, proxyEndpoint, si
 	} else {
 		data = response.data;
 	}
-	return data.map(item => item.id);
+	return data.map((item: any) => item.id);
 }
 
-function openaiConvertOptions(options, endpoint, isChat) {
+function openaiConvertOptions(options: any, endpoint: any, isChat: any) {
 	const endpointHost = (() => { try { return new URL(endpoint).hostname; } catch { return ''; } })();
 	const isOpenAI = endpointHost === "api.openai.com" || endpointHost.endsWith(".openai.com");
 	const isTogetherAI = endpointHost === "api.together.xyz";
 	const isOpenRouter = endpointHost === "openrouter.ai";
-	const swapOption = (lhs, rhs) => {
+	const swapOption = (lhs: any, rhs: any) => {
 		if (lhs in options) {
 			options[rhs] = options[lhs];
 			delete options[lhs];
@@ -260,7 +260,7 @@ function openaiConvertOptions(options, endpoint, isChat) {
 	return options;
 }
 
-export async function* openaiCompletion({ endpoint, endpointAPIKey, proxyEndpoint, signal, ...options }) {
+export async function* openaiCompletion({ endpoint, endpointAPIKey, proxyEndpoint, signal, ...options }: { endpoint: any; endpointAPIKey: any; proxyEndpoint: any; signal: any; [key: string]: any }) {
 	let finalEndpoint = proxyEndpoint ?? endpoint;
 	const needsPath = (() => {
 		try {
@@ -302,7 +302,7 @@ export async function* openaiCompletion({ endpoint, endpointAPIKey, proxyEndpoin
 		throw new Error(`HTTP ${res.status}`);
 	}
 
-	async function* yieldTokens(chunks) {
+	async function* yieldTokens(chunks: any) {
 		for await (const chunk of chunks) {
 			if (!chunk.choices || chunk.choices.length === 0) {
 				if (chunk.content) yield { content: chunk.content };
@@ -317,7 +317,7 @@ export async function* openaiCompletion({ endpoint, endpointAPIKey, proxyEndpoin
 			let rawProbsArr = [];
 
 			if (logprobsData?.content?.[0]?.top_logprobs) {
-				rawProbsArr = logprobsData.content[0].top_logprobs.map(({ token, logprob }) => ({ tok_str: token, logprob }));
+				rawProbsArr = logprobsData.content[0].top_logprobs.map(({ token, logprob }: { token: any; logprob: any }) => ({ tok_str: token, logprob }));
 			} else if (logprobsData?.top_logprobs?.[0]) {
 				const top_logprobs_obj = logprobsData.top_logprobs[0];
 				rawProbsArr = Object.entries(top_logprobs_obj).map(([tok, logprob]) => ({ tok_str: tok, logprob }));
@@ -348,7 +348,7 @@ export async function* openaiCompletion({ endpoint, endpointAPIKey, proxyEndpoin
 		const { content, choices } = await res.json();
 		if (choices?.[0].logprobs?.tokens) {
 			const logprobs = choices[0].logprobs;
-			const chunks = Object.values(logprobs.tokens).map((token, i) => ({
+			const chunks = Object.values(logprobs.tokens).map((token: any, i: any) => ({
 				choices: [{
 					text: token,
 					logprobs: { top_logprobs: [logprobs.top_logprobs[i]] }
@@ -363,19 +363,19 @@ export async function* openaiCompletion({ endpoint, endpointAPIKey, proxyEndpoin
 	}
 }
 
-async function* openaiBufferUtf8Stream(stream) {
+async function* openaiBufferUtf8Stream(stream: any) {
 	const decoder = new TextDecoder('utf-8', { fatal: false });
 
-	function parseEscapedString(escapedStr) {
+	function parseEscapedString(escapedStr: any) {
 		return new Uint8Array(
 			escapedStr
 				.split('\\x')
 				.slice(1)
-				.map(hex => parseInt(hex, 16))
+				.map((hex: any) => parseInt(hex, 16))
 		);
 	}
 
-	const hasEscapedSequence = str => /\\x[0-9a-fA-F]{2}/.test(str);
+	const hasEscapedSequence = (str: any) => /\\x[0-9a-fA-F]{2}/.test(str);
 	const encoder = new TextEncoder();
 
 	for await (const chunk of stream) {
@@ -405,7 +405,7 @@ async function* openaiBufferUtf8Stream(stream) {
 	}
 }
 
-export async function* openaiChatCompletion({ endpoint, endpointAPIKey, proxyEndpoint, signal, ...options }) {
+export async function* openaiChatCompletion({ endpoint, endpointAPIKey, proxyEndpoint, signal, ...options }: { endpoint: any; endpointAPIKey: any; proxyEndpoint: any; signal: any; [key: string]: any }) {
 	let finalEndpoint = proxyEndpoint ?? endpoint;
 	const needsPath = (() => {
 		try {
@@ -447,7 +447,7 @@ export async function* openaiChatCompletion({ endpoint, endpointAPIKey, proxyEnd
 		throw new Error(`HTTP ${res.status}`);
 	}
 
-	async function* yieldTokens(chunks) {
+	async function* yieldTokens(chunks: any) {
 		for await (const chunk of chunks) {
 			if (!chunk.choices || chunk.choices.length === 0) continue;
 			const choice = chunk.choices[0];
@@ -455,7 +455,7 @@ export async function* openaiChatCompletion({ endpoint, endpointAPIKey, proxyEnd
 			const top_logprobs = choice.logprobs?.content?.[0]?.top_logprobs ?? {};
 			if (!token) continue;
 
-				let rawProbsArr = Object.values(top_logprobs).map(({ token: t, logprob }) => ({ tok_str: t, logprob }));
+				let rawProbsArr = Object.values(top_logprobs).map(({ token: t, logprob }: any) => ({ tok_str: t, logprob }));
 				const res = applyTemperatureToProbs(rawProbsArr, token, options.temperature);
 				const probs = res.probs;
 				let prob = res.prob;
@@ -480,7 +480,7 @@ export async function* openaiChatCompletion({ endpoint, endpointAPIKey, proxyEnd
 		const chunks = choices?.[0].logprobs?.content;
 
 		if (chunks?.length) {
-			const formattedChunks = chunks.map(chunk => ({
+			const formattedChunks = chunks.map((chunk: any) => ({
 				choices: [{
 					delta: { content: chunk.token },
 					logprobs: { content: [{ top_logprobs: chunk.top_logprobs }] }
@@ -493,7 +493,7 @@ export async function* openaiChatCompletion({ endpoint, endpointAPIKey, proxyEnd
 	}
 }
 
-export async function openaiOobaAbortCompletion({ endpoint, proxyEndpoint, ...options }) {
+export async function openaiOobaAbortCompletion({ endpoint, proxyEndpoint, ...options }: { endpoint: any; proxyEndpoint: any; [key: string]: any }) {
 	try {
 		await fetch(`${proxyEndpoint ?? endpoint}/v1/internal/stop-generation`, {
 			method: 'POST',

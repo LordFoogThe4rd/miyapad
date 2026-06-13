@@ -1,6 +1,6 @@
 import { parseEventStream, applyTemperatureToProbs } from './common';
 
-export async function koboldCppTokenCount({ endpoint, endpointAPIKey, proxyEndpoint, signal, ...options }) {
+export async function koboldCppTokenCount({ endpoint, endpointAPIKey, proxyEndpoint, signal, ...options }: { endpoint: any; endpointAPIKey: any; proxyEndpoint: any; signal: any; [key: string]: any }) {
 	const res = await fetch(`${proxyEndpoint ?? endpoint}/api/extra/tokencount`, {
 		method: 'POST',
 		headers: {
@@ -19,7 +19,7 @@ export async function koboldCppTokenCount({ endpoint, endpointAPIKey, proxyEndpo
 	return value;
 }
 
-export async function koboldCppTokenize({ endpoint, endpointAPIKey, proxyEndpoint, signal, ...options }) {
+export async function koboldCppTokenize({ endpoint, endpointAPIKey, proxyEndpoint, signal, ...options }: { endpoint: any; endpointAPIKey: any; proxyEndpoint: any; signal: any; [key: string]: any }) {
 	const res = await fetch(`${proxyEndpoint ?? endpoint}/api/extra/tokencount`, {
 		method: 'POST',
 		headers: {
@@ -40,10 +40,10 @@ export async function koboldCppTokenize({ endpoint, endpointAPIKey, proxyEndpoin
 
 }
 
-export function koboldCppConvertOptions(options, endpoint) {
+export function koboldCppConvertOptions(options: any, endpoint: any) {
 	const endpointHost = (() => { try { return new URL(endpoint).hostname; } catch { return ''; } })();
 	const isHorde = endpointHost === "aihorde.net" || endpointHost.endsWith(".aihorde.net");
-	const swapOption = (lhs, rhs) => {
+	const swapOption = (lhs: any, rhs: any) => {
 		if (lhs in options) {
 			options[rhs] = options[lhs];
 			delete options[lhs];
@@ -68,7 +68,7 @@ export function koboldCppConvertOptions(options, endpoint) {
 	return options;
 }
 
-export async function* koboldCppCompletion({ endpoint, endpointAPIKey, proxyEndpoint, signal, ...options }) {
+export async function* koboldCppCompletion({ endpoint, endpointAPIKey, proxyEndpoint, signal, ...options }: { endpoint: any; endpointAPIKey: any; proxyEndpoint: any; signal: any; [key: string]: any }) {
 	const res = await fetch(`${proxyEndpoint ?? endpoint}/api/${options.stream ? 'extra/generate/stream' : 'v1/generate'}`, {
 		method: 'POST',
 		headers: {
@@ -86,11 +86,11 @@ export async function* koboldCppCompletion({ endpoint, endpointAPIKey, proxyEndp
 		throw new Error(`HTTP ${res.status}`);
 	}
 
-	async function* yieldTokens(chunks) {
+	async function* yieldTokens(chunks: any) {
 		for await (const chunk of chunks) {
 			const { token, top_logprobs } = chunk;
 
-			let rawProbsArr = Object.values(top_logprobs ?? {}).map(({ token: t, logprob }) => ({ tok_str: t, logprob }));
+			let rawProbsArr = Object.values(top_logprobs ?? {}).map(({ token: t, logprob }: any) => ({ tok_str: t, logprob }));
 				const res = applyTemperatureToProbs(rawProbsArr, token, options.temperature);
 				const probs = res.probs;
 				let prob = res.prob;
@@ -116,7 +116,7 @@ export async function* koboldCppCompletion({ endpoint, endpointAPIKey, proxyEndp
 	}
 }
 
-export async function koboldCppAbortCompletion({ endpoint, proxyEndpoint, ...options }) {
+export async function koboldCppAbortCompletion({ endpoint, proxyEndpoint, ...options }: { endpoint: any; proxyEndpoint: any; [key: string]: any }) {
 	try {
 		await fetch(`${proxyEndpoint ?? endpoint}/api/extra/abort`, {
 			method: 'POST',

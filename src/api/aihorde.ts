@@ -1,6 +1,6 @@
 import { koboldCppConvertOptions } from './koboldcpp';
 
-export async function aiHordeModels({ endpoint, endpointAPIKey, proxyEndpoint, signal, ...options }) {
+export async function aiHordeModels({ endpoint, endpointAPIKey, proxyEndpoint, signal, ...options }: { endpoint: any; endpointAPIKey: any; proxyEndpoint: any; signal: any; [key: string]: any }) {
 	const res = await fetch(`${proxyEndpoint ?? endpoint}/v2/status/models?type=text`, {
 		method: 'GET',
 		headers: {
@@ -16,11 +16,11 @@ export async function aiHordeModels({ endpoint, endpointAPIKey, proxyEndpoint, s
 	const response = await res.json();
 
 	return response
-		.filter(model => model.type === "text")
-		.map(model => model.name);
+		.filter((model: any) => model.type === "text")
+		.map((model: any) => model.name);
 }
 
-export async function* aiHordeCompletion({ endpoint, endpointAPIKey, proxyEndpoint, signal, ...options }) {
+export async function* aiHordeCompletion({ endpoint, endpointAPIKey, proxyEndpoint, signal, ...options }: { endpoint: any; endpointAPIKey: any; proxyEndpoint: any; signal: any; [key: string]: any }) {
 	const { model, prompt, ...params } = options;
 	const submitRes = await fetch(`${proxyEndpoint ?? endpoint}/v2/generate/text/async`, {
 		method: 'POST',
@@ -69,7 +69,7 @@ export async function* aiHordeCompletion({ endpoint, endpointAPIKey, proxyEndpoi
 	}
 }
 
-export async function aiHordeAbortCompletion({ endpoint, proxyEndpoint, hordeTaskId, ...options }) {
+export async function aiHordeAbortCompletion({ endpoint, proxyEndpoint, hordeTaskId, ...options }: { endpoint: any; proxyEndpoint: any; hordeTaskId: any; [key: string]: any }) {
 	try {
 		await fetch(`${proxyEndpoint ?? endpoint}/v2/generate/text/status/${hordeTaskId}`, {
 			method: 'DELETE',

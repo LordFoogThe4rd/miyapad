@@ -1,6 +1,6 @@
 import { API_LLAMA_CPP, API_KOBOLD_CPP, API_OPENAI_COMPAT, API_AI_HORDE, API_DEEPSEEK } from '../constants';
 
-export function exportText(filename, text) {
+export function exportText(filename: any, text: any) {
 	const textBlob = new Blob([text], {type: 'text/plain;charset=utf-8'});
 	const textURL = URL.createObjectURL(textBlob);
 	var element = document.createElement('a');
@@ -13,7 +13,7 @@ export function exportText(filename, text) {
 	document.body.removeChild(element);
 }
 
-export function normalizeEndpoint(endpoint, endpointAPI) {
+export function normalizeEndpoint(endpoint: any, endpointAPI: any) {
 	const url = new URL(endpoint.trim());
 	url.pathname = url.pathname.replace(/\/+/g, "/"); // normalize consecutive slashes
 
@@ -30,7 +30,7 @@ export function normalizeEndpoint(endpoint, endpointAPI) {
 }
 
 // Function to parse text/event-stream data and yield JSON objects
-export async function* parseEventStream(eventStream) {
+export async function* parseEventStream(eventStream: any) {
 	let buf = '';
 	let ignoreNextLf = false;
 
@@ -44,7 +44,7 @@ export async function* parseEventStream(eventStream) {
 
 		// Event streams must be parsed line-by-line (ending in CR, LF, or CRLF)
 		const lines = (buf + chunk).split(/\n|\r\n?/);
-		buf = lines.pop();
+		buf = lines.pop() ?? '';
 		let type, data;
 
 		for (const line of lines) {
@@ -53,7 +53,7 @@ export async function* parseEventStream(eventStream) {
 				data = undefined;
 				continue;
 			}
-			const { name, value } = /^(?<name>.*?)(?:: ?(?<value>.*))?$/s.exec(line).groups;
+			const { name, value } = /^(?<name>.*?)(?:: ?(?<value>.*))?$/s.exec(line)?.groups ?? {};
 			switch (name) {
 				case 'event':
 					type = (value ?? '');
@@ -91,11 +91,11 @@ export async function* parseEventStream(eventStream) {
 	}
 }
 
-export function applyTemperatureToProbs(probsArr, token, temperature) {
+export function applyTemperatureToProbs(probsArr: any, token: any, temperature: any) {
 	const t = Math.max(0.01, temperature ?? 1);
 	if (t === 1) {
 		let chosenProb;
-		probsArr.forEach(p => {
+	probsArr.forEach((p: any) => {
 			if (p.logprob !== undefined && p.prob === undefined) {
 				p.prob = Math.exp(p.logprob);
 			}
@@ -106,7 +106,7 @@ export function applyTemperatureToProbs(probsArr, token, temperature) {
 
 	let pSum = 0;
 	let pOrigSum = 0;
-	probsArr.forEach(p => {
+	probsArr.forEach((p: any) => {
 		const orig_p = p.prob !== undefined ? p.prob : Math.exp(p.logprob);
 		pOrigSum += orig_p;
 		const log_p = p.logprob !== undefined ? p.logprob : Math.log(Math.max(1e-10, orig_p));
@@ -115,7 +115,7 @@ export function applyTemperatureToProbs(probsArr, token, temperature) {
 	});
 
 	let chosenProb;
-	probsArr.forEach(p => {
+	probsArr.forEach((p: any) => {
 		p.prob = pSum > 0 ? p.temp_p * (pOrigSum / pSum) : 0;
 		if (p.tok_str === token) chosenProb = p.prob;
 		delete p.temp_p;
