@@ -16,7 +16,17 @@ interface ConnectionManagerModalProps {
   activeConnectionId: string;
 }
 
-function GenericConnectionSettings({ connection, updateConnection }: any) {
+interface GenericConnectionSettingsProps {
+  connection: ConnectionData;
+  updateConnection: (field: keyof ConnectionData, value: unknown) => void;
+}
+
+interface AIHordeConnectionSettingsProps {
+  connection: ConnectionData;
+  updateConnection: (field: keyof ConnectionData, value: unknown) => void;
+}
+
+function GenericConnectionSettings({ connection, updateConnection }: GenericConnectionSettingsProps) {
 	const [showKey, setShowKey] = useState(false);
 	const [isFetching, setIsFetching] = useState(false);
 	const [error, setError] = useState<string | null>(null);
@@ -163,7 +173,7 @@ ${(connection.api === API_OPENAI_COMPAT || connection.api === API_DEEPSEEK) && h
 	`;
 }
 
-function AIHordeConnectionSettings({ connection, updateConnection }: any) {
+function AIHordeConnectionSettings({ connection, updateConnection }: AIHordeConnectionSettingsProps) {
 	const [showKey, setShowKey] = useState(false);
 	const [isFetching, setIsFetching] = useState(false);
 	const [error, setError] = useState<string | null>(null);
