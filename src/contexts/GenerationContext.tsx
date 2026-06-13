@@ -1,10 +1,11 @@
 import { html } from 'htm/react';
-import { createContext, useContext, useState, useRef } from 'react';
+import { createContext, useContext, useState, useRef, type ReactNode, type Dispatch } from 'react';
 import { defaultPresets } from '../defaults/presets';
+import type { GenerationState } from '../types/contexts';
 
-export const GenerationContext = createContext<Record<string, any> | null>(null);
+export const GenerationContext = createContext<GenerationState | null>(null);
 
-export function GenerationProvider({ children, useSessionState }: { children: any; useSessionState: any }) {
+export function GenerationProvider({ children, useSessionState }: { children: ReactNode; useSessionState: <T>(name: string, initialState: T) => [T, Dispatch<T>] }) {
 	const promptArea = useRef<HTMLTextAreaElement>(null);
 	const promptOverlay = useRef<HTMLDivElement>(null);
 	const undoStack = useRef<number[]>([]);

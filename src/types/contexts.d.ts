@@ -215,7 +215,7 @@ interface SettingsState {
   postSamplingProbs: boolean;
 }
 
-interface GenerationState {
+export interface GenerationState {
   promptArea: RefObject<HTMLTextAreaElement | null>;
   promptOverlay: RefObject<HTMLDivElement | null>;
   undoStack: RefObject<number[]>;
