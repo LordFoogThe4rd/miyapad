@@ -1,5 +1,6 @@
 import axios from 'axios';
 import { URL } from 'url';
+import { Readable } from 'stream';
 import type { Express, Request, Response } from 'express';
 import { headersToRemove } from '../lib/utils.js';
 
@@ -60,7 +61,7 @@ export default function(app: Express): void {
     });
 
     const proxyPost = async (req: Request, res: Response) => {
-        const path = (req.params as any)[0] || '';
+        const path = req.params['0'] || '';
         const targetBaseUrl = req.headers['x-real-url'] as string | undefined;
         delete req.headers['x-real-url'];
 
@@ -98,10 +99,10 @@ export default function(app: Express): void {
             });
 
             res.set(response.headers as Record<string, string>);
-            (response.data as any).pipe(res);
+            (response.data as Readable).pipe(res);
 
             res.on('close', () => {
-                (response.data as any).destroy();
+                (response.data as Readable).destroy();
             });
         } catch (error: any) {
             if (error.response) {
@@ -124,7 +125,7 @@ export default function(app: Express): void {
     };
 
     const proxyGet = async (req: Request, res: Response) => {
-        const path = (req.params as any)[0] || '';
+        const path = req.params['0'] || '';
         const targetBaseUrl = req.headers['x-real-url'] as string | undefined;
         delete req.headers['x-real-url'];
 
@@ -171,7 +172,7 @@ export default function(app: Express): void {
     };
 
     const proxyDelete = async (req: Request, res: Response) => {
-        const path = (req.params as any)[0] || '';
+        const path = req.params['0'] || '';
         const targetBaseUrl = req.headers['x-real-url'] as string | undefined;
         delete req.headers['x-real-url'];
 

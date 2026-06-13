@@ -1,11 +1,12 @@
 import path from 'path';
 import fs from 'fs';
 import { fileURLToPath } from 'url';
+import type { Tokenizer } from '@huggingface/tokenizers';
 
 const __dirname = path.dirname(fileURLToPath(import.meta.url));
 
-let TokenizerClass: any;
-let loadedTokenizer: any = null;
+let TokenizerClass: typeof Tokenizer | null = null;
+let loadedTokenizer: Tokenizer | null = null;
 let loadedModel: string | null = null;
 
 const TOKENIZERS_DIR = path.join(__dirname, 'tokenizers');
@@ -23,7 +24,7 @@ function getAvailableTokenizers(): string[] {
 
 async function ensureTokenizerModule() {
 	if (!TokenizerClass) {
-		const mod = await import('@huggingface/tokenizers') as any;
+		const mod = await import('@huggingface/tokenizers');
 		TokenizerClass = mod.Tokenizer;
 	}
 }
