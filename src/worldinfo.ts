@@ -1,6 +1,6 @@
-export function importSillyTavernWorldInfo(json, setWorldInfo, importBehavior) {
-	setWorldInfo(prevWorldInfo => {
-		let updatedEntries;
+export function importSillyTavernWorldInfo(json: any, setWorldInfo: any, importBehavior: any) {
+	setWorldInfo((prevWorldInfo: any) => {
+		let updatedEntries: any[];
 
 		if (importBehavior === "replace") {
 			updatedEntries = [];

@@ -116,8 +116,8 @@ export function AppLayout() {
 				n_predict: promptPreviewTokens
 			};
 
-			const predicted = await predict(finalPromptText, promptChunks.length, (chunk) => {
-				setPromptPreviewChunks((c) => [...c, chunk]);
+			const predicted = await predict(finalPromptText, promptChunks.length, (chunk: any) => {
+				setPromptPreviewChunks((c: any[]) => [...c, chunk]);
 				return true;
 			}, ac, false, customParams);
 		}, 500);
@@ -147,7 +147,7 @@ export function AppLayout() {
 		document.body.style.setProperty('--font-size-multiplier', fontSizeMultiplier);
 	}, [fontSizeMultiplier]);
 
-	const availableFonts = {
+	const availableFonts: Record<string, { cssValue: string | null; url: string | null }> = {
 		"Default": { cssValue: null, url: null },
 		"System Serif": { cssValue: "serif", url: null },
 		"System Sans-serif": { cssValue: "sans-serif", url: null },
@@ -249,7 +249,7 @@ export function AppLayout() {
 		try {
 			JSON.parse(stoppingStrings);
 			setStoppingStringsError(undefined);
-		} catch (e) {
+		} catch (e: any) {
 			setStoppingStringsError(e.toString());
 		}
 	}, [stoppingStrings]);
@@ -258,7 +258,7 @@ export function AppLayout() {
 		try {
 			JSON.parse(drySequenceBreakers);
 			setDrySequenceBreakersError(undefined);
-		} catch (e) {
+		} catch (e: any) {
 			setDrySequenceBreakersError(e.toString());
 		}
 	}, [drySequenceBreakers]);
@@ -266,7 +266,7 @@ export function AppLayout() {
 	useEffect(() => {
 		try {JSON.parse(bannedTokens);
 			setBannedTokensError(undefined);
-		} catch (e) {
+		} catch (e: any) {
 			setBannedTokensError(e.toString());
 		}
 	}, [bannedTokens]);
@@ -396,7 +396,7 @@ export function AppLayout() {
 				} as any)
 			);
 				setTokens(tokenCount);
-			} catch (e) {
+			} catch (e: any) {
 				if (e.name !== 'AbortError')
 					reportError(e);
 			}
@@ -421,7 +421,7 @@ export function AppLayout() {
 					...(isMiyapadEndpoint ? { proxyEndpoint: sessionStorage.proxyEndpoint } : {})
 				} as any);
 				setOpenaiModels(models);
-			} catch (e) {
+			} catch (e: any) {
 				if (e.name !== 'AbortError') {
 					reportError(e);
 					const errStr = e.toString();
@@ -441,7 +441,7 @@ export function AppLayout() {
 		const promptString = promptArea.current.value;
 		if (!promptString.trim()) return;
 
-		let bestMessages = [];
+		let bestMessages: any[] = [];
 		for (const templateName of Object.keys(templates)) {
 			const messages = convertChatToJSON(promptString, templates[templateName]);
 			if (messages.length > bestMessages.length) {
@@ -492,7 +492,7 @@ export function AppLayout() {
 						setSessionEndpointError(undefined);
 						clearTimeout(sessionReconnectTimer.current);
 						sessionReconnectTimer.current = undefined;
-					} catch (e) {
+					} catch (e: any) {
 						reportError(e);
 					}
 				}, 1000);
@@ -515,7 +515,7 @@ export function AppLayout() {
 		if (!sessionStorage?.sessionEndpoint) return;
 
 		loadServerTokenizer({ sessionEndpoint: sessionStorage.sessionEndpoint, model: tokenizerModel })
-			.catch(e => {
+			.catch((e: any) => {
 				if (e.name !== 'AbortError')
 					reportError(e);
 			});
@@ -523,16 +523,18 @@ export function AppLayout() {
 
 
 
-	const sidebar = useRef(null);
+	const sidebar = useRef<HTMLDivElement | null>(null);
 	const [sidebarHeight, setSidebarHeight] = useState(0);
 	const [isMobile, setIsMobile] = useState(false);
 	useEffect(() => {
-		setSidebarHeight(sidebar.current.scrollHeight);
+		const el = sidebar.current;
+		if (!el) return;
+		setSidebarHeight(el.scrollHeight);
 		const observer = new SVResizeObserver(() => {
 			setIsMobile(window.innerWidth < 767.8);
-			setSidebarHeight(sidebar.current.scrollHeight);
+			setSidebarHeight(el.scrollHeight);
 		});
-		observer.observe(sidebar.current);
+		observer.observe(el);
 		return () => observer.disconnect();
 	}, []);
 

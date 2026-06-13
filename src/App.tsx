@@ -3,7 +3,17 @@ import { SettingsProvider } from './contexts/SettingsContext';
 import { GenerationProvider } from './contexts/GenerationContext';
 import { AppLayout } from './AppLayout';
 
-export function App({ sessionStorage, templateStorage, themeStorage, connectionStorage, useSessionState, useDBTemplates, useDBThemes, useDBConnections, isMiyapadEndpoint }) {
+export function App({ sessionStorage, templateStorage, themeStorage, connectionStorage, useSessionState, useDBTemplates, useDBThemes, useDBConnections, isMiyapadEndpoint }: {
+	sessionStorage: any;
+	templateStorage: any;
+	themeStorage: any;
+	connectionStorage: any;
+	useSessionState: any;
+	useDBTemplates: any;
+	useDBThemes: any;
+	useDBConnections: any;
+	isMiyapadEndpoint: boolean;
+}) {
 	return html`
 		<${SettingsProvider}
 			sessionStorage=${sessionStorage}

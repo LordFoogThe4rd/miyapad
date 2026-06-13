@@ -46,17 +46,19 @@ async function main() {
     const connectionStorage = new ConnectionStorage(dbAdapter);
     await connectionStorage.init();
 
-	createRoot(document.getElementById('root')).render(html`
+	const rootEl = document.getElementById('root');
+	if (!rootEl) throw new Error('Root element not found');
+	createRoot(rootEl).render(html`
 		<${ErrorBoundary} FallbackComponent=${CrashScreenFallback}>
 			<${App}
 				sessionStorage=${sessionStorage}
 				templateStorage=${templateStorage}
 				themeStorage=${themeStorage}
 				connectionStorage=${connectionStorage}
-				useSessionState=${(name, initialState) => useSessionState(sessionStorage, name, initialState)}
-				useDBTemplates=${(initialState => useStorageState(templateStorage, initialState))}
-				useDBThemes=${(initialState => useStorageState(themeStorage, initialState))}
-				useDBConnections=${(initialState => useStorageState(connectionStorage, initialState))}
+				useSessionState=${(name: any, initialState: any) => useSessionState(sessionStorage, name, initialState)}
+				useDBTemplates=${(initialState: any) => useStorageState(templateStorage, initialState)}
+				useDBThemes=${(initialState: any) => useStorageState(themeStorage, initialState)}
+				useDBConnections=${(initialState: any) => useStorageState(connectionStorage, initialState)}
 				isMiyapadEndpoint=${isMiyapadEndpoint}/>
 		</${ErrorBoundary}>`);
 }
