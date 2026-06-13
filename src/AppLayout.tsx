@@ -281,7 +281,7 @@ export function AppLayout() {
 
 		const adjustProbsPosition = () => {
 			const probsElement = document.getElementById('probs');
-			if (!probsElement) {
+			if (!probsElement || !currentPromptChunk) {
 				return;
 			}
 
