@@ -221,7 +221,9 @@ export function SessionsModal({ isOpen, closeModal, sessionStorage, cancel }: Se
 	};
 
 	const exportSession = () => {
-		const sessionObj = { ...sessionStorage.sessions[sessionStorage.selectedSession!] };
+		const sid = sessionStorage.selectedSession;
+		if (sid == null) return;
+		const sessionObj = { ...sessionStorage.sessions[sid] };
 
 		delete sessionObj.endpoint;
 		delete sessionObj.endpointAPIKey;
@@ -249,7 +251,9 @@ export function SessionsModal({ isOpen, closeModal, sessionStorage, cancel }: Se
 	};
 
 	const cloneSession = async () => {
-		const sessionObj = { ...sessionStorage.sessions[sessionStorage.selectedSession!] };
+		const sid = sessionStorage.selectedSession;
+		if (sid == null) return;
+		const sessionObj = { ...sessionStorage.sessions[sid] };
 		for (const [key, value] of Object.entries(sessionObj)) {
 			sessionObj[key] = JSON.stringify(value);
 		}
@@ -273,6 +277,7 @@ export function SessionsModal({ isOpen, closeModal, sessionStorage, cancel }: Se
 	}
 
 	const disabled = !!cancel;
+	const noSession = sessionStorage.selectedSession == null;
 
 	return html`
 		<${Modal} isOpen=${isOpen} onClose=${closeModal}
@@ -309,9 +314,9 @@ export function SessionsModal({ isOpen, closeModal, sessionStorage, cancel }: Se
 				<div className="sessions-modal-toolbar-row">
 					<button disabled=${disabled} onClick=${startCreateSession}>Create</button>
 					<button disabled=${disabled} onClick=${importSession}>Import</button>
-					<button disabled=${disabled} onClick=${exportSession}>Export</button>
+					<button disabled=${disabled || noSession} onClick=${exportSession}>Export</button>
 					<button disabled=${disabled} onClick=${exportAll}>Export All</button>
-					<button disabled=${disabled} onClick=${cloneSession}>Clone</button>
+					<button disabled=${disabled || noSession} onClick=${cloneSession}>Clone</button>
 				</div>
 			</div>
 			<div className="sessions-modal-list overflow-container">
