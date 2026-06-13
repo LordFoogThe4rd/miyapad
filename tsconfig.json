@@ -6,7 +6,7 @@
     "jsx": "react-jsx",
     "jsxImportSource": "react",
     "ignoreDeprecations": "6.0",
-    "strict": false,
+    "strict": true,
     "noEmit": true,
     "allowJs": true,
     "skipLibCheck": true,
