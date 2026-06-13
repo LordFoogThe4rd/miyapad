@@ -45,7 +45,7 @@ export function LogitBiasModal({ isOpen, closeModal, biasState, apiConfig, cance
 		}
 		const biasPowerNum = Number(biasPower);
 
-		const modBias = logitBias.bias;
+		const modBias = { ...logitBias.bias };
 
 		// delete entry if power 0 or empty
 		if (biasPowerNum == 0) {	
