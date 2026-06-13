@@ -35,7 +35,7 @@ function GenericConnectionSettings({ connection, updateConnection }: any) {
 				endpointAPI: connection.api,
 				endpointAPIKey: connection.key,
 				signal: ac.signal
-			} as any);
+			});
 
 			if (Array.isArray(models)) {
 				updateConnection('models', models);

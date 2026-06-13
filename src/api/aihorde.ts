@@ -69,7 +69,7 @@ export async function* aiHordeCompletion({ endpoint, endpointAPIKey, proxyEndpoi
 	}
 }
 
-export async function aiHordeAbortCompletion({ endpoint, proxyEndpoint, hordeTaskId, ...options }: { endpoint: any; proxyEndpoint: any; hordeTaskId: any; [key: string]: any }) {
+export async function aiHordeAbortCompletion({ endpoint, proxyEndpoint, hordeTaskId, ...options }: { endpoint: any; proxyEndpoint?: any; hordeTaskId?: any; [key: string]: any }) {
 	try {
 		await fetch(`${proxyEndpoint ?? endpoint}/v2/generate/text/status/${hordeTaskId}`, {
 			method: 'DELETE',

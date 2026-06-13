@@ -65,7 +65,7 @@ export function useGenerationLogic() {
 					endpointAPI,
 					...(endpointAPI == API_AI_HORDE ? { hordeTaskId: hordeTaskId.current } : {}),
 					...(isMiyapadEndpoint ? { proxyEndpoint: sessionStorage.proxyEndpoint } : {})
-				} as any);
+				});
 				ac.abort();
 			};
 			setCancel(() => cancelThis);
@@ -77,7 +77,7 @@ export function useGenerationLogic() {
 					endpointAPI,
 					...(endpointAPI == API_AI_HORDE ? { hordeTaskId: hordeTaskId.current } : {}),
 					...(isMiyapadEndpoint ? { proxyEndpoint: sessionStorage.proxyEndpoint } : {})
-				} as any);
+				});
 			};
 			ac.signal.addEventListener('abort', cancelThis);
 		}
@@ -101,7 +101,7 @@ export function useGenerationLogic() {
 						content: prompt,
 						signal: ac.signal,
 						...(isMiyapadEndpoint ? { proxyEndpoint: sessionStorage.proxyEndpoint } : {})
-					} as any)
+				})
 				);
 				if (myId !== activeGenId.current) return;
 				setTokens(tokenCount);
@@ -260,7 +260,7 @@ export function useGenerationLogic() {
 				signal: ac.signal,
 				...(isMiyapadEndpoint ? { proxyEndpoint: sessionStorage.proxyEndpoint } : {}),
 				...customParams
-			} as any)) {
+			})) {
 				if (myId !== activeGenId.current) break;
 				ac.signal.throwIfAborted();
 				const chunkData = chunk as any;

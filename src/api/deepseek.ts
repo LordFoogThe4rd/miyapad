@@ -32,7 +32,7 @@ function deepseekConvertOptions(options: any) {
 }
 
 export async function* deepseekChatCompletion({ endpoint, endpointAPIKey, proxyEndpoint, signal, ...options }: { endpoint: any; endpointAPIKey: any; proxyEndpoint: any; signal: any; [key: string]: any }) {
-  const opts = {...options} as any;
+  const opts = {...options};
   const finalEndpoint = proxyEndpoint ?? endpoint;
   const res = await fetch(`${finalEndpoint}/chat/completions`, {
     method: 'POST',
@@ -92,7 +92,7 @@ export async function* deepseekChatCompletion({ endpoint, endpointAPIKey, proxyE
 }
 
 export async function* deepseekCompletion({ endpoint, endpointAPIKey, proxyEndpoint, signal, ...options }: { endpoint: any; endpointAPIKey: any; proxyEndpoint: any; signal: any; [key: string]: any }) {
-  const opts = {...options} as any;
+  const opts = {...options};
   const finalEndpoint = proxyEndpoint ?? endpoint;
   const res = await fetch(`${finalEndpoint}/beta/completions`, {
     method: 'POST',

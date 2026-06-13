@@ -393,7 +393,7 @@ export function AppLayout() {
 				content: finalPromptText,
 					signal: ac.signal,
 					...(isMiyapadEndpoint ? { proxyEndpoint: sessionStorage.proxyEndpoint } : {})
-				} as any)
+				})
 			);
 				setTokens(tokenCount);
 			} catch (e: any) {
@@ -419,7 +419,7 @@ export function AppLayout() {
 					endpointAPIKey,
 					signal: ac.signal,
 					...(isMiyapadEndpoint ? { proxyEndpoint: sessionStorage.proxyEndpoint } : {})
-				} as any);
+				});
 				setOpenaiModels(models);
 			} catch (e: any) {
 				if (e.name !== 'AbortError') {

@@ -67,7 +67,7 @@ export async function loadServerTokenizer({ sessionEndpoint, model }: { sessionE
 	return data;
 }
 
-export async function getTokenCount({ endpoint, endpointAPI, endpointAPIKey, proxyEndpoint, signal, ...options }: { endpoint: any; endpointAPI: any; endpointAPIKey: any; proxyEndpoint: any; signal: any; [key: string]: any }) {
+export async function getTokenCount({ endpoint, endpointAPI, endpointAPIKey, proxyEndpoint, signal, ...options }: { endpoint: any; endpointAPI: any; endpointAPIKey?: any; proxyEndpoint?: any; signal: any; [key: string]: any }) {
 	endpoint = normalizeEndpoint(endpoint, endpointAPI);
 	switch (endpointAPI) {
 		case API_LLAMA_CPP:
@@ -98,7 +98,7 @@ export async function getTokenCount({ endpoint, endpointAPI, endpointAPIKey, pro
 	}
 }
 
-export async function getTokens({ endpoint, endpointAPI, endpointAPIKey, proxyEndpoint, signal, ...options }: { endpoint: any; endpointAPI: any; endpointAPIKey: any; proxyEndpoint: any; signal: any; [key: string]: any }) {
+export async function getTokens({ endpoint, endpointAPI, endpointAPIKey, proxyEndpoint, signal, ...options }: { endpoint: any; endpointAPI: any; endpointAPIKey?: any; proxyEndpoint?: any; signal: any; [key: string]: any }) {
 	// currently only implemented for llama.cpp and koboldcpp
 	// returns a json object in the format of:
 	// { ids:[ array of token ids ], str:[ array of detokenized ids ] }
@@ -130,7 +130,7 @@ export async function getTokens({ endpoint, endpointAPI, endpointAPIKey, proxyEn
 	}
 }
 
-export async function getModels({ endpoint, endpointAPI, endpointAPIKey, proxyEndpoint, signal, ...options }: { endpoint: any; endpointAPI: any; endpointAPIKey: any; proxyEndpoint: any; signal: any; [key: string]: any }) {
+export async function getModels({ endpoint, endpointAPI, endpointAPIKey, proxyEndpoint, signal, ...options }: { endpoint: any; endpointAPI: any; endpointAPIKey: any; proxyEndpoint?: any; signal: any; [key: string]: any }) {
 	endpoint = normalizeEndpoint(endpoint, endpointAPI);
 	switch (endpointAPI) {
 		case API_DEEPSEEK:
@@ -143,7 +143,7 @@ export async function getModels({ endpoint, endpointAPI, endpointAPIKey, proxyEn
 	}
 }
 
-export async function* completion({ endpoint, endpointAPI, endpointAPIKey, proxyEndpoint, signal, ...options }: { endpoint: any; endpointAPI: any; endpointAPIKey: any; proxyEndpoint: any; signal: any; [key: string]: any }) {
+export async function* completion({ endpoint, endpointAPI, endpointAPIKey, proxyEndpoint, signal, ...options }: { endpoint: any; endpointAPI: any; endpointAPIKey?: any; proxyEndpoint?: any; signal: any; [key: string]: any }) {
 	endpoint = normalizeEndpoint(endpoint, endpointAPI);
 	switch (endpointAPI) {
 		case API_LLAMA_CPP:
@@ -159,7 +159,7 @@ export async function* completion({ endpoint, endpointAPI, endpointAPIKey, proxy
 	}
 }
 
-export async function* chatCompletion({ endpoint, endpointAPI, endpointAPIKey, proxyEndpoint, signal, ...options }: { endpoint: any; endpointAPI: any; endpointAPIKey: any; proxyEndpoint: any; signal: any; [key: string]: any }) {
+export async function* chatCompletion({ endpoint, endpointAPI, endpointAPIKey, proxyEndpoint, signal, ...options }: { endpoint: any; endpointAPI: any; endpointAPIKey?: any; proxyEndpoint?: any; signal: any; [key: string]: any }) {
 	endpoint = normalizeEndpoint(endpoint, endpointAPI);
 	switch (endpointAPI) {
 		case API_DEEPSEEK:
@@ -168,7 +168,7 @@ export async function* chatCompletion({ endpoint, endpointAPI, endpointAPIKey, p
 	}
 }
 
-export async function abortCompletion({ endpoint, endpointAPI, proxyEndpoint, ...options }: { endpoint: any; endpointAPI: any; proxyEndpoint: any; [key: string]: any }) {
+export async function abortCompletion({ endpoint, endpointAPI, proxyEndpoint, ...options }: { endpoint: any; endpointAPI: any; proxyEndpoint?: any; [key: string]: any }) {
 	endpoint = normalizeEndpoint(endpoint, endpointAPI);
 	switch (endpointAPI) {
 		case API_KOBOLD_CPP:
@@ -177,6 +177,6 @@ export async function abortCompletion({ endpoint, endpointAPI, proxyEndpoint, ..
 		case API_OPENAI_COMPAT:
 			return await (endpointAPI === API_DEEPSEEK ? deepseekAbortCompletion : openaiOobaAbortCompletion)({ endpoint, proxyEndpoint, ...options });
 		case API_AI_HORDE:
-			return await aiHordeAbortCompletion({ endpoint, proxyEndpoint, ...options } as any);
+			return await aiHordeAbortCompletion({ endpoint, proxyEndpoint, ...options });
 	}
 }

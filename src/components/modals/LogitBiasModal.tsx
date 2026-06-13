@@ -94,7 +94,7 @@ export function LogitBiasModal({ isOpen, closeModal, biasState, apiConfig, cance
 					content: `!==${biasString}`.replace(/\\n/g,'\n'),
 					signal: ac.signal,
 					...(isMiyapadEndpoint ? { proxyEndpoint: sessionStorage.proxyEndpoint } : {})
-				} as any)
+				})
 			)) as any;
 			if (tokens.length === 0) {
 				setLastBiasError("Error: Tokenizer endpoint unavailable.");
@@ -109,7 +109,7 @@ export function LogitBiasModal({ isOpen, closeModal, biasState, apiConfig, cance
 					content: `!==`,
 					signal: ac.signal,
 					...(isMiyapadEndpoint ? { proxyEndpoint: sessionStorage.proxyEndpoint } : {})
-				} as any)
+				})
 			)) as any;
 				// Remove however many tokens !== is tokenized as for the workaround
 				tokens.ids = tokens.ids.slice(logitBiasWorkaround.ids.length);
