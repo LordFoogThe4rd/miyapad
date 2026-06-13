@@ -25,9 +25,9 @@ export function useGenerationLogic() {
 			if (myId !== activeGenId.current) return false;
 			fimLeftChunks!.push(chunk);
 			setPromptChunks((p: any) => [
-				...fimLeftChunks! as PromptChunk[],
-				...fimRightChunks! as PromptChunk[]
-			]);
+				...fimLeftChunks!,
+				...fimRightChunks!
+			] as any);
 			setTokens((t: any) => t + (chunk?.completion_probabilities?.length ?? 1));
 			return true;
 		}, undefined, true);

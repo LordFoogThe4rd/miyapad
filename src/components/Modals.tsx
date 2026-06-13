@@ -41,7 +41,8 @@ export function Modals({ toggleModal, currentThemeName, setCurrentThemeName, all
 		screenshotFontColor, setScreenshotFontColor,
 		screenshotAiTextColor, setScreenshotAiTextColor,
 		screenshotModelAvatarUrl, setScreenshotModelAvatarUrl,
-		connections, setConnections, selectedConnectionId
+		connections, setConnections, selectedConnectionId,
+		stoppingStringsError, drySequenceBreakersError, bannedTokensError
 	} = useSettings();
 	const { cancel, modalState, closeModal, instructModalState, setInstructModalState, promptArea, lastError, sessionEndpointConnecting, predictStartTokens, tokens, contextMenuState, setContextMenuState, setTriggerPredict, sessionEndpointError, setRejectedAPIKey } = useGeneration();
 
@@ -188,7 +189,7 @@ export function Modals({ toggleModal, currentThemeName, setCurrentThemeName, all
 			closeModal=${() => closeModal("preferences")}
 			settings=${{
 				fontSizeMultiplier, setFontSizeMultiplier,
-		spellCheck, setSpellCheck, stoppingStringsError, setStoppingStringsError, drySequenceBreakersError, setDrySequenceBreakersError, bannedTokensError, setBannedTokensError,
+		spellCheck, setSpellCheck,
 		attachSidebar, setAttachSidebar,
 				preserveCursorPosition, setPreserveCursorPosition,
 				tokenHighlightMode, setTokenHighlightMode,
