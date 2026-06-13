@@ -343,7 +343,7 @@ export function useGenerationLogic() {
 		// Chat Mode
 		if (myId === activeGenId.current && !callback && (chatMode || useChatAPI) && predictCount > 0) {
 			// add bot EOT template (instruct prefix)
-			const eotBot = templates[selectedTemplate]?.instPre.replace(/\\n/g, '\n')
+			const eotBot = templates[selectedTemplate]?.instPre?.replace(/\\n/g, '\n') ?? ''
 			setPromptChunks((p: any) => [...p, { type: 'user', content: eotBot }])
 			prompt += `${eotBot}`
 		}

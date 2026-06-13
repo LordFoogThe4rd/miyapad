@@ -73,12 +73,12 @@ export function usePromptBuilder() {
 				}
 				leftPromptChunks = [
 					...promptChunks.slice(0, i),
-					...(left ? [{ type: 'user', content: left }] : [])
+					...(left ? [{ type: 'user' as const, content: left }] : [])
 				];
 
 				let right = sides[1];
 				rightPromptChunks = [
-					...(right ? [{ type: 'user', content: right }] : []),
+					...(right ? [{ type: 'user' as const, content: right }] : []),
 					...promptChunks.slice(i + 1, promptChunks.length),
 				];
 				break;

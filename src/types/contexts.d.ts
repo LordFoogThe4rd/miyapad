@@ -244,7 +244,7 @@ export interface GenerationState {
   showProbs: boolean;
   setShowProbs: Dispatch<boolean>;
   cancel: (() => void) | null;
-  setCancel: Dispatch<(() => void) | null>;
+  setCancel: Dispatch<SetStateAction<(() => void) | null>>;
   sessionEndpointConnecting: boolean;
   setSessionEndpointConnecting: Dispatch<boolean>;
   sessionEndpointError: string | undefined;
@@ -254,7 +254,7 @@ export interface GenerationState {
   openaiModels: any[];
   setOpenaiModels: Dispatch<any[]>;
   tokens: number;
-  setTokens: Dispatch<number>;
+  setTokens: Dispatch<SetStateAction<number>>;
   tokensPerSec: number;
   setTokensPerSec: Dispatch<number>;
   predictStartTokens: number;
@@ -276,7 +276,7 @@ export interface GenerationState {
   promptPreviewChunks: PromptChunk[];
   setPromptPreviewChunks: Dispatch<SetStateAction<PromptChunk[]>>;
   promptPreviewReroll: number;
-  setPromptPreviewReroll: Dispatch<number>;
+  setPromptPreviewReroll: Dispatch<SetStateAction<number>>;
   ttsAvailable: boolean;
   setTTSAvailable: Dispatch<boolean>;
   triggerPredict: boolean;
