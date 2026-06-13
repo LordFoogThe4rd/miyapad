@@ -367,7 +367,7 @@ async function* openaiBufferUtf8Stream(stream: Iterable<any> | AsyncIterable<any
 	const decoder = new TextDecoder('utf-8', { fatal: false });
 
 	function parseEscapedString(escapedStr: any) {
-		const decoded = escapedStr.replace(/\\x([0-9a-fA-F]{2})/g, (_, hex: string) => String.fromCharCode(parseInt(hex, 16)));
+		const decoded = escapedStr.replace(/\\x([0-9a-fA-F]{2})/g, (_: string, hex: string) => String.fromCharCode(parseInt(hex, 16)));
 		return new TextEncoder().encode(decoded);
 	}
 

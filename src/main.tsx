@@ -55,10 +55,10 @@ async function main() {
 				templateStorage=${templateStorage}
 				themeStorage=${themeStorage}
 				connectionStorage=${connectionStorage}
-				useSessionState=${(name: any, initialState: any) => useSessionState(sessionStorage, name, initialState)}
-				useDBTemplates=${(initialState: any) => useStorageState(templateStorage, initialState)}
-				useDBThemes=${(initialState: any) => useStorageState(themeStorage, initialState)}
-				useDBConnections=${(initialState: any) => useStorageState(connectionStorage, initialState)}
+				useSessionState=${(name: string, initialState: any) => useSessionState(sessionStorage, name, initialState)}
+				useDBTemplates=${(initialState: any) => useStorageState(templateStorage, initialState) as [Record<string, InstructTemplate>, React.Dispatch<React.SetStateAction<Record<string, InstructTemplate>>>]}
+				useDBThemes=${(initialState: any) => useStorageState(themeStorage, initialState) as [Record<string, ThemeData>, React.Dispatch<React.SetStateAction<Record<string, ThemeData>>>]}
+				useDBConnections=${(initialState: any) => useStorageState(connectionStorage, initialState) as [Record<string, ConnectionData>, React.Dispatch<React.SetStateAction<Record<string, ConnectionData>>>]}
 				isMiyapadEndpoint=${isMiyapadEndpoint}/>
 		</${ErrorBoundary}>`);
 }
