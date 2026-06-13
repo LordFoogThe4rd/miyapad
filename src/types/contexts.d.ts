@@ -8,15 +8,15 @@ interface PromptChunk {
   top_logprobs?: any;
 }
 
-interface SettingsState {
+export interface SettingsState {
   sessionStorage: SessionStorage;
   templateStorage: TemplateStorage;
   themeStorage: ThemeStorage;
   connectionStorage: ConnectionStorage;
   useSessionState: <T>(name: string, initialState: T) => [T, Dispatch<SetStateAction<T>>];
-  useDBTemplates: <T>(initialState: T) => [Record<string, InstructTemplate>, Dispatch<SetStateAction<Record<string, InstructTemplate>>>];
-  useDBThemes: <T>(initialState: T) => [Record<string, ThemeData>, Dispatch<SetStateAction<Record<string, ThemeData>>>];
-  useDBConnections: <T>(initialState: T) => [Record<string, ConnectionData>, Dispatch<SetStateAction<Record<string, ConnectionData>>>];
+  useDBTemplates: (initialState: Record<string, InstructTemplate>) => [Record<string, InstructTemplate>, Dispatch<SetStateAction<Record<string, InstructTemplate>>>];
+  useDBThemes: (initialState: Record<string, ThemeData>) => [Record<string, ThemeData>, Dispatch<SetStateAction<Record<string, ThemeData>>>];
+  useDBConnections: (initialState: Record<string, ConnectionData>) => [Record<string, ConnectionData>, Dispatch<SetStateAction<Record<string, ConnectionData>>>];
   isMiyapadEndpoint: boolean;
   connections: Record<string, ConnectionData>;
   setConnections: Dispatch<SetStateAction<Record<string, ConnectionData>>>;
@@ -212,6 +212,8 @@ interface SettingsState {
   setScreenshotAiTextColor: Dispatch<SetStateAction<string>>;
   screenshotModelAvatarUrl: string;
   setScreenshotModelAvatarUrl: Dispatch<SetStateAction<string>>;
+  isMobile: boolean;
+  setIsMobile: Dispatch<SetStateAction<boolean>>;
 }
 
 export interface GenerationState {

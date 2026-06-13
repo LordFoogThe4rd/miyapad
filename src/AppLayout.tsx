@@ -61,7 +61,8 @@ export function AppLayout() {
 		showMarkdownPreview, setShowMarkdownPreview, ttsEnabled, setTTSEnabled, ttsVoiceId, setTTSVoiceId, ttsPitch, setTTSPitch,
 		ttsRate, setTTSRate, ttsVolume, setTTSVolume, ttsSpeakInputs, setTTSSpeakInputs, ttsMaxUserInput, setTTSMaxUserInput,
 		useServerTokenization,
-		tokenizerModel
+		tokenizerModel,
+		isMobile, setIsMobile
 	} = useSettings();
 
 	const {
@@ -532,13 +533,11 @@ export function AppLayout() {
 
 	const sidebar = useRef<HTMLDivElement | null>(null);
 	const [sidebarHeight, setSidebarHeight] = useState(0);
-	const [isMobile, setIsMobile] = useState(false);
 	useEffect(() => {
 		const el = sidebar.current;
 		if (!el) return;
 		setSidebarHeight(el.scrollHeight);
 		const observer = new SVResizeObserver(() => {
-			setIsMobile(window.innerWidth < 767.8);
 			setSidebarHeight(el.scrollHeight);
 		});
 		observer.observe(el);

@@ -1,21 +1,26 @@
 import { html } from 'htm/react';
-import { createContext, useContext, useState, useEffect, type Dispatch, type SetStateAction } from 'react';
+import { createContext, useContext, useState, useEffect, type Dispatch, type SetStateAction, type ReactNode } from 'react';
 import { usePersistentState } from '../hooks/usePersistentState';
 import { defaultPresets } from '../defaults/presets';
 import { defaultThemes } from '../defaults/themes';
+import type { SessionStorage } from '../storage/SessionStorage';
+import type { TemplateStorage } from '../storage/TemplateStorage';
+import type { ThemeStorage } from '../storage/ThemeStorage';
+import type { ConnectionStorage } from '../storage/ConnectionStorage';
+import type { SettingsState } from '../types/contexts';
 
-export const SettingsContext = createContext<Record<string, any> | null>(null);
+export const SettingsContext = createContext<SettingsState | null>(null);
 
 export function SettingsProvider({ children, sessionStorage, templateStorage, themeStorage, connectionStorage, useSessionState, useDBTemplates, useDBThemes, useDBConnections, isMiyapadEndpoint }: {
-	children: any;
-	sessionStorage: any;
-	templateStorage: any;
-	themeStorage: any;
-	connectionStorage: any;
+	children: ReactNode;
+	sessionStorage: SessionStorage;
+	templateStorage: TemplateStorage;
+	themeStorage: ThemeStorage;
+	connectionStorage: ConnectionStorage;
 	useSessionState: <T>(name: string, initialState: T) => [T, Dispatch<SetStateAction<T>>];
-	useDBTemplates: (initialState: unknown) => [Record<string, InstructTemplate>, Dispatch<SetStateAction<Record<string, InstructTemplate>>>];
-	useDBThemes: (initialState: unknown) => [Record<string, ThemeData>, Dispatch<SetStateAction<Record<string, ThemeData>>>];
-	useDBConnections: (initialState: unknown) => [Record<string, ConnectionData>, Dispatch<SetStateAction<Record<string, ConnectionData>>>];
+	useDBTemplates: (initialState: Record<string, InstructTemplate>) => [Record<string, InstructTemplate>, Dispatch<SetStateAction<Record<string, InstructTemplate>>>];
+	useDBThemes: (initialState: Record<string, ThemeData>) => [Record<string, ThemeData>, Dispatch<SetStateAction<Record<string, ThemeData>>>];
+	useDBConnections: (initialState: Record<string, ConnectionData>) => [Record<string, ConnectionData>, Dispatch<SetStateAction<Record<string, ConnectionData>>>];
 	isMiyapadEndpoint: boolean;
 }) {
 	const [templates, setTemplates] = useDBTemplates(defaultPresets.instructTemplates);
@@ -122,7 +127,15 @@ export function SettingsProvider({ children, sessionStorage, templateStorage, th
 	const [ttsSpeakInputs, setTTSSpeakInputs] = usePersistentState('ttsSpeakInputs', true);
 	const [ttsMaxUserInput, setTTSMaxUserInput] = usePersistentState('ttsMaxUserInput', 50);
 
-	const [connections, setConnections] = useDBConnections({});
+	const [isMobile, setIsMobile] = useState(window.innerWidth < 767.8);
+
+	useEffect(() => {
+		const onResize = () => setIsMobile(window.innerWidth < 767.8);
+		window.addEventListener('resize', onResize);
+		return () => window.removeEventListener('resize', onResize);
+	}, []);
+
+		const [connections, setConnections] = useDBConnections({});
 	const [selectedConnectionId, setSelectedConnectionId] = useSessionState('connectionId', 'custom');
 	const [useServerTokenization, setUseServerTokenization] = usePersistentState('useServerTokenization', false);
 	const [tokenizerModel, setTokenizerModel] = usePersistentState('tokenizerModel', null);
@@ -164,7 +177,7 @@ export function SettingsProvider({ children, sessionStorage, templateStorage, th
 		authorNoteDepth, setAuthorNoteDepth, worldInfo, setWorldInfo, sillyTarvernWorldInfoJSON, setSillyTarvernWorldInfoJSON,
 		enabledSamplers, setEnabledSamplers, grammar, setGrammar, useChatAPI, setUseChatAPI, useTokenStreaming, setUseTokenStreaming,
 		disableLogprobs, setDisableLogprobs, postSamplingProbs, setPostSamplingProbs, showPromptPreview, setShowPromptPreview,
-		promptPreviewTokens, setPromptPreviewTokens, currentThemeName, setCurrentThemeName, allThemes, setAllThemes,
+		promptPreviewTokens, setPromptPreviewTokens, isMobile, setIsMobile, currentThemeName, setCurrentThemeName, allThemes, setAllThemes,
 		showMarkdownPreview, setShowMarkdownPreview, ttsEnabled, setTTSEnabled, ttsVoiceId, setTTSVoiceId, ttsPitch, setTTSPitch,
 		ttsRate, setTTSRate, ttsVolume, setTTSVolume, ttsSpeakInputs, setTTSSpeakInputs, ttsMaxUserInput, setTTSMaxUserInput,
 		useServerTokenization, setUseServerTokenization, tokenizerModel, setTokenizerModel,

@@ -58,9 +58,9 @@ async function main() {
 				themeStorage=${themeStorage}
 				connectionStorage=${connectionStorage}
 				useSessionState=${boundUseSessionState}
-				useDBTemplates=${(initialState: unknown) => useStorageState<Record<string, InstructTemplate>>(templateStorage, initialState as Record<string, InstructTemplate>)}
-				useDBThemes=${(initialState: unknown) => useStorageState<Record<string, ThemeData>>(themeStorage, initialState as Record<string, ThemeData>)}
-				useDBConnections=${(initialState: unknown) => useStorageState<Record<string, ConnectionData>>(connectionStorage, initialState as Record<string, ConnectionData>)}
+				useDBTemplates=${(initialState: Record<string, InstructTemplate>) => useStorageState(templateStorage, initialState)}
+				useDBThemes=${(initialState: Record<string, ThemeData>) => useStorageState(themeStorage, initialState)}
+				useDBConnections=${(initialState: Record<string, ConnectionData>) => useStorageState(connectionStorage, initialState)}
 				isMiyapadEndpoint=${isMiyapadEndpoint}/>
 		</${ErrorBoundary}>`);
 }
