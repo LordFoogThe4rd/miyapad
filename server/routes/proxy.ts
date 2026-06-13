@@ -139,19 +139,19 @@ export default function(app: Express): void {
                 (response.data as Readable).destroy();
             });
         } catch (e: unknown) {
-            const err = e as any;
-            if (err.response) {
-                if (err.response.data?.pipe) {
+            if (axios.isAxiosError(e) && e.response) {
+                const responseData = e.response.data as Readable | undefined;
+                if (responseData?.pipe) {
                     const chunks: Buffer[] = [];
-                    err.response.data.on('data', (c: Buffer) => chunks.push(c));
-                    err.response.data.on('end', () => {
+                    responseData.on('data', (c: Buffer) => chunks.push(c));
+                    responseData.on('end', () => {
                         const body = Buffer.concat(chunks).toString('utf8');
-                        res.status(err.response.status).json({ error: body });
+                        res.status(e.response.status).json({ error: body });
                     });
                 } else {
-                    res.status(err.response.status).json({ error: err.response.data });
+                    res.status(e.response.status).json({ error: e.response.data });
                 }
-            } else if (err.request) {
+            } else if (axios.isAxiosError(e) && e.request) {
                 res.status(504).json({ error: 'No response from target server.' });
             } else {
                 res.status(500).json({ error: 'Error setting up request to target server.' });
