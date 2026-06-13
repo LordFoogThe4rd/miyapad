@@ -143,7 +143,7 @@ export async function getModels({ endpoint, endpointAPI, endpointAPIKey, proxyEn
 	}
 }
 
-export async function* completion({ endpoint, endpointAPI, endpointAPIKey, proxyEndpoint, signal, ...options }: { endpoint: any; endpointAPI: any; endpointAPIKey?: any; proxyEndpoint?: any; signal: any; [key: string]: any }) {
+export async function* completion({ endpoint, endpointAPI, endpointAPIKey, proxyEndpoint, signal, ...options }: { endpoint: any; endpointAPI: any; endpointAPIKey?: any; proxyEndpoint?: any; signal: any; [key: string]: any }): AsyncGenerator<CompletionChunk | AIHordeChunk, void, unknown> {
 	endpoint = normalizeEndpoint(endpoint, endpointAPI);
 	switch (endpointAPI) {
 		case API_LLAMA_CPP:
@@ -159,7 +159,7 @@ export async function* completion({ endpoint, endpointAPI, endpointAPIKey, proxy
 	}
 }
 
-export async function* chatCompletion({ endpoint, endpointAPI, endpointAPIKey, proxyEndpoint, signal, ...options }: { endpoint: any; endpointAPI: any; endpointAPIKey?: any; proxyEndpoint?: any; signal: any; [key: string]: any }) {
+export async function* chatCompletion({ endpoint, endpointAPI, endpointAPIKey, proxyEndpoint, signal, ...options }: { endpoint: any; endpointAPI: any; endpointAPIKey?: any; proxyEndpoint?: any; signal: any; [key: string]: any }): AsyncGenerator<CompletionChunk, void, unknown> {
 	endpoint = normalizeEndpoint(endpoint, endpointAPI);
 	switch (endpointAPI) {
 		case API_DEEPSEEK:

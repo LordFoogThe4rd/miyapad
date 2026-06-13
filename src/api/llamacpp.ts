@@ -62,7 +62,7 @@ async function llamaCppDetokenize({ endpoint, endpointAPIKey, proxyEndpoint, sig
 	return content
 }
 
-export async function* llamaCppCompletion({ endpoint, endpointAPIKey, proxyEndpoint, signal, ...options }: { endpoint: any; endpointAPIKey: any; proxyEndpoint: any; signal: any; [key: string]: any }) {
+export async function* llamaCppCompletion({ endpoint, endpointAPIKey, proxyEndpoint, signal, ...options }: { endpoint: any; endpointAPIKey: any; proxyEndpoint: any; signal: any; [key: string]: any }): AsyncGenerator<CompletionChunk, void, unknown> {
 	const res = await fetch(`${proxyEndpoint ?? endpoint}/completion`, {
 		method: 'POST',
 		headers: {

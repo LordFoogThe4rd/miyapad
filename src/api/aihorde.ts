@@ -20,7 +20,7 @@ export async function aiHordeModels({ endpoint, endpointAPIKey, proxyEndpoint, s
 		.map((model: any) => model.name);
 }
 
-export async function* aiHordeCompletion({ endpoint, endpointAPIKey, proxyEndpoint, signal, ...options }: { endpoint: any; endpointAPIKey: any; proxyEndpoint: any; signal: any; [key: string]: any }) {
+export async function* aiHordeCompletion({ endpoint, endpointAPIKey, proxyEndpoint, signal, ...options }: { endpoint: any; endpointAPIKey: any; proxyEndpoint: any; signal: any; [key: string]: any }): AsyncGenerator<AIHordeChunk, void, unknown> {
 	const { model, prompt, ...params } = options;
 	const submitRes = await fetch(`${proxyEndpoint ?? endpoint}/v2/generate/text/async`, {
 		method: 'POST',

@@ -40,7 +40,7 @@ function deepseekConvertOptions(options: any) {
   return out;
 }
 
-export async function* deepseekChatCompletion({ endpoint, endpointAPIKey, proxyEndpoint, signal, ...options }: { endpoint: any; endpointAPIKey: any; proxyEndpoint: any; signal: any; [key: string]: any }) {
+export async function* deepseekChatCompletion({ endpoint, endpointAPIKey, proxyEndpoint, signal, ...options }: { endpoint: any; endpointAPIKey: any; proxyEndpoint: any; signal: any; [key: string]: any }): AsyncGenerator<CompletionChunk, void, unknown> {
   const opts = {...options};
   const finalEndpoint = proxyEndpoint ?? endpoint;
   const res = await fetch(`${finalEndpoint}/chat/completions`, {
@@ -100,7 +100,7 @@ export async function* deepseekChatCompletion({ endpoint, endpointAPIKey, proxyE
   }
 }
 
-export async function* deepseekCompletion({ endpoint, endpointAPIKey, proxyEndpoint, signal, ...options }: { endpoint: any; endpointAPIKey: any; proxyEndpoint: any; signal: any; [key: string]: any }) {
+export async function* deepseekCompletion({ endpoint, endpointAPIKey, proxyEndpoint, signal, ...options }: { endpoint: any; endpointAPIKey: any; proxyEndpoint: any; signal: any; [key: string]: any }): AsyncGenerator<CompletionChunk, void, unknown> {
   const opts = {...options};
   const finalEndpoint = proxyEndpoint ?? endpoint;
   const res = await fetch(`${finalEndpoint}/beta/completions`, {

@@ -260,7 +260,7 @@ function openaiConvertOptions(options: any, endpoint: any, isChat: any) {
 	return options;
 }
 
-export async function* openaiCompletion({ endpoint, endpointAPIKey, proxyEndpoint, signal, ...options }: { endpoint: any; endpointAPIKey: any; proxyEndpoint: any; signal: any; [key: string]: any }) {
+export async function* openaiCompletion({ endpoint, endpointAPIKey, proxyEndpoint, signal, ...options }: { endpoint: any; endpointAPIKey: any; proxyEndpoint: any; signal: any; [key: string]: any }): AsyncGenerator<CompletionChunk, void, unknown> {
 	let finalEndpoint = proxyEndpoint ?? endpoint;
 	const needsPath = (() => {
 		try {
@@ -405,7 +405,7 @@ async function* openaiBufferUtf8Stream(stream: any) {
 	}
 }
 
-export async function* openaiChatCompletion({ endpoint, endpointAPIKey, proxyEndpoint, signal, ...options }: { endpoint: any; endpointAPIKey: any; proxyEndpoint: any; signal: any; [key: string]: any }) {
+export async function* openaiChatCompletion({ endpoint, endpointAPIKey, proxyEndpoint, signal, ...options }: { endpoint: any; endpointAPIKey: any; proxyEndpoint: any; signal: any; [key: string]: any }): AsyncGenerator<CompletionChunk, void, unknown> {
 	let finalEndpoint = proxyEndpoint ?? endpoint;
 	const needsPath = (() => {
 		try {

@@ -263,21 +263,22 @@ export function useGenerationLogic() {
 			})) {
 				if (myId !== activeGenId.current) break;
 				ac.signal.throwIfAborted();
-				const chunkData = chunk as any;
-				if (chunkData.stopping_word)
-					chunkData.content = chunkData.stopping_word;
 				if (endpointAPI === API_AI_HORDE) {
-					switch (chunkData.status) {
+					const hordeChunk = chunk as AIHordeChunk;
+					switch (hordeChunk.status) {
 					case 'queue_init':
-						hordeTaskId.current = chunkData.taskId;
+						hordeTaskId.current = hordeChunk.taskId;
 						continue;
 					case 'queue_status':
-						setHordeQueuePos(chunkData.position);
-						setHordeProcessing(chunkData.processing);
+						setHordeQueuePos(hordeChunk.position);
+						setHordeProcessing(hordeChunk.processing);
 						continue;
 					}
 				}
-				if (!chunkData.content) {
+				const compChunk = chunk as CompletionChunk;
+				if (compChunk.stopping_word)
+					compChunk.content = compChunk.stopping_word;
+				if (!compChunk.content) {
 					continue;
 				}
 				if (startTime === 0) {
