@@ -318,6 +318,7 @@ export function AppLayout() {
 	// selection or cursor position during prediction
 	useLayoutEffect(() => {
 		const elem = promptArea.current;
+		if (!elem) return;
 		const activePromptText = promptText;
 		if (elem.value === activePromptText) {
 			return;
@@ -377,9 +378,12 @@ export function AppLayout() {
 	useLayoutEffect(() => {
 		if (cancel || promptPreviewText)
 			return;
-		promptArea.current.scrollTarget = undefined;
-		promptArea.current.scrollTop = savedScrollTop;
-		promptOverlay.current.scrollTop = savedScrollTop;
+		const elem = promptArea.current;
+		const overlay = promptOverlay.current;
+		if (!elem || !overlay) return;
+		elem.scrollTarget = undefined;
+		elem.scrollTop = savedScrollTop;
+		overlay.scrollTop = savedScrollTop;
 	}, [savedScrollTop, tokenHighlightMode, showProbsMode]);
 
 	useEffect(() => {
@@ -442,7 +446,9 @@ export function AppLayout() {
 	useKeyboardShortcuts();
 
 	const applyChatTemplate = () => {
-		const promptString = promptArea.current.value;
+		const elem = promptArea.current;
+		if (!elem) return;
+		const promptString = elem.value;
 		if (!promptString.trim()) return;
 
 		let bestMessages: any[] = [];
@@ -473,7 +479,6 @@ export function AppLayout() {
 			else if (msg.role === 'assistant') newPrompt += msg.content;
 		}
 
-		const elem = promptArea.current;
 		elem.value = newPrompt;
 		if (elem.onInputHandler) {
 			elem.onInputHandler({ target: elem });
