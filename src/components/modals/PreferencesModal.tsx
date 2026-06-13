@@ -306,7 +306,7 @@ export function PreferencesModal({ isOpen, closeModal, settings }: any) {
 										onValueChange=${handleTokenizerChange}
 										options=${[
 											{ name: '(none)', value: '' },
-											...tokenizerList.map((t: any) => ({ name: t, value: t }))
+											...tokenizerList.map((t: string) => ({ name: t, value: t }))
 										]}/>
 									<button className="symbol-button" title="Refresh list"
 										onClick=${refreshTokenizers}>
