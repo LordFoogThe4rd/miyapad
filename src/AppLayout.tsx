@@ -32,6 +32,10 @@ import {
 import { useSettings } from './contexts/SettingsContext';
 import { useGeneration } from './contexts/GenerationContext';
 
+function isAbortError(e: unknown): e is Error {
+	return e instanceof Error && e.name === 'AbortError';
+}
+
 export function AppLayout() {
 	const {
 		sessionStorage, templateStorage, themeStorage, useSessionState, useDBTemplates, useDBThemes, isMiyapadEndpoint,
@@ -397,7 +401,7 @@ export function AppLayout() {
 			);
 				setTokens(tokenCount);
 			} catch (e: unknown) {
-				if ((e as Error).name !== 'AbortError')
+				if (!isAbortError(e))
 					reportError(e);
 			}
 		}, 500);
@@ -422,7 +426,7 @@ export function AppLayout() {
 				});
 				setOpenaiModels(models);
 			} catch (e: unknown) {
-				if ((e as Error).name !== 'AbortError') {
+				if (!isAbortError(e)) {
 					reportError(e);
 					const errStr = String(e);
 					if ((endpointAPI == API_OPENAI_COMPAT || endpointAPI == API_DEEPSEEK) && errStr.includes("401")) {
@@ -516,7 +520,7 @@ export function AppLayout() {
 
 		loadServerTokenizer({ sessionEndpoint: sessionStorage.sessionEndpoint, model: tokenizerModel })
 			.catch((e: unknown) => {
-				if ((e as Error).name !== 'AbortError')
+				if (!isAbortError(e))
 					reportError(e);
 			});
 	}, []);
