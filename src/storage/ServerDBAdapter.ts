@@ -1,5 +1,7 @@
 export class ServerDBAdapter {
-	constructor(sessionEndpoint) {
+	sessionEndpoint: string;
+
+	constructor(sessionEndpoint: any) {
 		this.sessionEndpoint = sessionEndpoint;
 	}
 
@@ -34,7 +36,7 @@ export class ServerDBAdapter {
 		};
 	}
 
-	async loadFromDatabase(db, storeName, key) {
+	async loadFromDatabase(db: any, storeName: any, key: any) {
 		return new Promise(async (resolve, reject) => {
 			const res = await db("/load", { storeName, key });
 			if (!res.ok) {
@@ -50,7 +52,7 @@ export class ServerDBAdapter {
 		});
 	}
 
-	async loadAllFromDatabase(db, storeName) {
+	async loadAllFromDatabase(db: any, storeName: any) {
 		return new Promise(async (resolve, reject) => {
 			const res = await db("/all", { storeName });
 			if (!res.ok) {
@@ -62,7 +64,7 @@ export class ServerDBAdapter {
 		});
 	}
 
-	async loadSessionInfoFromDatabase(db, storeName) {
+	async loadSessionInfoFromDatabase(db: any, storeName: any) {
 		return new Promise(async (resolve, reject) => {
 			const res = await db("/sessions", { storeName });
 			if (!res.ok) {
@@ -74,7 +76,7 @@ export class ServerDBAdapter {
 		});
 	}
 
-	async saveToDatabase(db, storeName, key, data) {
+	async saveToDatabase(db: any, storeName: any, key: any, data: any) {
 		return new Promise(async (resolve, reject) => {
 			const res = await db("/save", { storeName, key, data });
 			if (!res.ok) {
@@ -86,7 +88,7 @@ export class ServerDBAdapter {
 		});
 	}
 
-	async renameSessionInDatabase(db, storeName, key, newName) {
+	async renameSessionInDatabase(db: any, storeName: any, key: any, newName: any) {
 		return new Promise(async (resolve, reject) => {
 			const res = await db("/rename", { storeName, key, newName });
 			if (!res.ok) {
@@ -98,14 +100,14 @@ export class ServerDBAdapter {
 		});
 	}
 
-	async deleteFromDatabase(db, storeName, key) {
+	async deleteFromDatabase(db: any, storeName: any, key: any) {
 		return new Promise(async (resolve, reject) => {
 			const res = await db("/delete", { storeName, key });
 			if (!res.ok) {
 				reject(res.status);
 				return;
 			}
-			resolve();
+			resolve(undefined);
 		});
 	}
 }

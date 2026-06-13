@@ -1,9 +1,10 @@
 import { AbstractStorage } from './AbstractStorage';
 
 export class TemplateStorage extends AbstractStorage {
-	constructor(dbAdapter) {
+	templates: Record<string, InstructTemplate> = {};
+
+	constructor(dbAdapter: any) {
 		super('Templates', dbAdapter);
-		this.templates = {};
 	}
 
 	async init() {
@@ -11,7 +12,7 @@ export class TemplateStorage extends AbstractStorage {
 		await this.loadTemplates(db);
 	}
 
-	async performFullSave(newTemplates, writeOnly=false) {
+	async performFullSave(newTemplates: any, writeOnly: any = false) {
 		const db = await this.openDatabase();
 
 		// Check if the keys exists in input, if not, delete
@@ -44,7 +45,7 @@ export class TemplateStorage extends AbstractStorage {
 		return this.templates;
 	}
 
-	async loadTemplates(db) {
+	async loadTemplates(db: any) {
 		this.templates = await this.loadAllFromDatabase(db);
 	}
 }

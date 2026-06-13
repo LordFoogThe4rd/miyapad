@@ -1,6 +1,7 @@
 export class IndexedDBAdapter {
+	dbName: string = 'MiyaPad';
+
 	constructor() {
-		this.dbName = 'MiyaPad';
 	}
 
 	async init() {
@@ -24,16 +25,17 @@ export class IndexedDBAdapter {
 		} catch {}
 	}
 
-	async openDatabase() {
+	async openDatabase(): Promise<IDBDatabase> {
 		return new Promise((resolve, reject) => {
 			const openRequest = indexedDB.open(this.dbName, 5);
 
 			openRequest.onerror = () => reject(openRequest.error);
 			openRequest.onsuccess = () => resolve(openRequest.result);
 
-			openRequest.onupgradeneeded = (event) => {
-				const db = event.target.result;
-				const transaction = event.target.transaction;
+			openRequest.onupgradeneeded = (event: IDBVersionChangeEvent) => {
+				const request = event.target as IDBOpenDBRequest;
+				const db = request.result;
+				const transaction = request.transaction!;
 
 				for (const storeName of ["Sessions", "Templates", "Names", "Themes", "Connections"]) {
 					if (!db.objectStoreNames.contains(storeName)) {
@@ -47,8 +49,8 @@ export class IndexedDBAdapter {
 						const sessionsStore = transaction.objectStore("Sessions");
 						const namesStore = transaction.objectStore("Names");
 
-						sessionsStore.openCursor().onsuccess = (e) => {
-							const cursor = e.target.result;
+						sessionsStore.openCursor().onsuccess = (e: Event) => {
+							const cursor = (e.target as IDBRequest<IDBCursorWithValue | null>).result;
 							if (cursor) {
 								const sessionData = cursor.value;
 								const sessionId = cursor.key;
@@ -68,7 +70,7 @@ export class IndexedDBAdapter {
 		});
 	}
 
-	async loadFromDatabase(db, storeName, key) {
+	async loadFromDatabase(db: any, storeName: any, key: any) {
 		return new Promise((resolve, reject) => {
 			const tx = db.transaction(storeName, 'readonly');
 			const store = tx.objectStore(storeName);
@@ -79,7 +81,7 @@ export class IndexedDBAdapter {
 		});
 	}
 
-	async loadAllFromDatabase(db, storeName) {
+	async loadAllFromDatabase(db: any, storeName: any) {
 		return new Promise((resolve, reject) => {
 			const tx = db.transaction(storeName, 'readonly');
 			const store = tx.objectStore(storeName);
@@ -87,10 +89,10 @@ export class IndexedDBAdapter {
 
 			let allTables = {};
 
-			request.onsuccess = async (event) => {
-				const cursor = event.target.result;
+			request.onsuccess = async (event: Event) => {
+				const cursor = (event.target as IDBRequest<IDBCursorWithValue | null>).result;
 				if (cursor) {
-					allTables[cursor.key] = cursor.value;
+					allTables[cursor.key as string] = cursor.value;
 					cursor.continue();
 				} else {
 					resolve(allTables);
@@ -100,7 +102,7 @@ export class IndexedDBAdapter {
 		});
 	}
 
-	async loadSessionInfoFromDatabase(db, storeName) {
+	async loadSessionInfoFromDatabase(db: any, storeName: any) {
 		return new Promise((resolve, reject) => {
 			const tx = db.transaction("Names", 'readonly');
 			const store = tx.objectStore("Names");
@@ -108,11 +110,11 @@ export class IndexedDBAdapter {
 
 			let allTables = {};
 
-			request.onsuccess = async (event) => {
-				const cursor = event.target.result;
+			request.onsuccess = async (event: Event) => {
+				const cursor = (event.target as IDBRequest<IDBCursorWithValue | null>).result;
 				if (cursor) {
 					if (cursor.key !== 'nextSessionId' && cursor.key !== 'selectedSessionId') {
-						allTables[cursor.key] = cursor.value;
+						allTables[cursor.key as string] = cursor.value;
 					}
 					cursor.continue();
 				} else {
@@ -124,18 +126,18 @@ export class IndexedDBAdapter {
 	}
 	
 
-	async saveToDatabase(db, storeName, key, data) {
+	async saveToDatabase(db: any, storeName: any, key: any, data: any) {
 		return new Promise((resolve, reject) => {
 			const tx = db.transaction(storeName, 'readwrite');
 			const store = tx.objectStore(storeName);
 			const request = store.put(data, key);
 
-			request.onsuccess = () => resolve();
+			request.onsuccess = () => resolve(undefined);
 			request.onerror = () => reject(request.error);
 		});
 	}
 
-	async renameSessionInDatabase(db, storeName, key, newName) {
+	async renameSessionInDatabase(db: any, storeName: any, key: any, newName: any) {
 		return new Promise((resolve, reject) => {
 			const tx = db.transaction("Names", 'readwrite');
 			const store = tx.objectStore("Names");
@@ -149,20 +151,20 @@ export class IndexedDBAdapter {
 					dataToPut = { name: newName, created: null, modified: Date.now() };
 				}
 				const putRequest = store.put(dataToPut, key);
-				putRequest.onsuccess = () => resolve();
+				putRequest.onsuccess = () => resolve(undefined);
 				putRequest.onerror = () => reject(putRequest.error);
 			};
 			getRequest.onerror = () => reject(getRequest.error);
 		});
 	}
 
-	async deleteFromDatabase(db, storeName, key) {
+	async deleteFromDatabase(db: any, storeName: any, key: any) {
 		return new Promise((resolve, reject) => {
 			const tx = db.transaction(storeName, 'readwrite');
 			const store = tx.objectStore(storeName);
 			const request = store.delete(key);
 
-			request.onsuccess = () => resolve();
+			request.onsuccess = () => resolve(undefined);
 			request.onerror = () => reject(request.error);
 		});
 	}
@@ -173,8 +175,8 @@ export class IndexedDBAdapter {
 		const storeNames = Array.from(db.objectStoreNames);
 
 		const transaction = db.transaction(storeNames, 'readonly');
-		transaction.onerror = (event) => {
-			console.error("Transaction error:", event.target.error);
+		transaction.onerror = (event: Event) => {
+			console.error("Transaction error:", (event.target as IDBTransaction).error);
 		};
 
 		for (const storeName of storeNames) {
@@ -183,17 +185,17 @@ export class IndexedDBAdapter {
 			const request = store.openCursor();
 
 			await new Promise((resolve, reject) => {
-				request.onsuccess = (event) => {
-					const cursor = event.target.result;
+				request.onsuccess = (event: Event) => {
+					const cursor = (event.target as IDBRequest<IDBCursorWithValue | null>).result;
 					if (cursor) {
 						exportObject[storeName].push({ key: cursor.key, value: cursor.value });
 						cursor.continue();
 					} else {
-						resolve();
+						resolve(undefined);
 					}
 				};
-				request.onerror = (event) => {
-					reject(event.target.error);
+				request.onerror = (event: Event) => {
+					reject((event.target as IDBRequest).error);
 				};
 			});
 		}
@@ -201,13 +203,13 @@ export class IndexedDBAdapter {
 		return exportObject;
 	}
 
-	async importDatabase(data) {
+	async importDatabase(data: any) {
 		const db = await this.openDatabase();
 		const storeNames = Array.from(db.objectStoreNames);
 		const transaction = db.transaction(storeNames, 'readwrite');
 
-		transaction.onerror = (event) => {
-			console.error("Transaction error:", event.target.error);
+		transaction.onerror = (event: Event) => {
+			console.error("Transaction error:", (event.target as IDBTransaction).error);
 		};
 
 		for (const storeName of storeNames) {
@@ -222,10 +224,10 @@ export class IndexedDBAdapter {
 
 		return new Promise((resolve, reject) => {
 			transaction.oncomplete = () => {
-				resolve();
+				resolve(undefined);
 			};
-			transaction.onerror = (event) => {
-				reject(event.target.error);
+			transaction.onerror = (event: Event) => {
+				reject((event.target as IDBTransaction).error);
 			};
 		});
 	}

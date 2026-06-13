@@ -1,7 +1,7 @@
 import { AbstractStorage } from './AbstractStorage';
 
 export class NameStorage extends AbstractStorage {
-	constructor(dbAdapter) {
+	constructor(dbAdapter: any) {
 		super('Names', dbAdapter);
 	}
 }
