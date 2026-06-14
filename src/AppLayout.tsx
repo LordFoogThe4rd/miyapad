@@ -450,7 +450,7 @@ export function AppLayout() {
 		const promptString = elem.value;
 		if (!promptString.trim()) return;
 
-		let bestMessages: any[] = [];
+		let bestMessages: ChatMessage[] = [];
 		for (const templateName of Object.keys(templates)) {
 			const messages = convertChatToJSON(promptString, templates[templateName]);
 			if (messages.length > bestMessages.length) {
