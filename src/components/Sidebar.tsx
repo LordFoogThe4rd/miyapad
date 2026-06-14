@@ -147,8 +147,8 @@ export function Sidebar({ sidebarRef, toggleModal, currentThemeName, setCurrentT
 		setEndpointAPI(value);
 	}
 
-	const insertTemplate = (sysInst: any) => {
-		let [prefix,suffix] = sysInst == "sys"
+	const insertTemplate = (sysInst: "sys" | "inst") => {
+		let [prefix,suffix] = sysInst === "sys"
 			? [templates[selectedTemplate]?.sysPre  || "", templates[selectedTemplate]?.sysSuf  || ""]
 			: [templates[selectedTemplate]?.instPre || "", templates[selectedTemplate]?.instSuf || ""];
 		if (!(prefix || suffix))
