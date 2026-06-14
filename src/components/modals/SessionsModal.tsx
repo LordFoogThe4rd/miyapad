@@ -1,5 +1,5 @@
 import { html } from 'htm/react';
-import { useState, useEffect, useMemo } from 'react';
+import { useState, useEffect, useMemo, type ChangeEvent, type KeyboardEvent, type MouseEvent } from 'react';
 import { Modal } from '../Modal';
 import { InputBox } from '../controls/InputBox';
 import { SelectBox } from '../controls/SelectBox';
@@ -14,22 +14,22 @@ interface SessionsModalProps {
   cancel: (() => void) | null;
 }
 
-function formatDate(ts: any) {
+function formatDate(ts: number | null | undefined) {
 	if (!ts) return '—';
 	const d = new Date(ts);
-	const pad = (n: any) => String(n).padStart(2, '0');
+	const pad = (n: number) => String(n).padStart(2, '0');
 	return `${d.getFullYear()}-${pad(d.getMonth() + 1)}-${pad(d.getDate())} ${pad(d.getHours())}:${pad(d.getMinutes())}`;
 }
 
 type TagGroup = Array<{ pattern: string; negate: boolean; regex: RegExp | null }>;
 
-function compileTagRegex(pattern: any) {
+function compileTagRegex(pattern: string) {
 	if (!pattern.includes('*')) return null;
 	const escaped = pattern.replace(/[.+?^${}()|[\]\\]/g, '\\$&').replace(/\*/g, '.*');
 	return new RegExp('^' + escaped + '$', 'i');
 }
 
-function parseTagFilter(input: any): TagGroup[] | null {
+function parseTagFilter(input: string): TagGroup[] | null {
 	if (!input.trim()) return null;
 	const tokens = input.trim().split(/\s+/);
 	const groups: TagGroup[] = [[]];
@@ -56,17 +56,17 @@ function parseTagFilter(input: any): TagGroup[] | null {
 	return groups.filter((g) => g.length > 0);
 }
 
-function tagMatches(tag: any, pattern: any, regex: any) {
+function tagMatches(tag: string, pattern: string, regex: RegExp | null) {
 	if (regex) return regex.test(tag);
 	return tag.toLowerCase() === pattern.toLowerCase();
 }
 
-function sessionMatches(session: any, groups: TagGroup[] | null) {
+function sessionMatches(session: SessionData, groups: TagGroup[] | null) {
 	if (!groups) return true;
 	if (groups.length === 0) return true;
 	return groups.some((group: TagGroup) =>
 		group.every(({ pattern, negate, regex }) => {
-			const match = (session.tags || []).some((tag: any) => tagMatches(tag, pattern, regex));
+			const match = (session.tags || []).some((tag: string) => tagMatches(tag, pattern, regex));
 			return negate ? !match : match;
 		})
 	);
@@ -127,7 +127,7 @@ export function SessionsModal({ isOpen, closeModal, sessionStorage, cancel }: Se
 		});
 
 		// Sort comparator
-		const compare = ([idA, a]: any, [idB, b]: any) => {
+		const compare = ([idA, a]: [string, SessionData], [idB, b]: [string, SessionData]) => {
 			let cmp = 0;
 			if (sortBy === 'name') {
 				cmp = (a.name || '').localeCompare(b.name || '');
@@ -149,26 +149,25 @@ export function SessionsModal({ isOpen, closeModal, sessionStorage, cancel }: Se
 		return [...pinned, ...unpinned];
 	}, [version, searchQuery, parsedTagFilter, sortBy, sortAsc, sessionStorage.sessions]);
 
-	const switchSession = async (sessionId: any) => {
+	const switchSession = async (sessionId: string | number) => {
 		if (sessionStorage.selectedSession != sessionId) {
 			await sessionStorage.switchSession(sessionId);
 		}
 		closeModal();
 	};
 
-	const startRenameSession = (sessionId: any, name: any) => {
+	const startRenameSession = (sessionId: string | number, name: string) => {
 		setRenameSessionName(name);
 		setRenamingId(sessionId);
 	};
 
-	const renameSession = async (sessionId: any) => {
-		if (renameSessionName) {
-			await sessionStorage.renameSession(sessionId, renameSessionName);
-			setRenamingId(undefined);
-		}
+	const renameSession = async (sessionId: string | number | undefined) => {
+		if (sessionId == null || !renameSessionName) return;
+		await sessionStorage.renameSession(sessionId, renameSessionName);
+		setRenamingId(undefined);
 	};
 
-	const deleteSession = async (sessionId: any) => {
+	const deleteSession = async (sessionId: string | number) => {
 		await sessionStorage.deleteSession(sessionId);
 	};
 
@@ -190,19 +189,19 @@ export function SessionsModal({ isOpen, closeModal, sessionStorage, cancel }: Se
 		fileInput.type = 'file';
 		fileInput.multiple = true;
 		fileInput.style.display = 'none';
-		fileInput.onchange = async (e: any) => {
+		fileInput.onchange = async (e: Event) => {
 			const files = (e.target as HTMLInputElement).files;
 			if (!files || files.length === 0)
 				return;
 
-			const sortedFiles = Array.from(files ?? []).sort((a: any, b: any) => a.lastModified - b.lastModified);
+			const sortedFiles = Array.from(files ?? []).sort((a: File, b: File) => a.lastModified - b.lastModified);
 			let lastNewId = null;
 
 			for (const file of sortedFiles) {
 				try {
 					const text = await new Promise<string>((resolve, reject) => {
 						const reader = new FileReader();
-						reader.onload = (e: any) => resolve((e.target as FileReader).result as string);
+						reader.onload = () => resolve(reader.result as string);
 						reader.onerror = () => reject(new Error(`Failed to read file: ${file.name}`));
 						reader.readAsText(file);
 					});
@@ -261,7 +260,7 @@ export function SessionsModal({ isOpen, closeModal, sessionStorage, cancel }: Se
 		await sessionStorage.switchSession(newId);
 	};
 
-	function handleKeyDown(sessionId: any, e: any) {
+	function handleKeyDown(sessionId: string | number | undefined, e: KeyboardEvent<HTMLInputElement>) {
 		if (e.key === 'Enter') {
 			if (isCreating)
 				createSession();
@@ -339,9 +338,9 @@ export function SessionsModal({ isOpen, closeModal, sessionStorage, cancel }: Se
 										type="text"
 										className="sessions-modal-inline-input"
 										value=${newSessionName}
-onChange=${(e: any) => setNewSessionName(e.target.value)}
-onKeyDown=${(e: any) => handleKeyDown(undefined, e)}
-onClick=${(e: any) => e.stopPropagation()}
+onChange=${(e: ChangeEvent<HTMLInputElement>) => setNewSessionName(e.target.value)}
+onKeyDown=${(e: KeyboardEvent<HTMLInputElement>) => handleKeyDown(undefined, e)}
+onClick=${(e: MouseEvent) => e.stopPropagation()}
 													autoFocus
 												/>
 								</td>
@@ -357,7 +356,7 @@ onClick=${(e: any) => e.stopPropagation()}
 							<tr key=${sessionId}
 								className="sessions-modal-row ${sessionStorage.selectedSession === +sessionId ? 'selected' : ''}"
 								onClick=${() => switchSession(+sessionId)}>
-								<td className="sessions-col-star" onClick=${(e: any) => e.stopPropagation()}>
+								<td className="sessions-col-star" onClick=${(e: MouseEvent) => e.stopPropagation()}>
 									<button className="sessions-action-btn"
 										title=${session.pinned ? "Unpin session" : "Pin session"}
 										onClick=${() => sessionStorage.togglePinSession(+sessionId)}>
@@ -370,9 +369,9 @@ onClick=${(e: any) => e.stopPropagation()}
 											type="text"
 											className="sessions-modal-inline-input"
 											value=${renameSessionName}
-											onChange=${(e: any) => setRenameSessionName(e.target.value)}
-											onKeyDown=${(e: any) => handleKeyDown(+sessionId, e)}
-onClick=${(e: any) => e.stopPropagation()}
+											onChange=${(e: ChangeEvent<HTMLInputElement>) => setRenameSessionName(e.target.value)}
+											onKeyDown=${(e: KeyboardEvent<HTMLInputElement>) => handleKeyDown(+sessionId, e)}
+onClick=${(e: MouseEvent) => e.stopPropagation()}
 									autoFocus
 								/>
 									` : html`
@@ -383,8 +382,8 @@ onClick=${(e: any) => e.stopPropagation()}
 													type="text"
 													className="sessions-modal-tag-input"
 													value=${editTagsValue}
-onChange=${(e: any) => setEditTagsValue(e.target.value)}
-onKeyDown=${(e: any) => {
+onChange=${(e: ChangeEvent<HTMLInputElement>) => setEditTagsValue(e.target.value)}
+onKeyDown=${(e: KeyboardEvent<HTMLInputElement>) => {
 														if (e.key === 'Enter') {
 															sessionStorage.setTags(+sessionId, editTagsValue);
 															setEditingTagsId(undefined);
@@ -397,12 +396,12 @@ onKeyDown=${(e: any) => {
 															sessionStorage.setTags(+sessionId, editTagsValue);
 															setEditingTagsId(undefined);
 														}}
-													onClick=${(e: any) => e.stopPropagation()}
+													onClick=${(e: MouseEvent) => e.stopPropagation()}
 													autoFocus
 													title="Enter comma-separated tags."/>
 											` : html`
 												<span className="sessions-modal-tags ${session.tags && session.tags.length > 0 ? '' : 'sessions-modal-tags-empty'}"
-													onClick=${(e: any) => {
+													onClick=${(e: MouseEvent) => {
 														e.stopPropagation();
 														setEditTagsValue(session.tags ? session.tags.join(', ') : '');
 														setEditingTagsId(sessionId);
@@ -415,14 +414,14 @@ onKeyDown=${(e: any) => {
 								</td>
 								<td className="sessions-col-modified">${formatDate(session.modified)}</td>
 								<td className="sessions-col-created">${formatDate(session.created)}</td>
-								<td className="sessions-col-actions" onClick=${(e: any) => e.stopPropagation()}>
+								<td className="sessions-col-actions" onClick=${(e: MouseEvent) => e.stopPropagation()}>
 									<div className="sessions-col-actions-inner">
 										${renamingId == sessionId ? html`
 											<button className="sessions-action-btn" onClick=${() => renameSession(+sessionId)}><${SVG_Confirm}/></button>
 											<button className="sessions-action-btn" onClick=${() => setRenamingId(undefined)}><${SVG_Cancel}/></button>
 										` : html`
 											<button className="sessions-action-btn" disabled=${disabled}
-												onClick=${() => startRenameSession(+sessionId, session.name)}>
+												onClick=${() => startRenameSession(+sessionId, session.name ?? '')}>
 												<${SVG_Rename}/>
 											</button>
 											<button className="sessions-action-btn" disabled=${disabled}

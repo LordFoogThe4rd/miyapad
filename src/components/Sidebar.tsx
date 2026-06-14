@@ -1,5 +1,5 @@
 import { html } from 'htm/react';
-import { useState, useEffect, useRef } from 'react';
+import { useState, useEffect, useRef, type FormEvent } from 'react';
 import { useSettings } from '../contexts/SettingsContext';
 import { useGeneration } from '../contexts/GenerationContext';
 import { API_LLAMA_CPP, API_KOBOLD_CPP, API_OPENAI_COMPAT, API_AI_HORDE, API_DEEPSEEK } from '../constants';
@@ -65,7 +65,7 @@ export function Sidebar({ sidebarRef, toggleModal, currentThemeName, setCurrentT
 	const maintConfigRef = useRef({ duration: 5, dbLoad: 0.5, mode: 'shutdown', interval: 60, walEnabled: false });
 	const saveTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
 
-	const saveMaintConfigToServer = (update: any) => {
+	const saveMaintConfigToServer = (update: Record<string, unknown>) => {
 		Object.assign(maintConfigRef.current, update);
 		if (saveTimerRef.current) clearTimeout(saveTimerRef.current);
 		saveTimerRef.current = setTimeout(async () => {
@@ -111,7 +111,7 @@ export function Sidebar({ sidebarRef, toggleModal, currentThemeName, setCurrentT
 		checkVersion();
 	}, [isMiyapadEndpoint]);
 
-	function switchEndpointAPI(value: any) {
+	function switchEndpointAPI(value: number) {
 		let url;
 		try {
 			url = new URL(endpoint);
@@ -193,7 +193,7 @@ export function Sidebar({ sidebarRef, toggleModal, currentThemeName, setCurrentT
 		elem.scrollTop = scrollTop;
 	};
 
-	const handleApplyConnection = (conn: any) => {
+	const handleApplyConnection = (conn: ConnectionData) => {
 		setEndpointAPI(conn.api);
 		if (conn.api !== API_AI_HORDE) {
 			setEndpoint(conn.endpoint);
@@ -262,7 +262,7 @@ export function Sidebar({ sidebarRef, toggleModal, currentThemeName, setCurrentT
 							   .filter(([_, c]) => c.enabled)
 							   .map(([id, c]) => ({ name: c.name, value: id }))
 						]}
-						onValueChange=${(val: any) => {
+						onValueChange=${(val: string) => {
 							if (val !== 'custom' && connections[val]) {
 								handleApplyConnection(connections[val]);
 							}
@@ -314,7 +314,7 @@ export function Sidebar({ sidebarRef, toggleModal, currentThemeName, setCurrentT
 					</div>`}
 			${(endpointAPI == API_OPENAI_COMPAT || endpointAPI == API_DEEPSEEK) && html`
 				<${InputBox} label="Model"
-					datalist=${openaiModels.map((model: any) => model.id || model)}
+					datalist=${openaiModels.map((model: string | { id: string }) => (typeof model === 'string' ? model : model.id))}
 					readOnly=${!!cancel}
 					value=${endpointModel}
 					onValueChange=${setEndpointModel}/>`}
@@ -648,7 +648,7 @@ export function Sidebar({ sidebarRef, toggleModal, currentThemeName, setCurrentT
 						placeholder="Anything written here will be injected at the head of the prompt. Tokens here DO count towards the Context Limit."
 						defaultValue=${memoryTokens.text}
 						value=${memoryTokens.text}
-						onInput=${(e: any) => handleMemoryTokensChange("text", e.target.value)}
+						onInput=${(e: FormEvent<HTMLTextAreaElement>) => handleMemoryTokensChange("text", e.currentTarget.value)}
 						id="memory-area"/>
 					<button
 						className="textAreaSettings"
@@ -664,7 +664,7 @@ export function Sidebar({ sidebarRef, toggleModal, currentThemeName, setCurrentT
 						placeholder="Anything written here will be injected ${authorNoteDepth} newlines from bottom into context."
 						defaultValue=${authorNoteTokens.text}
 						value=${authorNoteTokens.text}
-						onInput=${(e: any) => handleauthorNoteTokensChange("text", e.target.value)}
+						onInput=${(e: FormEvent<HTMLTextAreaElement>) => handleauthorNoteTokensChange("text", e.currentTarget.value)}
 						id="an-area"/>
 					<button
 						className="textAreaSettings"

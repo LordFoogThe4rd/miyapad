@@ -1,5 +1,5 @@
 import { html } from 'htm/react';
-import { useState, useEffect, useLayoutEffect, useRef } from 'react';
+import { useState, useEffect, useLayoutEffect, useRef, type FormEvent, type MouseEvent } from 'react';
 import { Modal } from '../Modal';
 import { InputBox } from '../controls/InputBox';
 import { SelectBox } from '../controls/SelectBox';
@@ -68,7 +68,7 @@ function GenericConnectionSettings({ connection, updateConnection }: GenericConn
 	};
 
 	const filteredModels = connection.models
-		? connection.models.filter((m: any) => m.toLowerCase().includes(search.toLowerCase()))
+		? connection.models.filter((m: string) => m.toLowerCase().includes(search.toLowerCase()))
 		: [];
 
 	const iconCheck = html`<svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="3"><polyline points="20 6 9 17 4 12"></polyline></svg>`;
@@ -77,21 +77,21 @@ function GenericConnectionSettings({ connection, updateConnection }: GenericConn
 		<div className="connection-content-scroll">
 			<${InputBox} label="Connection Name"
 				value=${connection.name}
-				onInput=${(e: any) => updateConnection('name', e.target.value)}
+				onInput=${(e: FormEvent<HTMLInputElement>) => updateConnection('name', (e.target as HTMLInputElement).value)}
 				onValueChange=${() => {}}
 			/>
 
 			<${InputBox} label="Base URL"
 				value=${connection.endpoint}
 				readOnly=${connection.api === API_DEEPSEEK}
-				onValueChange=${(val: any) => updateConnection('endpoint', val)}
+				onValueChange=${(val: string) => updateConnection('endpoint', val)}
 			/>
 
 			${connection.api !== API_LLAMA_CPP && connection.api !== API_KOBOLD_CPP && html`
 				<div className="hbox-flex" style=${{"flex-wrap": "unset"}}>
 					<${InputBox} label="API Key" type=${showKey ? 'text' : 'password'}
 						value=${connection.key}
-						onValueChange=${(val: any) => updateConnection('key', val)}
+						onValueChange=${(val: string) => updateConnection('key', val)}
 					/>
 					<button title=${showKey ? "Hide" : "Show"}
 						className="eye-button"
@@ -105,25 +105,25 @@ function GenericConnectionSettings({ connection, updateConnection }: GenericConn
 				<${Checkbox} label="Post Sampling Probs"
 					title="This returns the probabilities after applying the sampling chain. Note that disabling this will significantly reduce generation speed."
 					value=${connection.postSamplingProbs ?? true}
-					onValueChange=${(val: any) => updateConnection('postSamplingProbs', val)}
+					onValueChange=${(val: boolean) => updateConnection('postSamplingProbs', val)}
 				/>
-			`}
+`}
 ${(connection.api === API_OPENAI_COMPAT || connection.api === API_DEEPSEEK) && html`
 				<${Checkbox} label="Strict API"
 					title="If enabled, non-standard fields won't be included in API requests."
 					value=${connection.strict ?? false}
-					onValueChange=${(val: any) => updateConnection('strict', val)}
+					onValueChange=${(val: boolean) => updateConnection('strict', val)}
 				/>
 				<${Checkbox} label="Chat Completions API"
 					title="If enabled, the chat API endpoint will be used, and the prompt will be split into chat messages based on the delimiters defined in the selected instruct template."
 					value=${connection.chatAPI ?? false}
-					onValueChange=${(val: any) => updateConnection('chatAPI', val)}
+					onValueChange=${(val: boolean) => updateConnection('chatAPI', val)}
 				/>
 			`}
 
 			<${InputBox} label="Selected Model"
 				value=${connection.model || ""}
-				onInput=${(e: any) => updateConnection('model', e.target.value)}
+				onInput=${(e: FormEvent<HTMLInputElement>) => updateConnection('model', (e.target as HTMLInputElement).value)}
 				onValueChange=${() => {}}
 			/>
 
@@ -150,14 +150,14 @@ ${(connection.api === API_OPENAI_COMPAT || connection.api === API_DEEPSEEK) && h
 					<${InputBox}
 						placeholder="Filter list..."
 						value=${search}
-						onInput=${(e: any) => setSearch(e.target.value)}
+						onInput=${(e: FormEvent<HTMLInputElement>) => setSearch((e.target as HTMLInputElement).value)}
 						onValueChange=${() => {}}
 					/>
 				</div>
 
 				<div className="connection-model-list">
 					${(connection.models && connection.models.length > 0)
-						? filteredModels.map((m: any) => html`
+						? filteredModels.map((m: string) => html`
 							<div className="connection-model-item ${connection.model === m ? 'selected' : ''}"
 								onClick=${() => updateConnection('model', m)}>
 								<span>${m}</span>
@@ -189,7 +189,7 @@ function AIHordeConnectionSettings({ connection, updateConnection }: AIHordeConn
 		};
 	}, []);
 
-	const selectedModels = connection.model ? connection.model.split(',').map((s: any) => s.trim()).filter(Boolean) : [];
+	const selectedModels = connection.model ? connection.model.split(',').map((s: string) => s.trim()).filter(Boolean) : [];
 
 	const fetchModels = async () => {
 		setIsFetching(true);
@@ -206,8 +206,8 @@ function AIHordeConnectionSettings({ connection, updateConnection }: AIHordeConn
 
 			if (!res.ok) throw new Error(`HTTP ${res.status}`);
 
-			const modelData = (await res.json()).filter((model: any) => model.type === "text");
-			modelData.sort((a: any, b: any) => b.count - a.count || a.eta - b.eta);
+			const modelData = (await res.json() as AIHordeModel[]).filter((model: AIHordeModel) => model.type === "text");
+			modelData.sort((a: AIHordeModel, b: AIHordeModel) => b.count - a.count || a.eta - b.eta);
 			setAvailableModels(modelData);
 		} catch (e: unknown) {
 			if ((e as Error).name === 'AbortError') return;
@@ -222,7 +222,7 @@ function AIHordeConnectionSettings({ connection, updateConnection }: AIHordeConn
 		fetchModels();
 	}, []);
 
-	const toggleModel = (modelName: any) => {
+	const toggleModel = (modelName: string) => {
 		const currentSet = new Set(selectedModels);
 		if (currentSet.has(modelName)) {
 			currentSet.delete(modelName);
@@ -232,13 +232,13 @@ function AIHordeConnectionSettings({ connection, updateConnection }: AIHordeConn
 		updateConnection('model', Array.from(currentSet).join(', '));
 	};
 
-	const filteredModels = availableModels.filter((m: any) => m.name.toLowerCase().includes(search.toLowerCase()));
+	const filteredModels = availableModels.filter((m: AIHordeModel) => m.name.toLowerCase().includes(search.toLowerCase()));
 
 	return html`
 		<div className="connection-content-scroll">
 			<${InputBox} label="Connection Name"
 				value=${connection.name}
-				onInput=${(e: any) => updateConnection('name', e.target.value)}
+				onInput=${(e: FormEvent<HTMLInputElement>) => updateConnection('name', (e.target as HTMLInputElement).value)}
 				onValueChange=${() => {}}
 			/>
 
@@ -246,7 +246,7 @@ function AIHordeConnectionSettings({ connection, updateConnection }: AIHordeConn
 				<${InputBox} label="AI Horde API Key" type=${showKey ? 'text' : 'password'}
 					placeholder="Enter a key (or leave empty for anonymous use)"
 					value=${connection.key}
-					onValueChange=${(val: any) => updateConnection('key', val)}
+					onValueChange=${(val: string) => updateConnection('key', val)}
 				/>
 				<button title=${showKey ? "Hide" : "Show"}
 					className="eye-button"
@@ -261,7 +261,7 @@ function AIHordeConnectionSettings({ connection, updateConnection }: AIHordeConn
 			<${InputBox} label="Selected Models"
 				placeholder="Select from the list below"
 				value=${connection.model || ""}
-				onInput=${(e: any) => updateConnection('model', e.target.value)}
+				onInput=${(e: FormEvent<HTMLInputElement>) => updateConnection('model', (e.target as HTMLInputElement).value)}
 				onValueChange=${() => {}}
 				readOnly
 			/>
@@ -289,14 +289,14 @@ function AIHordeConnectionSettings({ connection, updateConnection }: AIHordeConn
 					<${InputBox}
 						placeholder="Filter models..."
 						value=${search}
-						onInput=${(e: any) => setSearch(e.target.value)}
+						onInput=${(e: FormEvent<HTMLInputElement>) => setSearch((e.target as HTMLInputElement).value)}
 						onValueChange=${() => {}}
 					/>
 				</div>
 
 				<div className="connection-model-list">
 					${(availableModels.length > 0)
-						? filteredModels.map((m: any) => {
+						? filteredModels.map((m: AIHordeModel) => {
 							const isSelected = selectedModels.includes(m.name);
 							return html`
 								<div className="connection-model-item"
@@ -364,12 +364,13 @@ export function ConnectionManagerModal({ isOpen, closeModal, connections, setCon
 			strict: false,
 			chatAPI: false,
 		};
-		setConnections((prev: any) => ({ ...prev, [newId]: newConnection }));
+		setConnections((prev: Record<string, ConnectionData>) => ({ ...prev, [newId]: newConnection }));
 		setSelectedId(newId);
 		setMobileShowDetails(true);
 	};
 
-	const handleCloneConnection = (id: any) => {
+	const handleCloneConnection = (id: string | null) => {
+		if (!id) return;
 		const conn = connections[id];
 		if (!conn) {
 			return;
@@ -378,19 +379,19 @@ export function ConnectionManagerModal({ isOpen, closeModal, connections, setCon
 		const newConnection = structuredClone(conn);
 		newConnection.id = newId;
 		newConnection.name = `${conn.name} (Copy)`;
-		setConnections((prev: any) => ({ ...prev, [newId]: newConnection }));
+		setConnections((prev: Record<string, ConnectionData>) => ({ ...prev, [newId]: newConnection }));
 		setSelectedId(newId);
 		setMobileShowDetails(true);
 	};
 
-	const handleDeleteConnection = (id: any) => {
-		if (id === activeConnectionId) {
+	const handleDeleteConnection = (id: string | null) => {
+		if (!id || id === activeConnectionId) {
 			return;
 		}
 		if (!confirm("Are you sure you want to delete this connection?")) {
 			return;
 		}
-		setConnections((prev: any) => {
+		setConnections((prev: Record<string, ConnectionData>) => {
 			const next = { ...prev };
 			delete next[id];
 			return next;
@@ -401,26 +402,27 @@ export function ConnectionManagerModal({ isOpen, closeModal, connections, setCon
 		}
 	};
 
-	const handleUpdateConnection = (id: any, field: any, value: any) => {
-		setConnections((prev: any) => ({
+	const handleUpdateConnection = (id: string | null, field: keyof ConnectionData, value: unknown) => {
+		if (!id) return;
+		setConnections((prev: Record<string, ConnectionData>) => ({
 			...prev,
 			[id]: { ...prev[id], [field]: value }
 		}));
 	};
 
-	const updateCurrentConnection = (field: any, value: any) => {
+	const updateCurrentConnection = (field: keyof ConnectionData, value: unknown) => {
 		if (!selectedId) {
 			return;
 		}
 		handleUpdateConnection(selectedId, field, value);
 	};
 
-	const updateCurrentConnectionType = (val: any) => {
+	const updateCurrentConnectionType = (val: number) => {
 		if (!selectedId) {
 			return;
 		}
 
-		const updates: Record<string, any> = {
+		const updates: Record<string, unknown> = {
 			api: val,
 			models: [],
 			model: "",
@@ -438,7 +440,7 @@ export function ConnectionManagerModal({ isOpen, closeModal, connections, setCon
 			updates.endpoint = "https://api.deepseek.com";
 		}
 
-		setConnections((prev: any) => ({
+		setConnections((prev: Record<string, ConnectionData>) => ({
 			...prev,
 			[selectedId]: { ...prev[selectedId], ...updates }
 		}));
@@ -461,7 +463,7 @@ export function ConnectionManagerModal({ isOpen, closeModal, connections, setCon
 						<button onClick=${handleNewConnection} title="Add New">+ New</button>
 					</div>
 					<div className="connection-list">
-						${(Object.entries(connections) as [string, ConnectionData][]).map(([id, conn]: any) => html`
+						${(Object.entries(connections) as [string, ConnectionData][]).map(([id, conn]: [string, ConnectionData]) => html`
 							<div key=${id}
 								className="connection-item ${selectedId === id ? 'selected' : ''} ${conn.enabled ? 'enabled' : ''}"
 								onClick=${() => {
