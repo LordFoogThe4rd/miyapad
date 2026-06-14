@@ -93,7 +93,7 @@ export function Sidebar({ sidebarRef, toggleModal, currentThemeName, setCurrentT
 					const configRes = await fetch('/zstd_get_configs');
 					const configJson = await configRes.json();
 					if (configJson.ok) {
-						setConfigData(configJson.configs);
+						setConfigData(Object.keys(configJson.configs ?? {}).length > 0 ? configJson.configs : null);
 					}
 					const maintRes = await fetch('/maintenance_config');
 					if (maintRes.ok) {
