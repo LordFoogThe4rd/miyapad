@@ -37,7 +37,7 @@ export function useGenerationLogic() {
 		return true;
 	}
 
-	async function predict(prompt = finalPromptText, chunkCount = promptChunks.length, callback: PredictionCallback | undefined = undefined, abortController: any = undefined, invalidatesUndo = false, customParams: any = {}) {
+	async function predict(prompt = finalPromptText, chunkCount = promptChunks.length, callback: PredictionCallback | undefined = undefined, abortController: AbortController | undefined = undefined, invalidatesUndo = false, customParams: Record<string, unknown> = {}) {
 		const myId = ++activeGenId.current;
 
 		if (!abortController && cancel) {
@@ -56,8 +56,8 @@ export function useGenerationLogic() {
 		if (!callback && !restartedPredict && await fillPredict())
 			return true;
 
-		let ac: any;
-		let cancelThis: any;
+		let ac: AbortController;
+		let cancelThis: (() => void) | null = null;
 		if (!abortController) {
 			ac = new AbortController();
 			abortControllerRef.current = ac;
@@ -141,7 +141,7 @@ export function useGenerationLogic() {
 				useScrollSmoothing.current = true;
 			}
 
-			let stopParam: any = [];
+			let stopParam: string[] = [];
 			if (useBasicStoppingMode) {
 				switch (basicStoppingModeType) {
 					case 'new_line':
