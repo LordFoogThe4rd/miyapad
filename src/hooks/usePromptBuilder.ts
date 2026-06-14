@@ -9,10 +9,8 @@ export function usePromptBuilder() {
 	const { templates, selectedTemplate, worldInfo, memoryTokens, authorNoteTokens, authorNoteDepth, contextLength, templateReplacements, setTemplateReplacements } = useSettings();
 	const { promptChunks, cancel } = useGeneration();
 
-	function replacePlaceholders(string: any, placeholders: any) {
-		// give placeholders as json object
-		// { "placeholder":"replacement" }
-		return string.replace(/\{[^}]+\}/g, function (placeholder: any) {
+	function replacePlaceholders(string: string, placeholders: Record<string, string>) {
+		return string.replace(/\{[^}]+\}/g, function (placeholder: string) {
 			return placeholders.hasOwnProperty(placeholder)
 				? placeholders[placeholder]
 				: placeholder;
@@ -93,7 +91,7 @@ export function usePromptBuilder() {
 			const prefix = joinPrompt(leftPromptChunks);
 			const suffix = joinPrompt(rightPromptChunks);
 
-			modifiedPromptText = replacePlaceholders(templates[selectedTemplate].fimTemplate, {
+			modifiedPromptText = replacePlaceholders(templates[selectedTemplate]?.fimTemplate ?? '', {
 				'{prefix}': prefix,
 				'{suffix}': suffix
 			});

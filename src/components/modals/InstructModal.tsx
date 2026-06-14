@@ -24,10 +24,8 @@ export function InstructModal({ isOpen, closeModal, predict, cancel, modalState,
 		};
 	}
 
-	function replacePlaceholders(string: any, placeholders: any) {
-		// give placeholders as json object
-		// { "placeholder":"replacement" }
-		return string.replace(/\{[^}]+\}/g, function (placeholder: any) {
+	function replacePlaceholders(string: string, placeholders: Record<string, string>) {
+		return string.replace(/\{[^}]+\}/g, function (placeholder: string) {
 			return placeholders.hasOwnProperty(placeholder)
 				? placeholders[placeholder]
 				: placeholder;
