@@ -141,7 +141,7 @@ export function Modals({ toggleModal, currentThemeName, setCurrentThemeName, all
 		}
 		elem.focus();
 		elem.setSelectionRange(newCursorPos, newCursorPos);
-		if (elem.onInputHandler) elem.onInputHandler({ target: elem });
+		if (elem.onInputHandler) elem.onInputHandler({ currentTarget: elem });
 
 		elem.scrollTop = scrollTop;
 	};
@@ -178,7 +178,7 @@ export function Modals({ toggleModal, currentThemeName, setCurrentThemeName, all
 		}
 		elem.focus();
 		elem.setSelectionRange(newCursorPos, newCursorPos);
-		if (elem.onInputHandler) elem.onInputHandler({ target: elem });
+		if (elem.onInputHandler) elem.onInputHandler({ currentTarget: elem });
 
 		elem.scrollTop = scrollTop;
 	}, [instructModalState.result]);
@@ -407,7 +407,7 @@ export function Modals({ toggleModal, currentThemeName, setCurrentThemeName, all
 										+ textAfter;
 
 						elem.value = finalText;
-						if (elem.onInputHandler) elem.onInputHandler({ target: elem });
+						if (elem.onInputHandler) elem.onInputHandler({ currentTarget: elem });
 						setTriggerPredict(true);
 					},
 					disabled: false
@@ -428,7 +428,7 @@ export function Modals({ toggleModal, currentThemeName, setCurrentThemeName, all
 										+ textAfter;
 
 						elem.value = finalText;
-						if (elem.onInputHandler) elem.onInputHandler({ target: elem });
+						if (elem.onInputHandler) elem.onInputHandler({ currentTarget: elem });
 						setTriggerPredict(true);
 					},
 					disabled: templates[selectedTemplate]?.fimTemplate === undefined || templates[selectedTemplate]?.fimTemplate.length === 0

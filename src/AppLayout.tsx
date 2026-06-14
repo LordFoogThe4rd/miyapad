@@ -480,7 +480,7 @@ export function AppLayout() {
 
 		elem.value = newPrompt;
 		if (elem.onInputHandler) {
-			elem.onInputHandler({ target: elem });
+			elem.onInputHandler({ currentTarget: elem });
 		}
 	};
 

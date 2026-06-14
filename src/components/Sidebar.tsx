@@ -188,7 +188,7 @@ export function Sidebar({ sidebarRef, toggleModal, currentThemeName, setCurrentT
 		}
 		elem.focus();
 		elem.setSelectionRange(newCursorPos, newCursorPos);
-		if (elem.onInputHandler) elem.onInputHandler({ target: elem });
+		if (elem.onInputHandler) elem.onInputHandler({ currentTarget: elem });
 
 		elem.scrollTop = scrollTop;
 	};

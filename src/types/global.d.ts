@@ -20,7 +20,7 @@ interface Document {
 
 interface HTMLTextAreaElement {
   scrollTarget?: number;
-  onInputHandler?: (e: { target: HTMLTextAreaElement }) => void;
+  onInputHandler?: (e: { currentTarget: HTMLTextAreaElement }) => void;
 }
 
 interface Window {

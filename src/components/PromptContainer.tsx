@@ -17,7 +17,7 @@ export function PromptContainer({ sidebarHeight }: PromptContainerProps) {
 
 	useEffect(() => {
 		if (promptArea.current) {
-			promptArea.current.onInputHandler = onInput;
+			promptArea.current.onInputHandler = (e) => onInput(e as React.FormEvent<HTMLTextAreaElement>);
 		}
 	});
 
@@ -114,12 +114,12 @@ export function PromptContainer({ sidebarHeight }: PromptContainerProps) {
 		};
 	}, []);
 
-	function onInput({ target }: any) {
+	function onInput(e: React.FormEvent<HTMLTextAreaElement>) {
 		if (showPromptPreview) {
 			setPromptPreviewChunks([]);
 		}
 
-		let nv = target.value;
+		let nv = e.currentTarget.value;
 
 		setPromptChunks((oldPrompt: any) => {
 			const start = [];
@@ -192,7 +192,8 @@ export function PromptContainer({ sidebarHeight }: PromptContainerProps) {
 		});
 	}
 
-	function onScroll({ target }: any) {
+	function onScroll(e: React.UIEvent<HTMLTextAreaElement>) {
+		const target = e.currentTarget;
 		if (target.scrollTop === target.scrollTarget)
 			target.scrollTarget = undefined;
 
@@ -235,7 +236,8 @@ export function PromptContainer({ sidebarHeight }: PromptContainerProps) {
 		}
 	}
 
-	function onPromptMouseMove({ clientX, clientY }: any) {
+	function onPromptMouseMove(e: React.MouseEvent<HTMLDivElement>) {
+		const { clientX, clientY } = e;
 		if (showProbsMode === -1 && tokenHighlightMode === -1)
 			return;
 		const overlay = promptOverlay.current;
