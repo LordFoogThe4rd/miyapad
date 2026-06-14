@@ -28,8 +28,10 @@ export function InstructTemplatesModal({ isOpen, closeModal, templateStorage, se
 	const [templateDuplicate, setTemplateDuplicate] = useState<string | false>(false);
 	const [newTemplateName, setNewTemplateName] = useState<string | undefined>(undefined);
 
-	function getArrObjByName(array: any, name: any, getIndex=false) {
-		const index = array.findIndex((obj: any) => obj.name === name)
+	function getArrObjByName(array: TemplateListItem[], name: string, getIndex: true): number;
+	function getArrObjByName(array: TemplateListItem[], name: string, getIndex?: false): TemplateListItem;
+	function getArrObjByName(array: TemplateListItem[], name: string, getIndex = false): TemplateListItem | number {
+		const index = array.findIndex(obj => obj.name === name)
 		if (getIndex)
 			return index
 		return array[index == -1 ? 0 : index];
