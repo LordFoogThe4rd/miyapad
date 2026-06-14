@@ -8,6 +8,8 @@ import { API_LLAMA_CPP, API_KOBOLD_CPP, API_OPENAI_COMPAT, API_AI_HORDE, API_DEE
 import { replaceNewlines } from '../utils/strings';
 import { regexLastIndexOf, createLenientRegex } from '../utils/regex';
 
+type PredictionCallback = (chunk: CompletionChunk) => boolean;
+
 export function useGenerationLogic() {
 	const { endpoint, endpointAPI, endpointAPIKey, endpointModel, seed, maxPredictTokens, temperature, dynaTempRange, dynaTempExp, repeatPenalty, repeatLastN, penalizeNl, presencePenalty, frequencyPenalty, topK, topP, typicalP, minP, tfsZ, mirostat, mirostatTau, mirostatEta, xtcThreshold, xtcProbability, dryMultiplier, dryBase, dryAllowedLength, dryPenaltyRange, drySequenceBreakers, bannedTokens, ignoreEos, openaiPresets, stoppingStrings, useBasicStoppingMode, basicStoppingModeType, logitBias, logitBiasParam, enabledSamplers, grammar, useChatAPI, useTokenStreaming, disableLogprobs, postSamplingProbs, showPromptPreview, promptPreviewTokens, templates, selectedTemplate, chatMode, setChatMode, setUseChatAPI, setSelectedTemplate, isMiyapadEndpoint, sessionStorage, ttsEnabled, useServerTokenization } = useSettings();
 	const { promptArea, promptOverlay, undoStack, redoStack, probsDelayTimer, keyState, sessionReconnectTimer, useScrollSmoothing, hordeTaskId, promptPreviewElement, markdownPreviewRef, isSyncingScroll, promptChunks, setPromptChunks, currentPromptChunk, setCurrentPromptChunk, undoHovered, setUndoHovered, showProbs, setShowProbs, cancel, setCancel, sessionEndpointConnecting, setSessionEndpointConnecting, sessionEndpointError, setSessionEndpointError, rejectedAPIKey, setRejectedAPIKey, openaiModels, setOpenaiModels, tokens, setTokens, tokensPerSec, setTokensPerSec, predictStartTokens, setPredictStartTokens, lastError, setLastError, savedScrollTop, setSavedScrollTop, modalState, setModalState, contextMenuState, setContextMenuState, instructModalState, setInstructModalState, hordeQueuePos, setHordeQueuePos, hordeProcessing, setHordeProcessing, promptPreviewChunks, setPromptPreviewChunks, promptPreviewReroll, setPromptPreviewReroll, ttsAvailable, setTTSAvailable, ttsNewText, ttsLastChunk, ttsQueue, ttsVoices, ttsPaused, activeGenId, abortControllerRef, triggerPredict, setTriggerPredict, restartedPredict, setRestartedPredict } = useGeneration();
@@ -21,7 +23,7 @@ export function useGenerationLogic() {
 
 		const { fimLeftChunks, fimRightChunks } = fimPromptInfo!;
 		const myId = activeGenId.current;
-		predict(finalPromptText, fimLeftChunks!.length, (chunk: any) => {
+		predict(finalPromptText, fimLeftChunks!.length, (chunk: CompletionChunk) => {
 			if (myId !== activeGenId.current) return false;
 			fimLeftChunks!.push(chunk);
 			setPromptChunks((p: any) => [
@@ -35,7 +37,7 @@ export function useGenerationLogic() {
 		return true;
 	}
 
-	async function predict(prompt = finalPromptText, chunkCount = promptChunks.length, callback: any = undefined, abortController: any = undefined, invalidatesUndo = false, customParams: any = {}) {
+	async function predict(prompt = finalPromptText, chunkCount = promptChunks.length, callback: PredictionCallback | undefined = undefined, abortController: any = undefined, invalidatesUndo = false, customParams: any = {}) {
 		const myId = ++activeGenId.current;
 
 		if (!abortController && cancel) {
@@ -292,7 +294,7 @@ export function useGenerationLogic() {
 					setTokensPerSec((predictCount + 1) / elapsedTime);
 				}
 				if (callback) {
-					if (!callback(chunk))
+					if (!callback(compChunk))
 						break;
 				} else {
 					if (myId !== activeGenId.current) break;

@@ -118,7 +118,7 @@ export function AppLayout() {
 				n_predict: promptPreviewTokens
 			};
 
-			const predicted = await predict(finalPromptText, promptChunks.length, (chunk: any) => {
+			const predicted = await predict(finalPromptText, promptChunks.length, (chunk: CompletionChunk) => {
 				setPromptPreviewChunks((c) => [...c, chunk]);
 				return true;
 			}, ac, false, customParams);

@@ -60,7 +60,7 @@ export function InstructModal({ isOpen, closeModal, predict, cancel, modalState,
 				instructPrompt;
 		}
 
-		predict(instructPrompt, 1, (chunk: any) => {
+		predict(instructPrompt, 1, (chunk: CompletionChunk) => {
 			setResult((r) => r + chunk.content);
 			return true;
 		});
