@@ -1,7 +1,8 @@
 import { html } from 'htm/react';
 import { useState, useEffect, useRef, useCallback } from 'react';
+import type { EditorContextMenuProps } from '../types/components';
 
-export function EditorContextMenu({ isOpen, closeMenu, menuItems, className, ...props }: any) {
+export function EditorContextMenu({ isOpen, closeMenu, menuItems, className, ...props }: EditorContextMenuProps) {
 	const menuRef = useRef<HTMLDivElement | null>(null);
 	const [subMenuOpen, setSubMenuOpen] = useState<string | null>(null);
 	const isNested = className === 'nested';
@@ -54,7 +55,7 @@ export function EditorContextMenu({ isOpen, closeMenu, menuItems, className, ...
 		if (menuRef.current) {
 			const rect = menuRef.current.getBoundingClientRect();
 			let newTop = props.y;
-			let newLeft = props.x;
+			let newLeft = props.x ?? 0;
 
 			if (rect.bottom > window.innerHeight)
 				newTop = Math.max(newTop - rect.height, 0);

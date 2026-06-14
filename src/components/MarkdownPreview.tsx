@@ -5,8 +5,9 @@ import DOMPurify from 'dompurify';
 import { useSettings } from '../contexts/SettingsContext';
 import { useGeneration } from '../contexts/GenerationContext';
 import { usePromptBuilder } from '../hooks/usePromptBuilder';
+import type { MarkdownPreviewProps } from '../types/components';
 
-export function MarkdownPreview({ sidebarHeight }: any) {
+export function MarkdownPreview({ sidebarHeight }: MarkdownPreviewProps) {
 	const { showMarkdownPreview, isMobile } = useSettings();
 	const { markdownPreviewRef } = useGeneration();
 	const { promptText } = usePromptBuilder();
