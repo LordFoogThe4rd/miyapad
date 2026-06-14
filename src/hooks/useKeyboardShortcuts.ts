@@ -35,11 +35,11 @@ export function useKeyboardShortcuts() {
 					if (!showPromptPreview || promptPreviewChunks.length === 0)
 						break;
 
-					setPromptChunks((p: any) => [
+					setPromptChunks((p: PromptChunk[]) => [
 						...p,
 						...promptPreviewChunks
 					]);
-					setTokens((t: any) => t + promptPreviewChunks.length);
+					setTokens((t: number) => t + promptPreviewChunks.length);
 					setPromptPreviewChunks([]);
 					break;
 				case 'false:true:false:false:ArrowRight':

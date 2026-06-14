@@ -121,7 +121,7 @@ export function PromptContainer({ sidebarHeight }: PromptContainerProps) {
 
 		let nv = e.currentTarget.value;
 
-		setPromptChunks((oldPrompt: any) => {
+		setPromptChunks((oldPrompt: PromptChunk[]) => {
 			const start = [];
 			const end = [];
 			let newValue = nv;
@@ -338,7 +338,7 @@ export function PromptContainer({ sidebarHeight }: PromptContainerProps) {
 				title="Toggle Markdown Preview"
 				style=${{ "margin-top": "3em" }}
 				className="textAreaSettings"
-				onClick=${() => setShowMarkdownPreview((p: any) => !p)}>
+				onClick=${() => setShowMarkdownPreview((p: boolean) => !p)}>
 				<${SVG_SplitView}/>
 			</button>
 			<button

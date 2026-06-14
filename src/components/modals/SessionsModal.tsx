@@ -85,8 +85,8 @@ export function SessionsModal({ isOpen, closeModal, sessionStorage, cancel }: Se
 	const [sortBy, setSortByState] = useState(() => localStorage.getItem('miyapad-sessions-sortBy') || 'modified');
 	const [sortAsc, setSortAscState] = useState(() => localStorage.getItem('miyapad-sessions-sortAsc') === 'true');
 
-	const setSortBy = (v: any) => { setSortByState(v); localStorage.setItem('miyapad-sessions-sortBy', v); };
-	const setSortAsc = (v: any) => {
+	const setSortBy = (v: string) => { setSortByState(v); localStorage.setItem('miyapad-sessions-sortBy', v); };
+	const setSortAsc = (v: boolean | ((prev: boolean) => boolean)) => {
 		setSortAscState((prev: boolean) => {
 			const next = typeof v === 'function' ? v(prev) : v;
 			localStorage.setItem('miyapad-sessions-sortAsc', String(next));
@@ -306,7 +306,7 @@ export function SessionsModal({ isOpen, closeModal, sessionStorage, cancel }: Se
 					<button
 						className="sessions-modal-sort-btn"
 						title=${sortAsc ? "Ascending" : "Descending"}
-						onClick=${() => setSortAsc((v: any) => !v)}
+						onClick=${() => setSortAsc((v: boolean) => !v)}
 						style=${{ transform: sortAsc ? 'rotate(0deg)' : 'rotate(180deg)' }}>
 						↑
 					</button>

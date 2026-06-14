@@ -26,11 +26,11 @@ export function useGenerationLogic() {
 		predict(finalPromptText, fimLeftChunks!.length, (chunk: CompletionChunk) => {
 			if (myId !== activeGenId.current) return false;
 			fimLeftChunks!.push(chunk);
-			setPromptChunks((p: any) => [
+			setPromptChunks((p: PromptChunk[]) => [
 				...fimLeftChunks!,
 				...fimRightChunks!
 			] as any);
-			setTokens((t: any) => t + (chunk?.completion_probabilities?.length ?? 1));
+			setTokens((t: number) => t + (chunk?.completion_probabilities?.length ?? 1));
 			return true;
 		}, undefined, true);
 
@@ -116,7 +116,7 @@ export function useGenerationLogic() {
 					const instSufIndex = instSuf ? regexLastIndexOf(prompt, createLenientRegex(instSuf)) : -1;
 					const instPreIndex = instPre ? regexLastIndexOf(prompt, createLenientRegex(instPre)) : -1;
 					if (instSufIndex <= instPreIndex) {
-						setPromptChunks((p: any) => [...p, { type: 'user', content: instSuf }])
+						setPromptChunks((p: PromptChunk[]) => [...p, { type: 'user', content: instSuf }])
 						prompt += instSuf;
 					}
 				}
@@ -298,8 +298,8 @@ export function useGenerationLogic() {
 						break;
 				} else {
 					if (myId !== activeGenId.current) break;
-					setPromptChunks((p: any) => [...p, chunk]);
-					setTokens((t: any) => t + (compChunk?.completion_probabilities?.length ?? 1));
+					setPromptChunks((p: PromptChunk[]) => [...p, chunk]);
+					setTokens((t: number) => t + (compChunk?.completion_probabilities?.length ?? 1));
 				}
 				predictCount += 1;
 				ttsAddChunk(compChunk.content);
@@ -320,7 +320,7 @@ export function useGenerationLogic() {
 			return false;
 		} finally {
 			if (myId === activeGenId.current) {
-				setCancel((c: any) => c === cancelThis ? null : c);
+				setCancel((c: (() => void) | null) => c === cancelThis ? null : c);
 				abortControllerRef.current = null;
 			}
 			if (abortController)
@@ -347,7 +347,7 @@ export function useGenerationLogic() {
 		if (myId === activeGenId.current && !callback && (chatMode || useChatAPI) && predictCount > 0) {
 			// add bot EOT template (instruct prefix)
 			const eotBot = templates[selectedTemplate]?.instPre?.replace(/\\n/g, '\n') ?? ''
-			setPromptChunks((p: any) => [...p, { type: 'user', content: eotBot }])
+			setPromptChunks((p: PromptChunk[]) => [...p, { type: 'user', content: eotBot }])
 			prompt += `${eotBot}`
 		}
 		
@@ -361,7 +361,7 @@ export function useGenerationLogic() {
 		if (showPromptPreview) setPromptPreviewChunks([]); // Discard current preview so that a new one is generated.
 		const lastUndoPos = undoStack.current[undoStack.current.length - 1];
 		if (Array.isArray(redoStack.current)) redoStack.current.push(promptChunks.slice(lastUndoPos));
-		setPromptChunks((p: any) => p.slice(0, undoStack.current.pop()));
+		setPromptChunks((p: PromptChunk[]) => p.slice(0, undoStack.current.pop()));
 		return true;
 	}
 
@@ -371,7 +371,7 @@ export function useGenerationLogic() {
 		activeGenId.current++; // Invalidate any active generation
 		if (showPromptPreview) setPromptPreviewChunks([]); // Discard current preview so that a new one is generated.
 		if (Array.isArray(undoStack.current)) undoStack.current.push(promptChunks.length);
-		setPromptChunks((p: any) => [...p, ...(redoStack.current.pop() ?? [])]);
+		setPromptChunks((p: PromptChunk[]) => [...p, ...(redoStack.current.pop() ?? [])]);
 		setUndoHovered(false);
 		return true;
 	}

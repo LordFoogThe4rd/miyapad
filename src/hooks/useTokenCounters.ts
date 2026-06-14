@@ -12,7 +12,7 @@ export function useTokenCounters() {
 	const { templateReplacements, replacePlaceholders } = usePromptBuilder();
 
 	function handleauthorNoteTokensChange(key: keyof AuthorNoteData, value: any) {
-		setAuthorNoteTokens((prevauthorNoteTokens: any) => ({ ...prevauthorNoteTokens, [key]: value }));
+		setAuthorNoteTokens((prevauthorNoteTokens: AuthorNoteData) => ({ ...prevauthorNoteTokens, [key]: value }));
 	}
 	// token counts for an
 	useEffect(() => {
@@ -21,7 +21,7 @@ export function useTokenCounters() {
 			? order.map(key => authorNoteTokens[key]).join("")
 			: "";	
 		if (assembled == "" || endpointAPI == API_OPENAI_COMPAT || endpointAPI == API_DEEPSEEK) {
-			setAuthorNoteTokens((prevauthorNoteTokens: any) => ({ ...prevauthorNoteTokens, "tokens": 0 }))
+			setAuthorNoteTokens((prevauthorNoteTokens: AuthorNoteData) => ({ ...prevauthorNoteTokens, "tokens": 0 }))
 			return
 		}
 		const ac = new AbortController();
@@ -39,14 +39,14 @@ export function useTokenCounters() {
 						...(isMiyapadEndpoint ? { proxyEndpoint: sessionStorage.proxyEndpoint } : {})
 					})
 				);
-				setAuthorNoteTokens((prevauthorNoteTokens: any) => ({
+				setAuthorNoteTokens((prevauthorNoteTokens: AuthorNoteData) => ({
 					...prevauthorNoteTokens,
 					"tokens": tokenCount - 1 
 				}));
 			} catch (e: unknown) {
 				if (!isAbortError(e)){
 					reportError(e);
-					setAuthorNoteTokens((prevauthorNoteTokens: any) => ({ ...prevauthorNoteTokens, "tokens": 0 }))
+					setAuthorNoteTokens((prevauthorNoteTokens: AuthorNoteData) => ({ ...prevauthorNoteTokens, "tokens": 0 }))
 				}
 			}
 		}, 500);
@@ -56,7 +56,7 @@ export function useTokenCounters() {
 	},[modalState["context"],authorNoteTokens.text,authorNoteTokens.prefix,authorNoteTokens.suffix,contextLength,cancel,endpoint,endpointAPI,useServerTokenization,templateReplacements])
 
 	function handleMemoryTokensChange(key: keyof MemoryTokensData, value: any) {
-		setMemoryTokens((prevMemoryTokens: any) => ({ ...prevMemoryTokens, [key]: value }));
+		setMemoryTokens((prevMemoryTokens: MemoryTokensData) => ({ ...prevMemoryTokens, [key]: value }));
 	}
 	// token counts for memory
 	useEffect(() => {
@@ -65,7 +65,7 @@ export function useTokenCounters() {
 			? order.map(key => memoryTokens[key]).join("")
 			: "";	
 		if (assembled == "" || endpointAPI == API_OPENAI_COMPAT || endpointAPI == API_DEEPSEEK){
-			setMemoryTokens((prevMemoryTokens: any) => ({ ...prevMemoryTokens, "tokens": 0 }));
+			setMemoryTokens((prevMemoryTokens: MemoryTokensData) => ({ ...prevMemoryTokens, "tokens": 0 }));
 			return
 		}
 
@@ -84,14 +84,14 @@ export function useTokenCounters() {
 						...(isMiyapadEndpoint ? { proxyEndpoint: sessionStorage.proxyEndpoint } : {})
 					})
 				);
-				setMemoryTokens((prevMemoryTokens: any) => ({
+				setMemoryTokens((prevMemoryTokens: MemoryTokensData) => ({
 					...prevMemoryTokens,
 					"tokens": tokenCount - 1 
 				}));
 			} catch (e: unknown) {
 				if (!isAbortError(e)){
 					reportError(e);
-					setMemoryTokens((prevMemoryTokens: any) => ({ ...prevMemoryTokens, "tokens": 0 }));
+					setMemoryTokens((prevMemoryTokens: MemoryTokensData) => ({ ...prevMemoryTokens, "tokens": 0 }));
 				}
 			}
 		}, 500);
@@ -105,7 +105,7 @@ export function useTokenCounters() {
 			? [worldInfo.prefix,memoryTokens.worldInfo,worldInfo.suffix].join("")
 			: "";
 		if (assembled == "" || endpointAPI == API_OPENAI_COMPAT || endpointAPI == API_DEEPSEEK){
-			setMemoryTokens((prevMemoryTokens: any) => ({ ...prevMemoryTokens, "tokensWI": 0 }));
+			setMemoryTokens((prevMemoryTokens: MemoryTokensData) => ({ ...prevMemoryTokens, "tokensWI": 0 }));
 			return
 		}
 
@@ -124,14 +124,14 @@ export function useTokenCounters() {
 						...(isMiyapadEndpoint ? { proxyEndpoint: sessionStorage.proxyEndpoint } : {})
 					})
 				);
-				setMemoryTokens((prevMemoryTokens: any) => ({
+				setMemoryTokens((prevMemoryTokens: MemoryTokensData) => ({
 					...prevMemoryTokens,
 					"tokensWI": tokenCount - 1 
 				}));
 			} catch (e: unknown) {
 				if (!isAbortError(e)){
 					reportError(e);
-					setMemoryTokens((prevMemoryTokens: any) => ({ ...prevMemoryTokens, "tokensWI": 0 }));
+					setMemoryTokens((prevMemoryTokens: MemoryTokensData) => ({ ...prevMemoryTokens, "tokensWI": 0 }));
 				}
 			}
 		}, 500);
