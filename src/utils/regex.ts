@@ -1,4 +1,4 @@
-export function regexSplitString(str: any, separator: any, limit: any) {
+export function regexSplitString(str: string, separator: string | RegExp, limit?: number) {
 	const result = [];
 	const separators = [];
 	let lastIndex = 0;
@@ -18,13 +18,13 @@ export function regexSplitString(str: any, separator: any, limit: any) {
 	return [result, separators];
 }
 
-export function regexIndexOf(string: any, regex: any, startpos?: any) {
+export function regexIndexOf(string: string, regex: RegExp, startpos?: number) {
     var indexOf = string.substring(startpos || 0).search(regex);
     return (indexOf >= 0) ? (indexOf + (startpos || 0)) : indexOf;
 }
 
-export function regexLastIndexOf(string: any, regex: any, startpos?: any) {
-    regex = (regex.global) ? regex : new RegExp(regex.source, "g" + (regex.ignoreCase ? "i" : "") + (regex.multiLine ? "m" : ""));
+export function regexLastIndexOf(string: string, regex: RegExp, startpos?: number) {
+    regex = (regex.global) ? regex : new RegExp(regex.source, "g" + (regex.ignoreCase ? "i" : "") + (regex.multiline ? "m" : ""));
     if(typeof (startpos) == "undefined") {
         startpos = string.length;
     } else if(startpos < 0) {
@@ -41,9 +41,9 @@ export function regexLastIndexOf(string: any, regex: any, startpos?: any) {
     return lastIndexOf;
 }
 
-export function memoize(fn: any) {
+export function memoize<T extends (...args: any[]) => any>(fn: T): T {
 	let cache: Record<string, any> = {};
-	return (...args: any[]) => {
+	const memoized = (...args: any[]) => {
 		let n = args[0];
 		if (n in cache) {
 			return cache[n];
@@ -54,27 +54,28 @@ export function memoize(fn: any) {
 			return result;
 		}
 	}
+	return memoized as T;
 }
 
-export function escapeRegExp(string: any) {
+export function escapeRegExp(string: string) {
 	return string.replace(/[.*+?^${}()|[\]\\]/g, '\\$&');
 };
 
-export function makeWhiteSpaceLenient(string: any) {
+export function makeWhiteSpaceLenient(string: string) {
 	return string.replace(/\s+/g, '')
 		// Add \s* between characters, but preserve escaped sequences
 		.replace(/(?<!\\)(?:\\{2})*(?!\s)(?!$)/g, '$&\\s*');
 }
 
-export const createLenientPrefixRegex = memoize((prefix: any) => {
+export const createLenientPrefixRegex = memoize((prefix: string) => {
 	return new RegExp("^" + makeWhiteSpaceLenient(escapeRegExp(prefix)), 'i');
 });
 
-export const createLenientRegex = memoize((suffix: any) => {
+export const createLenientRegex = memoize((suffix: string) => {
 	return new RegExp(makeWhiteSpaceLenient(escapeRegExp(suffix)).replace(/^\\s\*/, '(^\\s*)?'), 'i');
 });
 
-export function prefixMatchLength(str1: any, str2: any) {
+export function prefixMatchLength(str1: string, str2: string) {
 	if (str1 === "" || str2 === "") {
 		return 0;
 	}

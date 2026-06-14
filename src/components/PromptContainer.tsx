@@ -165,7 +165,8 @@ export function PromptContainer({ sidebarHeight }: PromptContainerProps) {
 				newPrompt = mergeUserChunks(newPrompt, newValue);
 			}
 			if (end.length && end[0].type === 'user') {
-				newPrompt = mergeUserChunks(newPrompt, end.shift().content);
+				const endChunk = end.shift()!;
+				newPrompt = mergeUserChunks(newPrompt, endChunk.content);
 			}
 			newPrompt.push(...end);
 

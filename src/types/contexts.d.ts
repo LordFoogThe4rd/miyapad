@@ -1,11 +1,13 @@
 import type { Dispatch, RefObject, SetStateAction } from 'react';
 
-interface PromptChunk {
-  type?: 'user';
-  content: string;
-  prob?: number;
-  completion_probabilities?: CompletionProb[];
-  top_logprobs?: any;
+declare global {
+  interface PromptChunk {
+    type?: 'user';
+    content: string;
+    prob?: number;
+    completion_probabilities?: CompletionProb[];
+    top_logprobs?: any;
+  }
 }
 
 export interface SettingsState {
@@ -286,12 +288,4 @@ export interface GenerationState {
   setRestartedPredict: Dispatch<SetStateAction<boolean>>;
   toggleModal: (modalKey: string) => void;
   closeModal: (modalKey: string) => void;
-}
-
-interface TemplateListItem {
-  name: string;
-  nameNew: string;
-  value: string;
-  nameBack: string;
-  affixes: InstructTemplate;
 }

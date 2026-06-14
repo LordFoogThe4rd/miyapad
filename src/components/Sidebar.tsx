@@ -708,13 +708,13 @@ export function Sidebar({ sidebarRef, toggleModal, currentThemeName, setCurrentT
 					<${InputBox} label="Duration (sec)" type="number"
 						readOnly=${!!cancel}
 						value=${maintDuration}
-						onValueChange=${(v: boolean) => {
+						onValueChange=${(v: number) => {
 							setMaintDuration(v);
 							saveMaintConfigToServer({ duration: v });
 						}}
 						placeholder="Infinite"/>
 					<${InputSlider} label="DB Load" type="number" step="0.1" max="1"
-						readOnly=${!!cancel} value=${maintDbLoad} onValueChange=${(v: boolean) => {
+						readOnly=${!!cancel} value=${maintDbLoad} onValueChange=${(v: number) => {
 							setMaintDbLoad(v);
 							saveMaintConfigToServer({ dbLoad: v });
 						}}/>
@@ -722,7 +722,7 @@ export function Sidebar({ sidebarRef, toggleModal, currentThemeName, setCurrentT
 				<${SelectBox}
 					label="Maintenance Mode"
 					value=${maintMode}
-					onValueChange=${(v: boolean) => {
+					onValueChange=${(v: string) => {
 						setMaintMode(v);
 						saveMaintConfigToServer({ mode: v });
 					}}
@@ -733,7 +733,7 @@ export function Sidebar({ sidebarRef, toggleModal, currentThemeName, setCurrentT
 					]}/>
 				${maintMode === 'interval' && html`
 					<${InputBox} label="Interval (min)" type="number" inputmode="numeric"
-						readOnly=${!!cancel} value=${maintInterval} onValueChange=${(v: boolean) => {
+						readOnly=${!!cancel} value=${maintInterval} onValueChange=${(v: number) => {
 							setMaintInterval(v);
 							saveMaintConfigToServer({ interval: v });
 						}}/>`}

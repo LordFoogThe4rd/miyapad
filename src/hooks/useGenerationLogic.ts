@@ -298,7 +298,7 @@ export function useGenerationLogic() {
 						break;
 				} else {
 					if (myId !== activeGenId.current) break;
-					setPromptChunks((p: PromptChunk[]) => [...p, chunk]);
+					setPromptChunks((p: PromptChunk[]) => [...p, compChunk]);
 					setTokens((t: number) => t + (compChunk?.completion_probabilities?.length ?? 1));
 				}
 				predictCount += 1;
