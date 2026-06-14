@@ -6,8 +6,9 @@ import { usePromptBuilder } from '../hooks/usePromptBuilder';
 import { SVG_Settings, SVG_SearchAndReplace, SVG_SplitView, SVG_Camera } from './icons/index';
 import { SearchAndReplaceWidget } from './SearchAndReplaceWidget';
 import { useScreenshotCapture } from '../hooks/useScreenshotCapture';
+import type { PromptContainerProps } from '../types/components';
 
-export function PromptContainer({ sidebarHeight }: any) {
+export function PromptContainer({ sidebarHeight }: PromptContainerProps) {
 	const { showMarkdownPreview, setShowMarkdownPreview, isMobile, tokenHighlightMode, tokenColorMode, showPromptPreview, promptAreaWidth, setPromptAreaWidth, showProbsMode, setShowProbsMode, spellCheck } = useSettings();
 	const { promptArea, promptOverlay, cancel, promptPreviewElement, promptChunks, setPromptChunks, currentPromptChunk, setCurrentPromptChunk, undoHovered, setUndoHovered, undoStack, redoStack, showProbs, setShowProbs, promptPreviewChunks, setPromptPreviewChunks, modalState, closeModal, toggleModal, markdownPreviewRef, isSyncingScroll, setSavedScrollTop, keyState, probsDelayTimer, setTriggerPredict } = useGeneration();
 	const { promptText, displayPromptChunks, cleanPromptText, origToClean, cleanToOrig } = usePromptBuilder();
