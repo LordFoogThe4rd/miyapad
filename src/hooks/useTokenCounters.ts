@@ -53,7 +53,7 @@ export function useTokenCounters() {
 
 		ac.signal.addEventListener('abort', () => clearTimeout(to));
 		return () => ac.abort();
-	},[modalState["context"],authorNoteTokens.text,authorNoteTokens.prefix,authorNoteTokens.suffix,contextLength,cancel,endpoint,endpointAPI,useServerTokenization])
+	},[modalState["context"],authorNoteTokens.text,authorNoteTokens.prefix,authorNoteTokens.suffix,contextLength,cancel,endpoint,endpointAPI,useServerTokenization,templateReplacements])
 
 	function handleMemoryTokensChange(key: keyof MemoryTokensData, value: any) {
 		setMemoryTokens((prevMemoryTokens: any) => ({ ...prevMemoryTokens, [key]: value }));
@@ -98,7 +98,7 @@ export function useTokenCounters() {
 
 		ac.signal.addEventListener('abort', () => clearTimeout(to));
 		return () => ac.abort();
-	},[modalState["context"],memoryTokens.text,memoryTokens.prefix,memoryTokens.suffix,cancel,endpoint,endpointAPI,useServerTokenization])
+	},[modalState["context"],memoryTokens.text,memoryTokens.prefix,memoryTokens.suffix,cancel,endpoint,endpointAPI,useServerTokenization,templateReplacements])
 	// token counts for wi
 	useEffect(() => {
 		const assembled = memoryTokens.worldInfo && memoryTokens.worldInfo !== ""
@@ -138,7 +138,7 @@ export function useTokenCounters() {
 
 		ac.signal.addEventListener('abort', () => clearTimeout(to));
 		return () => ac.abort();
-	},[modalState["context"],worldInfo.prefix,memoryTokens.worldInfo,worldInfo.suffix,cancel,endpoint,endpointAPI,useServerTokenization])
+	},[modalState["context"],worldInfo.prefix,memoryTokens.worldInfo,worldInfo.suffix,cancel,endpoint,endpointAPI,useServerTokenization,templateReplacements])
 
 	return { handleauthorNoteTokensChange, handleMemoryTokensChange };
 }
