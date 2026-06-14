@@ -13,7 +13,7 @@ interface ContextModalProps {
 	tokens: number;
 	memoryTokens: MemoryTokensData;
 	authorNoteTokens: AuthorNoteData;
-	handleMemoryTokensChange: (key: string, value: string) => void;
+	handleMemoryTokensChange: (key: keyof MemoryTokensData, value: string) => void;
 	finalPromptText: string;
 	defaultPresets: DefaultPresets;
 	cancel: (() => void) | null;

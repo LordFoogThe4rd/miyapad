@@ -11,7 +11,7 @@ export function useTokenCounters() {
 	const { cancel, modalState } = useGeneration();
 	const { templateReplacements, replacePlaceholders } = usePromptBuilder();
 
-	function handleauthorNoteTokensChange(key: any, value: any) {
+	function handleauthorNoteTokensChange(key: keyof AuthorNoteData, value: any) {
 		setAuthorNoteTokens((prevauthorNoteTokens: any) => ({ ...prevauthorNoteTokens, [key]: value }));
 	}
 	// token counts for an
@@ -55,7 +55,7 @@ export function useTokenCounters() {
 		return () => ac.abort();
 	},[modalState["context"],authorNoteTokens.text,authorNoteTokens.prefix,authorNoteTokens.suffix,contextLength,cancel,endpoint,endpointAPI,useServerTokenization])
 
-	function handleMemoryTokensChange(key: any, value: any) {
+	function handleMemoryTokensChange(key: keyof MemoryTokensData, value: any) {
 		setMemoryTokens((prevMemoryTokens: any) => ({ ...prevMemoryTokens, [key]: value }));
 	}
 	// token counts for memory
