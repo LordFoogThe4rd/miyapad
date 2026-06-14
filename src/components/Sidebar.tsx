@@ -14,8 +14,9 @@ import {
 } from './icons/index';
 import { useTokenCounters } from '../hooks/useTokenCounters';
 import { useGenerationLogic } from '../hooks/useGenerationLogic';
+import type { SidebarProps } from '../types/components';
 
-export function Sidebar({ sidebarRef, toggleModal, currentThemeName, setCurrentThemeName, allThemes, showAPIKey, setShowAPIKey }: any) {
+export function Sidebar({ sidebarRef, toggleModal, currentThemeName, setCurrentThemeName, allThemes, showAPIKey, setShowAPIKey }: SidebarProps) {
 	const {
 		endpoint, setEndpoint, endpointAPI, setEndpointAPI, endpointAPIKey, setEndpointAPIKey,
 		endpointModel, setEndpointModel, maxPredictTokens, setMaxPredictTokens, temperature, setTemperature,
