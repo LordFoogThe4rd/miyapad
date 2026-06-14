@@ -75,6 +75,23 @@ interface AbortParams {
   hordeTaskId?: string;
 }
 
+type AnyIterable<T> = Iterable<T> | AsyncIterable<T>;
+
+interface LogprobToken {
+  token: string;
+  logprob: number;
+}
+
+interface LLamaCppProb {
+  token: string;
+  prob: number;
+}
+
+interface LLamaCppProbItem {
+  tok_str: string;
+  prob: number;
+}
+
 interface SamplerOptions {
   stream?: boolean;
   temperature?: number;

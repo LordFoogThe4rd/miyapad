@@ -13,7 +13,7 @@ export async function deepseekModels({ endpoint, endpointAPIKey, proxyEndpoint, 
   });
   if (!res.ok) throw new Error(`HTTP ${res.status}`);
   const { data } = await res.json();
-  return data.map((item: any) => item.id);
+  return data.map((item: { id: string }) => item.id);
 }
 
 interface DeepseekConvertedOpts {
@@ -66,7 +66,17 @@ export async function* deepseekChatCompletion({ endpoint, endpointAPIKey, proxyE
     throw new Error(`HTTP ${res.status}`);
   }
 
-  async function* yieldTokens(chunks: any) {
+  interface DeepseekChatChunk {
+    choices?: Array<{
+      delta?: { content?: string };
+      text?: string;
+      logprobs?: {
+        content?: Array<{ top_logprobs: LogprobToken[] }>;
+      };
+    }>;
+  }
+
+  async function* yieldTokens(chunks: AnyIterable<DeepseekChatChunk>) {
     for await (const chunk of chunks) {
       if (!chunk.choices || chunk.choices.length === 0) continue;
       const choice = chunk.choices[0];
@@ -77,7 +87,7 @@ export async function* deepseekChatCompletion({ endpoint, endpointAPIKey, proxyE
       let probs: ProbItem[] = [];
       let prob: number | undefined;
       if (topLogprobs?.length) {
-        const rawProbsArr = topLogprobs.map(({ token: t, logprob }: { token: any; logprob: any }) => ({ tok_str: t, logprob }));
+        const rawProbsArr = topLogprobs.map(({ token: t, logprob }) => ({ tok_str: t, logprob }));
         const res = applyTemperatureToProbs(rawProbsArr, token, opts.temperature);
         probs = res.probs;
         prob = res.prob;
@@ -91,7 +101,7 @@ export async function* deepseekChatCompletion({ endpoint, endpointAPIKey, proxyE
   }
 
   if (opts.stream) {
-    yield* yieldTokens(parseEventStream(res.body));
+    yield* yieldTokens(parseEventStream(res.body) as AsyncIterable<DeepseekChatChunk>);
   } else {
     const { choices } = await res.json();
     if (choices?.[0]?.message?.content) {
@@ -125,7 +135,17 @@ export async function* deepseekCompletion({ endpoint, endpointAPIKey, proxyEndpo
     throw new Error(`HTTP ${res.status}`);
   }
 
-  async function* yieldTokens(chunks: any) {
+  interface DeepseekCompletionChunk {
+    choices?: Array<{
+      text?: string;
+      logprobs?: {
+        content?: Array<{ top_logprobs: LogprobToken[] }>;
+        top_logprobs?: Array<Record<string, number>>;
+      };
+    }>;
+  }
+
+  async function* yieldTokens(chunks: AnyIterable<DeepseekCompletionChunk>) {
     for await (const chunk of chunks) {
       if (!chunk.choices || chunk.choices.length === 0) continue;
       const choice = chunk.choices[0];
@@ -138,10 +158,10 @@ export async function* deepseekCompletion({ endpoint, endpointAPIKey, proxyEndpo
       let rawProbsArr: ProbItem[] = [];
 
       if (logprobsData?.content?.[0]?.top_logprobs) {
-        rawProbsArr = logprobsData.content[0].top_logprobs.map(({ token, logprob }: { token: any; logprob: any }) => ({ tok_str: token, logprob }));
+        rawProbsArr = logprobsData.content[0].top_logprobs.map(({ token, logprob }) => ({ tok_str: token, logprob }));
       } else if (logprobsData?.top_logprobs?.[0]) {
         const top_logprobs_obj = logprobsData.top_logprobs[0];
-        rawProbsArr = Object.entries(top_logprobs_obj).map(([tok, logprob]) => ({ tok_str: tok, logprob: logprob as number }));
+        rawProbsArr = Object.entries(top_logprobs_obj).map(([tok, logprob]) => ({ tok_str: tok, logprob }));
       }
 
       if (rawProbsArr.length > 0) {
@@ -158,7 +178,7 @@ export async function* deepseekCompletion({ endpoint, endpointAPIKey, proxyEndpo
   }
 
   if (opts.stream) {
-    yield* yieldTokens(parseEventStream(res.body));
+    yield* yieldTokens(parseEventStream(res.body) as AsyncIterable<DeepseekCompletionChunk>);
   } else {
     const data = await res.json();
     if (data.choices?.[0]?.text) {

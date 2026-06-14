@@ -1,5 +1,26 @@
 import { parseEventStream, applyTemperatureToProbs } from './common';
 
+interface OpenaiStreamChunk {
+	choices?: Array<{
+		text?: string;
+		logprobs?: {
+			content?: Array<{ top_logprobs: LogprobToken[] }>;
+			top_logprobs?: Array<Record<string, number>>;
+		};
+	}>;
+	content?: string;
+}
+
+interface OpenaiChatChunk {
+	choices?: Array<{
+		delta?: { content?: string };
+		text?: string;
+		logprobs?: {
+			content?: Array<{ top_logprobs: LogprobToken[] }>;
+		};
+	}>;
+}
+
 export async function openaiAphroditeTokenCount({ endpoint, endpointAPIKey, proxyEndpoint, signal, ...options }: TokenCounterParams) {
 	try {
 		const res = await fetch(`${proxyEndpoint ?? endpoint}/v1/token/encode`, {
@@ -85,7 +106,7 @@ export async function openaiOobaTokenize({ endpoint, endpointAPIKey, proxyEndpoi
 			throw new Error(`HTTP ${res.status}`);
 		const { tokens } = await res.json();
 
-		const strings = await Promise.all(tokens.map((token: any) =>
+		const strings = await Promise.all(tokens.map((token: number) =>
 			openaiOobaDetokenize({
 				endpoint,
 				proxyEndpoint,
@@ -139,7 +160,7 @@ export async function openaiTabbyTokenize({ endpoint, endpointAPIKey, proxyEndpo
 			throw new Error(`HTTP ${res.status}`);
 		const { tokens } = await res.json();
 
-		const strings = await Promise.all(tokens.map((token: any) =>
+		const strings = await Promise.all(tokens.map((token: number) =>
 			openaiTabbyDetokenize({
 				endpoint,
 				proxyEndpoint,
@@ -201,7 +222,7 @@ export async function openaiModels({ endpoint, endpointAPIKey, proxyEndpoint, si
 	} else {
 		data = response.data;
 	}
-	return data.map((item: any) => item.id);
+	return data.map((item: { id: string }) => item.id);
 }
 
 function openaiConvertOptions(options: SamplerOptions, endpoint: string, isChat: boolean) {
@@ -209,7 +230,7 @@ function openaiConvertOptions(options: SamplerOptions, endpoint: string, isChat:
 	const isOpenAI = endpointHost === "api.openai.com" || endpointHost.endsWith(".openai.com");
 	const isTogetherAI = endpointHost === "api.together.xyz";
 	const isOpenRouter = endpointHost === "openrouter.ai";
-	const swapOption = (lhs: any, rhs: any) => {
+	const swapOption = (lhs: string, rhs: string) => {
 		if (lhs in options) {
 			options[rhs] = options[lhs];
 			delete options[lhs];
@@ -302,7 +323,7 @@ export async function* openaiCompletion({ endpoint, endpointAPIKey, proxyEndpoin
 		throw new Error(`HTTP ${res.status}`);
 	}
 
-	async function* yieldTokens(chunks: any) {
+	async function* yieldTokens(chunks: AnyIterable<OpenaiStreamChunk>) {
 		for await (const chunk of chunks) {
 			if (!chunk.choices || chunk.choices.length === 0) {
 				if (chunk.content) yield { content: chunk.content };
@@ -311,16 +332,17 @@ export async function* openaiCompletion({ endpoint, endpointAPIKey, proxyEndpoin
 
 			const choice = chunk.choices[0];
 			const text = choice.text;
+			if (!text) continue;
 			const logprobsData = choice.logprobs;
 			let probs: ProbItem[] = [];
 			let prob: number | undefined;
 			let rawProbsArr: ProbItem[] = [];
 
 			if (logprobsData?.content?.[0]?.top_logprobs) {
-				rawProbsArr = logprobsData.content[0].top_logprobs.map(({ token, logprob }: { token: any; logprob: any }) => ({ tok_str: token, logprob }));
+				rawProbsArr = logprobsData.content[0].top_logprobs.map(({ token, logprob }) => ({ tok_str: token, logprob }));
 			} else if (logprobsData?.top_logprobs?.[0]) {
 				const top_logprobs_obj = logprobsData.top_logprobs[0];
-				rawProbsArr = Object.entries(top_logprobs_obj).map(([tok, logprob]) => ({ tok_str: tok, logprob: logprob as number }));
+				rawProbsArr = Object.entries(top_logprobs_obj).map(([tok, logprob]) => ({ tok_str: tok, logprob }));
 			}
 
 			if (rawProbsArr.length > 0) {
@@ -343,15 +365,16 @@ export async function* openaiCompletion({ endpoint, endpointAPIKey, proxyEndpoin
 	}
 
 	if (options.stream) {
-		yield* yieldTokens(parseEventStream(res.body));
+		yield* yieldTokens(parseEventStream(res.body) as AsyncIterable<OpenaiStreamChunk>);
 	} else {
 		const { content, choices } = await res.json();
 		if (choices?.[0].logprobs?.tokens) {
 			const logprobs = choices[0].logprobs;
-			const chunks = Object.values(logprobs.tokens).map((token: any, i: any) => ({
+			const tokensArr = logprobs.tokens as string[];
+			const chunks: OpenaiStreamChunk[] = tokensArr.map((token, i) => ({
 				choices: [{
 					text: token,
-					logprobs: { top_logprobs: [logprobs.top_logprobs[i]] }
+					logprobs: { top_logprobs: [(logprobs.top_logprobs as Record<string, number>[])[i]] }
 				}]
 			}));
 			yield* yieldTokens(chunks);
@@ -363,21 +386,22 @@ export async function* openaiCompletion({ endpoint, endpointAPIKey, proxyEndpoin
 	}
 }
 
-async function* openaiBufferUtf8Stream(stream: Iterable<any> | AsyncIterable<any>): AsyncGenerator<any, void, undefined> {
+async function* openaiBufferUtf8Stream(stream: AnyIterable<OpenaiChatChunk>): AsyncGenerator<OpenaiChatChunk, void, undefined> {
 	const decoder = new TextDecoder('utf-8', { fatal: false });
 
-	function parseEscapedString(escapedStr: any) {
+	function parseEscapedString(escapedStr: string) {
 		const decoded = escapedStr.replace(/\\x([0-9a-fA-F]{2})/g, (_: string, hex: string) => String.fromCharCode(parseInt(hex, 16)));
 		return new TextEncoder().encode(decoded);
 	}
 
-	const hasEscapedSequence = (str: any) => /\\x[0-9a-fA-F]{2}/.test(str);
+	const hasEscapedSequence = (str: string) => /\\x[0-9a-fA-F]{2}/.test(str);
 	const encoder = new TextEncoder();
 
 	for await (const chunk of stream) {
-		const content = chunk?.choices?.[0]?.delta?.content ?? chunk?.choices?.[0]?.text;
+		const choice = chunk.choices?.[0];
+		const content = choice?.delta?.content ?? choice?.text;
 
-		if (!content) {
+		if (!content || !choice) {
 			yield chunk;
 			continue;
 		}
@@ -391,9 +415,9 @@ async function* openaiBufferUtf8Stream(stream: Iterable<any> | AsyncIterable<any
 		yield {
 			...chunk,
 			choices: [{
-				...chunk.choices[0],
-				...(chunk.choices[0].delta
-					? { delta: { ...chunk.choices[0].delta, content: decoded } }
+				...choice,
+				...(choice.delta
+					? { delta: { ...choice.delta, content: decoded } }
 					: { text: decoded }
 				)
 			}]
@@ -443,15 +467,15 @@ export async function* openaiChatCompletion({ endpoint, endpointAPIKey, proxyEnd
 		throw new Error(`HTTP ${res.status}`);
 	}
 
-	async function* yieldTokens(chunks: any) {
+	async function* yieldTokens(chunks: AnyIterable<OpenaiChatChunk>) {
 		for await (const chunk of chunks) {
 			if (!chunk.choices || chunk.choices.length === 0) continue;
 			const choice = chunk.choices[0];
 			const token = choice.delta?.content || choice.text;
-			const top_logprobs = choice.logprobs?.content?.[0]?.top_logprobs ?? {};
+			const top_logprobs = choice.logprobs?.content?.[0]?.top_logprobs ?? [];
 			if (!token) continue;
 
-				let rawProbsArr = Object.values(top_logprobs).map(({ token: t, logprob }: any) => ({ tok_str: t, logprob }));
+				let rawProbsArr = top_logprobs.map(({ token: t, logprob }) => ({ tok_str: t, logprob }));
 				const res = applyTemperatureToProbs(rawProbsArr, token, options.temperature);
 				const probs = res.probs;
 				let prob = res.prob;
@@ -470,13 +494,13 @@ export async function* openaiChatCompletion({ endpoint, endpointAPIKey, proxyEnd
 	}
 
 	if (options.stream) {
-		yield* yieldTokens(parseEventStream(res.body));
+		yield* yieldTokens(parseEventStream(res.body) as AsyncIterable<OpenaiChatChunk>);
 	} else {
 		const { choices } = await res.json();
 		const chunks = choices?.[0].logprobs?.content;
 
 		if (chunks?.length) {
-			const formattedChunks = chunks.map((chunk: any) => ({
+			const formattedChunks: OpenaiChatChunk[] = chunks.map((chunk: { token: string; top_logprobs: LogprobToken[] }) => ({
 				choices: [{
 					delta: { content: chunk.token },
 					logprobs: { content: [{ top_logprobs: chunk.top_logprobs }] }

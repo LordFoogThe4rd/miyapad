@@ -43,7 +43,7 @@ export async function koboldCppTokenize({ endpoint, endpointAPIKey, proxyEndpoin
 export function koboldCppConvertOptions(options: SamplerOptions, endpoint: string) {
 	const endpointHost = (() => { try { return new URL(endpoint).hostname; } catch { return ''; } })();
 	const isHorde = endpointHost === "aihorde.net" || endpointHost.endsWith(".aihorde.net");
-	const swapOption = (lhs: any, rhs: any) => {
+	const swapOption = (lhs: string, rhs: string) => {
 		if (lhs in options) {
 			options[rhs] = options[lhs];
 			delete options[lhs];
@@ -87,11 +87,16 @@ export async function* koboldCppCompletion({ endpoint, endpointAPIKey, proxyEndp
 		throw new Error(`HTTP ${res.status}`);
 	}
 
-	async function* yieldTokens(chunks: any) {
+	interface KoboldCppChunk {
+		token: string;
+		top_logprobs?: Record<string, LogprobToken>;
+	}
+
+	async function* yieldTokens(chunks: AnyIterable<KoboldCppChunk>) {
 		for await (const chunk of chunks) {
 			const { token, top_logprobs } = chunk;
 
-			let rawProbsArr = Object.values(top_logprobs ?? {}).map(({ token: t, logprob }: any) => ({ tok_str: t, logprob }));
+			let rawProbsArr = Object.values(top_logprobs ?? {}).map(({ token: t, logprob }) => ({ tok_str: t, logprob }));
 				const res = applyTemperatureToProbs(rawProbsArr, token, options.temperature);
 				const probs = res.probs;
 				let prob = res.prob;
@@ -110,10 +115,10 @@ export async function* koboldCppCompletion({ endpoint, endpointAPIKey, proxyEndp
 	}
 
 	if (options.stream) {
-		yield* yieldTokens(parseEventStream(res.body));
+		yield* yieldTokens(parseEventStream(res.body) as AsyncIterable<KoboldCppChunk>);
 	} else {
 		const { results } = await res.json();
-		yield* yieldTokens(results?.[0].logprobs?.content ?? []);
+		yield* yieldTokens(results?.[0].logprobs?.content as KoboldCppChunk[] ?? []);
 	}
 }
 

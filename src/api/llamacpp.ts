@@ -81,24 +81,36 @@ export async function* llamaCppCompletion({ endpoint, endpointAPIKey, proxyEndpo
 		throw new Error(`HTTP ${res.status}`);
 	}
 
-	async function* yieldTokens(chunks: any) {
+	interface LLamaCppChunk {
+		content?: string;
+		token?: string;
+		top_logprobs?: Record<string, LogprobToken>;
+		completion_probabilities?: Array<{
+			top_probs?: LLamaCppProb[];
+			probs?: LLamaCppProbItem[];
+			top_logprobs?: Record<string, LogprobToken>;
+		}>;
+	}
+
+	async function* yieldTokens(chunks: AnyIterable<LLamaCppChunk>) {
 		for await (const chunk of chunks) {
 			const token = chunk.content || chunk.token;
+			if (!token) continue;
 			const choice = chunk.completion_probabilities?.[0];
 
 			let prob;
 			let probs;
 			if (choice?.top_probs) { // post_sampling_probs: true
-				probs = choice.top_probs.map(({ token: t, prob: p }: { token: any; prob: any }) => {
+				probs = choice.top_probs.map(({ token: t, prob: p }) => {
 					if (t === token) prob = p;
 					return { tok_str: t, prob: p };
 				});
 			} else {  // post_sampling_probs: false
-					let rawProbsArr = [];
+					let rawProbsArr: ProbItem[] = [];
 				if (choice?.probs) {
-						rawProbsArr = choice.probs.map((p: any) => ({ tok_str: p.tok_str, prob: p.prob }));
+						rawProbsArr = choice.probs.map((p) => ({ tok_str: p.tok_str, prob: p.prob }));
 				} else {
-						rawProbsArr = Object.values(choice?.top_logprobs || chunk.top_logprobs || {}).map(({ token: t, logprob }: any) => ({ tok_str: t, logprob }));
+						rawProbsArr = Object.values(choice?.top_logprobs || chunk.top_logprobs || {} as Record<string, LogprobToken>).map(({ token: t, logprob }) => ({ tok_str: t, logprob }));
 				}
 					const res = applyTemperatureToProbs(rawProbsArr, token, options.temperature);
 					probs = res.probs;
@@ -119,9 +131,9 @@ export async function* llamaCppCompletion({ endpoint, endpointAPIKey, proxyEndpo
 	}
 
 	if (options.stream) {
-		yield* yieldTokens(parseEventStream(res.body));
+		yield* yieldTokens(parseEventStream(res.body) as AsyncIterable<LLamaCppChunk>);
 	} else {
 		const { completion_probabilities } = await res.json();
-		yield* yieldTokens(completion_probabilities);
+		yield* yieldTokens(completion_probabilities as LLamaCppChunk[]);
 	}
 }
