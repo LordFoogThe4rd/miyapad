@@ -8,6 +8,11 @@ interface SessionData {
   [key: string]: any;
 }
 
+interface ChatMessage {
+  role: 'system' | 'user' | 'assistant';
+  content: string;
+}
+
 interface InstructTemplate {
   sysPre: string;
   sysSuf: string;

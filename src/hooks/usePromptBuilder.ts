@@ -227,14 +227,14 @@ export function usePromptBuilder() {
 		return text;
 	}, [additionalContextPrompt, templates, selectedTemplate]);
 	function convertChatToJSON(chatString: string, template: InstructTemplate) {
-		function extractMessage(text: any, prefix: any, suffixes: any, role: any) {
+		function extractMessage(text: string, prefix: string, suffixes: string[], role: 'system' | 'user' | 'assistant'): { message: ChatMessage; remainingString: string } | null {
 			const matches = text.match(createLenientPrefixRegex(prefix));
 			if (matches && matches.length) {
 				text = text.substring(matches[0].length);
 				let endIndex = suffixes[0] ? regexIndexOf(text, createLenientRegex(suffixes[0])) : -1;
 				if (endIndex === -1) {
 					if (suffixes.length > 1) {
-						const indices = suffixes.slice(1).map((suffix: any) => suffix ? regexIndexOf(text, createLenientRegex(suffix)) : -1).filter((index: any) => index !== -1);
+						const indices = suffixes.slice(1).map((suffix: string) => suffix ? regexIndexOf(text, createLenientRegex(suffix)) : -1).filter((index: number) => index !== -1);
 						endIndex = indices.length > 0 ? Math.min(...indices) : text.length;
 					}  else {
 						endIndex = text.length;
@@ -250,7 +250,7 @@ export function usePromptBuilder() {
 			return null;
 		}
 
-		function skipToNextKnownPrefix(text: any, ...prefixes: any[]) {
+		function skipToNextKnownPrefix(text: string, ...prefixes: string[]) {
 			const indices = prefixes.map(prefix => prefix ? regexIndexOf(text, createLenientRegex(prefix)) : -1).filter(index => index !== -1);
 			const minIndex = indices.length > 0 ? Math.min(...indices) : text.length;
 			if (minIndex == 0) {
