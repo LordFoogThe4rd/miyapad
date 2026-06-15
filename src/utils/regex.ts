@@ -27,7 +27,7 @@ export function regexIndexOf(string: string, regex: RegExp, startpos?: number) {
 }
 
 export function regexLastIndexOf(string: string, regex: RegExp, startpos?: number) {
-    regex = (regex.global) ? regex : new RegExp(regex.source, "g" + (regex.ignoreCase ? "i" : "") + (regex.multiline ? "m" : ""));
+    regex = regex.global ? regex : new RegExp(regex.source, regex.flags + 'g');
     if(typeof (startpos) == "undefined") {
         startpos = string.length;
     } else if(startpos < 0) {
