@@ -272,7 +272,7 @@ export class SessionStorage extends AbstractStorage {
 		}
 
 		if (!Object.hasOwn(this.sessions[newId], 'name')) {
-			this.sessions[newId]['name'] = `MiyaPad #${(this.nextId ?? 0) + 1}`;
+			this.sessions[newId]['name'] = `MiyaPad #${newId + 1}`;
 		}
 
 		if (cloned && !this.sessions[newId]['name']!.startsWith('Cloned')) {
