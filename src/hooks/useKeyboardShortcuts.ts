@@ -1,4 +1,4 @@
-import { useEffect } from 'react';
+import { useEffect, useEffectEvent } from 'react';
 import { useSettings } from '../contexts/SettingsContext';
 import { useGeneration } from '../contexts/GenerationContext';
 import { useTTS } from './useTTS';
@@ -10,115 +10,116 @@ export function useKeyboardShortcuts() {
 	const { predict, undoAndPredict, undo, redo } = useGenerationLogic();
 	const { ttsStop } = useTTS();
 
-	useEffect(() => {
-		function onKeyDown(e: any) {
-			const { altKey, ctrlKey, metaKey, shiftKey, key, defaultPrevented } = e;
-			if (defaultPrevented)
-				return;
-			if (Object.values(modalState).some((s) => s))
-				return;
-			let preventDefaultAction = true;
+	const onKeyDown = useEffectEvent((e: KeyboardEvent) => {
+		const { altKey, ctrlKey, metaKey, shiftKey, key, defaultPrevented } = e;
+		if (defaultPrevented)
+			return;
+		if (Object.values(modalState).some((s) => s))
+			return;
+		let preventDefaultAction = true;
 		switch (`${altKey}:${ctrlKey}:${metaKey}:${shiftKey}:${key}`) {
-			case 'false:false:false:true:Enter':
-			case 'false:true:false:false:Enter':
-					predict();
-					break;
-				case 'false:false:false:false:Escape':
-					if (cancel) {
-						cancel();
-					} else if (showPromptPreview && promptPreviewChunks.length !== 0) {
-						setPromptPreviewChunks([]); // Discard current preview so that a new one is generated.
-						setPromptPreviewReroll((r: any) => r + 1);
-					}
-					break;
-				case 'false:false:false:false:Tab':
-					if (!showPromptPreview || promptPreviewChunks.length === 0)
-						break;
-
-					setPromptChunks((p: PromptChunk[]) => [
-						...p,
-						...promptPreviewChunks
-					]);
-					setTokens((t: number) => t + promptPreviewChunks.length);
+		case 'false:false:false:true:Enter':
+		case 'false:true:false:false:Enter':
+				predict();
+				break;
+			case 'false:false:false:false:Escape':
+				if (cancel) {
+					cancel();
+				} else if (showPromptPreview && promptPreviewChunks.length !== 0) {
 					setPromptPreviewChunks([]);
+					setPromptPreviewReroll((r: any) => r + 1);
+				}
+				break;
+			case 'false:false:false:false:Tab':
+				if (!showPromptPreview || promptPreviewChunks.length === 0)
 					break;
-				case 'false:true:false:false:ArrowRight':
-					if (!showPromptPreview || promptPreviewChunks.length === 0)
-					{
-						preventDefaultAction = false;
-						break;
-					}
 
-					let newPromptChunks = [ ...promptChunks ];
-					let newPromptPreviewChunks = [ ...promptPreviewChunks ];
-					let newTokens = tokens;
+				setPromptChunks((p: PromptChunk[]) => [
+					...p,
+					...promptPreviewChunks
+				]);
+				setTokens((t: number) => t + promptPreviewChunks.length);
+				setPromptPreviewChunks([]);
+				break;
+			case 'false:true:false:false:ArrowRight':
+				if (!showPromptPreview || promptPreviewChunks.length === 0)
+				{
+					preventDefaultAction = false;
+					break;
+				}
 
-					do {
-						newPromptChunks = newPromptChunks.concat(newPromptPreviewChunks.splice(0, 1));
-					} while (
-						newPromptPreviewChunks.length > 0 &&
-						newPromptPreviewChunks[0].content[0] != " " &&
+				let newPromptChunks = [ ...promptChunks ];
+				let newPromptPreviewChunks = [ ...promptPreviewChunks ];
+				let newTokens = tokens;
+
+				do {
+					newPromptChunks = newPromptChunks.concat(newPromptPreviewChunks.splice(0, 1));
+				} while (
+					newPromptPreviewChunks.length > 0 &&
+					newPromptPreviewChunks[0].content[0] != " " &&
+					(
+						newPromptChunks.length == 0 ||
 						(
-							newPromptChunks.length == 0 ||
-							(
-								newPromptChunks.length > 0 &&
-								newPromptChunks[newPromptChunks.length - 1].content[newPromptChunks[newPromptChunks.length - 1].content.length - 1] != " "
-							)
+							newPromptChunks.length > 0 &&
+							newPromptChunks[newPromptChunks.length - 1].content[newPromptChunks[newPromptChunks.length - 1].content.length - 1] != " "
 						)
 					)
-					
-					setPromptChunks(newPromptChunks);
-					setPromptPreviewChunks(newPromptPreviewChunks);
-					setTokens(newTokens);
-					break;
-				case 'false:true:false:false:r':
-				case 'false:false:false:true:r':
-					undoAndPredict();
-					break;
-				case 'false:true:false:false:z':
-				case 'false:false:false:true:z':
-					if (showPromptPreview) setPromptPreviewChunks([]);
-					if (cancel || !undo()) return;
-					break;
-				case 'false:true:false:true:Z':
-				case 'false:true:false:false:y':
-				case 'false:false:false:true:y':
-					if (showPromptPreview) setPromptPreviewChunks([]);
-					if (cancel || !redo()) return;
-					break;
-				case 'false:true:false:false:e':
-				case 'false:false:false:true:e':
-					ttsStop();
-					break;
-				case 'false:true:false:false:f':
-				case 'false:false:false:true:f':
-					toggleModal("searchAndReplace");
-					break;
-				case 'false:false:true:false:p':
-				case 'false:true:false:false:p':
-					toggleModal("quickSwitcher");
-					break;
+				)
 				
-				default:
-					keyState.current = e;
-					return;
-			}
-
-			if (preventDefaultAction)
-				e.preventDefault();
-		}
-		function onKeyUp(e: any) {
-			const { altKey, ctrlKey, shiftKey, key, defaultPrevented } = e;
-			if (defaultPrevented)
+				setPromptChunks(newPromptChunks);
+				setPromptPreviewChunks(newPromptPreviewChunks);
+				setTokens(newTokens);
+				break;
+			case 'false:true:false:false:r':
+			case 'false:false:false:true:r':
+				undoAndPredict();
+				break;
+			case 'false:true:false:false:z':
+			case 'false:false:false:true:z':
+				if (showPromptPreview) setPromptPreviewChunks([]);
+				if (cancel || !undo()) return;
+				break;
+			case 'false:true:false:true:Z':
+			case 'false:true:false:false:y':
+			case 'false:false:false:true:y':
+				if (showPromptPreview) setPromptPreviewChunks([]);
+				if (cancel || !redo()) return;
+				break;
+			case 'false:true:false:false:e':
+			case 'false:false:false:true:e':
+				ttsStop();
+				break;
+			case 'false:true:false:false:f':
+			case 'false:false:false:true:f':
+				toggleModal("searchAndReplace");
+				break;
+			case 'false:false:true:false:p':
+			case 'false:true:false:false:p':
+				toggleModal("quickSwitcher");
+				break;
+			
+			default:
+				keyState.current = e as unknown as Record<string, boolean>;
 				return;
-			keyState.current = e;
 		}
 
+		if (preventDefaultAction)
+			e.preventDefault();
+	});
+
+	const onKeyUp = useEffectEvent((e: KeyboardEvent) => {
+		const { altKey, ctrlKey, shiftKey, key, defaultPrevented } = e;
+		if (defaultPrevented)
+			return;
+		keyState.current = e as unknown as Record<string, boolean>;
+	});
+
+	useEffect(() => {
 		window.addEventListener('keydown', onKeyDown);
 		window.addEventListener('keyup', onKeyUp);
 		return () => {
 			window.removeEventListener('keydown', onKeyDown);
 			window.removeEventListener('keyup', onKeyUp)
 		};
-	}, [predict, cancel]);
+	}, []);
 }
