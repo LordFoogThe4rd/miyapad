@@ -9,7 +9,7 @@ export function InstructModal({ isOpen, closeModal, predict, cancel, modalState,
 	const [includeContext, setIncludeContext] = useState(true);
 	const [result, setResult] = useState("");
 
-	const finish = (replace: any) => {
+	const finish = (replace: boolean) => {
 		modalState.result = {
 			content: result,
 			replace: replace
