@@ -390,8 +390,17 @@ async function* openaiBufferUtf8Stream(stream: AnyIterable<OpenaiChatChunk>): As
 	const decoder = new TextDecoder('utf-8', { fatal: false });
 
 	function parseEscapedString(escapedStr: string) {
-		const decoded = escapedStr.replace(/\\x([0-9a-fA-F]{2})/g, (_: string, hex: string) => String.fromCharCode(parseInt(hex, 16)));
-		return new TextEncoder().encode(decoded);
+		const bytes: number[] = [];
+		const encoder = new TextEncoder();
+		const parts = escapedStr.split(/(\\x[0-9a-fA-F]{2})/);
+		for (const part of parts) {
+			if (/^\\x[0-9a-fA-F]{2}$/.test(part)) {
+				bytes.push(parseInt(part.slice(2), 16));
+			} else if (part) {
+				bytes.push(...encoder.encode(part));
+			}
+		}
+		return new Uint8Array(bytes);
 	}
 
 	const hasEscapedSequence = (str: string) => /\\x[0-9a-fA-F]{2}/.test(str);
