@@ -36,10 +36,15 @@ export class AbstractStorage extends EventTarget {
 
 	async saveTimerHandler(saveCallback: (key: string | number) => Promise<void>) {
 		const key = this.pendingSaveKey;
-		this.pendingSaveKey = null;
-
 		if (key !== null) {
-			await saveCallback(key);
+			this.pendingSaveKey = null;
+			try {
+				await saveCallback(key);
+			} catch {
+				if (this.pendingSaveKey === null) {
+					this.pendingSaveKey = key;
+				}
+			}
 		}
 	}
 
