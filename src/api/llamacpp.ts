@@ -133,7 +133,12 @@ export async function* llamaCppCompletion({ endpoint, endpointAPIKey, proxyEndpo
 	if (options.stream) {
 		yield* yieldTokens(parseEventStream(res.body) as AsyncIterable<LLamaCppChunk>);
 	} else {
-		const { completion_probabilities = [] } = await res.json();
-		yield* yieldTokens(completion_probabilities as LLamaCppChunk[]);
+		const data = await res.json();
+		const { completion_probabilities = [] } = data;
+		if (completion_probabilities.length > 0) {
+			yield* yieldTokens(completion_probabilities as LLamaCppChunk[]);
+		} else if (data.content) {
+			yield { content: data.content };
+		}
 	}
 }

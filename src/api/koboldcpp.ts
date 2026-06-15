@@ -118,7 +118,12 @@ export async function* koboldCppCompletion({ endpoint, endpointAPIKey, proxyEndp
 		yield* yieldTokens(parseEventStream(res.body) as AsyncIterable<KoboldCppChunk>);
 	} else {
 		const { results } = await res.json();
-		yield* yieldTokens(results?.[0].logprobs?.content as KoboldCppChunk[] ?? []);
+		const probContent = results?.[0]?.logprobs?.content;
+		if (probContent?.length) {
+			yield* yieldTokens(probContent as KoboldCppChunk[]);
+		} else if (results?.[0]?.text) {
+			yield { content: results[0].text };
+		}
 	}
 }
 
