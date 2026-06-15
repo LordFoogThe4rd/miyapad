@@ -7,6 +7,7 @@ import { getTokenCount, serverTokenCount, completion, chatCompletion, abortCompl
 import { API_LLAMA_CPP, API_KOBOLD_CPP, API_OPENAI_COMPAT, API_AI_HORDE, API_DEEPSEEK } from '../constants';
 import { replaceNewlines } from '../utils/strings';
 import { regexLastIndexOf, createLenientRegex } from '../utils/regex';
+import { isAbortError } from '../utils/errors';
 
 type PredictionCallback = (chunk: CompletionChunk) => boolean;
 
@@ -305,7 +306,7 @@ export function useGenerationLogic() {
 				ttsAddChunk(compChunk.content);
 			}
 		} catch (e: unknown) {
-			if ((e as Error).name !== 'AbortError') {
+			if (!isAbortError(e)) {
 				reportError(e);
 				const errStr = String(e);
 				if ((endpointAPI == API_OPENAI_COMPAT || endpointAPI == API_LLAMA_CPP || endpointAPI == API_DEEPSEEK) && errStr.includes("401")) {
