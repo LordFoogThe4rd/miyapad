@@ -11,6 +11,12 @@ function extractMeta(s: Record<string, unknown>) {
 	};
 }
 
+function safeSessionName(name: unknown, key: string | number, fallback = 'Untitled'): string {
+	return typeof name === 'string'
+		? (name === '[object Object]' ? `Session #${key}` : name)
+		: fallback;
+}
+
 interface SessionMeta {
   name?: string;
   created?: number | null;
@@ -77,7 +83,7 @@ export class SessionStorage extends AbstractStorage {
 				data['tags'] = [];
 			} else if (nameData && typeof nameData === 'object') {
 				const meta = nameData as Record<string, unknown>;
-				data['name'] = (meta.name === '[object Object]' ? `Session #${key}` : meta.name) || 'Untitled';
+				data['name'] = safeSessionName(meta.name, key);
 				data['created'] = meta.created || null;
 				data['modified'] = meta.modified || null;
 				data['pinned'] = meta.pinned === undefined ? false : !!meta.pinned;
@@ -150,7 +156,7 @@ export class SessionStorage extends AbstractStorage {
 			if (typeof record === 'string') {
 				this.sessions[key] = { name: record === '[object Object]' ? `Session #${key}` : record, created: null, modified: null, pinned: false, tags: [] };
 			} else if (record && typeof record === 'object') {
-				this.sessions[key] = { ...extractMeta(record), name: ((record as SessionMeta).name === '[object Object]' ? `Session #${key}` : (record as SessionMeta).name) || 'Untitled' };
+				this.sessions[key] = { ...extractMeta(record), name: safeSessionName((record as SessionMeta).name, key) };
 			} else {
 				this.sessions[key] = { name: 'Untitled', created: null, modified: null, pinned: false, tags: [] };
 			}
