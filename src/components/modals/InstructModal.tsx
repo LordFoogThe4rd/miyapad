@@ -4,7 +4,7 @@ import { Modal } from '../Modal';
 import { Checkbox } from '../controls/Checkbox';
 import type { InstructModalState } from '../../types/contexts';
 
-export function InstructModal({ isOpen, closeModal, predict, cancel, modalState, templates, selectedTemplate, lastError, ...props }: { isOpen: boolean; closeModal: () => void; predict: any; cancel: (() => void) | null; modalState: InstructModalState; templates: Record<string, any>; selectedTemplate: string; lastError: string | undefined; [key: string]: any }) {
+export function InstructModal({ isOpen, closeModal, predict, cancel, modalState, templates, selectedTemplate, lastError, ...props }: { isOpen: boolean; closeModal: () => void; predict: (prompt: string, n?: number, callback?: (chunk: CompletionChunk) => boolean) => void; cancel: (() => void) | null; modalState: InstructModalState; templates: Record<string, any>; selectedTemplate: string; lastError: string | undefined; [key: string]: any }) {
 	const [prompt, setPrompt] = useState("");
 	const [includeContext, setIncludeContext] = useState(true);
 	const [result, setResult] = useState("");
