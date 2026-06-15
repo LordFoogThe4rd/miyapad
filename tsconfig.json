@@ -1,17 +1,12 @@
 {
+  "extends": "./tsconfig.base.json",
   "compilerOptions": {
-    "target": "ES2022",
     "module": "ESNext",
     "moduleResolution": "bundler",
     "jsx": "react-jsx",
     "jsxImportSource": "react",
     "ignoreDeprecations": "6.0",
-    "strict": true,
-    "noEmit": true,
     "allowJs": true,
-    "skipLibCheck": true,
-    "isolatedModules": true,
-    "esModuleInterop": true,
     "baseUrl": ".",
     "paths": { "*": ["src/types/*"] }
   },
