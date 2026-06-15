@@ -37,11 +37,11 @@ export function InstructTemplatesModal({ isOpen, closeModal, templateStorage, se
 		return array[index];
 	}
 
-	function handleInstructTemplateChange(templateName: any, key: any, value: any, back="") {
+	function handleInstructTemplateChange(templateName: string, key: keyof InstructTemplate | "name", value: string | undefined, back="") {
 		if (key == "name")
 			setNewTemplateName(value);
 
-		setTemplateList((prevState: any) => {
+		setTemplateList((prevState: TemplateListItem[]) => {
 			const newState = [
 				...prevState
 			];
