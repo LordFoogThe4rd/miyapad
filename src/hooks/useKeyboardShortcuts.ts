@@ -53,6 +53,7 @@ export function useKeyboardShortcuts() {
 
 				do {
 					newPromptChunks.push(...newPromptPreviewChunks.splice(0, 1));
+					newTokens++;
 				} while (
 					newPromptPreviewChunks.length > 0 &&
 					newPromptPreviewChunks[0].content[0] != " " &&
