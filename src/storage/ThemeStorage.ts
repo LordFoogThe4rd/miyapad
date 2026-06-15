@@ -78,7 +78,8 @@ export class ThemeStorage extends AbstractStorage {
             if (isThemeData(value)) {
                 this.themes[key] = value;
             } else {
-                console.warn(`[ThemeStorage] Skipped invalid entry: ${key}`);
+                console.warn(`[ThemeStorage] Removing invalid entry: ${key}`);
+                await this.deleteFromDatabase(db, key);
             }
         }
     }
