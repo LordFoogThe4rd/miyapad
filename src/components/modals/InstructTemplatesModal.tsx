@@ -50,7 +50,7 @@ export function InstructTemplatesModal({ isOpen, closeModal, templateStorage, se
 			if (key == "name") { 
 				newState[index] = {
 					...newState[index],
-					'nameNew': value
+					'nameNew': value ?? ''
 				}
 			} else {
 				newState[index] = {
