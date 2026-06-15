@@ -1,6 +1,6 @@
 import { html } from 'htm/react';
 import { useState, useEffect, useRef, useCallback } from 'react';
-import type { EditorContextMenuProps } from '../types/components';
+import type { ContextMenuItem, EditorContextMenuProps } from '../types/components';
 
 export function EditorContextMenu({ isOpen, closeMenu, menuItems, className, ...props }: EditorContextMenuProps) {
 	const menuRef = useRef<HTMLDivElement | null>(null);
@@ -79,7 +79,7 @@ export function EditorContextMenu({ isOpen, closeMenu, menuItems, className, ...
 			}}>
 			<ul>
 				${menuItems.map(
-					(item: any) => html`
+					(item: ContextMenuItem) => html`
 						<li
 							className="MenuItem ${item.disabled ? 'disabled' : ''} ${item.subItems ? 'hasSubItems' : ''}"
 							onClick=${(event: any) => {

@@ -63,7 +63,7 @@ export interface ContextMenuItem {
   label: string;
   action?: () => void;
   disabled: boolean;
-  subItems?: Array<{ label: string; action: () => void; disabled: boolean }>;
+  subItems?: ContextMenuItem[];
 }
 
 export interface QuickSwitcherProps {
