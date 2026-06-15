@@ -25,6 +25,14 @@ function isPrivateIP(ip: string): boolean {
     return PRIVATE_IP_RANGES.some(r => num >= r.start && num <= r.end);
 }
 
+function isPrivateIPv6(ip: string): boolean {
+    const lower = ip.toLowerCase();
+    if (lower === '::1' || lower === '0:0:0:0:0:0:0:1') return true;
+    if (lower.startsWith('fc') || lower.startsWith('fd')) return true;
+    if (lower.startsWith('fe8') || lower.startsWith('fe9') || lower.startsWith('fea') || lower.startsWith('feb')) return true;
+    return false;
+}
+
 function isPrivateHostname(hostname: string): boolean {
     const lower = hostname.toLowerCase();
     if (lower === 'localhost' || lower === '127.0.0.1' || lower === '0.0.0.0' || lower === '[::1]') return true;
@@ -44,7 +52,8 @@ async function isValidProxyUrl(urlString: string): Promise<boolean> {
         );
         const addresses = await Promise.race([lookup, timeout]);
         for (const addr of addresses) {
-            if (isPrivateIP(addr.address)) return false;
+            if (addr.family === 4 && isPrivateIP(addr.address)) return false;
+            if (addr.family === 6 && isPrivateIPv6(addr.address)) return false;
         }
 
         return true;
@@ -85,7 +94,8 @@ export default function(app: Express): void {
                 responseType: 'arraybuffer',
                 headers: {
                     'User-Agent': 'Mozilla/5.0',
-                }
+                },
+                maxRedirects: 0,
             });
             res.set('Content-Type', response.headers['content-type'] as string);
             res.set('Access-Control-Allow-Origin', '*');
@@ -129,7 +139,8 @@ export default function(app: Express): void {
                     'Accept-Encoding': 'identity',
                     'Authorization': authorization
                 },
-                responseType: 'stream'
+                responseType: 'stream',
+                maxRedirects: 0,
             });
 
             res.set(response.headers as Record<string, string>);
@@ -190,7 +201,8 @@ export default function(app: Express): void {
                     'Host': new URL(targetBaseUrl).hostname,
                     'Accept-Encoding': 'identity',
                     'Authorization': authorization
-                }
+                },
+                maxRedirects: 0,
             });
 
             res.send(response.data);
@@ -234,7 +246,8 @@ export default function(app: Express): void {
                     'Host': new URL(targetBaseUrl).hostname,
                     'Accept-Encoding': 'identity',
                     'Authorization': authorization
-                }
+                },
+                maxRedirects: 0,
             });
 
             res.send(response.data);
