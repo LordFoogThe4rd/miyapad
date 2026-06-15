@@ -431,87 +431,59 @@ export function Sidebar({ sidebarRef, toggleModal, currentThemeName, setCurrentT
 					<${Checkbox} label="Temperature"
 						disabled=${!!cancel}
 						value=${enabledSamplers.includes('temperature')}
-						onValueChange=${(v: boolean) => enabledSamplers.indexOf('temperature') === -1
-											  ? setEnabledSamplers((es: string[]) => [...es, 'temperature'])
-											  : setEnabledSamplers((es: string[]) => es.filter((s: string) => s !== 'temperature'))}/>
+						onValueChange=${(v: boolean) => setEnabledSamplers(v ? (es: string[]) => [...es, 'temperature'] : (es: string[]) => es.filter((s: string) => s !== 'temperature'))}/>
 					<${Checkbox} label="Dynamic Temperature"
 						disabled=${!!cancel}
 						value=${enabledSamplers.includes('dynatemp')}
-						onValueChange=${(v: boolean) => enabledSamplers.indexOf('dynatemp') === -1
-											  ? setEnabledSamplers((es: string[]) => [...es, 'dynatemp'])
-											  : setEnabledSamplers((es: string[]) => es.filter((s: string) => s !== 'dynatemp'))}/>
+						onValueChange=${(v: boolean) => setEnabledSamplers(v ? (es: string[]) => [...es, 'dynatemp'] : (es: string[]) => es.filter((s: string) => s !== 'dynatemp'))}/>
 					<${Checkbox} label="Repetition Penalty"
 						disabled=${!!cancel}
 						value=${enabledSamplers.includes('rep_pen')}
-						onValueChange=${(v: boolean) => enabledSamplers.indexOf('rep_pen') === -1
-											  ? setEnabledSamplers((es: string[]) => [...es, 'rep_pen'])
-											  : setEnabledSamplers((es: string[]) => es.filter((s: string) => s !== 'rep_pen'))}/>
+						onValueChange=${(v: boolean) => setEnabledSamplers(v ? (es: string[]) => [...es, 'rep_pen'] : (es: string[]) => es.filter((s: string) => s !== 'rep_pen'))}/>
 					<${Checkbox} label="Presence Penalty"
 						disabled=${!!cancel}
 						value=${enabledSamplers.includes('pres_pen')}
-						onValueChange=${(v: boolean) => enabledSamplers.indexOf('pres_pen') === -1
-											  ? setEnabledSamplers((es: string[]) => [...es, 'pres_pen'])
-											  : setEnabledSamplers((es: string[]) => es.filter((s: string) => s !== 'pres_pen'))}/>
+						onValueChange=${(v: boolean) => setEnabledSamplers(v ? (es: string[]) => [...es, 'pres_pen'] : (es: string[]) => es.filter((s: string) => s !== 'pres_pen'))}/>
 					<${Checkbox} label="Frequence Penalty"
 						disabled=${!!cancel}
 						value=${enabledSamplers.includes('freq_pen')}
-						onValueChange=${(v: boolean) => enabledSamplers.indexOf('freq_pen') === -1
-											  ? setEnabledSamplers((es: string[]) => [...es, 'freq_pen'])
-											  : setEnabledSamplers((es: string[]) => es.filter((s: string) => s !== 'freq_pen'))}/>
+						onValueChange=${(v: boolean) => setEnabledSamplers(v ? (es: string[]) => [...es, 'freq_pen'] : (es: string[]) => es.filter((s: string) => s !== 'freq_pen'))}/>
 					<${Checkbox} label="Mirostat"
 						disabled=${!!cancel}
 						value=${enabledSamplers.includes('mirostat')}
-						onValueChange=${(v: boolean) => enabledSamplers.indexOf('mirostat') === -1
-											  ? setEnabledSamplers((es: string[]) => [...es, 'mirostat'])
-											  : setEnabledSamplers((es: string[]) => es.filter((s: string) => s !== 'mirostat'))}/>
+						onValueChange=${(v: boolean) => setEnabledSamplers(v ? (es: string[]) => [...es, 'mirostat'] : (es: string[]) => es.filter((s: string) => s !== 'mirostat'))}/>
 					<${Checkbox} label="XTC"
 						disabled=${!!cancel}
 						value=${enabledSamplers.includes('xtc')}
-						onValueChange=${(v: boolean) => enabledSamplers.indexOf('xtc') === -1
-											  ? setEnabledSamplers((es: string[]) => [...es, 'xtc'])
-											  : setEnabledSamplers((es: string[]) => es.filter((s: string) => s !== 'xtc'))}/>
+						onValueChange=${(v: boolean) => setEnabledSamplers(v ? (es: string[]) => [...es, 'xtc'] : (es: string[]) => es.filter((s: string) => s !== 'xtc'))}/>
 					<${Checkbox} label="DRY"
 						disabled=${!!cancel}
 						value=${enabledSamplers.includes('dry')}
-						onValueChange=${(v: boolean) => enabledSamplers.indexOf('dry') === -1
-											  ? setEnabledSamplers((es: string[]) => [...es, 'dry'])
-											  : setEnabledSamplers((es: string[]) => es.filter((s: string) => s !== 'dry'))}/>
+						onValueChange=${(v: boolean) => setEnabledSamplers(v ? (es: string[]) => [...es, 'dry'] : (es: string[]) => es.filter((s: string) => s !== 'dry'))}/>
 					<${Checkbox} label="Top K"
 						disabled=${!!cancel}
 						value=${enabledSamplers.includes('top_k')}
-						onValueChange=${(v: boolean) => enabledSamplers.indexOf('top_k') === -1
-											  ? setEnabledSamplers((es: string[]) => [...es, 'top_k'])
-											  : setEnabledSamplers((es: string[]) => es.filter((s: string) => s !== 'top_k'))}/>
+						onValueChange=${(v: boolean) => setEnabledSamplers(v ? (es: string[]) => [...es, 'top_k'] : (es: string[]) => es.filter((s: string) => s !== 'top_k'))}/>
 					<${Checkbox} label="Top P"
 						disabled=${!!cancel}
 						value=${enabledSamplers.includes('top_p')}
-						onValueChange=${(v: boolean) => enabledSamplers.indexOf('top_p') === -1
-											  ? setEnabledSamplers((es: string[]) => [...es, 'top_p'])
-											  : setEnabledSamplers((es: string[]) => es.filter((s: string) => s !== 'top_p'))}/>
+						onValueChange=${(v: boolean) => setEnabledSamplers(v ? (es: string[]) => [...es, 'top_p'] : (es: string[]) => es.filter((s: string) => s !== 'top_p'))}/>
 					<${Checkbox} label="Min P"
 						disabled=${!!cancel}
 						value=${enabledSamplers.includes('min_p')}
-						onValueChange=${(v: boolean) => enabledSamplers.indexOf('min_p') === -1
-											  ? setEnabledSamplers((es: string[]) => [...es, 'min_p'])
-											  : setEnabledSamplers((es: string[]) => es.filter((s: string) => s !== 'min_p'))}/>
+						onValueChange=${(v: boolean) => setEnabledSamplers(v ? (es: string[]) => [...es, 'min_p'] : (es: string[]) => es.filter((s: string) => s !== 'min_p'))}/>
 					<${Checkbox} label="Typical P"
 						disabled=${!!cancel}
 						value=${enabledSamplers.includes('typical_p')}
-						onValueChange=${(v: boolean) => enabledSamplers.indexOf('typical_p') === -1
-											  ? setEnabledSamplers((es: string[]) => [...es, 'typical_p'])
-											  : setEnabledSamplers((es: string[]) => es.filter((s: string) => s !== 'typical_p'))}/>
+						onValueChange=${(v: boolean) => setEnabledSamplers(v ? (es: string[]) => [...es, 'typical_p'] : (es: string[]) => es.filter((s: string) => s !== 'typical_p'))}/>
 					<${Checkbox} label="TFS z"
 						disabled=${!!cancel}
 						value=${enabledSamplers.includes('tfs_z')}
-						onValueChange=${(v: boolean) => enabledSamplers.indexOf('tfs_z') === -1
-											  ? setEnabledSamplers((es: string[]) => [...es, 'tfs_z'])
-											  : setEnabledSamplers((es: string[]) => es.filter((s: string) => s !== 'tfs_z'))}/>
+						onValueChange=${(v: boolean) => setEnabledSamplers(v ? (es: string[]) => [...es, 'tfs_z'] : (es: string[]) => es.filter((s: string) => s !== 'tfs_z'))}/>
 					<${Checkbox} label="Banned Strings"
 						disabled=${!!cancel}
 						value=${enabledSamplers.includes('ban_tokens')}
-						onValueChange=${(v: boolean) => enabledSamplers.indexOf('ban_tokens') === -1
-											  ? setEnabledSamplers((es: string[]) => [...es, 'ban_tokens'])
-											  : setEnabledSamplers((es: string[]) => es.filter((s: string) => s !== 'ban_tokens'))}/>
+						onValueChange=${(v: boolean) => setEnabledSamplers(v ? (es: string[]) => [...es, 'ban_tokens'] : (es: string[]) => es.filter((s: string) => s !== 'ban_tokens'))}/>
 				`}>
 				<${InputSlider} label="Temperature" type="number" step="0.01" max="5"
 					hidden=${!enabledSamplers.includes('temperature')}
