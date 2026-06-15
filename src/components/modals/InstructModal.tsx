@@ -53,7 +53,7 @@ export function InstructModal({ isOpen, closeModal, predict, cancel, modalState,
 
 		if (includeContext) {
 			instructPrompt = 
-				modalState.instructContext + 
+				(modalState.instructContext ?? '') + 
 				prefix +
 				"Wait a moment, I want to ask you something." +
 				suffix +
