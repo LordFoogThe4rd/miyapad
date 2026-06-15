@@ -9,7 +9,7 @@ export function useStorageState<T>(storage: { getStorageData(): T; performFullSa
 		setValue((prevValue) => {
 			const updatedValue = typeof newValue === 'function' ? (newValue as (prev: T) => T)(prevValue) : newValue;
 			storage.performFullSave(updatedValue).catch((error) => {
-				setValue(prevValue);
+				setValue((current) => current === updatedValue ? prevValue : current);
 				reportError(error);
 			});
 			return updatedValue;
