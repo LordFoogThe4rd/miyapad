@@ -30,7 +30,7 @@ export function useGenerationLogic() {
 			setPromptChunks((p: PromptChunk[]) => [
 				...fimLeftChunks!,
 				...fimRightChunks!
-			] as any);
+			]);
 			setTokens((t: number) => t + (chunk?.completion_probabilities?.length ?? 1));
 			return true;
 		}, undefined, true);

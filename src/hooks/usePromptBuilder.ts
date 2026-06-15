@@ -50,8 +50,8 @@ export function usePromptBuilder() {
 		if (templates[selectedTemplate]?.fimTemplate !== undefined && templates[selectedTemplate]?.fimTemplate.length > 0)
 			placeholderRegex += `|${fillPlaceholder}`;
 
-		let leftPromptChunks = undefined;
-		let rightPromptChunks = undefined;
+		let leftPromptChunks: PromptChunk[] | undefined = undefined;
+		let rightPromptChunks: PromptChunk[] | undefined = undefined;
 		let foundPlaceholder = undefined;
 
 		for (let i = 0; i < promptChunks.length; i++) {
