@@ -33,6 +33,7 @@ export class ConnectionStorage extends AbstractStorage {
 			this.dispatchChangeEvent();
 		} catch (error) {
 			this.dispatchErrorEvent(error);
+			throw error;
 		}
 	}
 
