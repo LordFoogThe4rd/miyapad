@@ -47,14 +47,13 @@ export function regexLastIndexOf(string: string, regex: RegExp, startpos?: numbe
 export function memoize<T extends (...args: any[]) => any>(fn: T): T {
 	let cache: Record<string, any> = {};
 	const memoized = (...args: any[]) => {
-		// NOTE: only caches on args[0]; multi-arg functions will not be correctly memoized
-		let n = args[0];
-		if (n in cache) {
-			return cache[n];
+		const key = JSON.stringify(args);
+		if (key in cache) {
+			return cache[key];
 		}
 		else {
-			let result = fn(n);
-			cache[n] = result;
+			let result = fn(...args);
+			cache[key] = result;
 			return result;
 		}
 	}
