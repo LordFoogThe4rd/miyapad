@@ -3,7 +3,10 @@ export function regexSplitString(str: string, separator: string | RegExp, limit?
 	const separators = [];
 	let lastIndex = 0;
 	let match;
-	const regex = new RegExp(separator, 'g');
+	const source = separator instanceof RegExp ? separator.source : separator;
+	const existingFlags = separator instanceof RegExp ? separator.flags : '';
+	const flags = existingFlags.includes('g') ? existingFlags : existingFlags + 'g';
+	const regex = new RegExp(source, flags);
 	
 	while ((match = regex.exec(str)) !== null) {
 			if (limit !== undefined && result.length >= limit) break;
