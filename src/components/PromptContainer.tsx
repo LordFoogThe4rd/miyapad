@@ -27,12 +27,12 @@ export function PromptContainer({ sidebarHeight }: PromptContainerProps) {
 		if (!container) return;
 
 		let isDragging = false;
-		let startX: any;
-		let startEdge: any;
-		let startNumericWidth: any;
+		let startX: number | undefined;
+		let startEdge: string | undefined;
+		let startNumericWidth: number | undefined;
 		let edgeDetectionZone = 5; // Pixels from edge to trigger resize
 
-		function getNearEdge(e: any) {
+		function getNearEdge(e: MouseEvent) {
 			const rect = container.getBoundingClientRect();
 			if (e.clientX - rect.left < edgeDetectionZone && e.clientX - rect.left > 0) {
 				return 'left';
@@ -42,7 +42,7 @@ export function PromptContainer({ sidebarHeight }: PromptContainerProps) {
 			return false;
 		}
 
-		function startDragging(e: any) {
+		function startDragging(e: MouseEvent) {
 			const edge = getNearEdge(e);
 			if (!edge) return; // Only drag from edges
 
@@ -60,7 +60,7 @@ export function PromptContainer({ sidebarHeight }: PromptContainerProps) {
 			startEdge = edge;
 		}
 
-		function drag(e: any) {
+		function drag(e: MouseEvent) {
 			const elem = promptArea.current;
 			if (!elem) return;
 			switch (getNearEdge(e)) {
@@ -90,10 +90,10 @@ export function PromptContainer({ sidebarHeight }: PromptContainerProps) {
 			const minWidth = 200;
 			const invEdgePos = startEdge == 'right' ? container.getBoundingClientRect().left : container.getBoundingClientRect().right;
 			const currentX = e.clientX - invEdgePos;
-			const delta = (currentX - startX) * (startEdge == 'right' ? 1 : -1);
+			const delta = (currentX - startX!) * (startEdge == 'right' ? 1 : -1);
 
 			// Calculate the new width and ensure it's not less than minWidth
-			const newWidth = Math.max(minWidth, startNumericWidth + delta);
+			const newWidth = Math.max(minWidth, startNumericWidth! + delta);
 
 			setPromptAreaWidth(`${newWidth}px`);
 		}
@@ -145,7 +145,7 @@ export function PromptContainer({ sidebarHeight }: PromptContainerProps) {
 			end.reverse();
 
 			// Merge chunks if they're from the user
-			let mergeUserChunks = (chunks: any, newContent: any) => {
+			let mergeUserChunks = (chunks: PromptChunk[], newContent: string): PromptChunk[] => {
 				let lastChunk = chunks[chunks.length - 1];
 				while (lastChunk && lastChunk.type === 'user') {
 					lastChunk.content += newContent;
@@ -171,13 +171,13 @@ export function PromptContainer({ sidebarHeight }: PromptContainerProps) {
 			newPrompt.push(...end);
 
 			// Remove all undo positions within the modified range.
-			undoStack.current = undoStack.current.filter((pos: any) => pos > start.length && pos < newPrompt.length);
+			undoStack.current = undoStack.current.filter((pos: number) => pos > start.length && pos < newPrompt.length);
 			if (!undoStack.current.length)
 				setUndoHovered(false);
 
 			// Adjust undo/redo stacks.
 			const chunkDifference = oldPrompt.length - newPrompt.length;
-			undoStack.current = undoStack.current.map((pos: any) => {
+			undoStack.current = undoStack.current.map((pos: number) => {
 				if (pos >= start.length) {
 					return pos - chunkDifference;
 				}
@@ -363,8 +363,8 @@ export function PromptContainer({ sidebarHeight }: PromptContainerProps) {
 				aria-hidden
 				...${showPromptPreview && { style: { 'padding-bottom': promptPreviewElement.current?.offsetHeight ?? '0px' } }}>
 				${tokenHighlightMode !== -1 ? html`
-					${promptChunks.map((chunk: any, i: any) => {
-		const getRatioColor = (ratio: any) => {
+					${promptChunks.map((chunk: PromptChunk, i: number) => {
+		const getRatioColor = (ratio: number) => {
 			const sRatio = Math.max(0, Math.min(1, ratio));
 			if (sRatio <= 0.5) {
 				const adjustedRatio = sRatio / 0.5;
@@ -380,8 +380,8 @@ export function PromptContainer({ sidebarHeight }: PromptContainerProps) {
 			bgColor = getRatioColor(chunkProb);
 		} else if (tokenColorMode === 2 && chunkProb < 1) {
 			const chunkProbs = chunk.completion_probabilities?.[0]?.probs ?? [];
-			const minChunkProb = chunkProbs.length < 10 ? Math.min(...chunkProbs.map((p: any) => p.prob)) : 0;
-			const maxChunkProb = chunkProbs.length > 0 ? Math.max(...chunkProbs.map((p: any) => p.prob)) : 1;
+			const minChunkProb = chunkProbs.length < 10 ? Math.min(...chunkProbs.map((p: ProbItem) => p.prob ?? 0)) : 0;
+			const maxChunkProb = chunkProbs.length > 0 ? Math.max(...chunkProbs.map((p: ProbItem) => p.prob ?? 0)) : 1;
 			bgColor = getRatioColor((chunkProb - minChunkProb) / (maxChunkProb - minChunkProb));
 		}
 		const isCurrent = currentPromptChunk && currentPromptChunk.index === i;
