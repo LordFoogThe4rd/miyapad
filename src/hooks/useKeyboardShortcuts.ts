@@ -41,19 +41,18 @@ export function useKeyboardShortcuts() {
 				setTokens((t: number) => t + promptPreviewChunks.length);
 				setPromptPreviewChunks([]);
 				break;
-			case 'false:true:false:false:ArrowRight':
-				if (!showPromptPreview || promptPreviewChunks.length === 0)
-				{
+			case 'false:true:false:false:ArrowRight': {
+				if (!showPromptPreview || promptPreviewChunks.length === 0) {
 					preventDefaultAction = false;
 					break;
 				}
 
-				let newPromptChunks = [ ...promptChunks ];
-				let newPromptPreviewChunks = [ ...promptPreviewChunks ];
+				const newPromptChunks = [ ...promptChunks ];
+				const newPromptPreviewChunks = [ ...promptPreviewChunks ];
 				let newTokens = tokens;
 
 				do {
-					newPromptChunks = newPromptChunks.concat(newPromptPreviewChunks.splice(0, 1));
+					newPromptChunks.push(...newPromptPreviewChunks.splice(0, 1));
 				} while (
 					newPromptPreviewChunks.length > 0 &&
 					newPromptPreviewChunks[0].content[0] != " " &&
@@ -64,12 +63,13 @@ export function useKeyboardShortcuts() {
 							newPromptChunks[newPromptChunks.length - 1].content[newPromptChunks[newPromptChunks.length - 1].content.length - 1] != " "
 						)
 					)
-				)
+				);
 				
 				setPromptChunks(newPromptChunks);
 				setPromptPreviewChunks(newPromptPreviewChunks);
 				setTokens(newTokens);
 				break;
+			}
 			case 'false:true:false:false:r':
 			case 'false:false:false:true:r':
 				undoAndPredict();
