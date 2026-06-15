@@ -380,9 +380,13 @@ export function PromptContainer({ sidebarHeight }: PromptContainerProps) {
 			bgColor = getRatioColor(chunkProb);
 		} else if (tokenColorMode === 2 && chunkProb < 1) {
 			const chunkProbs = chunk.completion_probabilities?.[0]?.probs ?? [];
-			const minChunkProb = chunkProbs.length < 10 ? Math.min(...chunkProbs.map((p: ProbItem) => p.prob ?? 0)) : 0;
-			const maxChunkProb = chunkProbs.length > 0 ? Math.max(...chunkProbs.map((p: ProbItem) => p.prob ?? 0)) : 1;
-			bgColor = getRatioColor((chunkProb - minChunkProb) / (maxChunkProb - minChunkProb));
+			if (chunkProbs.length > 0) {
+				const minChunkProb = chunkProbs.length < 10 ? Math.min(...chunkProbs.map((p: ProbItem) => p.prob ?? 0)) : 0;
+				const maxChunkProb = Math.max(...chunkProbs.map((p: ProbItem) => p.prob ?? 0));
+				if (maxChunkProb !== minChunkProb) {
+					bgColor = getRatioColor((chunkProb - minChunkProb) / (maxChunkProb - minChunkProb));
+				}
+			}
 		}
 		const isCurrent = currentPromptChunk && currentPromptChunk.index === i;
 		const lastUndoPos = undoStack.current.length > 0 ? undoStack.current[undoStack.current.length - 1] : -1;
