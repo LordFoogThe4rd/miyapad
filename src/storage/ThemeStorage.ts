@@ -51,7 +51,7 @@ export class ThemeStorage extends AbstractStorage {
         const db = await this.openDatabase();
 
         for (const key of Object.keys(this.themes)) {
-            if (!newThemes.hasOwnProperty(key)) {
+            if (!Object.hasOwn(newThemes, key)) {
                 await this.deleteFromDatabase(db, key);
             }
         }
