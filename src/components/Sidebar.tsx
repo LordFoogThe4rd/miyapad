@@ -752,7 +752,7 @@ export function Sidebar({ sidebarRef, toggleModal, currentThemeName, setCurrentT
 						<button
 							disabled=${!!cancel}
 							onClick=${async () => {
-								await fetch('/zstd_enable_transparent', {
+								const res = await fetch('/zstd_enable_transparent', {
 									method: 'POST',
 									headers: { 'Content-Type': 'application/json' },
 									body: JSON.stringify({
@@ -761,7 +761,7 @@ export function Sidebar({ sidebarRef, toggleModal, currentThemeName, setCurrentT
 										train_dict_samples_ratio: zstdRatio
 									})
 								});
-								setConfigData({});
+								if (res.ok) setConfigData({});
 							}}>
 							Enable
 						</button>
