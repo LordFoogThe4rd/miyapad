@@ -1,7 +1,7 @@
 import { html } from 'htm/react';
 import { createContext, useContext, useState, useRef, type ReactNode, type Dispatch, type SetStateAction } from 'react';
 import { defaultPresets } from '../defaults/presets';
-import type { GenerationState } from '../types/contexts';
+import type { GenerationState, InstructModalState, ProbsDelayTimerValue } from '../types/contexts';
 
 export const GenerationContext = createContext<GenerationState | null>(null);
 
@@ -9,8 +9,8 @@ export function GenerationProvider({ children, useSessionState }: { children: Re
 	const promptArea = useRef<HTMLTextAreaElement>(null);
 	const promptOverlay = useRef<HTMLDivElement>(null);
 	const undoStack = useRef<number[]>([]);
-	const redoStack = useRef<any[][]>([]);
-	const probsDelayTimer = useRef<ReturnType<typeof setTimeout> | null>(null);
+	const redoStack = useRef<PromptChunk[][]>([]);
+	const probsDelayTimer = useRef<ProbsDelayTimerValue | undefined>(undefined);
 	const keyState = useRef<Record<string, boolean>>({});
 	const sessionReconnectTimer = useRef<number | undefined>(undefined);
 	const useScrollSmoothing = useRef(true);
@@ -33,16 +33,16 @@ export function GenerationProvider({ children, useSessionState }: { children: Re
 	const [predictStartTokens, setPredictStartTokens] = useState(0);
 	const [lastError, setLastError] = useState(undefined);
 	const [savedScrollTop, setSavedScrollTop] = useSessionState('scrollTop', defaultPresets.scrollTop);
-	const [modalState, setModalState] = useState<Record<string, any>>({});
+	const [modalState, setModalState] = useState<Record<string, boolean>>({});
 	const [contextMenuState, setContextMenuState] = useState({ visible: false, x: 0, y: 0 });
-	const [instructModalState, setInstructModalState] = useState({});
+	const [instructModalState, setInstructModalState] = useState<InstructModalState>({});
 	const [hordeQueuePos, setHordeQueuePos] = useState(undefined);
 	const [hordeProcessing, setHordeProcessing] = useState(false);
 	const [promptPreviewChunks, setPromptPreviewChunks] = useState([]);
 	const [promptPreviewReroll, setPromptPreviewReroll] = useState(0);
 	const [ttsAvailable, setTTSAvailable] = useState(true);
 	
-	const toggleModal = (modalKey: any) => {
+	const toggleModal = (modalKey: string) => {
 		setShowProbs(false);
 		setModalState((prevState) => ({
 			...prevState,
@@ -50,7 +50,7 @@ export function GenerationProvider({ children, useSessionState }: { children: Re
 		}));
 	};
 
-	const closeModal = (modalKey: any) => {
+	const closeModal = (modalKey: string) => {
 		setModalState((prevState) => ({
 			...prevState,
 			[modalKey]: false,

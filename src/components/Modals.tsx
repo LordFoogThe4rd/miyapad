@@ -157,8 +157,8 @@ export function Modals({ toggleModal, currentThemeName, setCurrentThemeName, all
 		if (!elem)
 			return;
 
-		const startPos = instructModalState.selectionStart;
-		const endPos = instructModalState.selectionEnd;
+		const startPos = instructModalState.selectionStart ?? 0;
+		const endPos = instructModalState.selectionEnd ?? 0;
 		const textBefore = elem.value.substring(0, startPos) || "";
 		const textAfter = elem.value.substring(endPos);
 		const selectedText = elem.value.substring(startPos, endPos);
@@ -301,7 +301,7 @@ export function Modals({ toggleModal, currentThemeName, setCurrentThemeName, all
 				const elem = promptArea.current;
 				if (elem) {
 					elem.focus();
-					elem.setSelectionRange(instructModalState.selectionStart, instructModalState.selectionEnd);
+					elem.setSelectionRange(instructModalState.selectionStart ?? 0, instructModalState.selectionEnd ?? 0);
 				}
 			}}
 			predict=${predict}

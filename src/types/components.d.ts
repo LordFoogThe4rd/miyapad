@@ -118,7 +118,6 @@ export interface InputBoxProps {
   placeholder?: string;
   inputmode?: string;
   pattern?: string;
-  [key: string]: any;
 }
 
 export interface InputSliderProps {
@@ -131,17 +130,15 @@ export interface InputSliderProps {
   hidden?: boolean;
   strict?: boolean;
   onValueChange: (value: number) => void;
-  [key: string]: any;
 }
 
-export interface SelectBoxProps {
+export interface SelectBoxProps<T = string> {
   label: string;
-  value: any;
+  value: T;
   hidden?: boolean;
-  onValueChange: (value: any) => void;
-  options: Array<{ name: string; value: any }> | (() => Array<{ name: string; value: any }>);
+  onValueChange: (value: T) => void;
+  options: Array<{ name: string; value: T }> | (() => Array<{ name: string; value: T }>);
   disabled?: boolean;
-  [key: string]: any;
 }
 
 export interface CollapsibleGroupProps {

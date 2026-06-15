@@ -1,14 +1,3 @@
-interface SillyTavernWorldInfoEntry {
-	key: string[];
-	comment: string;
-	content: string;
-	scanDepth?: string | null;
-}
-
-interface SillyTavernWorldInfo {
-	entries?: Record<string, SillyTavernWorldInfoEntry>;
-}
-
 type SetWorldInfo = (value: WorldInfoData | ((prev: WorldInfoData) => WorldInfoData)) => void;
 
 export function importSillyTavernWorldInfo(json: SillyTavernWorldInfo, setWorldInfo: SetWorldInfo, importBehavior: "replace" | "append") {

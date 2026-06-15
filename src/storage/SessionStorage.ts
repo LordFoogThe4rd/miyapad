@@ -1,13 +1,13 @@
 import { AbstractStorage } from './AbstractStorage';
 import { NameStorage } from './NameStorage';
 
-function extractMeta(s: Record<string, any>) {
+function extractMeta(s: Record<string, unknown>) {
 	return {
-		name: s.name,
-		created: s.created || null,
-		modified: s.modified || null,
+		name: typeof s.name === 'string' ? s.name : undefined,
+		created: typeof s.created === 'number' ? s.created : null,
+		modified: typeof s.modified === 'number' ? s.modified : null,
 		pinned: !!s.pinned,
-		tags: Array.isArray(s.tags) ? s.tags : [],
+		tags: Array.isArray(s.tags) ? s.tags.filter((t): t is string => typeof t === 'string') : [],
 	};
 }
 
@@ -47,25 +47,26 @@ export class SessionStorage extends AbstractStorage {
 
 	async init() {
 		const db = await this.openDatabase();
-		this.nextId = (await this.loadFromDatabase(db, 'nextSessionId')) || 0;
-		this.selectedSession = (await this.loadFromDatabase(db, 'selectedSessionId')) || 0;
+		this.nextId = ((await this.loadFromDatabase(db, 'nextSessionId')) as number) || 0;
+		this.selectedSession = ((await this.loadFromDatabase(db, 'selectedSessionId')) as number) || 0;
 		await this.loadSessions(db);
 		this.startSaveTimer(async (sessionId) => await this.saveSessionToDB(sessionId));
 	}
 
-	async saveToDatabase(db: DbConnection, key: string | number, data: any) {
-        if (data && Object.hasOwn(data, 'name')) {
-            const nameData = extractMeta(data);
+	async saveToDatabase(db: DbConnection, key: string | number, data: unknown) {
+        const record = data as Record<string, unknown> | undefined;
+        if (record && Object.hasOwn(record, 'name')) {
+            const nameData = extractMeta(record);
             await this.nameStorage!.saveToDatabase(db, key, nameData);
-            const { name, created, modified, pinned, tags, ...sessionData } = data;
+            const { name, created, modified, pinned, tags, ...sessionData } = record;
             await super.saveToDatabase(db, key, sessionData);
         } else {
             await super.saveToDatabase(db, key, data);
         }
 	}
 
-	async loadFromDatabase(db: DbConnection, key: string | number) {
-		const data = await super.loadFromDatabase(db, key);
+	async loadFromDatabase(db: DbConnection, key: string | number): Promise<unknown> {
+		const data = (await super.loadFromDatabase(db, key)) as Record<string, unknown> | null;
 		if(data && !['selectedSessionId', 'nextSessionId'].includes(key as string)){
 			const nameData = await this.nameStorage!.loadFromDatabase(db, key);
 			if (typeof nameData === 'string') {
@@ -75,11 +76,12 @@ export class SessionStorage extends AbstractStorage {
 				data['pinned'] = false;
 				data['tags'] = [];
 			} else if (nameData && typeof nameData === 'object') {
-				data['name'] = (nameData.name === '[object Object]' ? `Session #${key}` : nameData.name) || 'Untitled';
-				data['created'] = nameData.created || null;
-				data['modified'] = nameData.modified || null;
-				data['pinned'] = nameData.pinned === undefined ? false : !!nameData.pinned;
-				data['tags'] = Array.isArray(nameData.tags) ? nameData.tags : [];
+				const meta = nameData as Record<string, unknown>;
+				data['name'] = (meta.name === '[object Object]' ? `Session #${key}` : meta.name) || 'Untitled';
+				data['created'] = meta.created || null;
+				data['modified'] = meta.modified || null;
+				data['pinned'] = meta.pinned === undefined ? false : !!meta.pinned;
+				data['tags'] = Array.isArray(meta.tags) ? meta.tags : [];
 			}
 		}
 		return data;
@@ -120,7 +122,7 @@ export class SessionStorage extends AbstractStorage {
 			if (propertyName === undefined) continue;
 			const rawValue = localStorage.getItem(key);
 			if (rawValue === null) continue;
-			let value: any;
+			let value: unknown;
 			try {
 				value = JSON.parse(rawValue);
 			} catch {
@@ -143,11 +145,12 @@ export class SessionStorage extends AbstractStorage {
 	async loadSessions(db: DbConnection) {
 		const sessions = await this.loadSessionInfoFromDatabase(db);
 		for (const [key, data] of Object.entries(sessions)) {
+			const record = data as Record<string, unknown> | string | null | undefined;
 			// Handle both legacy string names and new metadata objects
-			if (typeof data === 'string') {
-				this.sessions[key] = { name: data === '[object Object]' ? `Session #${key}` : data, created: null, modified: null, pinned: false, tags: [] };
-			} else if (data && typeof data === 'object') {
-				this.sessions[key] = { ...extractMeta(data), name: ((data as SessionMeta).name === '[object Object]' ? `Session #${key}` : (data as SessionMeta).name) || 'Untitled' };
+			if (typeof record === 'string') {
+				this.sessions[key] = { name: record === '[object Object]' ? `Session #${key}` : record, created: null, modified: null, pinned: false, tags: [] };
+			} else if (record && typeof record === 'object') {
+				this.sessions[key] = { ...extractMeta(record), name: ((record as SessionMeta).name === '[object Object]' ? `Session #${key}` : (record as SessionMeta).name) || 'Untitled' };
 			} else {
 				this.sessions[key] = { name: 'Untitled', created: null, modified: null, pinned: false, tags: [] };
 			}
@@ -180,7 +183,7 @@ export class SessionStorage extends AbstractStorage {
 			return;
 
 		// Flush pending save.
-		await this.saveTimerHandler(async (sessionId: any) => await this.saveSessionToDB(sessionId));
+		await this.saveTimerHandler(async (sessionId: string | number) => await this.saveSessionToDB(sessionId));
 
 		//Clear data of old session in order to minimize memory usage.
 		const currSel = this.selectedSession;
@@ -191,7 +194,7 @@ export class SessionStorage extends AbstractStorage {
 		await this.saveToDatabase(db, 'selectedSessionId', +sessionId);
 
 		this.selectedSession = +sessionId;
-		this.sessions[this.selectedSession] = (await this.loadFromDatabase(db, this.selectedSession));
+		this.sessions[this.selectedSession] = (await this.loadFromDatabase(db, this.selectedSession)) as SessionData;
 
 		await this.saveToDatabase(db, this.selectedSession, this.sessions[this.selectedSession]);
 

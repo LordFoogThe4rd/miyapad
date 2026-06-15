@@ -53,5 +53,4 @@ interface DefaultPresets {
   disableLogprobs: boolean;
   promptPreview: boolean;
   promptPreviewTokens: number;
-  [key: string]: any;
 }

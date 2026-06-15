@@ -5,7 +5,7 @@ interface SessionData {
   pinned?: boolean;
   tags?: string[];
   inactive?: boolean;
-  [key: string]: any;
+  [key: string]: unknown;
 }
 
 interface ChatMessage {
@@ -78,16 +78,27 @@ interface LogitBiasState {
   model: string;
 }
 
-type DbConnection = IDBDatabase | ((route: string, options?: any) => Promise<any>);
+type DbConnection = IDBDatabase | ((route: string, options?: unknown) => Promise<unknown>);
 
 interface DatabaseAdapter {
   sessionEndpoint?: string;
   init?(): Promise<void>;
   openDatabase(): Promise<DbConnection>;
-  loadFromDatabase(db: DbConnection, storeName: string, key: string | number): Promise<any>;
-  loadAllFromDatabase(db: DbConnection, storeName: string): Promise<Record<string, any>>;
-  loadSessionInfoFromDatabase(db: DbConnection, storeName: string): Promise<Record<string, any>>;
-  saveToDatabase(db: DbConnection, storeName: string, key: string | number, data: any): Promise<void>;
+  loadFromDatabase(db: DbConnection, storeName: string, key: string | number): Promise<unknown>;
+  loadAllFromDatabase(db: DbConnection, storeName: string): Promise<Record<string, unknown>>;
+  loadSessionInfoFromDatabase(db: DbConnection, storeName: string): Promise<Record<string, unknown>>;
+  saveToDatabase(db: DbConnection, storeName: string, key: string | number, data: unknown): Promise<void>;
   renameSessionInDatabase(db: DbConnection, storeName: string, key: string | number, newName: string): Promise<void>;
   deleteFromDatabase(db: DbConnection, storeName: string, key: string | number): Promise<void>;
+}
+
+interface SillyTavernWorldInfoEntry {
+  key: string[];
+  comment: string;
+  content: string;
+  scanDepth?: string | null;
+}
+
+interface SillyTavernWorldInfo {
+  entries?: Record<string, SillyTavernWorldInfoEntry>;
 }

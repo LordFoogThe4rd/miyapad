@@ -43,6 +43,6 @@ export class TemplateStorage extends AbstractStorage {
 	}
 
 	async loadTemplates(db: DbConnection) {
-		this.templates = await this.loadAllFromDatabase(db);
+		this.templates = (await this.loadAllFromDatabase(db)) as Record<string, InstructTemplate>;
 	}
 }

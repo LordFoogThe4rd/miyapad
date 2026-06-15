@@ -6,7 +6,6 @@ declare global {
     content: string;
     prob?: number;
     completion_probabilities?: CompletionProb[];
-    top_logprobs?: any;
   }
 }
 
@@ -136,8 +135,8 @@ export interface SettingsState {
   setBasicStoppingModeType: Dispatch<SetStateAction<string>>;
   logitBias: LogitBiasState;
   setLogitBias: Dispatch<SetStateAction<LogitBiasState>>;
-  logitBiasParam: Record<string, any>;
-  setLogitBiasParam: Dispatch<SetStateAction<Record<string, any>>>;
+  logitBiasParam: Record<string, number>;
+  setLogitBiasParam: Dispatch<SetStateAction<Record<string, number>>>;
   contextLength: number;
   setContextLength: Dispatch<SetStateAction<number>>;
   memoryTokens: MemoryTokensData;
@@ -148,8 +147,8 @@ export interface SettingsState {
   setAuthorNoteDepth: Dispatch<SetStateAction<number>>;
   worldInfo: WorldInfoData;
   setWorldInfo: Dispatch<SetStateAction<WorldInfoData>>;
-  sillyTarvernWorldInfoJSON: any;
-  setSillyTarvernWorldInfoJSON: Dispatch<SetStateAction<any>>;
+  sillyTarvernWorldInfoJSON: SillyTavernWorldInfo | null;
+  setSillyTarvernWorldInfoJSON: Dispatch<SetStateAction<SillyTavernWorldInfo | null>>;
   enabledSamplers: string[];
   setEnabledSamplers: Dispatch<SetStateAction<string[]>>;
   grammar: string;
@@ -218,13 +217,27 @@ export interface SettingsState {
   setIsMobile: Dispatch<SetStateAction<boolean>>;
 }
 
+export interface InstructModalState {
+  result?: { content: string; replace: boolean };
+  selectionStart?: number;
+  selectionEnd?: number;
+  instructContext?: string;
+  selectedText?: string;
+}
+
+export interface ProbsDelayTimerValue {
+  id: ReturnType<typeof setTimeout>;
+  hiding: boolean;
+  tokenKey?: string;
+}
+
 export interface GenerationState {
   promptArea: RefObject<HTMLTextAreaElement | null>;
   promptOverlay: RefObject<HTMLDivElement | null>;
   undoStack: RefObject<number[]>;
-  redoStack: RefObject<any[][]>;
-  probsDelayTimer: RefObject<any>;
-  keyState: RefObject<any>;
+  redoStack: RefObject<PromptChunk[][]>;
+  probsDelayTimer: RefObject<ProbsDelayTimerValue | undefined>;
+  keyState: RefObject<Record<string, boolean>>;
   sessionReconnectTimer: RefObject<number | undefined>;
   useScrollSmoothing: RefObject<boolean>;
   hordeTaskId: RefObject<string | undefined>;
@@ -254,8 +267,8 @@ export interface GenerationState {
   setSessionEndpointError: Dispatch<SetStateAction<string | undefined>>;
   rejectedAPIKey: boolean;
   setRejectedAPIKey: Dispatch<SetStateAction<boolean>>;
-  openaiModels: any[];
-  setOpenaiModels: Dispatch<SetStateAction<any[]>>;
+  openaiModels: string[];
+  setOpenaiModels: Dispatch<SetStateAction<string[]>>;
   tokens: number;
   setTokens: Dispatch<SetStateAction<number>>;
   tokensPerSec: number;
@@ -270,8 +283,8 @@ export interface GenerationState {
   setModalState: Dispatch<SetStateAction<Record<string, boolean>>>;
   contextMenuState: { visible: boolean; x: number; y: number };
   setContextMenuState: Dispatch<SetStateAction<{ visible: boolean; x: number; y: number }>>;
-  instructModalState: Record<string, any>;
-  setInstructModalState: Dispatch<SetStateAction<Record<string, any>>>;
+  instructModalState: InstructModalState;
+  setInstructModalState: Dispatch<SetStateAction<InstructModalState>>;
   hordeQueuePos: number | undefined;
   setHordeQueuePos: Dispatch<SetStateAction<number | undefined>>;
   hordeProcessing: boolean;

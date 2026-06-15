@@ -64,7 +64,7 @@ export class AbstractStorage extends EventTarget {
 		}
 	}
 
-	async loadFromDatabase(db: DbConnection, key: string | number): Promise<any> {
+	async loadFromDatabase(db: DbConnection, key: string | number): Promise<unknown> {
 		try {
 			return await this.dbAdapter.loadFromDatabase(db, this.storeName, key);
 		} catch (e) {
@@ -73,7 +73,7 @@ export class AbstractStorage extends EventTarget {
 		}
 	}
 
-	async loadAllFromDatabase(db: DbConnection): Promise<Record<string, any>> {
+	async loadAllFromDatabase(db: DbConnection): Promise<Record<string, unknown>> {
 		try {
 			return await this.dbAdapter.loadAllFromDatabase(db, this.storeName);
 		} catch (e) {
@@ -82,7 +82,7 @@ export class AbstractStorage extends EventTarget {
 		}
 	}
 
-	async loadSessionInfoFromDatabase(db: DbConnection): Promise<Record<string, any>> {
+	async loadSessionInfoFromDatabase(db: DbConnection): Promise<Record<string, unknown>> {
 		try {
 			return await this.dbAdapter.loadSessionInfoFromDatabase(db, this.storeName);
 		} catch (e) {
@@ -91,7 +91,7 @@ export class AbstractStorage extends EventTarget {
 		}
 	}
 
-	async saveToDatabase(db: DbConnection, key: string | number, data: any): Promise<void> {
+	async saveToDatabase(db: DbConnection, key: string | number, data: unknown): Promise<void> {
 		try {
 			return await this.dbAdapter.saveToDatabase(db, this.storeName, key, data);
 		} catch (e) {

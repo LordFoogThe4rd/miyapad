@@ -2,8 +2,9 @@ import { html } from 'htm/react';
 import { useState, useEffect, useRef } from 'react';
 import { Modal } from '../Modal';
 import { Checkbox } from '../controls/Checkbox';
+import type { InstructModalState } from '../../types/contexts';
 
-export function InstructModal({ isOpen, closeModal, predict, cancel, modalState, templates, selectedTemplate, lastError, ...props }: any) {
+export function InstructModal({ isOpen, closeModal, predict, cancel, modalState, templates, selectedTemplate, lastError, ...props }: { isOpen: boolean; closeModal: () => void; predict: any; cancel: (() => void) | null; modalState: InstructModalState; templates: Record<string, any>; selectedTemplate: string; lastError: string | undefined; [key: string]: any }) {
 	const [prompt, setPrompt] = useState("");
 	const [includeContext, setIncludeContext] = useState(true);
 	const [result, setResult] = useState("");
@@ -47,7 +48,7 @@ export function InstructModal({ isOpen, closeModal, predict, cancel, modalState,
 			suffix;
 
 		instructPrompt = replacePlaceholders(instructPrompt, {
-			'{selectedText}': modalState.selectedText.trim(),
+			'{selectedText}': modalState.selectedText?.trim() ?? '',
 		});
 
 		if (includeContext) {
@@ -128,7 +129,7 @@ export function InstructModal({ isOpen, closeModal, predict, cancel, modalState,
 						${cancel && html`
 							<button
 								onClick=${() => cancel()}
-								className=${cancel && !props.sessionEndpointConnecting ? (props.predictStartTokens === props.tokens ? 'processing' : 'completing') : ''}>
+								className=${cancel !== null && !props.sessionEndpointConnecting ? (props.predictStartTokens === props.tokens ? 'processing' : 'completing') : ''}>
 								Cancel
 							</button>`}
 						${!!lastError && html`

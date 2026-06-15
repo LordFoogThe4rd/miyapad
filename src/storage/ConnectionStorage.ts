@@ -40,6 +40,6 @@ export class ConnectionStorage extends AbstractStorage {
 	}
 
 	async loadConnections(db: DbConnection) {
-		this.connections = await this.loadAllFromDatabase(db);
+		this.connections = (await this.loadAllFromDatabase(db)) as Record<string, ConnectionData>;
 	}
 }

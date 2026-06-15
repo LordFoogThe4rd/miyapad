@@ -71,6 +71,6 @@ export class ThemeStorage extends AbstractStorage {
 	}
 
     async loadThemes(db: DbConnection) {
-        this.themes = await this.loadAllFromDatabase(db);
+        this.themes = (await this.loadAllFromDatabase(db)) as Record<string, ThemeData>;
     }
 }
