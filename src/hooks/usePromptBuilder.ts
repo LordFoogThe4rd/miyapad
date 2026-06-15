@@ -193,7 +193,7 @@ export function usePromptBuilder() {
 		const truncPromptLen = truncPrompt.split('\n').length;
 		const injDepth = truncPromptLen > authorNoteDepth ? authorNoteDepth : truncPromptLen
 
-		const lines = truncPrompt.match(/.*\n?/g);
+		const lines = truncPrompt.match(/.*\n?/g) ?? [];
 		const injIndex = lines.length-injDepth-1
 		// inject an
 		lines.splice(injIndex,0,assembledAuthorNote)
