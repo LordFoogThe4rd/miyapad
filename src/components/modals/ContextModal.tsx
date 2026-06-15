@@ -139,13 +139,13 @@ export function ContextModal({ isOpen, closeModal, tokens, memoryTokens, authorN
 					placeholder=${defaultPresets.memoryTokens.contextOrder}
 					defaultValue=${memoryTokens.contextOrder}
 					value=${memoryTokens.contextOrder}
-					onInput=${(e: any) => handleMemoryTokensChange("contextOrder", e.target.value)}
+					onInput=${(e: InputEvent) => handleMemoryTokensChange("contextOrder", (e.target as HTMLTextAreaElement).value)}
 					class="expanded-text-area-settings"
 					id="advanced-context-order-settings"/>
 			</${CollapsibleGroup}>
 			<textarea
 				value=${contextPlayground}
-				onInput=${(e: any) => setContextPlayground(e.target.value)}
+				onInput=${(e: InputEvent) => setContextPlayground((e.target as HTMLTextAreaElement).value)}
 				class="expanded-text-area-settings"
 				id="context-area-settings" />
 			<div class="hbox" style=${{ justifyContent: 'flex-end', marginTop: '8px' }}>
