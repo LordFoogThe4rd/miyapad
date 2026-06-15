@@ -50,7 +50,7 @@ export function EditorContextMenu({ isOpen, closeMenu, menuItems, className, ...
 	useEffect(() => {
 		if (isNested)
 			return;
-		if (!props.y)
+		if (props.y === undefined)
 			return;
 		if (menuRef.current) {
 			const rect = menuRef.current.getBoundingClientRect();
@@ -74,8 +74,8 @@ export function EditorContextMenu({ isOpen, closeMenu, menuItems, className, ...
 			className="EditorContextMenu ${className || ''}"
 			style=${{
 				...(isOpen ? { display: 'block' } : {}),
-                ...(props.y ? { top: props.y + 'px' } : {}),
-                ...(props.x ? { left: props.x + 'px' } : {})
+                ...(props.y !== undefined ? { top: props.y + 'px' } : {}),
+                ...(props.x !== undefined ? { left: props.x + 'px' } : {})
 			}}>
 			<ul>
 				${menuItems.map(
