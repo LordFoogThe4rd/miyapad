@@ -1,5 +1,6 @@
 import { AbstractStorage } from './AbstractStorage';
 import { defaultThemes } from '../defaults/themes';
+import { isThemeData } from './validators';
 
 export class ThemeStorage extends AbstractStorage {
     themes: Record<string, ThemeData> = {};
@@ -71,6 +72,14 @@ export class ThemeStorage extends AbstractStorage {
 	}
 
     async loadThemes(db: DbConnection) {
-        this.themes = (await this.loadAllFromDatabase(db)) as Record<string, ThemeData>;
+        const raw = await this.loadAllFromDatabase(db);
+        this.themes = {};
+        for (const [key, value] of Object.entries(raw)) {
+            if (isThemeData(value)) {
+                this.themes[key] = value;
+            } else {
+                console.warn(`[ThemeStorage] Skipped invalid entry: ${key}`);
+            }
+        }
     }
 }

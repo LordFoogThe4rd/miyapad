@@ -1,4 +1,5 @@
 import { AbstractStorage } from './AbstractStorage';
+import { isConnectionData } from './validators';
 
 export class ConnectionStorage extends AbstractStorage {
 	connections: Record<string, ConnectionData> = {};
@@ -40,6 +41,14 @@ export class ConnectionStorage extends AbstractStorage {
 	}
 
 	async loadConnections(db: DbConnection) {
-		this.connections = (await this.loadAllFromDatabase(db)) as Record<string, ConnectionData>;
+		const raw = await this.loadAllFromDatabase(db);
+		this.connections = {};
+		for (const [key, value] of Object.entries(raw)) {
+			if (isConnectionData(value)) {
+				this.connections[key] = value;
+			} else {
+				console.warn(`[ConnectionStorage] Skipped invalid entry: ${key}`);
+			}
+		}
 	}
 }

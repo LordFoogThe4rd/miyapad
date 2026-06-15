@@ -1,4 +1,5 @@
 import { AbstractStorage } from './AbstractStorage';
+import { isInstructTemplate } from './validators';
 
 export class TemplateStorage extends AbstractStorage {
 	templates: Record<string, InstructTemplate> = {};
@@ -43,6 +44,14 @@ export class TemplateStorage extends AbstractStorage {
 	}
 
 	async loadTemplates(db: DbConnection) {
-		this.templates = (await this.loadAllFromDatabase(db)) as Record<string, InstructTemplate>;
+		const raw = await this.loadAllFromDatabase(db);
+		this.templates = {};
+		for (const [key, value] of Object.entries(raw)) {
+			if (isInstructTemplate(value)) {
+				this.templates[key] = value;
+			} else {
+				console.warn(`[TemplateStorage] Skipped invalid entry: ${key}`);
+			}
+		}
 	}
 }
