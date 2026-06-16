@@ -484,10 +484,10 @@ export async function* openaiChatCompletion({ endpoint, endpointAPIKey, proxyEnd
 			const top_logprobs = choice.logprobs?.content?.[0]?.top_logprobs ?? [];
 			if (!token) continue;
 
-				let rawProbsArr = top_logprobs.map(({ token: t, logprob }) => ({ tok_str: t, logprob }));
-				const res = applyTemperatureToProbs(rawProbsArr, token, options.temperature);
-				const probs = res.probs;
-				let prob = res.prob;
+			let rawProbsArr = top_logprobs.map(({ token: t, logprob }) => ({ tok_str: t, logprob }));
+			const res = applyTemperatureToProbs(rawProbsArr, token, options.temperature);
+			const probs = res.probs;
+			let prob = res.prob;
 
 			yield {
 				content: token,
