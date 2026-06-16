@@ -40,9 +40,8 @@ export function ThemeManagerModal({ isOpen, closeModal, allThemes, setAllThemes,
             const newThemes = { ...prevThemes };
             const theme = newThemes[editingThemeName];
             if (!theme) return prevThemes;
-			const { isDefault, order, ...themeData } = theme;
             delete newThemes[editingThemeName];
-            newThemes[trimmedNewName] = themeData;
+            newThemes[trimmedNewName] = { ...theme };
             return newThemes;
         });
 
@@ -70,9 +69,8 @@ export function ThemeManagerModal({ isOpen, closeModal, allThemes, setAllThemes,
             const newThemes = { ...prevThemes };
             const theme = newThemes[editingThemeName];
             if (!theme) return prevThemes;
-			const { isDefault, ...rest } = theme;
             newThemes[editingThemeName] = {
-                ...rest,
+                ...theme,
                 className: sanitizedClassName,
                 css: newCss
             };
@@ -86,8 +84,7 @@ export function ThemeManagerModal({ isOpen, closeModal, allThemes, setAllThemes,
             const newThemes = { ...prevThemes };
             const theme = newThemes[editingThemeName];
             if (!theme) return prevThemes;
-			const { isDefault, ...rest } = theme;
-            newThemes[editingThemeName] = { ...rest, css: newCss };
+            newThemes[editingThemeName] = { ...theme, css: newCss };
             return newThemes;
         });
     };
@@ -100,13 +97,18 @@ export function ThemeManagerModal({ isOpen, closeModal, allThemes, setAllThemes,
         }
 		const className = newName.toLowerCase().replace(/[^a-z0-9]+/g, '-').replace(/^-|-$/g, '');
 
-        setAllThemes((prevThemes: any) => ({
-            ...prevThemes,
-            [newName]: {
-                className: className,
-                css: `html.${className} {\n\t/* Your CSS here */\n}`
-            }
-        }));
+        setAllThemes((prevThemes: any) => {
+            const maxOrder = Math.max(0, ...Object.values(prevThemes).map((t: any) => t.order ?? 0));
+            return {
+                ...prevThemes,
+                [newName]: {
+                    order: maxOrder + 1,
+                    isDefault: false,
+                    className: className,
+                    css: `html.${className} {\n\t/* Your CSS here */\n}`
+                }
+            };
+        });
         setEditingThemeName(newName);
     };
 
@@ -120,10 +122,14 @@ export function ThemeManagerModal({ isOpen, closeModal, allThemes, setAllThemes,
 		setAllThemes((prevThemes: any) => {
 			const theme = prevThemes[editingThemeName];
 			if (!theme) return prevThemes;
-			const { isDefault, order, ...rest } = theme;
+			const maxOrder = Math.max(0, ...Object.values(prevThemes).map((t: any) => t.order ?? 0));
 			return {
 				...prevThemes,
-				[newName]: { ...rest },
+				[newName]: {
+					...theme,
+					order: maxOrder + 1,
+					isDefault: false,
+				},
 			};
 		});
 		setEditingThemeName(newName);

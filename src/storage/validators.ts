@@ -37,9 +37,18 @@ export function isInstructTemplate(value: unknown): value is InstructTemplate {
 export function isThemeData(value: unknown): value is ThemeData {
   if (!isRecord(value)) return false;
   return (
-    typeof value.order === 'number' &&
-    typeof value.isDefault === 'boolean' &&
     typeof value.className === 'string' &&
     typeof value.css === 'string'
   );
+}
+
+export function coerceThemeData(value: unknown): ThemeData | null {
+  if (!isRecord(value)) return null;
+  if (typeof value.className !== 'string' || typeof value.css !== 'string') return null;
+  return {
+    order: typeof value.order === 'number' ? value.order : 999,
+    isDefault: typeof value.isDefault === 'boolean' ? value.isDefault : false,
+    className: value.className,
+    css: value.css,
+  };
 }
