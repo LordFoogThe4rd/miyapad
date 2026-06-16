@@ -200,7 +200,11 @@ export class SessionStorage extends AbstractStorage {
 			return;
 
 		// Flush pending save.
-		await this.saveTimerHandler(async (sessionId: string | number) => await this.saveSessionToDB(sessionId));
+		try {
+			await this.saveTimerHandler(async (sessionId: string | number) => await this.saveSessionToDB(sessionId));
+		} catch {
+			return;
+		}
 
 		//Clear data of old session in order to minimize memory usage.
 		const currSel = this.selectedSession;

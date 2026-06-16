@@ -31,7 +31,13 @@ export class AbstractStorage extends EventTarget {
 	}
 
 	startSaveTimer(saveCallback: (key: string | number) => Promise<void>) {
-		this.saveTimer = setInterval(async () => await this.saveTimerHandler(saveCallback), 500);
+		this.saveTimer = setInterval(async () => {
+			try {
+				await this.saveTimerHandler(saveCallback);
+			} catch {
+				// Timer retries on next tick; error already dispatched by saveTimerHandler
+			}
+		}, 500);
 	}
 
 	async saveTimerHandler(saveCallback: (key: string | number) => Promise<void>) {
@@ -40,10 +46,12 @@ export class AbstractStorage extends EventTarget {
 			this.pendingSaveKey = null;
 			try {
 				await saveCallback(key);
-			} catch {
+			} catch (e) {
+				this.dispatchErrorEvent(e);
 				if (this.pendingSaveKey === null) {
 					this.pendingSaveKey = key;
 				}
+				throw e;
 			}
 		}
 	}
