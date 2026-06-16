@@ -19,7 +19,7 @@ const __dirname = path.dirname(fileURLToPath(import.meta.url));
 
 const args = minimist(process.argv.slice(2)) as Record<string, any>;
 const port = args.port || process.env.MIYAPAD_PORT || 3000;
-const host = args.host || process.env.MIYAPAD_HOST || '0.0.0.0';
+const host = args.host || process.env.MIYAPAD_HOST || '127.0.0.1';
 const noOpen = (args.open !== undefined && !args.open) || process.env.MIYAPAD_NO_OPEN;
 const login = args.login || process.env.MIYAPAD_LOGIN || 'anon';
 const password = args.password || process.env.MIYAPAD_PASSWORD || undefined;

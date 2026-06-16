@@ -58,6 +58,10 @@ npm run build
 
 The compiled `miyapad.html` will be output to `dist/`.
 
+## Security
+
+Network security concerns associated with hosting Miyapad on a public-facing server are out of scope of this project. It is the user's responsibility to secure their instance (e.g., with a reverse proxy, authentication, firewall rules, etc.) when exposing it to untrusted networks. Pull requests addressing such concerns are welcome and will be reviewed.
+
 ## Contributing
 
 Contributions are welcome. To contribute:
