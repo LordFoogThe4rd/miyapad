@@ -18,7 +18,7 @@ export function useStorageState<T>(storage: { getStorageData(): T; performFullSa
 				setValue(prevValue);
 				latestValueRef.current = prevValue;
 			}
-			reportError(error);
+			reportError(error instanceof Error ? error : new Error(String(error)));
 		});
 	};
 
