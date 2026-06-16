@@ -237,7 +237,7 @@ export function InstructTemplatesModal({ isOpen, closeModal, templateStorage, se
 		document.body.removeChild(fileInput);
 	};
 
-	return (getArrObjByName(templateList,selectedTemplate) ?? templateList[0]) && html`
+	return html`
 		<${Modal} isOpen=${isOpen} onClose=${closeModal}
 			title="Instruct Templates"
 			description="Use placeholders to insert the selected prompt template formats when sending your prompt to the model.
