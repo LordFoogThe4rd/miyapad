@@ -27,7 +27,7 @@ export function useKeyboardShortcuts() {
 					cancel();
 				} else if (showPromptPreview && promptPreviewChunks.length !== 0) {
 					setPromptPreviewChunks([]);
-					setPromptPreviewReroll((r: any) => r + 1);
+					setPromptPreviewReroll((r: number) => r + 1);
 				}
 				break;
 			case 'false:false:false:false:Tab':
