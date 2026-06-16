@@ -15,7 +15,7 @@ interface ViewTransition {
 }
 
 interface Document {
-  startViewTransition?(callback: () => void): ViewTransition;
+  startViewTransition?(callback: () => void | Promise<void>): ViewTransition;
 }
 
 interface HTMLTextAreaElement {
@@ -25,5 +25,5 @@ interface HTMLTextAreaElement {
 
 interface Window {
   logSSEEvents?: boolean;
-  startViewTransition?: (callback: () => void) => ViewTransition;
+  startViewTransition?: (callback: () => void | Promise<void>) => ViewTransition;
 }
