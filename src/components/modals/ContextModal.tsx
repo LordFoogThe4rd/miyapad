@@ -66,7 +66,7 @@ export function ContextModal({ isOpen, closeModal, tokens, memoryTokens, authorN
 		}, 500);
 		ac.signal.addEventListener('abort', () => clearTimeout(to));
 		return () => ac.abort();
-	}, [isOpen, contextPlayground, endpoint, endpointAPI, useServerTokenization]);
+	}, [isOpen, contextPlayground, endpoint, endpointAPI, endpointAPIKey, isMiyapadEndpoint, useServerTokenization, sessionStorage]);
 	return html`
 		<${Modal} isOpen=${isOpen} onClose=${closeModal}
 			title="Context"
