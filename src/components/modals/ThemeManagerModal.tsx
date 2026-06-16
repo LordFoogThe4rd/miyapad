@@ -1,5 +1,5 @@
 import { html } from 'htm/react';
-import { useState, useEffect } from 'react';
+import { useState, useEffect, type Dispatch, type SetStateAction } from 'react';
 import { Modal } from '../Modal';
 import { InputBox } from '../controls/InputBox';
 import { SelectBox } from '../controls/SelectBox';
@@ -7,7 +7,17 @@ import { exportText } from '../../api/common';
 import { escapeRegExp } from '../../utils/regex';
 import { defaultThemes } from '../../defaults/themes';
 
-export function ThemeManagerModal({ isOpen, closeModal, allThemes, setAllThemes, currentThemeName, setCurrentThemeName, cancel }: any) {
+interface ThemeManagerModalProps {
+  isOpen: boolean;
+  closeModal: () => void;
+  allThemes: Record<string, ThemeData>;
+  setAllThemes: Dispatch<SetStateAction<Record<string, ThemeData>>>;
+  currentThemeName: string;
+  setCurrentThemeName: Dispatch<string>;
+  cancel: (() => void) | null;
+}
+
+export function ThemeManagerModal({ isOpen, closeModal, allThemes, setAllThemes, currentThemeName, setCurrentThemeName, cancel }: ThemeManagerModalProps) {
     const [editingThemeName, setEditingThemeName] = useState(currentThemeName);
     const [newThemeName, setNewThemeName] = useState<string | undefined>(undefined);
     const [newClassName, setNewClassName] = useState<string | undefined>(undefined);
