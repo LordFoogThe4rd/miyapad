@@ -38,7 +38,9 @@ export function isThemeData(value: unknown): value is ThemeData {
   if (!isRecord(value)) return false;
   return (
     typeof value.className === 'string' &&
-    typeof value.css === 'string'
+    typeof value.css === 'string' &&
+    typeof value.order === 'number' &&
+    typeof value.isDefault === 'boolean'
   );
 }
 
