@@ -289,7 +289,11 @@ export class SessionStorage extends AbstractStorage {
 
 		for (const [propertyName, value] of Object.entries(obj)) {
 			if (propertyName === 'darkMode') continue;
-			raw[propertyName] = JSON.parse(value as string);
+			try {
+				raw[propertyName] = JSON.parse(value as string);
+			} catch {
+				raw[propertyName] = value;
+			}
 		}
 
 		if (!Object.hasOwn(raw, 'name')) {
