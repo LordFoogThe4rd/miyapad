@@ -59,9 +59,9 @@ function GenericConnectionSettings({ connection, updateConnection }: GenericConn
 				updateConnection('models', models);
 			}
 		} catch (e: unknown) {
-			if ((e as Error).name === 'AbortError') return;
+			if (e instanceof Error && e.name === 'AbortError') return;
 			console.error(e);
-			setError((e as Error).message || String(e));
+			setError(e instanceof Error ? e.message : String(e));
 		} finally {
 			setIsFetching(false);
 		}
@@ -210,9 +210,9 @@ function AIHordeConnectionSettings({ connection, updateConnection }: AIHordeConn
 			modelData.sort((a: AIHordeModel, b: AIHordeModel) => b.count - a.count || a.eta - b.eta);
 			setAvailableModels(modelData);
 		} catch (e: unknown) {
-			if ((e as Error).name === 'AbortError') return;
+			if (e instanceof Error && e.name === 'AbortError') return;
 			console.error(e);
-			setError((e as Error).message || String(e));
+			setError(e instanceof Error ? e.message : String(e));
 		} finally {
 			setIsFetching(false);
 		}
