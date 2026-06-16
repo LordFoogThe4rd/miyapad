@@ -13,7 +13,7 @@ interface ThemeManagerModalProps {
   allThemes: Record<string, ThemeData>;
   setAllThemes: Dispatch<SetStateAction<Record<string, ThemeData>>>;
   currentThemeName: string;
-  setCurrentThemeName: Dispatch<string>;
+  setCurrentThemeName: Dispatch<SetStateAction<string>>;
   cancel: (() => void) | null;
 }
 
