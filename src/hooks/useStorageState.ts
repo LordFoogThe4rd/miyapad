@@ -6,15 +6,19 @@ export function useStorageState<T>(storage: { getStorageData(): T; performFullSa
 	const [value, setValue] = useState(Object.keys(savedState as Record<string, unknown>).length === 0 ? initialState : savedState);
 
 	const versionRef = useRef(0);
+	const latestValueRef = useRef(value);
 	const updateState = (newValue: SetStateAction<T>) => {
 		const myVersion = ++versionRef.current;
-		setValue((prevValue) => {
-			const updatedValue = typeof newValue === 'function' ? (newValue as (prev: T) => T)(prevValue) : newValue;
-			storage.performFullSave(updatedValue).catch((error) => {
-				setValue((current) => myVersion === versionRef.current ? prevValue : current);
-				reportError(error);
-			});
-			return updatedValue;
+		const prevValue = latestValueRef.current;
+		const nextValue = typeof newValue === 'function' ? (newValue as (prev: T) => T)(prevValue) : newValue;
+		latestValueRef.current = nextValue;
+		setValue(nextValue);
+		storage.performFullSave(nextValue).catch((error) => {
+			if (myVersion === versionRef.current) {
+				setValue(prevValue);
+				latestValueRef.current = prevValue;
+			}
+			reportError(error);
 		});
 	};
 
