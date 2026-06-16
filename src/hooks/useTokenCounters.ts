@@ -11,7 +11,7 @@ export function useTokenCounters() {
 	const { cancel, modalState } = useGeneration();
 	const { templateReplacements, replacePlaceholders } = usePromptBuilder();
 
-	function handleauthorNoteTokensChange(key: keyof AuthorNoteData, value: any) {
+	function handleauthorNoteTokensChange<K extends keyof AuthorNoteData>(key: K, value: AuthorNoteData[K]) {
 		setAuthorNoteTokens((prevauthorNoteTokens: AuthorNoteData) => ({ ...prevauthorNoteTokens, [key]: value }));
 	}
 	// token counts for an
@@ -55,7 +55,7 @@ export function useTokenCounters() {
 		return () => ac.abort();
 	},[modalState["context"],authorNoteTokens.text,authorNoteTokens.prefix,authorNoteTokens.suffix,contextLength,cancel,endpoint,endpointAPI,endpointAPIKey,isMiyapadEndpoint,sessionStorage,useServerTokenization,templateReplacements])
 
-	function handleMemoryTokensChange(key: keyof MemoryTokensData, value: any) {
+	function handleMemoryTokensChange<K extends keyof MemoryTokensData>(key: K, value: MemoryTokensData[K]) {
 		setMemoryTokens((prevMemoryTokens: MemoryTokensData) => ({ ...prevMemoryTokens, [key]: value }));
 	}
 	// token counts for memory
