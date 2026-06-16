@@ -4,7 +4,21 @@ import { Modal } from '../Modal';
 import { Checkbox } from '../controls/Checkbox';
 import type { InstructModalState } from '../../types/contexts';
 
-export function InstructModal({ isOpen, closeModal, predict, cancel, modalState, templates, selectedTemplate, lastError, ...props }: { isOpen: boolean; closeModal: () => void; predict: (prompt: string, n?: number, callback?: (chunk: CompletionChunk) => boolean) => void; cancel: (() => void) | null; modalState: InstructModalState; templates: Record<string, any>; selectedTemplate: string; lastError: string | undefined; [key: string]: any }) {
+interface InstructModalProps {
+  isOpen: boolean;
+  closeModal: () => void;
+  predict: (prompt: string, n?: number, callback?: (chunk: CompletionChunk) => boolean) => void;
+  cancel: (() => void) | null;
+  modalState: InstructModalState;
+  templates: Record<string, InstructTemplate>;
+  selectedTemplate: string;
+  lastError: string | undefined;
+  sessionEndpointConnecting: boolean;
+  predictStartTokens: number;
+  tokens: number;
+}
+
+export function InstructModal({ isOpen, closeModal, predict, cancel, modalState, templates, selectedTemplate, lastError, sessionEndpointConnecting, predictStartTokens, tokens }: InstructModalProps) {
 	const [prompt, setPrompt] = useState("");
 	const [includeContext, setIncludeContext] = useState(true);
 	const [result, setResult] = useState("");
@@ -76,7 +90,7 @@ export function InstructModal({ isOpen, closeModal, predict, cancel, modalState,
 	handlePredictRef.current = handlePredictInModal;
 
 	useEffect(() => {
-		function onKeyDown(e: any) {
+		function onKeyDown(e: KeyboardEvent) {
 			const { altKey, ctrlKey, shiftKey, key, defaultPrevented } = e;
 			if (defaultPrevented || !isOpenRef.current)
 				return;
@@ -111,14 +125,14 @@ export function InstructModal({ isOpen, closeModal, predict, cancel, modalState,
 						autoFocus
 						style=${{height: "200px"}}
                         value=${prompt}
-                        onChange=${(e: any) => setPrompt(e.target.value)}
+                        onChange=${(e: Event) => setPrompt((e.target as HTMLTextAreaElement).value)}
                         placeholder="Enter your prompt here..."
 						className="wi-textarea"
 						readOnly=${!!cancel}/>
 
 					<${Checkbox} label="Include Context"
 						value=${includeContext}
-						onValueChange=${(v: any) => setIncludeContext(v)}/>
+						onValueChange=${(v: boolean) => setIncludeContext(v)}/>
 
                     <div className="vbox">
 						${!cancel && html`
@@ -129,7 +143,7 @@ export function InstructModal({ isOpen, closeModal, predict, cancel, modalState,
 						${cancel && html`
 							<button
 								onClick=${() => cancel()}
-								className=${cancel !== null && !props.sessionEndpointConnecting ? (props.predictStartTokens === props.tokens ? 'processing' : 'completing') : ''}>
+								className=${cancel !== null && !sessionEndpointConnecting ? (predictStartTokens === tokens ? 'processing' : 'completing') : ''}>
 								Cancel
 							</button>`}
 						${!!lastError && html`
@@ -140,7 +154,7 @@ export function InstructModal({ isOpen, closeModal, predict, cancel, modalState,
 						label="Result"
 						style=${{height: "200px"}}
 						value=${result}
-						onChange=${(e: any) => setResult(e.target.value)}
+						onChange=${(e: Event) => setResult((e.target as HTMLTextAreaElement).value)}
 						readOnly=${!!cancel}
 						className="wi-textarea"/>
 
