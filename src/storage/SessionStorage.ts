@@ -17,12 +17,28 @@ function safeSessionName(name: unknown, key: string | number, fallback = 'Untitl
 		: fallback;
 }
 
-interface SessionMeta {
-  name?: string;
-  created?: number | null;
-  modified?: number | null;
-  pinned?: boolean;
-  tags?: string[];
+function sanitizeNumber(value: unknown, fallback: number): number {
+	return typeof value === 'number' && !Number.isNaN(value) ? value : fallback;
+}
+
+function sanitizeSessionData(raw: unknown, key?: string | number): SessionData {
+	if (typeof raw === 'string') {
+		const name = raw === '[object Object]' ? `Session #${key}` : raw;
+		return { name, created: null, modified: null, pinned: false, tags: [] };
+	}
+	if (!raw || typeof raw !== 'object') {
+		return { name: safeSessionName(undefined, key ?? 'unknown'), created: null, modified: null, pinned: false, tags: [] };
+	}
+	const src = raw as Record<string, unknown>;
+	return {
+		...src,
+		name: safeSessionName(src.name, key ?? 'unknown'),
+		created: typeof src.created === 'number' ? src.created : null,
+		modified: typeof src.modified === 'number' ? src.modified : null,
+		pinned: !!src.pinned,
+		tags: Array.isArray(src.tags) ? src.tags.filter((t): t is string => typeof t === 'string') : [],
+		inactive: !!src.inactive,
+	};
 }
 
 export class SessionStorage extends AbstractStorage {
@@ -53,8 +69,8 @@ export class SessionStorage extends AbstractStorage {
 
 	async init() {
 		const db = await this.openDatabase();
-		this.nextId = ((await this.loadFromDatabase(db, 'nextSessionId')) as number) || 0;
-		this.selectedSession = ((await this.loadFromDatabase(db, 'selectedSessionId')) as number) || 0;
+		this.nextId = sanitizeNumber(await this.loadFromDatabase(db, 'nextSessionId'), 0);
+		this.selectedSession = sanitizeNumber(await this.loadFromDatabase(db, 'selectedSessionId'), 0);
 		await this.loadSessions(db);
 		this.startSaveTimer(async (sessionId) => await this.saveSessionToDB(sessionId));
 	}
@@ -84,8 +100,8 @@ export class SessionStorage extends AbstractStorage {
 			} else if (nameData && typeof nameData === 'object') {
 				const meta = nameData as Record<string, unknown>;
 				data['name'] = safeSessionName(meta.name, key);
-				data['created'] = meta.created || null;
-				data['modified'] = meta.modified || null;
+				data['created'] = typeof meta.created === 'number' ? meta.created : null;
+				data['modified'] = typeof meta.modified === 'number' ? meta.modified : null;
 				data['pinned'] = meta.pinned === undefined ? false : !!meta.pinned;
 				data['tags'] = Array.isArray(meta.tags) ? meta.tags : [];
 			}
@@ -119,10 +135,10 @@ export class SessionStorage extends AbstractStorage {
 	// but we might want to erase it in the future.
 	async migrateSessions() {
 		const nextId = +(localStorage.getItem('nextSessionId') ?? 0);
-		if (nextId == 0)
+		if (!(nextId > 0))
 			return false;
 		this.nextId = nextId;
-		this.selectedSession = +(localStorage.getItem('selectedSessionId') ?? 0);
+		this.selectedSession = sanitizeNumber(+(localStorage.getItem('selectedSessionId') ?? 0), 0);
 		for (const key of Object.keys(localStorage)) {
 			const [sessionId, propertyName] = key.split('/');
 			if (propertyName === undefined) continue;
@@ -139,6 +155,9 @@ export class SessionStorage extends AbstractStorage {
 				this.sessions[sessionId][propertyName] = value;
 			}
 		};
+		for (const sessionId of Object.keys(this.sessions)) {
+			this.sessions[sessionId] = sanitizeSessionData(this.sessions[sessionId], sessionId);
+		}
 		const db = await this.openDatabase();
 		await this.saveToDatabase(db, 'nextSessionId', this.nextId);
 		await this.saveToDatabase(db, 'selectedSessionId', this.selectedSession);
@@ -151,15 +170,7 @@ export class SessionStorage extends AbstractStorage {
 	async loadSessions(db: DbConnection) {
 		const sessions = await this.loadSessionInfoFromDatabase(db);
 		for (const [key, data] of Object.entries(sessions)) {
-			const record = data as Record<string, unknown> | string | null | undefined;
-			// Handle both legacy string names and new metadata objects
-			if (typeof record === 'string') {
-				this.sessions[key] = { name: record === '[object Object]' ? `Session #${key}` : record, created: null, modified: null, pinned: false, tags: [] };
-			} else if (record && typeof record === 'object') {
-				this.sessions[key] = { ...extractMeta(record), name: safeSessionName((record as SessionMeta).name, key) };
-			} else {
-				this.sessions[key] = { name: 'Untitled', created: null, modified: null, pinned: false, tags: [] };
-			}
+			this.sessions[key] = sanitizeSessionData(data, key);
 		}
 		if (Object.keys(this.sessions).length === 0) {
 			if (!await this.migrateSessions()) {
@@ -200,7 +211,7 @@ export class SessionStorage extends AbstractStorage {
 		await this.saveToDatabase(db, 'selectedSessionId', +sessionId);
 
 		this.selectedSession = +sessionId;
-		this.sessions[this.selectedSession] = (await this.loadFromDatabase(db, this.selectedSession)) as SessionData;
+		this.sessions[this.selectedSession] = sanitizeSessionData(await this.loadFromDatabase(db, this.selectedSession), this.selectedSession);
 
 		await this.saveToDatabase(db, this.selectedSession, this.sessions[this.selectedSession]);
 
@@ -270,26 +281,26 @@ export class SessionStorage extends AbstractStorage {
 
 	async createSessionFromObject(obj: Record<string, string>, cloned: boolean) {
 		const newId = await this.getNewId();
-		this.sessions[newId] = {};
+		const raw: Record<string, unknown> = {};
 
 		for (const [propertyName, value] of Object.entries(obj)) {
 			if (propertyName === 'darkMode') continue;
-			this.sessions[newId][propertyName] = JSON.parse(value as string);
+			raw[propertyName] = JSON.parse(value as string);
 		}
 
-		if (!Object.hasOwn(this.sessions[newId], 'name')) {
-			this.sessions[newId]['name'] = `MiyaPad #${newId + 1}`;
+		if (!Object.hasOwn(raw, 'name')) {
+			raw['name'] = `MiyaPad #${newId + 1}`;
 		}
 
-		if (cloned && !this.sessions[newId]['name']!.startsWith('Cloned')) {
-			this.sessions[newId]['name'] = `Cloned ${this.sessions[newId]['name']}`;
+		if (cloned && typeof raw.name === 'string' && !raw.name.startsWith('Cloned')) {
+			raw['name'] = `Cloned ${raw['name']}`;
 		}
 
 		const now = Date.now();
-		this.sessions[newId].created = now;
-		this.sessions[newId].modified = now;
-		this.sessions[newId].pinned = false;
-		this.sessions[newId].tags = this.sessions[newId].tags || [];
+		raw.created = now;
+		raw.modified = now;
+
+		this.sessions[newId] = sanitizeSessionData(raw, newId);
 
 		const db = await this.openDatabase();
 		await this.saveToDatabase(db, newId, this.sessions[newId]);
