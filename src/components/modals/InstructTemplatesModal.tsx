@@ -45,8 +45,8 @@ export function InstructTemplatesModal({ isOpen, closeModal, templateStorage, se
 			const newState = [
 				...prevState
 			];
-			const tempIndex = newState.findIndex(obj => obj.name === templateName);
-			const index = tempIndex < 0 ? 0 : tempIndex;
+			const index = newState.findIndex(obj => obj.name === templateName);
+			if (index < 0) return prevState;
 			if (key == "name") { 
 				newState[index] = {
 					...newState[index],
