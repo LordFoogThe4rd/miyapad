@@ -53,7 +53,7 @@ export class ThemeStorage extends AbstractStorage {
 
         for (const key of Object.keys(this.themes)) {
             if (!Object.hasOwn(newThemes, key)) {
-                await this.deleteFromDatabase(db, key);
+                await this.deleteFromDatabase(db, key).catch(e => console.warn(`[ThemeStorage] Failed to delete stale entry: ${key}`, e));
             }
         }
 
@@ -80,7 +80,7 @@ export class ThemeStorage extends AbstractStorage {
                 this.themes[key] = coerced;
             } else {
                 console.warn(`[ThemeStorage] Removing invalid entry: ${key}`);
-                await this.deleteFromDatabase(db, key);
+                await this.deleteFromDatabase(db, key).catch(e => console.warn(`[ThemeStorage] Failed to delete invalid entry: ${key}`, e));
             }
         }
     }
