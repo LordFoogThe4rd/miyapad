@@ -1,9 +1,9 @@
 import { useMemo, useRef, useState, type Dispatch, type SetStateAction } from 'react';
 
 export function useStorageState<T>(storage: { getStorageData(): T; performFullSave(data: T): Promise<void> }, initialState: T): [T, Dispatch<SetStateAction<T>>] {
-	const savedState = useMemo(() => storage.getStorageData(), []);
+	const savedState = useMemo(() => storage.getStorageData(), [storage]);
 
-	const [value, setValue] = useState(Object.keys(savedState as Record<string, unknown>).length === 0 ? initialState : savedState);
+	const [value, setValue] = useState(savedState ?? initialState);
 
 	const versionRef = useRef(0);
 	const latestValueRef = useRef(value);
