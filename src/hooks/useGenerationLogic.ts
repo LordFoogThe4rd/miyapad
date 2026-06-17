@@ -160,7 +160,8 @@ export function useGenerationLogic() {
 				}
 			} else {
 				try {
-					stopParam = JSON.parse(stoppingStrings);
+				const parsed = JSON.parse(stoppingStrings);
+				stopParam = Array.isArray(parsed) ? parsed.filter((s): s is string => typeof s === 'string') : [];
 			} catch (e: unknown) {
 				console.error('Failed to parse stopping strings', stoppingStrings, e);
 				stopParam = [];
