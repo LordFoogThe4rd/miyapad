@@ -354,12 +354,12 @@ onClick=${(e: MouseEvent) => e.stopPropagation()}
 						`}
 						${sortedSessions.map(([sessionId, session]) => html`
 							<tr key=${sessionId}
-								className="sessions-modal-row ${sessionStorage.selectedSession === +sessionId ? 'selected' : ''}"
-								onClick=${() => switchSession(+sessionId)}>
+								className="sessions-modal-row ${sessionStorage.selectedSession === sessionId ? 'selected' : ''}"
+								onClick=${() => switchSession(sessionId)}>
 								<td className="sessions-col-star" onClick=${(e: MouseEvent) => e.stopPropagation()}>
 									<button className="sessions-action-btn"
 										title=${session.pinned ? "Unpin session" : "Pin session"}
-										onClick=${() => sessionStorage.togglePinSession(+sessionId)}>
+										onClick=${() => sessionStorage.togglePinSession(sessionId)}>
 										${session.pinned ? html`<${SVG_Star}/>` : html`<${SVG_StarOutline}/>`}
 									</button>
 								</td>
@@ -370,7 +370,7 @@ onClick=${(e: MouseEvent) => e.stopPropagation()}
 											className="sessions-modal-inline-input"
 											value=${renameSessionName}
 											onChange=${(e: ChangeEvent<HTMLInputElement>) => setRenameSessionName(e.target.value)}
-											onKeyDown=${(e: KeyboardEvent<HTMLInputElement>) => handleKeyDown(+sessionId, e)}
+											onKeyDown=${(e: KeyboardEvent<HTMLInputElement>) => handleKeyDown(sessionId, e)}
 onClick=${(e: MouseEvent) => e.stopPropagation()}
 									autoFocus
 								/>
@@ -385,7 +385,7 @@ onClick=${(e: MouseEvent) => e.stopPropagation()}
 onChange=${(e: ChangeEvent<HTMLInputElement>) => setEditTagsValue(e.target.value)}
 onKeyDown=${(e: KeyboardEvent<HTMLInputElement>) => {
 														if (e.key === 'Enter') {
-															sessionStorage.setTags(+sessionId, editTagsValue);
+															sessionStorage.setTags(sessionId, editTagsValue);
 															setEditingTagsId(undefined);
 														} else if (e.key === 'Escape') {
 															setEditingTagsId(undefined);
@@ -393,7 +393,7 @@ onKeyDown=${(e: KeyboardEvent<HTMLInputElement>) => {
 														e.stopPropagation();
 													}}
 													onBlur=${() => {
-															sessionStorage.setTags(+sessionId, editTagsValue);
+															sessionStorage.setTags(sessionId, editTagsValue);
 															setEditingTagsId(undefined);
 														}}
 													onClick=${(e: MouseEvent) => e.stopPropagation()}
@@ -417,15 +417,15 @@ onKeyDown=${(e: KeyboardEvent<HTMLInputElement>) => {
 								<td className="sessions-col-actions" onClick=${(e: MouseEvent) => e.stopPropagation()}>
 									<div className="sessions-col-actions-inner">
 										${renamingId == sessionId ? html`
-											<button className="sessions-action-btn" onClick=${() => renameSession(+sessionId)}><${SVG_Confirm}/></button>
+											<button className="sessions-action-btn" onClick=${() => renameSession(sessionId)}><${SVG_Confirm}/></button>
 											<button className="sessions-action-btn" onClick=${() => setRenamingId(undefined)}><${SVG_Cancel}/></button>
 										` : html`
 											<button className="sessions-action-btn" disabled=${disabled}
-												onClick=${() => startRenameSession(+sessionId, session.name ?? '')}>
+												onClick=${() => startRenameSession(sessionId, session.name ?? '')}>
 												<${SVG_Rename}/>
 											</button>
 											<button className="sessions-action-btn" disabled=${disabled}
-												onClick=${() => deleteSession(+sessionId)}>
+												onClick=${() => deleteSession(sessionId)}>
 												<${SVG_Trash}/>
 											</button>
 										`}
