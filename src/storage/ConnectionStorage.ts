@@ -48,7 +48,8 @@ export class ConnectionStorage extends AbstractStorage {
 			if (isConnectionData(value)) {
 				this.connections[key] = value;
 			} else {
-				console.warn(`[ConnectionStorage] Skipped invalid entry: ${key}`);
+				console.warn(`[ConnectionStorage] Removing invalid entry: ${key}`);
+				await this.deleteFromDatabase(db, key).catch(e => console.warn(`[ConnectionStorage] Failed to delete invalid entry: ${key}`, e));
 			}
 		}
 	}
