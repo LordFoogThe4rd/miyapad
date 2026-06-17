@@ -49,6 +49,11 @@ export function Sidebar({ sidebarRef, toggleModal, currentThemeName, setCurrentT
 	const { predict, undo, redo, undoAndPredict } = useGenerationLogic();
 	const { handleauthorNoteTokensChange, handleMemoryTokensChange } = useTokenCounters();
 
+	const toggleSampler = (name: string) => (v: boolean) =>
+		setEnabledSamplers(v
+			? (es: string[]) => es.includes(name) ? es : [...es, name]
+			: (es: string[]) => es.filter((s: string) => s !== name));
+
 	const [extensionLoaded, setExtensionLoaded] = useState(false);
 	const [configData, setConfigData] = useState<Record<string, unknown> | null>(null);
 	const [zstdLevel, setZstdLevel] = useState(3);
@@ -431,59 +436,59 @@ export function Sidebar({ sidebarRef, toggleModal, currentThemeName, setCurrentT
 					<${Checkbox} label="Temperature"
 						disabled=${!!cancel}
 						value=${enabledSamplers.includes('temperature')}
-						onValueChange=${(v: boolean) => setEnabledSamplers(v ? (es: string[]) => es.includes('temperature') ? es : [...es, 'temperature'] : (es: string[]) => es.filter((s: string) => s !== 'temperature'))}/>
+						onValueChange=${toggleSampler('temperature')}/>
 					<${Checkbox} label="Dynamic Temperature"
 						disabled=${!!cancel}
 						value=${enabledSamplers.includes('dynatemp')}
-						onValueChange=${(v: boolean) => setEnabledSamplers(v ? (es: string[]) => es.includes('dynatemp') ? es : [...es, 'dynatemp'] : (es: string[]) => es.filter((s: string) => s !== 'dynatemp'))}/>
+						onValueChange=${toggleSampler('dynatemp')}/>
 					<${Checkbox} label="Repetition Penalty"
 						disabled=${!!cancel}
 						value=${enabledSamplers.includes('rep_pen')}
-						onValueChange=${(v: boolean) => setEnabledSamplers(v ? (es: string[]) => es.includes('rep_pen') ? es : [...es, 'rep_pen'] : (es: string[]) => es.filter((s: string) => s !== 'rep_pen'))}/>
+						onValueChange=${toggleSampler('rep_pen')}/>
 					<${Checkbox} label="Presence Penalty"
 						disabled=${!!cancel}
 						value=${enabledSamplers.includes('pres_pen')}
-						onValueChange=${(v: boolean) => setEnabledSamplers(v ? (es: string[]) => es.includes('pres_pen') ? es : [...es, 'pres_pen'] : (es: string[]) => es.filter((s: string) => s !== 'pres_pen'))}/>
+						onValueChange=${toggleSampler('pres_pen')}/>
 					<${Checkbox} label="Frequence Penalty"
 						disabled=${!!cancel}
 						value=${enabledSamplers.includes('freq_pen')}
-						onValueChange=${(v: boolean) => setEnabledSamplers(v ? (es: string[]) => es.includes('freq_pen') ? es : [...es, 'freq_pen'] : (es: string[]) => es.filter((s: string) => s !== 'freq_pen'))}/>
+						onValueChange=${toggleSampler('freq_pen')}/>
 					<${Checkbox} label="Mirostat"
 						disabled=${!!cancel}
 						value=${enabledSamplers.includes('mirostat')}
-						onValueChange=${(v: boolean) => setEnabledSamplers(v ? (es: string[]) => es.includes('mirostat') ? es : [...es, 'mirostat'] : (es: string[]) => es.filter((s: string) => s !== 'mirostat'))}/>
+						onValueChange=${toggleSampler('mirostat')}/>
 					<${Checkbox} label="XTC"
 						disabled=${!!cancel}
 						value=${enabledSamplers.includes('xtc')}
-						onValueChange=${(v: boolean) => setEnabledSamplers(v ? (es: string[]) => es.includes('xtc') ? es : [...es, 'xtc'] : (es: string[]) => es.filter((s: string) => s !== 'xtc'))}/>
+						onValueChange=${toggleSampler('xtc')}/>
 					<${Checkbox} label="DRY"
 						disabled=${!!cancel}
 						value=${enabledSamplers.includes('dry')}
-						onValueChange=${(v: boolean) => setEnabledSamplers(v ? (es: string[]) => es.includes('dry') ? es : [...es, 'dry'] : (es: string[]) => es.filter((s: string) => s !== 'dry'))}/>
+						onValueChange=${toggleSampler('dry')}/>
 					<${Checkbox} label="Top K"
 						disabled=${!!cancel}
 						value=${enabledSamplers.includes('top_k')}
-						onValueChange=${(v: boolean) => setEnabledSamplers(v ? (es: string[]) => es.includes('top_k') ? es : [...es, 'top_k'] : (es: string[]) => es.filter((s: string) => s !== 'top_k'))}/>
+						onValueChange=${toggleSampler('top_k')}/>
 					<${Checkbox} label="Top P"
 						disabled=${!!cancel}
 						value=${enabledSamplers.includes('top_p')}
-						onValueChange=${(v: boolean) => setEnabledSamplers(v ? (es: string[]) => es.includes('top_p') ? es : [...es, 'top_p'] : (es: string[]) => es.filter((s: string) => s !== 'top_p'))}/>
+						onValueChange=${toggleSampler('top_p')}/>
 					<${Checkbox} label="Min P"
 						disabled=${!!cancel}
 						value=${enabledSamplers.includes('min_p')}
-						onValueChange=${(v: boolean) => setEnabledSamplers(v ? (es: string[]) => es.includes('min_p') ? es : [...es, 'min_p'] : (es: string[]) => es.filter((s: string) => s !== 'min_p'))}/>
+						onValueChange=${toggleSampler('min_p')}/>
 					<${Checkbox} label="Typical P"
 						disabled=${!!cancel}
 						value=${enabledSamplers.includes('typical_p')}
-						onValueChange=${(v: boolean) => setEnabledSamplers(v ? (es: string[]) => es.includes('typical_p') ? es : [...es, 'typical_p'] : (es: string[]) => es.filter((s: string) => s !== 'typical_p'))}/>
+						onValueChange=${toggleSampler('typical_p')}/>
 					<${Checkbox} label="TFS z"
 						disabled=${!!cancel}
 						value=${enabledSamplers.includes('tfs_z')}
-						onValueChange=${(v: boolean) => setEnabledSamplers(v ? (es: string[]) => es.includes('tfs_z') ? es : [...es, 'tfs_z'] : (es: string[]) => es.filter((s: string) => s !== 'tfs_z'))}/>
+						onValueChange=${toggleSampler('tfs_z')}/>
 					<${Checkbox} label="Banned Strings"
 						disabled=${!!cancel}
 						value=${enabledSamplers.includes('ban_tokens')}
-						onValueChange=${(v: boolean) => setEnabledSamplers(v ? (es: string[]) => es.includes('ban_tokens') ? es : [...es, 'ban_tokens'] : (es: string[]) => es.filter((s: string) => s !== 'ban_tokens'))}/>
+						onValueChange=${toggleSampler('ban_tokens')}/>
 				`}>
 				<${InputSlider} label="Temperature" type="number" step="0.01" max="5"
 					hidden=${!enabledSamplers.includes('temperature')}
