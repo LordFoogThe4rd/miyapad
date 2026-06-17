@@ -154,11 +154,41 @@ export default function(app: Express): void {
                 const responseData = e.response.data as Readable | undefined;
                 const status = e.response.status;
                 if (responseData?.pipe) {
+                    const MAX_ERROR_BYTES = 10_240;
                     const chunks: Buffer[] = [];
-                    responseData.on('data', (c: Buffer) => chunks.push(c));
+                    let totalBytes = 0;
+                    let aborted = false;
+
+                    const cleanup = () => {
+                        responseData.removeAllListeners('data');
+                        responseData.removeAllListeners('end');
+                        responseData.removeAllListeners('error');
+                        responseData.destroy();
+                    };
+
+                    responseData.on('data', (c: Buffer) => {
+                        totalBytes += c.length;
+                        if (totalBytes > MAX_ERROR_BYTES) {
+                            aborted = true;
+                            cleanup();
+                            if (!res.headersSent)
+                                res.status(status).json({ error: 'Error response body too large' });
+                        } else {
+                            chunks.push(c);
+                        }
+                    });
+
                     responseData.on('end', () => {
-                        const body = Buffer.concat(chunks).toString('utf8');
-                        res.status(status).json({ error: body });
+                        if (!aborted) {
+                            const body = Buffer.concat(chunks).toString('utf8');
+                            res.status(status).json({ error: body });
+                        }
+                    });
+
+                    responseData.on('error', () => {
+                        cleanup();
+                        if (!res.headersSent)
+                            res.status(status).json({ error: 'Error reading error response body' });
                     });
                 } else {
                     res.status(status).json({ error: e.response.data });
