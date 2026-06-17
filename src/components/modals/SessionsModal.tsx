@@ -354,7 +354,7 @@ onClick=${(e: MouseEvent) => e.stopPropagation()}
 						`}
 						${sortedSessions.map(([sessionId, session]) => html`
 							<tr key=${sessionId}
-								className="sessions-modal-row ${sessionStorage.selectedSession === sessionId ? 'selected' : ''}"
+								className="sessions-modal-row ${String(sessionStorage.selectedSession) === sessionId ? 'selected' : ''}"
 								onClick=${() => switchSession(sessionId)}>
 								<td className="sessions-col-star" onClick=${(e: MouseEvent) => e.stopPropagation()}>
 									<button className="sessions-action-btn"

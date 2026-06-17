@@ -49,22 +49,27 @@ export class ThemeStorage extends AbstractStorage {
     }
 
     async performFullSave(newThemes: Record<string, ThemeData>) {
-        const db = await this.openDatabase();
+        try {
+            const db = await this.openDatabase();
 
-        for (const key of Object.keys(this.themes)) {
-            if (!Object.hasOwn(newThemes, key)) {
-                await this.deleteFromDatabase(db, key).catch(e => console.warn(`[ThemeStorage] Failed to delete stale entry: ${key}`, e));
+            for (const key of Object.keys(this.themes)) {
+                if (!Object.hasOwn(newThemes, key)) {
+                    await this.deleteFromDatabase(db, key).catch(e => console.warn(`[ThemeStorage] Failed to delete stale entry: ${key}`, e));
+                }
             }
-        }
 
-        for (const [key, value] of Object.entries(newThemes)) {
-            if (JSON.stringify(value) !== JSON.stringify(this.themes[key])) {
-                await this.saveToDatabase(db, key, value);
+            for (const [key, value] of Object.entries(newThemes)) {
+                if (JSON.stringify(value) !== JSON.stringify(this.themes[key])) {
+                    await this.saveToDatabase(db, key, value);
+                }
             }
-        }
 
-        this.themes = newThemes;
-        this.dispatchChangeEvent();
+            this.themes = newThemes;
+            this.dispatchChangeEvent();
+        } catch (error) {
+            this.dispatchErrorEvent(error);
+            throw error;
+        }
     }
 
 	getStorageData(): Record<string, ThemeData> {
