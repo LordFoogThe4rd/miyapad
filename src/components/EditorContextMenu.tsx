@@ -1,5 +1,6 @@
 import { html } from 'htm/react';
 import { useState, useEffect, useRef, useCallback } from 'react';
+import type { MouseEvent } from 'react';
 import type { ContextMenuItem, EditorContextMenuProps } from '../types/components';
 
 export function EditorContextMenu({ isOpen, closeMenu, menuItems, className, ...props }: EditorContextMenuProps) {
@@ -82,14 +83,14 @@ export function EditorContextMenu({ isOpen, closeMenu, menuItems, className, ...
 					(item: ContextMenuItem) => html`
 						<li
 							className="MenuItem ${item.disabled ? 'disabled' : ''} ${item.subItems ? 'hasSubItems' : ''}"
-							onClick=${(event: any) => {
+							onClick=${(event: MouseEvent<HTMLLIElement>) => {
 								if (item.action && !item.disabled && !item.subItems) {
 									item.action();
 									handleClose();
 									event.stopPropagation();
 								}
 							}}
-							onMouseEnter=${(event: any) => {
+							onMouseEnter=${(event: MouseEvent<HTMLLIElement>) => {
 								setSubMenuOpen(null);
 								if (item.subItems && !item.disabled)
 									setSubMenuOpen(item.label);
