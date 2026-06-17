@@ -88,8 +88,10 @@ export class SessionStorage extends AbstractStorage {
 	}
 
 	async loadFromDatabase(db: DbConnection, key: string | number): Promise<unknown> {
-		const data = (await super.loadFromDatabase(db, key)) as Record<string, unknown> | null;
-		if(data && !['selectedSessionId', 'nextSessionId'].includes(key as string)){
+		const raw = await super.loadFromDatabase(db, key);
+		if (typeof raw !== 'object' || raw === null) return raw;
+		const data = raw as Record<string, unknown>;
+		if (!['selectedSessionId', 'nextSessionId'].includes(key as string)) {
 			const nameData = await this.nameStorage!.loadFromDatabase(db, key);
 			if (typeof nameData === 'string') {
 				data['name'] = nameData === '[object Object]' ? `Session #${key}` : nameData;
