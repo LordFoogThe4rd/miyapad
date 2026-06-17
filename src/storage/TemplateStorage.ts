@@ -50,7 +50,8 @@ export class TemplateStorage extends AbstractStorage {
 			if (isInstructTemplate(value)) {
 				this.templates[key] = value;
 			} else {
-				console.warn(`[TemplateStorage] Skipped invalid entry: ${key}`);
+				console.warn(`[TemplateStorage] Removing invalid entry: ${key}`);
+				await this.deleteFromDatabase(db, key).catch(e => console.warn(`[TemplateStorage] Failed to delete invalid entry: ${key}`, e));
 			}
 		}
 	}
