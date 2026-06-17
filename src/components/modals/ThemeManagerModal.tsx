@@ -71,7 +71,7 @@ export function ThemeManagerModal({ isOpen, closeModal, allThemes, setAllThemes,
             return;
         }
 
-        const oldCss = allThemes[editingThemeName].css;
+        const oldCss = allThemes[editingThemeName]?.css ?? '';
         const regex = new RegExp(`\\.${escapeRegExp(oldClassName)}(?=[\\s,{]|$)`, 'g');
         const newCss = oldCss.replace(regex, `.${sanitizedClassName}`);
 
