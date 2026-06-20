@@ -18,12 +18,12 @@ interface ConnectionManagerModalProps {
 
 interface GenericConnectionSettingsProps {
   connection: ConnectionData;
-  updateConnection: (field: keyof ConnectionData, value: unknown) => void;
+  updateConnection: <K extends keyof ConnectionData>(field: K, value: ConnectionData[K]) => void;
 }
 
 interface AIHordeConnectionSettingsProps {
   connection: ConnectionData;
-  updateConnection: (field: keyof ConnectionData, value: unknown) => void;
+  updateConnection: <K extends keyof ConnectionData>(field: K, value: ConnectionData[K]) => void;
 }
 
 function GenericConnectionSettings({ connection, updateConnection }: GenericConnectionSettingsProps) {
@@ -402,7 +402,7 @@ export function ConnectionManagerModal({ isOpen, closeModal, connections, setCon
 		}
 	};
 
-	const handleUpdateConnection = (id: string | null, field: keyof ConnectionData, value: unknown) => {
+	const handleUpdateConnection = <K extends keyof ConnectionData>(id: string | null, field: K, value: ConnectionData[K]) => {
 		if (!id) return;
 		setConnections((prev: Record<string, ConnectionData>) => ({
 			...prev,
@@ -410,7 +410,7 @@ export function ConnectionManagerModal({ isOpen, closeModal, connections, setCon
 		}));
 	};
 
-	const updateCurrentConnection = (field: keyof ConnectionData, value: unknown) => {
+	const updateCurrentConnection = <K extends keyof ConnectionData>(field: K, value: ConnectionData[K]) => {
 		if (!selectedId) {
 			return;
 		}
