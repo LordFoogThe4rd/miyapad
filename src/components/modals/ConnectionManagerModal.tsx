@@ -451,6 +451,8 @@ export function ConnectionManagerModal({ isOpen, closeModal, connections, setCon
 			updates.endpoint = "http://127.0.0.1:5001/api";
 		} else if (val === API_DEEPSEEK) {
 			updates.endpoint = "https://api.deepseek.com";
+		} else {
+			updates.endpoint = "http://127.0.0.1:8080/v1";
 		}
 
 		setConnections((prev: Record<string, ConnectionData>) => {
