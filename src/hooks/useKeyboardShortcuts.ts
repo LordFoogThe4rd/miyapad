@@ -100,8 +100,8 @@ export function useKeyboardShortcuts() {
 				break;
 			
 			default:
-				keyState.current = e as unknown as Record<string, boolean>;
-				return;
+		keyState.current = { altKey, ctrlKey, metaKey, shiftKey };
+		return;
 		}
 
 		if (preventDefaultAction)
@@ -109,10 +109,10 @@ export function useKeyboardShortcuts() {
 	});
 
 	const onKeyUp = useEffectEvent((e: KeyboardEvent) => {
-		const { altKey, ctrlKey, shiftKey, key, defaultPrevented } = e;
+		const { altKey, ctrlKey, metaKey, shiftKey, key, defaultPrevented } = e;
 		if (defaultPrevented)
 			return;
-		keyState.current = e as unknown as Record<string, boolean>;
+		keyState.current = { altKey, ctrlKey, metaKey, shiftKey };
 	});
 
 	useEffect(() => {
