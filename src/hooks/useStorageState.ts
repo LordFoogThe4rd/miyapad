@@ -29,7 +29,7 @@ export function useStorageState<T>(storage: { getStorageData(): T; performFullSa
 				}
 				reportError(error instanceof Error ? error : new Error(String(error)));
 			}
-		});
+		}).catch(() => {});
 	};
 
 	return [value, updateState];
