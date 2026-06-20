@@ -29,11 +29,15 @@ export function InstructTemplatesModal({ isOpen, closeModal, templateStorage, se
 	const [newTemplateName, setNewTemplateName] = useState<string | undefined>(undefined);
 
 	function getArrObjByName(array: TemplateListItem[], name: string, getIndex: true): number;
-	function getArrObjByName(array: TemplateListItem[], name: string, getIndex?: false): TemplateListItem | undefined;
-	function getArrObjByName(array: TemplateListItem[], name: string, getIndex = false): TemplateListItem | undefined | number {
-		const index = array.findIndex(obj => obj.name === name)
+	function getArrObjByName(array: TemplateListItem[], name: string, getIndex?: false): TemplateListItem;
+	function getArrObjByName(array: TemplateListItem[], name: string, getIndex = false): TemplateListItem | number {
+		const index = array.findIndex(obj => obj.name === name);
+		if (index < 0) {
+			if (getIndex) return 0;
+			return array[0];
+		}
 		if (getIndex)
-			return index
+			return index;
 		return array[index];
 	}
 
