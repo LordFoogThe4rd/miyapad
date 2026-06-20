@@ -239,7 +239,7 @@ function openaiConvertOptions(options: SamplerOptions, endpoint: string, isChat:
 	if (options.n_predict === -1) {
 		options.n_predict = 1024;
 	}
-	if (isOpenAI && (options.n_probs ?? 0) > 5 || endpointHost === "api.x.ai") {
+	if ((isOpenAI || endpointHost === "api.x.ai") && (options.n_probs ?? 0) > 5) {
 		options.n_probs = 5;
 	}
 	if (isTogetherAI && (options.n_probs ?? 0) > 1) {
