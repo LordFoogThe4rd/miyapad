@@ -43,7 +43,7 @@ interface AIHordeModel {
   count: number;
   eta: number;
   queued?: number;
-  type?: string;
+  type: string;
 }
 
 interface TemplateListItem {
