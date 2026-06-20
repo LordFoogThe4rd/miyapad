@@ -32,9 +32,11 @@ function GenericConnectionSettings({ connection, updateConnection }: GenericConn
 	const [error, setError] = useState<string | null>(null);
 	const [search, setSearch] = useState("");
 	const acRef = useRef<AbortController | null>(null);
+	const timeoutRef = useRef<ReturnType<typeof setTimeout> | null>(null);
 
 	useEffect(() => {
 		return () => {
+			if (timeoutRef.current) clearTimeout(timeoutRef.current);
 			if (acRef.current) {
 				acRef.current.abort();
 			}
@@ -44,9 +46,11 @@ function GenericConnectionSettings({ connection, updateConnection }: GenericConn
 	const fetchModels = async () => {
 		setIsFetching(true);
 		setError(null);
+		if (timeoutRef.current) clearTimeout(timeoutRef.current);
 		if (acRef.current) acRef.current.abort();
 		const ac = new AbortController();
 		acRef.current = ac;
+		timeoutRef.current = setTimeout(() => ac.abort(), 30000);
 		try {
 			const models = await getModels({
 				endpoint: connection.endpoint,
@@ -185,9 +189,11 @@ function AIHordeConnectionSettings({ connection, updateConnection }: AIHordeConn
 	const [search, setSearch] = useState("");
 	const [availableModels, setAvailableModels] = useState<AIHordeModel[]>([]);
 	const acRef = useRef<AbortController | null>(null);
+	const timeoutRef = useRef<ReturnType<typeof setTimeout> | null>(null);
 
 	useEffect(() => {
 		return () => {
+			if (timeoutRef.current) clearTimeout(timeoutRef.current);
 			if (acRef.current) {
 				acRef.current.abort();
 			}
@@ -199,9 +205,11 @@ function AIHordeConnectionSettings({ connection, updateConnection }: AIHordeConn
 	const fetchModels = async () => {
 		setIsFetching(true);
 		setError(null);
+		if (timeoutRef.current) clearTimeout(timeoutRef.current);
 		if (acRef.current) acRef.current.abort();
 		const ac = new AbortController();
 		acRef.current = ac;
+		timeoutRef.current = setTimeout(() => ac.abort(), 30000);
 		try {
 			const res = await fetch(`https://aihorde.net/api/v2/status/models?type=text`, {
 				method: 'GET',
