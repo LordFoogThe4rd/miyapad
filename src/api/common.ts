@@ -95,7 +95,7 @@ export async function* parseEventStream(eventStream: ReadableStream<Uint8Array> 
 }
 
 export function applyTemperatureToProbs(probsArr: ProbItem[], token: string, temperature?: number): { probs: ProbItem[]; prob?: number } {
-	const t = Math.max(0.01, temperature ?? 1);
+	const t = Math.max(0.01, (temperature != null && isFinite(temperature)) ? temperature : 1);
 	if (t === 1) {
 		let chosenProb;
 	probsArr.forEach((p: ProbItem) => {
