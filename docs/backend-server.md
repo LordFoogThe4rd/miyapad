@@ -1,6 +1,6 @@
 # Backend Server & Database
 
-The server (`server/server.js` — entrypoint that loads modules from `lib/` and `routes/`) uses **SQLite3** combined with the precompiled **`sqlite-zstd` extension** to perform transparent, row-level Zstandard compression on database records.
+The server (`server/server.ts` — entrypoint that loads modules from `lib/` and `routes/`, run via `tsx`) uses **SQLite3** combined with the precompiled **`sqlite-zstd` extension** to perform transparent, row-level Zstandard compression on database records. Environment variables for the server are typed in `server/types/env.d.ts`.
 
 ## Database Schema (v4)
 
@@ -15,7 +15,7 @@ The database has six main tables:
 
 ### Schema Column Constraints
 
-The `sqlite-zstd` extension can experience index naming collisions if multiple tables use identical column names (e.g., `data`). To avoid this, each table maps to a unique column name managed dynamically via the server's `getColumnName(storeName)` helper (in `lib/utils.js`):
+The `sqlite-zstd` extension can experience index naming collisions if multiple tables use identical column names (e.g., `data`). To avoid this, each table maps to a unique column name managed dynamically via the server's `getColumnName(storeName)` helper (in `lib/utils.ts`):
 
 - `sessions` table uses **`session_data`**
 - `templates` table uses **`template_data`**

@@ -5,15 +5,17 @@
 From the root directory:
 
 1. Install dependencies: `npm install`
-2. Start the development server: `npm start` (Runs `parcel` dev server)
+2. Start the development server: `npm start` (Runs `parcel` dev server, entry point `miyapad.html` loads `src/main.tsx`)
 3. Build for production: `npm run build` (Runs `parcel build miyapad.html --no-cache`)
+4. Type-check the frontend: `tsc --noEmit` (validates types without emitting files — Parcel handles transpilation independently)
 
 ## Backend Server
 
 From the `server/` directory:
 
 1. Install dependencies: `npm install`
-2. Start the server: `npm start` (Runs `node server.js`)
+2. Type-check the server: `npm run check` (Runs `tsc --noEmit`)
+3. Start the server: `npm start` (Runs `tsx server.ts`)
 
 See [Backend Server](backend-server.md) for CLI options and environment variables.
 

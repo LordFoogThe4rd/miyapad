@@ -1,6 +1,6 @@
 # Miyapad
 
-Web-based AI text generation interface. React 19 frontend with optional Node.js/SQLite backend.
+Web-based AI text generation interface. React 19/TypeScript frontend with optional Node.js/SQLite backend.
 
 ## Documentation
 

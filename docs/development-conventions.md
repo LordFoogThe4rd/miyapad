@@ -4,16 +4,21 @@
 
 All UI files use tagged template literals via `htm`. Never write XML/JSX style code.
 
-```javascript
+```tsx
 import { html } from 'htm/react';
-export function Widget({ title }) {
-    return html`<div className="widget"><h3>${title}</h3></div>`;
+
+interface WidgetProps {
+  title: string;
+}
+
+export function Widget({ title }: WidgetProps) {
+  return html`<div className="widget"><h3>${title}</h3></div>`;
 }
 ```
 
 ## Uncontrolled Textarea Scroll Preservation
 
-In `AppLayout.js`, the main prompt textarea updates in an uncontrolled manner during prediction. This ensures the user does not lose cursor positions, highlights, or scrolling alignments when text chunks stream in at high frequencies. Always maintain this pattern when updating prompt-related text structures.
+In `AppLayout.tsx`, the main prompt textarea updates in an uncontrolled manner during prediction. This ensures the user does not lose cursor positions, highlights, or scrolling alignments when text chunks stream in at high frequencies. Always maintain this pattern when updating prompt-related text structures.
 
 ## Storage Modifications
 
@@ -44,6 +49,60 @@ Use `Object.hasOwn(obj, prop)` (ES2022+) instead of `obj.hasOwnProperty(prop)` t
 ## Deep Cloning
 
 Use `structuredClone` for deep copying plain data objects instead of shallow spread or `JSON.parse(JSON.stringify(...))`.
+
+## TypeScript Conventions
+
+### Component Typing
+
+Use plain function components with an explicit props interface. Never use `React.FC`.
+
+```tsx
+export function Sidebar({ sidebarRef, toggleModal }: SidebarProps) { ... }
+```
+
+### `interface` vs `type`
+
+Prefer `interface` for objects, props, and configuration shapes. Use `type` only for aliases, unions, tuples, and function signatures.
+
+```tsx
+interface WidgetProps { title: string; }
+type PredictionCallback = (chunk: CompletionChunk) => boolean;
+```
+
+### Imports
+
+Omit `.ts`/`.tsx` extensions from local import paths (resolved by Parcel's bundler module resolution). Use `import type` for type-only imports.
+
+```tsx
+import { useSettings } from '../contexts/SettingsContext';
+import type { ModalProps } from '../types/components';
+```
+
+### Type Locations
+
+- **Global ambient types** (available project-wide without imports) live in `src/types/*.d.ts` — used for domain models like `SessionData`, `CompletionChunk`, `ApiEndpointConfig`.
+- **Exported interfaces** in `src/types/components.d.ts` and `src/types/contexts.d.ts` must be explicitly imported.
+- **Component-specific props** can be defined inline above the component function.
+- **Server environment variables** are typed in `server/types/env.d.ts` via `NodeJS.ProcessEnv` augmentation.
+
+### Casting
+
+Use `as` sparingly — acceptable in API stream parsing where the type is known at runtime. Prefer type guards (`isAbortError`) for error handling and `as const` for literal types.
+
+```tsx
+const tokens = logprobs.tokens as string[];
+if (!isAbortError(e)) { throw e; }
+```
+
+### Generics
+
+Custom hooks accept a single `<T>` parameter. Always annotate the return type explicitly.
+
+```tsx
+export function useSessionState<T>(
+  sessionStorage: any, name: string, initialState: T
+): [T, Dispatch<SetStateAction<T>>] { ... }
+```
 
 ## CSS Conventions
 

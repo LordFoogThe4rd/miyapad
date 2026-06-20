@@ -4,10 +4,10 @@ Miyapad supports an optional server-side tokenization engine using HuggingFace t
 
 ## Key Files
 
-- `server/tokenizer.js` — Core module: scans `server/tokenizers/` for subdirectories containing `tokenizer.json`, loads a HuggingFace `Tokenizer` from the JSON definition, provides `tokenCount()`, `tokenize()`, and `detokenize()` methods.
-- `server/routes/tokenizer.js` — Serves API endpoints and reports `server_tokenizer: true` in the `/version` response.
-- `src/api/index.js` — Client API functions: `serverTokenCount()`, `serverTokenize()`, `serverDetokenize()`, `getServerTokenizers()`, `loadServerTokenizer()`.
-- `src/components/modals/PreferencesModal.js` — UI: checkbox to enable/disable ("Use server-side tokenization") and a dropdown to select which tokenizer model to load, with a refresh button and status display.
+- `server/tokenizer.ts` — Core module: scans `server/tokenizers/` for subdirectories containing `tokenizer.json`, loads a HuggingFace `Tokenizer` from the JSON definition, provides `tokenCount()`, `tokenize()`, and `detokenize()` methods.
+- `server/routes/tokenizer.ts` — Serves API endpoints and reports `server_tokenizer: true` in the `/version` response.
+- `src/api/index.ts` — Client API functions: `serverTokenCount()`, `serverTokenize()`, `serverDetokenize()`, `getServerTokenizers()`, `loadServerTokenizer()`.
+- `src/components/modals/PreferencesModal.tsx` — UI: checkbox to enable/disable ("Use server-side tokenization") and a dropdown to select which tokenizer model to load, with a refresh button and status display.
 
 ## Architecture
 
@@ -32,4 +32,4 @@ Each tokenizer directory should include a `LICENSE` file for the redistributed t
 
 ## Server Dependency
 
-`@huggingface/tokenizers` must be installed (`npm install` in `server/`), otherwise tokenizer operations will throw a module-load error. The `tokenizer.js` module uses dynamic `import()` to lazily load the package.
+`@huggingface/tokenizers` must be installed (`npm install` in `server/`), otherwise tokenizer operations will throw a module-load error. The `tokenizer.ts` module uses dynamic `import()` to lazily load the package.

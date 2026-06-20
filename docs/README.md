@@ -6,14 +6,15 @@ The application features full local browser persistence via IndexedDB or central
 
 ## Documentation
 
-- [Technology Stack](technology-stack.md) — React 19, htm, Parcel, Node/Express, SQLite3+zstd
+- [Technology Stack](technology-stack.md) — React 19, TypeScript, htm, Parcel, Node/Express, SQLite3+zstd
 - [Project Structure](project-structure.md) — Directory tree and purpose of each component
 - [Architecture](architecture.md) — Storage abstraction layer, Context APIs, custom hooks
+- [Type System](type-system.md) — tsconfig architecture, ambient declarations, typing conventions
 - [Backend Server](backend-server.md) — Server entrypoint, database schema, compaction, CLI options
 - [API Endpoints](api-endpoints.md) — Full REST API route reference
 - [Tokenization](tokenization.md) — Optional server-side tokenization with HuggingFace tokenizers
 - [Building & Running](building-and-running.md) — Dev server, production build, server CLI
 - [CSS Architecture](css.md) — 20 partial files, import order, theming, conventions
-- [Development Conventions](development-conventions.md) — JSX-less components, CSS conventions, storage patterns
+- [Development Conventions](development-conventions.md) — JSX-less components, TypeScript conventions, CSS conventions, storage patterns
 - [Screenshot Capture](screenshot-capture.md) — Native screenshot feature for styled quote PNGs
 - [Session Tags](session-tags.md) — Freeform tags on sessions with inline editing and filtering
