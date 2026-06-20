@@ -443,7 +443,7 @@ export function ConnectionManagerModal({ isOpen, closeModal, connections, setCon
 			return;
 		}
 
-		const updates: Record<string, unknown> = {
+		const updates: Partial<ConnectionData> = {
 			api: val,
 			models: [],
 			model: "",
