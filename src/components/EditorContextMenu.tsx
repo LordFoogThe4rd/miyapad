@@ -49,7 +49,7 @@ export function EditorContextMenu({ isOpen, closeMenu, menuItems, className, ...
 	}, [isOpen, handleClose]);
 
 	useEffect(() => {
-		if (isNested)
+		if (isNested || !isOpen)
 			return;
 		if (props.y === undefined)
 			return;
@@ -67,7 +67,7 @@ export function EditorContextMenu({ isOpen, closeMenu, menuItems, className, ...
 			menuRef.current.style.top = `${newTop}px`;
 			menuRef.current.style.left = `${newLeft}px`;
 		}
-	}, [props.x, props.y]);
+	}, [isOpen, props.x, props.y]);
 
 	return html`
 		<div
