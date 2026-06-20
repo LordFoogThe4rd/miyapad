@@ -404,10 +404,13 @@ export function ConnectionManagerModal({ isOpen, closeModal, connections, setCon
 
 	const handleUpdateConnection = <K extends keyof ConnectionData>(id: string | null, field: K, value: ConnectionData[K]) => {
 		if (!id) return;
-		setConnections((prev: Record<string, ConnectionData>) => ({
-			...prev,
-			[id]: { ...prev[id], [field]: value }
-		}));
+		setConnections((prev: Record<string, ConnectionData>) => {
+			if (!(id in prev)) return prev;
+			return {
+				...prev,
+				[id]: { ...prev[id], [field]: value }
+			};
+		});
 	};
 
 	const updateCurrentConnection = <K extends keyof ConnectionData>(field: K, value: ConnectionData[K]) => {
@@ -440,10 +443,13 @@ export function ConnectionManagerModal({ isOpen, closeModal, connections, setCon
 			updates.endpoint = "https://api.deepseek.com";
 		}
 
-		setConnections((prev: Record<string, ConnectionData>) => ({
-			...prev,
-			[selectedId]: { ...prev[selectedId], ...updates }
-		}));
+		setConnections((prev: Record<string, ConnectionData>) => {
+			if (!(selectedId in prev)) return prev;
+			return {
+				...prev,
+				[selectedId]: { ...prev[selectedId], ...updates }
+			};
+		});
 	}
 
 	const currentConn = selectedId ? connections[selectedId] : undefined;
