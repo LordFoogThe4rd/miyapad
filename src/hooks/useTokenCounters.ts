@@ -53,7 +53,7 @@ export function useTokenCounters() {
 
 		ac.signal.addEventListener('abort', () => clearTimeout(to));
 		return () => ac.abort();
-	},[modalState["context"],authorNoteTokens.text,authorNoteTokens.prefix,authorNoteTokens.suffix,contextLength,cancel,endpoint,endpointAPI,endpointAPIKey,isMiyapadEndpoint,sessionStorage,useServerTokenization,templateReplacements])
+	},[authorNoteTokens.text,authorNoteTokens.prefix,authorNoteTokens.suffix,endpoint,endpointAPI,endpointAPIKey,isMiyapadEndpoint,sessionStorage,useServerTokenization,templateReplacements])
 
 	function handleMemoryTokensChange<K extends keyof MemoryTokensData>(key: K, value: MemoryTokensData[K]) {
 		setMemoryTokens((prevMemoryTokens: MemoryTokensData) => ({ ...prevMemoryTokens, [key]: value }));
@@ -98,7 +98,7 @@ export function useTokenCounters() {
 
 		ac.signal.addEventListener('abort', () => clearTimeout(to));
 		return () => ac.abort();
-	},[modalState["context"],memoryTokens.text,memoryTokens.prefix,memoryTokens.suffix,cancel,endpoint,endpointAPI,endpointAPIKey,isMiyapadEndpoint,sessionStorage,useServerTokenization,templateReplacements])
+	},[memoryTokens.text,memoryTokens.prefix,memoryTokens.suffix,endpoint,endpointAPI,endpointAPIKey,isMiyapadEndpoint,sessionStorage,useServerTokenization,templateReplacements])
 	// token counts for wi
 	useEffect(() => {
 		const assembled = memoryTokens.worldInfo && memoryTokens.worldInfo !== ""
@@ -138,7 +138,7 @@ export function useTokenCounters() {
 
 		ac.signal.addEventListener('abort', () => clearTimeout(to));
 		return () => ac.abort();
-	},[modalState["context"],worldInfo.prefix,memoryTokens.worldInfo,worldInfo.suffix,cancel,endpoint,endpointAPI,endpointAPIKey,isMiyapadEndpoint,sessionStorage,useServerTokenization,templateReplacements])
+	},[worldInfo.prefix,memoryTokens.worldInfo,worldInfo.suffix,endpoint,endpointAPI,endpointAPIKey,isMiyapadEndpoint,sessionStorage,useServerTokenization,templateReplacements])
 
 	return { handleauthorNoteTokensChange, handleMemoryTokensChange };
 }
