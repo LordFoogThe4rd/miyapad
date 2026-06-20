@@ -55,15 +55,20 @@ function GenericConnectionSettings({ connection, updateConnection }: GenericConn
 				signal: ac.signal
 			});
 
+			if (acRef.current !== ac) return;
 			if (Array.isArray(models)) {
 				updateConnection('models', models);
 			}
 		} catch (e: unknown) {
 			if (e instanceof Error && e.name === 'AbortError') return;
 			console.error(e);
-			setError(e instanceof Error ? e.message : String(e));
+			if (acRef.current === ac) {
+				setError(e instanceof Error ? e.message : String(e));
+			}
 		} finally {
-			setIsFetching(false);
+			if (acRef.current === ac) {
+				setIsFetching(false);
+			}
 		}
 	};
 
@@ -206,15 +211,20 @@ function AIHordeConnectionSettings({ connection, updateConnection }: AIHordeConn
 
 			if (!res.ok) throw new Error(`HTTP ${res.status}`);
 
+			if (acRef.current !== ac) return;
 			const modelData = (await res.json() as AIHordeModel[]).filter((model: AIHordeModel) => model.type === "text");
 			modelData.sort((a: AIHordeModel, b: AIHordeModel) => b.count - a.count || a.eta - b.eta);
 			setAvailableModels(modelData);
 		} catch (e: unknown) {
 			if (e instanceof Error && e.name === 'AbortError') return;
 			console.error(e);
-			setError(e instanceof Error ? e.message : String(e));
+			if (acRef.current === ac) {
+				setError(e instanceof Error ? e.message : String(e));
+			}
 		} finally {
-			setIsFetching(false);
+			if (acRef.current === ac) {
+				setIsFetching(false);
+			}
 		}
 	};
 
