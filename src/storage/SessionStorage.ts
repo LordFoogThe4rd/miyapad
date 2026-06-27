@@ -43,6 +43,7 @@ function sanitizeSessionData(raw: unknown, key?: string | number): SessionData {
 
 export class SessionStorage extends AbstractStorage {
 	nextId: number | undefined;
+	switchGeneration = 0;
 	sessions: Record<string, SessionData> = {};
 	selectedSession: number | undefined;
 	nameStorage: NameStorage | undefined;
@@ -201,25 +202,31 @@ export class SessionStorage extends AbstractStorage {
 		if (!this.sessions[sessionId])
 			return;
 
-		// Flush pending save.
+		const gen = ++this.switchGeneration;
+		const targetId = +sessionId;
+
 		try {
 			await this.saveTimerHandler(async (sessionId: string | number) => await this.saveSessionToDB(sessionId));
 		} catch {
 			return;
 		}
+		if (this.switchGeneration !== gen) return;
 
-		//Clear data of old session in order to minimize memory usage.
 		const currSel = this.selectedSession;
 		if (currSel !== undefined && this.sessions[currSel] && this.sessions[currSel]['name'])
 			this.sessions[currSel] = { ...extractMeta(this.sessions[currSel]), inactive: true };
 
 		const db = await this.openDatabase();
-		await this.saveToDatabase(db, 'selectedSessionId', +sessionId);
+		if (this.switchGeneration !== gen) return;
 
-		this.selectedSession = +sessionId;
-		this.sessions[this.selectedSession] = sanitizeSessionData(await this.loadFromDatabase(db, this.selectedSession), this.selectedSession);
+		await this.saveToDatabase(db, 'selectedSessionId', targetId);
 
-		await this.saveToDatabase(db, this.selectedSession, this.sessions[this.selectedSession]);
+		this.selectedSession = targetId;
+		this.sessions[targetId] = sanitizeSessionData(await this.loadFromDatabase(db, targetId), targetId);
+
+		if (this.switchGeneration !== gen) return;
+
+		await this.saveToDatabase(db, targetId, this.sessions[targetId]);
 
 		this.dispatchChangeEvent();
 		this.dispatchSessionChangeEvent();
