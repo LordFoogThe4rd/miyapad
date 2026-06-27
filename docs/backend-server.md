@@ -39,7 +39,7 @@ The `sqlite-zstd` extension can experience index naming collisions if multiple t
 ## Server CLI Options & Environment Variables
 
 - `--port` or `MIYAPAD_PORT`: Port to bind (default: `3000`).
-- `--host` or `MIYAPAD_HOST`: Host to bind (default: `0.0.0.0`).
+- `--host` or `MIYAPAD_HOST`: Host to bind (default: `127.0.0.1`).
 - `--login` / `--password`: Basic authentication login/password. If password is set, prompts standard HTTP Basic Auth on requests.
 - `--storagePath`: Path to the SQLite file (default: `./web-session-storage.db`).
 - `--open` / `MIYAPAD_NO_OPEN`: Controls whether the default web browser auto-opens the UI on server start.
