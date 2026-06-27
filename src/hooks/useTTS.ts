@@ -30,8 +30,8 @@ export function useTTS() {
 				window.speechSynthesis.cancel();
 			var text = (ttsQueue.current.shift() ?? '').trim();
 			// Remove special tokens (anything between <> and [])
-			text = text.replaceAll(/\<.+?\>/g, "");
-			text = text.replaceAll(/\[.+?\]/g, "");
+text = text.replaceAll(/\<[\s\S]+?\>/g, "");
+text = text.replaceAll(/\[[\s\S]+?\]/g, "");
 			// Remove asterisks
 			text = text.replaceAll("*", "");
 			var utterance = new SpeechSynthesisUtterance(text);
