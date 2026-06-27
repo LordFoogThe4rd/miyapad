@@ -5,6 +5,7 @@ import path from 'path';
 import minimist from 'minimist';
 import open from 'open';
 import { fileURLToPath } from 'url';
+import readline from 'readline';
 
 import { initDatabase, getMaintenanceConfig, runZstdMaintenance, clearMaintenanceScheduler } from './lib/database.js';
 import { createAuthMiddleware } from './lib/auth.js';
@@ -73,7 +74,8 @@ initDatabase(storagePath).then((db) => {
     });
 
     let shuttingDown = false;
-    process.on('SIGINT', async () => {
+
+    async function gracefulShutdown() {
         if (shuttingDown) return;
         shuttingDown = true;
         stopAutoBackup();
@@ -85,7 +87,19 @@ initDatabase(storagePath).then((db) => {
         db.close(() => {
             process.exit(0);
         });
-    });
+    }
+
+    process.on('SIGINT', gracefulShutdown);
+    process.on('SIGTERM', gracefulShutdown);
+    process.on('SIGHUP', gracefulShutdown);
+
+    if (process.platform === 'win32') {
+        process.on('SIGBREAK', gracefulShutdown);
+        readline.createInterface({
+            input: process.stdin,
+            output: process.stdout
+        }).on('SIGINT', gracefulShutdown);
+    }
 }).catch((err: Error) => {
     console.error('Failed to initialize database:', err.message);
     process.exit(1);

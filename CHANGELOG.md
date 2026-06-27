@@ -1,5 +1,10 @@
 # Changelog
 
+## [???] - unreleased
+
+### Fixed
+- Closing the terminal or stopping miyapad as a systemd/Docker/Windows service now triggers a graceful shutdown (saves data, runs maintenance, closes database cleanly)
+
 ## [2.5.1] - 2026-06-27
 
 ### Fixed
