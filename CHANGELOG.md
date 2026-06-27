@@ -1,5 +1,12 @@
 # Changelog
 
+## [2.5.0] - 2026-06-27
+
+### Changed
+
+- Codebase migrated from JavaScript to TypeScript
+- Server now binds to localhost (`127.0.0.1`) by default
+
 ## [2.4.0] - 2026-06-11
 
 ### Added
