@@ -1,5 +1,12 @@
 # Changelog
 
+## [???] - unreleased
+
+### Fixed
+
+- Proxy no longer blocks requests to local/private-network LLM backends (localhost, 192.168.x.x, etc.)
+- Switching sessions during text generation no longer corrupts the target session with output from the previous session
+
 ## [2.5.0] - 2026-06-27
 
 ### Changed

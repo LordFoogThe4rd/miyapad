@@ -75,7 +75,7 @@ export function AppLayout() {
 		savedScrollTop, setSavedScrollTop, modalState, setModalState, contextMenuState, setContextMenuState,
 		instructModalState, setInstructModalState, hordeQueuePos, setHordeQueuePos, hordeProcessing, setHordeProcessing,
 		promptPreviewChunks, setPromptPreviewChunks, promptPreviewReroll, setPromptPreviewReroll, ttsAvailable, setTTSAvailable,
-		ttsNewText, ttsLastChunk, ttsQueue, ttsVoices, ttsPaused, triggerPredict, setTriggerPredict, restartedPredict, setRestartedPredict,
+		ttsNewText, ttsLastChunk, ttsQueue, ttsVoices, ttsPaused, activeGenId, triggerPredict, setTriggerPredict, restartedPredict, setRestartedPredict,
 		toggleModal, closeModal
 	} = useGeneration();
 
@@ -486,6 +486,7 @@ export function AppLayout() {
 
 	useEffect(() => {
 		function onSessionChange() {
+			activeGenId.current++;
 			redoStack.current = [];
 			undoStack.current = [];
 			setUndoHovered(false);

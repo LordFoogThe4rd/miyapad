@@ -151,6 +151,7 @@ export function SessionsModal({ isOpen, closeModal, sessionStorage, cancel }: Se
 
 	const switchSession = async (sessionId: string | number) => {
 		if (sessionStorage.selectedSession != sessionId) {
+			cancel?.();
 			await sessionStorage.switchSession(sessionId);
 		}
 		closeModal();
