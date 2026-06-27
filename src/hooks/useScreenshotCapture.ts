@@ -1,4 +1,6 @@
 import { useCallback } from 'react';
+
+const escapeHtml = (s: string) => s.replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;').replace(/"/g, '&quot;').replace(/'/g, '&#039;');
 import { useSettings } from '../contexts/SettingsContext';
 import { useGeneration } from '../contexts/GenerationContext';
 import { toPng } from 'html-to-image';
@@ -124,7 +126,7 @@ export function useScreenshotCapture() {
 		captureContainer.innerHTML = `
 			<header>
 				${screenshotIncludeSessionName ? `<div class="novel-subtitle novel-gold">AN EXCERPT FROM</div>
-				<h1 class="novel-title novel-gold">${storyTitle}</h1>` : ''}
+				<h1 class="novel-title novel-gold">${escapeHtml(storyTitle)}</h1>` : ''}
 				${screenshotIncludeDate ? `<div class="novel-date novel-grey">${dateString}</div>` : ''}
 			</header>
 			<div class="novel-body" style="
@@ -142,7 +144,7 @@ export function useScreenshotCapture() {
 				<div class="novel-footer-right">
 					<span>Written alongside</span>
 					${avatarHtml}
-					<span class="novel-model-name novel-gold">${modelName}</span>
+					<span class="novel-model-name novel-gold">${escapeHtml(modelName)}</span>
 				</div>
 			</footer>
 		`;
