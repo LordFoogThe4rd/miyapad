@@ -1,0 +1,29 @@
+declare module '*.css' {
+  const content: string;
+  export default content;
+}
+
+declare module 'html-to-image' {
+  export function toPng(node: HTMLElement, options?: object): Promise<string>;
+}
+
+interface ViewTransition {
+  ready: Promise<void>;
+  finished: Promise<void>;
+  updateCallbackDone: Promise<void>;
+  skipTransition(): void;
+}
+
+interface Document {
+  startViewTransition?(callback: () => void | Promise<void>): ViewTransition;
+}
+
+interface HTMLTextAreaElement {
+  scrollTarget?: number;
+  onInputHandler?: (e: { currentTarget: HTMLTextAreaElement }) => void;
+}
+
+interface Window {
+  logSSEEvents?: boolean;
+  startViewTransition?: (callback: () => void | Promise<void>) => ViewTransition;
+}

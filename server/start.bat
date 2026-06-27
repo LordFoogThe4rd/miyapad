@@ -12,4 +12,7 @@ if %errorlevel% neq 0 (
 )
 
 call npm install --no-audit
-call node server.js %*
+if %errorlevel% neq 0 exit /b %errorlevel%
+
+call npx tsx server.ts %*
+exit /b %errorlevel%

@@ -15,4 +15,5 @@ RUN mv /app/mikupad_compiled.html /app/miyapad.html
 # Compile server
 WORKDIR /app/server
 RUN npm install --no-audit
-ENTRYPOINT [ "node", "server.js" ]
+USER node
+ENTRYPOINT [ "node", "--import", "tsx", "server.ts" ]

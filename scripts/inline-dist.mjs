@@ -7,6 +7,7 @@ const dist = join(__dirname, '..', 'dist')
 
 const files = readdirSync(dist)
 const htmlFile = files.find(f => f.endsWith('.html'))
+if (!htmlFile) throw new Error(`No HTML file found in ${dist}`)
 const jsFile = files.find(f => f.endsWith('.js'))
 const cssFile = files.find(f => f.endsWith('.css'))
 

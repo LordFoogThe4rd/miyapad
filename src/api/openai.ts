@@ -1,0 +1,536 @@
+import { parseEventStream, applyTemperatureToProbs } from './common';
+
+interface OpenaiStreamChunk {
+	choices?: Array<{
+		text?: string;
+		logprobs?: {
+			content?: Array<{ top_logprobs: LogprobToken[] }>;
+			top_logprobs?: Array<Record<string, number>>;
+		};
+	}>;
+	content?: string;
+}
+
+interface OpenaiChatChunk {
+	choices?: Array<{
+		delta?: { content?: string };
+		text?: string;
+		logprobs?: {
+			content?: Array<{ top_logprobs: LogprobToken[] }>;
+		};
+	}>;
+}
+
+export async function openaiAphroditeTokenCount({ endpoint, endpointAPIKey, proxyEndpoint, signal, ...options }: TokenCounterParams) {
+	try {
+		const res = await fetch(`${proxyEndpoint ?? endpoint}/v1/token/encode`, {
+			method: 'POST',
+			headers: {
+				'Content-Type': 'application/json',
+				...(proxyEndpoint ? { 'X-Real-Authorization': `Bearer ${endpointAPIKey}` } : { 'Authorization': `Bearer ${endpointAPIKey}` }),
+				...(proxyEndpoint ? { 'X-Real-URL': endpoint } : {})
+			},
+			body: JSON.stringify({
+				prompt: options.content
+			}),
+			signal,
+		});
+		if (!res.ok)
+			throw new Error(`HTTP ${res.status}`);
+		const tokens = await res.json();
+		return tokens.length;
+	} catch (e) {
+		return -1;
+	}
+}
+
+export async function openaiOobaTokenCount({ endpoint, proxyEndpoint, signal, ...options }: TokenCounterParams) {
+	try {
+		const res = await fetch(`${proxyEndpoint ?? endpoint}/v1/internal/token-count`, {
+			method: 'POST',
+			headers: {
+				'Content-Type': 'application/json',
+				...(proxyEndpoint ? { 'X-Real-URL': endpoint } : {})
+			},
+			body: JSON.stringify({
+				text: options.content
+			}),
+			signal,
+		});
+		if (!res.ok)
+			throw new Error(`HTTP ${res.status}`);
+		const { length } = await res.json();
+		return length;
+	} catch (e) {
+		return -1;
+	}
+}
+
+export async function openaiTabbyTokenCount({ endpoint, endpointAPIKey, proxyEndpoint, signal, ...options }: TokenCounterParams) {
+	try {
+		const res = await fetch(`${proxyEndpoint ?? endpoint}/v1/token/encode`, {
+			method: 'POST',
+			headers: {
+				'Content-Type': 'application/json',
+				...(proxyEndpoint ? { 'X-Real-Authorization': `Bearer ${endpointAPIKey}` } : { 'Authorization': `Bearer ${endpointAPIKey}` }),
+				...(proxyEndpoint ? { 'X-Real-URL': endpoint } : {})
+			},
+			body: JSON.stringify({
+				text: options.content
+			}),
+			signal,
+		});
+		if (!res.ok)
+			throw new Error(`HTTP ${res.status}`);
+		const tokens = await res.json();
+		return tokens.length;
+	} catch (e) {
+		return -1;
+	}
+}
+
+export async function openaiOobaTokenize({ endpoint, endpointAPIKey, proxyEndpoint, signal, ...options }: TokenCounterParams) {
+	try {
+		const res = await fetch(`${proxyEndpoint ?? endpoint}/v1/internal/encode`, {
+			method: 'POST',
+			headers: {
+				'Content-Type': 'application/json',
+				...(proxyEndpoint ? { 'X-Real-URL': endpoint } : {})
+			},
+			body: JSON.stringify({
+				text: options.content
+			}),
+			signal,
+		});
+		if (!res.ok)
+			throw new Error(`HTTP ${res.status}`);
+		const { tokens } = await res.json();
+
+		const strings = await Promise.all(tokens.map((token: number) =>
+			openaiOobaDetokenize({
+				endpoint,
+				proxyEndpoint,
+				...(endpointAPIKey ? {
+					endpointAPIKey,
+				} : {}),
+				tokens: [ token ],
+				signal: signal,
+			})
+		));
+		return {ids:tokens,str:strings};
+	} catch (e) {
+		return null;
+	}
+}
+async function openaiOobaDetokenize({ endpoint, endpointAPIKey, proxyEndpoint, signal, ...options }: ApiProviderParams & { tokens: number[] }) {
+	try {
+		const res = await fetch(`${proxyEndpoint ?? endpoint}/v1/internal/decode`, {
+			method: 'POST',
+			headers: {
+				'Content-Type': 'application/json',
+				...(proxyEndpoint ? { 'X-Real-URL': endpoint } : {})
+			},
+			body: JSON.stringify(options),
+			signal,
+		});
+		if (!res.ok)
+			throw new Error(`HTTP ${res.status}`);
+		const { text } = await res.json();
+		return text;
+	} catch (e) {
+		reportError(e);
+		return null;
+	}
+}
+
+export async function openaiTabbyTokenize({ endpoint, endpointAPIKey, proxyEndpoint, signal, ...options }: TokenCounterParams) {
+	try {
+		const res = await fetch(`${proxyEndpoint ?? endpoint}/v1/token/encode`, {
+			method: 'POST',
+			headers: {
+				'Content-Type': 'application/json',
+				...(proxyEndpoint ? { 'X-Real-URL': endpoint } : {})
+			},
+			body: JSON.stringify({
+				text: options.content
+			}),
+			signal,
+		});
+		if (!res.ok)
+			throw new Error(`HTTP ${res.status}`);
+		const { tokens } = await res.json();
+
+		const strings = await Promise.all(tokens.map((token: number) =>
+			openaiTabbyDetokenize({
+				endpoint,
+				proxyEndpoint,
+				...(endpointAPIKey ? {
+					endpointAPIKey,
+				} : {}),
+				tokens: [ token ],
+				signal: signal,
+			})
+		));
+		return {ids:tokens,str:strings};
+	} catch (e) {
+		return null;
+	}
+}
+async function openaiTabbyDetokenize({ endpoint, endpointAPIKey, proxyEndpoint, signal, ...options }: ApiProviderParams & { tokens: number[] }) {
+	try {
+		const res = await fetch(`${proxyEndpoint ?? endpoint}/v1/token/decode`, {
+			method: 'POST',
+			headers: {
+				'Content-Type': 'application/json',
+				...(proxyEndpoint ? { 'X-Real-URL': endpoint } : {})
+			},
+			body: JSON.stringify(options),
+			signal,
+		});
+		if (!res.ok)
+			throw new Error(`HTTP ${res.status}`);
+		const { text } = await res.json();
+		return text;
+	} catch (e) {
+		reportError(e);
+		return null;
+	}
+}
+
+export async function openaiModels({ endpoint, endpointAPIKey, proxyEndpoint, signal }: ApiProviderParams) {
+	const endpointHost = (() => { try { return new URL(endpoint).hostname; } catch { return ''; } })();
+	const isTogetherAI = endpointHost === "api.together.xyz";
+
+	const res = await fetch(`${proxyEndpoint ?? endpoint}/v1/models`, {
+		method: 'GET',
+		headers: {
+			'Content-Type': 'application/json',
+			...(proxyEndpoint ? { 'X-Real-Authorization': `Bearer ${endpointAPIKey}` } : { 'Authorization': `Bearer ${endpointAPIKey}` }),
+			...(proxyEndpoint ? { 'X-Real-URL': endpoint } : {})
+		},
+		signal,
+	});
+	if (!res.ok)
+		throw new Error(`HTTP ${res.status}`);
+
+	const response = await res.json();
+	let data;
+
+	if (isTogetherAI) {
+		// TogetherAI returns an array.
+		data = response;
+	} else {
+		data = response.data;
+	}
+	return data.map((item: { id: string }) => item.id);
+}
+
+function openaiConvertOptions(options: SamplerOptions, endpoint: string, isChat: boolean) {
+	const endpointHost = (() => { try { return new URL(endpoint).hostname; } catch { return ''; } })();
+	const isOpenAI = endpointHost === "api.openai.com" || endpointHost.endsWith(".openai.com");
+	const isTogetherAI = endpointHost === "api.together.xyz";
+	const isOpenRouter = endpointHost === "openrouter.ai";
+	const swapOption = (lhs: string, rhs: string) => {
+		if (lhs in options) {
+			options[rhs] = options[lhs];
+			delete options[lhs];
+		}
+	};
+	if (options.n_predict === -1) {
+		options.n_predict = 1024;
+	}
+	if ((isOpenAI || endpointHost === "api.x.ai") && (options.n_probs ?? 0) > 5) {
+		options.n_probs = 5;
+	}
+	if (isTogetherAI && (options.n_probs ?? 0) > 1) {
+		options.n_probs = 1;
+	}
+	if ("dynatemp_range" in options && options.dynatemp_range !== 0) {
+		// oobabooga specific.
+		options.dynamic_temperature = true;
+		options.dynatemp_low = Math.max(0, (options.temperature ?? 0) - (options.dynatemp_range ?? 0));
+		options.dynatemp_high = Math.max(0, (options.temperature ?? 0) + (options.dynatemp_range ?? 0));
+	}
+	if (!isOpenAI && (options.temperature ?? 0) === 0) {
+		// oobabooga specific.
+		options.do_sample = false;
+	}
+	swapOption("n_ctx", "max_context_length");
+	swapOption("n_predict", "max_tokens");
+	if (isChat) {
+		if ((options.n_probs ?? 0) > 0) {
+			options.logprobs = true;
+			swapOption("n_probs", "top_logprobs");
+		} else {
+			options.logprobs = false;
+			delete options.n_probs;
+		}
+	} else {
+		if ((options.n_probs ?? 0) > 0) {
+			swapOption("n_probs", "logprobs");
+		} else {
+			delete options.n_probs;
+		}
+	}
+	swapOption("repeat_penalty", "repetition_penalty");
+	swapOption("repeat_last_n", "repetition_penalty_range");
+	swapOption("tfs_z", "tfs");
+	swapOption("mirostat", "mirostat_mode");
+	swapOption("ignore_eos", "ban_eos_token");
+	swapOption("grammar", "grammar_string");
+	return options;
+}
+
+export async function* openaiCompletion({ endpoint, endpointAPIKey, proxyEndpoint, signal, ...options }: ApiProviderParams & SamplerOptions): AsyncGenerator<CompletionChunk, void, unknown> {
+	let finalEndpoint = proxyEndpoint ?? endpoint;
+	const needsPath = (() => {
+		try {
+			return !new URL(endpoint).pathname.endsWith("/completions");
+		} catch {
+			return !endpoint.endsWith("/completions");
+		}
+	})();
+	if (needsPath) {
+		try {
+			const url = new URL(finalEndpoint);
+			url.pathname = url.pathname.replace(/\/$/, "") + "/v1/completions";
+			finalEndpoint = url.toString();
+		} catch {
+			finalEndpoint += "/v1/completions";
+		}
+	}
+	const res = await fetch(finalEndpoint, {
+		method: 'POST',
+		headers: {
+			'Content-Type': 'application/json',
+			...(proxyEndpoint ? { 'X-Real-Authorization': `Bearer ${endpointAPIKey}` } : { 'Authorization': `Bearer ${endpointAPIKey}` }),
+			...(proxyEndpoint ? { 'X-Real-URL': endpoint } : {})
+		},
+		body: JSON.stringify({
+			...openaiConvertOptions(options, endpoint, false)
+		}),
+		signal,
+	});
+
+	if (!res.ok) {
+		let json;
+		try {
+			json = await res.json();
+		} catch {}
+		if (json?.error?.message) {
+			throw new Error(json.error.message);
+		}
+		throw new Error(`HTTP ${res.status}`);
+	}
+
+	async function* yieldTokens(chunks: AnyIterable<OpenaiStreamChunk>) {
+		for await (const chunk of chunks) {
+			if (!chunk.choices || chunk.choices.length === 0) {
+				if (chunk.content) yield { content: chunk.content };
+				continue;
+			}
+
+			const choice = chunk.choices[0];
+			const text = choice.text;
+			if (!text) continue;
+			const logprobsData = choice.logprobs;
+			let probs: ProbItem[] = [];
+			let prob: number | undefined;
+			let rawProbsArr: ProbItem[] = [];
+
+			if (logprobsData?.content?.[0]?.top_logprobs) {
+				rawProbsArr = logprobsData.content[0].top_logprobs.map(({ token, logprob }) => ({ tok_str: token, logprob }));
+			} else if (logprobsData?.top_logprobs?.[0]) {
+				const top_logprobs_obj = logprobsData.top_logprobs[0];
+				rawProbsArr = Object.entries(top_logprobs_obj).map(([tok, logprob]) => ({ tok_str: tok, logprob }));
+			}
+
+			if (rawProbsArr.length > 0) {
+				const res = applyTemperatureToProbs(rawProbsArr, text, options.temperature);
+				probs = res.probs;
+				prob = res.prob;
+			}
+
+			yield {
+				content: text,
+				...(probs.length > 0 ? {
+					prob: prob ?? -1,
+					completion_probabilities: [{
+						content: text,
+						probs
+					}]
+				} : {})
+			};
+		}
+	}
+
+	if (options.stream) {
+		yield* yieldTokens(parseEventStream(res.body) as AsyncIterable<OpenaiStreamChunk>);
+	} else {
+		const { content, choices } = await res.json();
+		if (choices?.[0].logprobs?.tokens) {
+			const logprobs = choices[0].logprobs;
+			const tokensArr = logprobs.tokens as string[];
+			const chunks: OpenaiStreamChunk[] = tokensArr.map((token, i) => ({
+				choices: [{
+					text: token,
+					logprobs: { top_logprobs: [(logprobs.top_logprobs as Record<string, number>[])[i]] }
+				}]
+			}));
+			yield* yieldTokens(chunks);
+		} else if (choices?.[0].text) {
+			yield { content: choices[0].text };
+		} else if (content) { // llama.cpp specific?
+			yield { content };
+		}
+	}
+}
+
+async function* openaiBufferUtf8Stream(stream: AnyIterable<OpenaiChatChunk>): AsyncGenerator<OpenaiChatChunk, void, undefined> {
+	const decoder = new TextDecoder('utf-8', { fatal: false });
+
+	function parseEscapedString(escapedStr: string) {
+		const bytes: number[] = [];
+		const encoder = new TextEncoder();
+		const parts = escapedStr.split(/(\\x[0-9a-fA-F]{2})/);
+		for (const part of parts) {
+			if (/^\\x[0-9a-fA-F]{2}$/.test(part)) {
+				bytes.push(parseInt(part.slice(2), 16));
+			} else if (part) {
+				bytes.push(...encoder.encode(part));
+			}
+		}
+		return new Uint8Array(bytes);
+	}
+
+	const hasEscapedSequence = (str: string) => /\\x[0-9a-fA-F]{2}/.test(str);
+	const encoder = new TextEncoder();
+
+	for await (const chunk of stream) {
+		const choice = chunk.choices?.[0];
+		const content = choice?.delta?.content ?? choice?.text;
+
+		if (!content || !choice) {
+			yield chunk;
+			continue;
+		}
+
+		const binaryData = hasEscapedSequence(content)
+			? parseEscapedString(content)
+			: encoder.encode(content);
+
+		const decoded = decoder.decode(binaryData, { stream: true });
+
+		yield {
+			...chunk,
+			choices: [{
+				...choice,
+				...(choice.delta
+					? { delta: { ...choice.delta, content: decoded } }
+					: { text: decoded }
+				)
+			}]
+		};
+	}
+}
+
+export async function* openaiChatCompletion({ endpoint, endpointAPIKey, proxyEndpoint, signal, ...options }: ApiProviderParams & SamplerOptions): AsyncGenerator<CompletionChunk, void, unknown> {
+	let finalEndpoint = proxyEndpoint ?? endpoint;
+	const needsPath = (() => {
+		try {
+			return !new URL(endpoint).pathname.endsWith("/completions");
+		} catch {
+			return !endpoint.endsWith("/completions");
+		}
+	})();
+	if (needsPath) {
+		try {
+			const url = new URL(finalEndpoint);
+			url.pathname = url.pathname.replace(/\/$/, "") + "/v1/chat/completions";
+			finalEndpoint = url.toString();
+		} catch {
+			finalEndpoint += "/v1/chat/completions";
+		}
+	}
+	const res = await fetch(finalEndpoint, {
+		method: 'POST',
+		headers: {
+			'Content-Type': 'application/json',
+			...(proxyEndpoint ? { 'X-Real-Authorization': `Bearer ${endpointAPIKey}` } : { 'Authorization': `Bearer ${endpointAPIKey}` }),
+			...(proxyEndpoint ? { 'X-Real-URL': endpoint } : {})
+		},
+		body: JSON.stringify({
+			...openaiConvertOptions(options, endpoint, true)
+		}),
+		signal,
+	});
+
+	if (!res.ok) {
+		let json;
+		try {
+			json = await res.json();
+		} catch {}
+		if (json?.error?.message) {
+			throw new Error(json.error.message);
+		}
+		throw new Error(`HTTP ${res.status}`);
+	}
+
+	async function* yieldTokens(chunks: AnyIterable<OpenaiChatChunk>) {
+		for await (const chunk of chunks) {
+			if (!chunk.choices || chunk.choices.length === 0) continue;
+			const choice = chunk.choices[0];
+			const token = choice.delta?.content || choice.text;
+			const top_logprobs = choice.logprobs?.content?.[0]?.top_logprobs ?? [];
+			if (!token) continue;
+
+			let rawProbsArr = top_logprobs.map(({ token: t, logprob }) => ({ tok_str: t, logprob }));
+			const res = applyTemperatureToProbs(rawProbsArr, token, options.temperature);
+			const probs = res.probs;
+			let prob = res.prob;
+
+			yield {
+				content: token,
+				...(probs.length > 0 ? {
+					prob: prob ?? -1,
+					completion_probabilities: [{
+						content: token,
+						probs
+					}]
+				} : {})
+			};
+		}
+	}
+
+	if (options.stream) {
+		yield* yieldTokens(parseEventStream(res.body) as AsyncIterable<OpenaiChatChunk>);
+	} else {
+		const { choices } = await res.json();
+		const chunks = choices?.[0].logprobs?.content;
+
+		if (chunks?.length) {
+			const formattedChunks: OpenaiChatChunk[] = chunks.map((chunk: { token: string; top_logprobs: LogprobToken[] }) => ({
+				choices: [{
+					delta: { content: chunk.token },
+					logprobs: { content: [{ top_logprobs: chunk.top_logprobs }] }
+				}]
+			}));
+			yield* yieldTokens(openaiBufferUtf8Stream(formattedChunks));
+		} else if (choices?.[0].message?.content) {
+			yield { content: choices[0].message.content };
+		}
+	}
+}
+
+export async function openaiOobaAbortCompletion({ endpoint, proxyEndpoint }: AbortParams) {
+	try {
+		await fetch(`${proxyEndpoint ?? endpoint}/v1/internal/stop-generation`, {
+			method: 'POST',
+			headers: {
+				...(proxyEndpoint ? { 'X-Real-URL': endpoint } : {})
+			},
+		});
+	} catch (e) {
+		// do nothing
+	}
+}

@@ -13,4 +13,4 @@ then
 fi
 
 npm install --no-audit
-node server.js "$@"
+exec npx tsx server.ts "$@"
