@@ -313,6 +313,8 @@ export function useGenerationLogic() {
 				if ((endpointAPI == API_OPENAI_COMPAT || endpointAPI == API_LLAMA_CPP || endpointAPI == API_DEEPSEEK) && errStr.includes("401")) {
 					setLastError("Error: Rejected API Key");
 					setRejectedAPIKey(true);
+				} else if ((endpointAPI == API_OPENAI_COMPAT || endpointAPI == API_DEEPSEEK) && errStr.includes("403")) {
+					setLastError("Error: Proxy access denied — check your endpoint URL");
 				} else if ((endpointAPI == API_OPENAI_COMPAT || endpointAPI == API_DEEPSEEK) && errStr.includes("429")) {
 					setLastError("Error: Insufficient Quota");
 				} else {

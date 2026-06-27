@@ -40,7 +40,7 @@ export default function(app: Express): void {
             return res.status(400).send('Missing url query parameter');
         }
         if (!await isValidProxyUrl(imageUrl)) {
-            return res.status(403).send('Invalid or disallowed image URL');
+            return res.status(403).json({ error: { message: 'Invalid or disallowed image URL' } });
         }
         try {
             const response = await axios.get(imageUrl, {
@@ -65,7 +65,7 @@ export default function(app: Express): void {
         delete req.headers['x-real-url'];
 
         if (!targetBaseUrl || !await isValidProxyUrl(targetBaseUrl)) {
-            return res.status(403).send('Invalid or disallowed target URL');
+            return res.status(403).json({ error: { message: 'Invalid or disallowed target URL' } });
         }
 
         const authorization = req.headers['x-real-authorization'] as string | undefined;
@@ -77,7 +77,7 @@ export default function(app: Express): void {
 
         const finalUrl = safeFinalUrl(targetBaseUrl, path);
         if (!finalUrl) {
-            return res.status(403).send('Path traversal detected');
+            return res.status(403).json({ error: { message: 'Path traversal detected' } });
         }
 
         try {
@@ -160,7 +160,7 @@ export default function(app: Express): void {
         delete req.headers['x-real-url'];
 
         if (!targetBaseUrl || !await isValidProxyUrl(targetBaseUrl)) {
-            return res.status(403).send('Invalid or disallowed target URL');
+            return res.status(403).json({ error: { message: 'Invalid or disallowed target URL' } });
         }
 
         const authorization = req.headers['x-real-authorization'] as string | undefined;
@@ -172,7 +172,7 @@ export default function(app: Express): void {
 
         const finalUrl = safeFinalUrl(targetBaseUrl, path);
         if (!finalUrl) {
-            return res.status(403).send('Path traversal detected');
+            return res.status(403).json({ error: { message: 'Path traversal detected' } });
         }
 
         try {
@@ -206,7 +206,7 @@ export default function(app: Express): void {
         delete req.headers['x-real-url'];
 
         if (!targetBaseUrl || !await isValidProxyUrl(targetBaseUrl)) {
-            return res.status(403).send('Invalid or disallowed target URL');
+            return res.status(403).json({ error: { message: 'Invalid or disallowed target URL' } });
         }
 
         const authorization = req.headers['x-real-authorization'] as string | undefined;
@@ -218,7 +218,7 @@ export default function(app: Express): void {
 
         const finalUrl = safeFinalUrl(targetBaseUrl, path);
         if (!finalUrl) {
-            return res.status(403).send('Path traversal detected');
+            return res.status(403).json({ error: { message: 'Path traversal detected' } });
         }
 
         try {

@@ -4,6 +4,7 @@
 
 ### Fixed
 
+- Proxy errors (403) now display a descriptive message instead of a cryptic "HTTP 403", making connection issues easier to diagnose
 - Proxy no longer blocks requests to local/private-network LLM backends (localhost, 192.168.x.x, etc.)
 - Switching sessions during text generation no longer corrupts the target session with output from the previous session
 - Rapidly clicking sessions in the sidebar or Quick Switcher no longer causes sessions to appear overwritten with default content
