@@ -31,8 +31,8 @@ desktop.ini
 *.swp
 *.swo
 
-# Personal TODO lists
-session-todo.md
+# Plans, notes, audit logs
+plans/
 
 # Server-specific
 server/node_modules/
