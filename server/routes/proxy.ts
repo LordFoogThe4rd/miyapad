@@ -1,62 +1,15 @@
 import axios from 'axios';
 import { URL } from 'url';
 import { Readable } from 'stream';
-import * as dns from 'dns/promises';
 import type { Express, Request, Response } from 'express';
 import { headersToRemove } from '../lib/utils.js';
 
-const PRIVATE_IP_RANGES = [
-    { start: 0x0A000000, end: 0x0AFFFFFF },   // 10.0.0.0/8
-    { start: 0x7F000000, end: 0x7FFFFFFF },   // 127.0.0.0/8 (loopback)
-    { start: 0xA9FE0000, end: 0xA9FEFFFF },   // 169.254.0.0/16 (link-local)
-    { start: 0xAC100000, end: 0xAC1FFFFF },   // 172.16.0.0/12
-    { start: 0xC0A80000, end: 0xC0A8FFFF },   // 192.168.0.0/16
-];
-
-function ip4ToInt(ip: string): number {
-    const parts = ip.split('.');
-    return ((+parts[0] << 24) | (+parts[1] << 16) | (+parts[2] << 8) | (+parts[3])) >>> 0;
-}
-
-function isPrivateIP(ip: string): boolean {
-    const m = ip.match(/^((?:[0-9]|[1-9][0-9]|1[0-9][0-9]|2[0-4][0-9]|25[0-5]))\.((?:[0-9]|[1-9][0-9]|1[0-9][0-9]|2[0-4][0-9]|25[0-5]))\.((?:[0-9]|[1-9][0-9]|1[0-9][0-9]|2[0-4][0-9]|25[0-5]))\.((?:[0-9]|[1-9][0-9]|1[0-9][0-9]|2[0-4][0-9]|25[0-5]))$/);
-    if (!m) return false;
-    const num = ip4ToInt(ip);
-    return PRIVATE_IP_RANGES.some(r => num >= r.start && num <= r.end);
-}
-
-function isPrivateIPv6(ip: string): boolean {
-    const lower = ip.toLowerCase();
-    if (lower === '::1' || lower === '0:0:0:0:0:0:0:1') return true;
-    if (lower.startsWith('fc') || lower.startsWith('fd')) return true;
-    if (lower.startsWith('fe8') || lower.startsWith('fe9') || lower.startsWith('fea') || lower.startsWith('feb')) return true;
-    return false;
-}
-
-function isPrivateHostname(hostname: string): boolean {
-    const lower = hostname.toLowerCase();
-    if (lower === 'localhost' || lower === '127.0.0.1' || lower === '0.0.0.0' || lower === '[::1]') return true;
-    if (lower.endsWith('.internal') || lower.endsWith('.local')) return true;
-    return false;
-}
-
-async function isValidProxyUrl(urlString: string): Promise<boolean> {
+// ponytail: SSRF checks removed — private IP blocking broke local LLM backends.
+// User considers hosting-on-unsecured-networks problems wontfix.
+function isValidProxyUrl(urlString: string): boolean {
     try {
         const parsed = new URL(urlString);
-        if (!['http:', 'https:'].includes(parsed.protocol)) return false;
-        if (isPrivateHostname(parsed.hostname)) return false;
-
-        const lookup = dns.lookup(parsed.hostname, { all: true });
-        const timeout = new Promise<never>((_, reject) =>
-            setTimeout(() => reject(new Error('DNS timeout')), 5000)
-        );
-        const addresses = await Promise.race([lookup, timeout]);
-        for (const addr of addresses) {
-            if (addr.family === 4 && isPrivateIP(addr.address)) return false;
-            if (addr.family === 6 && isPrivateIPv6(addr.address)) return false;
-        }
-
-        return true;
+        return ['http:', 'https:'].includes(parsed.protocol);
     } catch {
         return false;
     }
