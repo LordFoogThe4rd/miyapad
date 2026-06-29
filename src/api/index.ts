@@ -68,20 +68,16 @@ export async function loadServerTokenizer({ sessionEndpoint, model }: { sessionE
 }
 
 export async function getTokenCount({ endpoint, endpointAPI, endpointAPIKey, proxyEndpoint, signal, ...options }: ApiEndpointConfig & { content: string }) {
-	endpoint = normalizeEndpoint(endpoint, endpointAPI);
-	switch (endpointAPI) {
+	switch (endpoint = normalizeEndpoint(endpoint, endpointAPI), endpointAPI) {
 		case API_LLAMA_CPP:
 			return await llamaCppTokenCount({ endpoint, endpointAPIKey, proxyEndpoint, signal, ...options });
 		case API_KOBOLD_CPP:
 			return await koboldCppTokenCount({ endpoint, endpointAPIKey, proxyEndpoint, signal, ...options });
 		case API_DEEPSEEK:
 		case API_OPENAI_COMPAT:
-			// These endpoints don't have a token count endpoint...
 			if (endpointAPI === API_OPENAI_COMPAT && (new URL(endpoint).host === 'api.openai.com' || new URL(endpoint).host === 'api.together.xyz'))
 				return 0;
 
-			// Each backend that exposes an OpenAI-compatible API may have a different token count endpoint.
-			// Instead of asking the user which backend they are using, let's try each one.
 			let tokenCount = 0;
 			tokenCount = await openaiAphroditeTokenCount({ endpoint, endpointAPIKey, proxyEndpoint, signal, ...options });
 			if (tokenCount != -1)
@@ -103,20 +99,16 @@ export async function getTokens({ endpoint, endpointAPI, endpointAPIKey, proxyEn
 	// returns a json object in the format of:
 	// { ids:[ array of token ids ], str:[ array of detokenized ids ] }
 	// example: { ids:[9288,4731],str:["test"," string"] }
-	endpoint = normalizeEndpoint(endpoint, endpointAPI);
-	switch (endpointAPI) {
+	switch (endpoint = normalizeEndpoint(endpoint, endpointAPI), endpointAPI) {
 		case API_LLAMA_CPP:
 			return await llamaCppTokenize({ endpoint, endpointAPIKey, proxyEndpoint, signal, ...options });
 		case API_KOBOLD_CPP:
 			return await koboldCppTokenize({ endpoint, endpointAPIKey, proxyEndpoint, signal, ...options });
 		case API_DEEPSEEK:
 		case API_OPENAI_COMPAT:
-			// These endpoints don't have a tokenenizer endpoint...
 			if (endpointAPI === API_OPENAI_COMPAT && (new URL(endpoint).host === 'api.openai.com' || new URL(endpoint).host === 'api.together.xyz'))
 				return [];
 			
-			// Each backend that exposes an OpenAI-compatible API may have a different tokenizer endpoint.
-			// Instead of asking the user which backend they are using, let's try each one.
 			let tokens = null;
 			tokens = await openaiOobaTokenize({ endpoint, endpointAPIKey, proxyEndpoint, signal, ...options });
 			if (tokens !== null)
@@ -131,8 +123,7 @@ export async function getTokens({ endpoint, endpointAPI, endpointAPIKey, proxyEn
 }
 
 export async function getModels({ endpoint, endpointAPI, endpointAPIKey, proxyEndpoint, signal, ...options }: ApiEndpointConfig) {
-	endpoint = normalizeEndpoint(endpoint, endpointAPI);
-	switch (endpointAPI) {
+	switch (endpoint = normalizeEndpoint(endpoint, endpointAPI), endpointAPI) {
 		case API_DEEPSEEK:
 		case API_OPENAI_COMPAT:
 			return await (endpointAPI === API_DEEPSEEK ? deepseekModels : openaiModels)({ endpoint, endpointAPIKey, proxyEndpoint, signal, ...options });
@@ -144,8 +135,7 @@ export async function getModels({ endpoint, endpointAPI, endpointAPIKey, proxyEn
 }
 
 export async function* completion({ endpoint, endpointAPI, endpointAPIKey, proxyEndpoint, signal, ...options }: CompletionOptions): AsyncGenerator<CompletionChunk | AIHordeChunk, void, unknown> {
-	endpoint = normalizeEndpoint(endpoint, endpointAPI);
-	switch (endpointAPI) {
+	switch (endpoint = normalizeEndpoint(endpoint, endpointAPI), endpointAPI) {
 		case API_LLAMA_CPP:
 			return yield* await llamaCppCompletion({ endpoint, endpointAPIKey, proxyEndpoint, signal, ...options });
 		case API_KOBOLD_CPP:
@@ -160,8 +150,7 @@ export async function* completion({ endpoint, endpointAPI, endpointAPIKey, proxy
 }
 
 export async function* chatCompletion({ endpoint, endpointAPI, endpointAPIKey, proxyEndpoint, signal, ...options }: CompletionOptions): AsyncGenerator<CompletionChunk, void, unknown> {
-	endpoint = normalizeEndpoint(endpoint, endpointAPI);
-	switch (endpointAPI) {
+	switch (endpoint = normalizeEndpoint(endpoint, endpointAPI), endpointAPI) {
 		case API_DEEPSEEK:
 		case API_OPENAI_COMPAT:
 			return yield* await (endpointAPI === API_DEEPSEEK ? deepseekChatCompletion : openaiChatCompletion)({ endpoint, endpointAPIKey, proxyEndpoint, signal, ...options });
@@ -169,8 +158,7 @@ export async function* chatCompletion({ endpoint, endpointAPI, endpointAPIKey, p
 }
 
 export async function abortCompletion({ endpoint, endpointAPI, proxyEndpoint, ...options }: ApiEndpointConfig) {
-	endpoint = normalizeEndpoint(endpoint, endpointAPI);
-	switch (endpointAPI) {
+	switch (endpoint = normalizeEndpoint(endpoint, endpointAPI), endpointAPI) {
 		case API_KOBOLD_CPP:
 			return await koboldCppAbortCompletion({ endpoint, proxyEndpoint, ...options });
 		case API_DEEPSEEK:
