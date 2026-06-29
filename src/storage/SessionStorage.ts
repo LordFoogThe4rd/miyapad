@@ -1,5 +1,4 @@
 import { AbstractStorage } from './AbstractStorage';
-import { NameStorage } from './NameStorage';
 
 function extractMeta(s: Record<string, unknown>) {
 	return {
@@ -46,7 +45,7 @@ export class SessionStorage extends AbstractStorage {
 	switchGeneration = 0;
 	sessions: Record<string, SessionData> = {};
 	selectedSession: number | undefined;
-	nameStorage: NameStorage | undefined;
+	nameStorage: AbstractStorage | undefined;
 	sessionEndpoint: string | undefined;
 	proxyEndpoint: string | undefined;
 	private onchange?: () => void;
@@ -56,16 +55,12 @@ export class SessionStorage extends AbstractStorage {
 		this.nextId = undefined;
 		this.sessions = {};
 		this.selectedSession = undefined;
-		this.nameStorage = new NameStorage(dbAdapter);
+		this.nameStorage = new AbstractStorage('Names', dbAdapter);
 
 		if (dbAdapter.sessionEndpoint) {
 			this.sessionEndpoint = dbAdapter.sessionEndpoint;
 			this.proxyEndpoint = `${dbAdapter.sessionEndpoint}/proxy`;
 		}
-	}
-
-	dispatchSessionChangeEvent() {
-		this.dispatchEvent(new CustomEvent('sessionchange'));
 	}
 
 	async init() {
@@ -229,7 +224,7 @@ export class SessionStorage extends AbstractStorage {
 		await this.saveToDatabase(db, targetId, this.sessions[targetId]);
 
 		this.dispatchChangeEvent();
-		this.dispatchSessionChangeEvent();
+		this.dispatchEvent(new CustomEvent('sessionchange'));
 	}
 
 	async renameSession(sessionId: string | number, renameSessionName: string) {
