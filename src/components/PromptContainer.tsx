@@ -14,6 +14,7 @@ export function PromptContainer({ sidebarHeight }: PromptContainerProps) {
 	const { promptText, displayPromptChunks, cleanPromptText, origToClean, cleanToOrig } = usePromptBuilder();
 	const { takeScreenshot } = useScreenshotCapture();
 	const lastMouseToken = useRef<string | null>(null);
+	const lastMousePos = useRef({ x: 0, y: 0 });
 
 	useEffect(() => {
 		if (promptArea.current) {
@@ -213,6 +214,7 @@ export function PromptContainer({ sidebarHeight }: PromptContainerProps) {
 		overlay.scrollLeft = target.scrollLeft;
 		setSavedScrollTop(newTop);
 
+		// ponytail: getComputedStyle forces layout every scroll tick; cache top in a ref or use ResizeObserver
 		if (showProbsMode !== -1) {
 			const probsElement = document.getElementById('probs');
 			if (probsElement) {
@@ -241,6 +243,11 @@ export function PromptContainer({ sidebarHeight }: PromptContainerProps) {
 		const { clientX, clientY } = e;
 		if (showProbsMode === -1 && tokenHighlightMode === -1)
 			return;
+		const dx = Math.abs(clientX - lastMousePos.current.x);
+		const dy = Math.abs(clientY - lastMousePos.current.y);
+		if (dx < 5 && dy < 5 && lastMouseToken.current !== null)
+			return;
+		lastMousePos.current = { x: clientX, y: clientY };
 		const overlay = promptOverlay.current;
 		if (!overlay) return;
 		overlay.style.pointerEvents = 'auto';
