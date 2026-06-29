@@ -43,7 +43,7 @@ interface ConnectionData {
 }
 
 interface WorldInfoData {
-  mikuPediaVersion: number;
+  miyaPediaVersion: number;
   entries: WorldInfoEntry[];
   prefix: string;
   suffix: string;
