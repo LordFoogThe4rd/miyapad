@@ -18,6 +18,7 @@ export function ProbsDisplay() {
 
 	async function switchCompletion(i: any, tok: any) {
 		const remainingPrompt = promptChunks.slice(i);
+		// ponytail: instPre replace runs even when hasRealUserTextAfter short-circuits below; move after the check
 		const instPre = templates[selectedTemplate]?.instPre?.replace(/\\n/g, '\n');
 		const lastChunk = promptChunks[promptChunks.length - 1];
 

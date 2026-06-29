@@ -15,12 +15,15 @@ export function PromptContainer({ sidebarHeight }: PromptContainerProps) {
 	const { takeScreenshot } = useScreenshotCapture();
 	const lastMouseToken = useRef<string | null>(null);
 	const lastMousePos = useRef({ x: 0, y: 0 });
+	const onInputRef = useRef(onInput);
+	onInputRef.current = onInput;
 
 	useEffect(() => {
-		if (promptArea.current) {
-			promptArea.current.onInputHandler = (e) => onInput(e as React.FormEvent<HTMLTextAreaElement>);
+		const elem = promptArea.current;
+		if (elem) {
+			elem.onInputHandler = (e) => onInputRef.current(e as React.FormEvent<HTMLTextAreaElement>);
 		}
-	});
+	}, []);
 
 	// textarea resize
 	useEffect(() => {
@@ -172,6 +175,7 @@ export function PromptContainer({ sidebarHeight }: PromptContainerProps) {
 			newPrompt.push(...end);
 
 			// Remove all undo positions within the modified range.
+			// ponytail: .filter + .map allocate fresh arrays per keystroke; switch to splice-in-place if undoStack grows large
 			undoStack.current = undoStack.current.filter((pos: number) => pos > start.length && pos < newPrompt.length);
 			if (!undoStack.current.length)
 				setUndoHovered(false);
@@ -327,6 +331,7 @@ export function PromptContainer({ sidebarHeight }: PromptContainerProps) {
 		}
 	}
 
+	// ponytail: offsetHeight reads on textarea+overlay (below) force layout during render; measure via layout effect instead
 	return html`
 		<div id="prompt-container" onMouseMove=${onPromptMouseMove} style=${{ 'margin-bottom': isMobile && !showMarkdownPreview ? sidebarHeight + 'px' : 0 }}>
 			<button
@@ -371,6 +376,7 @@ export function PromptContainer({ sidebarHeight }: PromptContainerProps) {
 				...${showPromptPreview && { style: { 'padding-bottom': promptPreviewElement.current?.offsetHeight ?? '0px' } }}>
 				${tokenHighlightMode !== -1 ? html`
 					${promptChunks.map((chunk: PromptChunk, i: number) => {
+		// ponytail: getRatioColor redefined per chunk inside .map(); extract to module scope if chunk count grows
 		const getRatioColor = (ratio: number) => {
 			const sRatio = Math.max(0, Math.min(1, ratio));
 			if (sRatio <= 0.5) {
