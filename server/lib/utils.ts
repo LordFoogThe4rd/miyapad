@@ -1,4 +1,5 @@
-import zlib from 'zlib';
+import { promisify } from 'node:util';
+import zlib from 'node:zlib';
 
 const headersToRemove = [
     'content-length',
@@ -31,23 +32,10 @@ const normalizeStoreName = (storeName: string): string | null => {
     return null;
 };
 
-const compressData = (data: string): Promise<Buffer> => {
-    return new Promise((resolve, reject) => {
-        zlib.gzip(data, (err, buffer) => {
-            if (err) return reject(err);
-            resolve(buffer);
-        });
-    });
-};
+const compressData = promisify(zlib.gzip);
 
-const decompressData = (buffer: Buffer): Promise<string> => {
-    return new Promise((resolve, reject) => {
-        zlib.gunzip(buffer, (err, decompressed) => {
-            if (err) return reject(err);
-            resolve(decompressed.toString());
-        });
-    });
-};
+const decompressData = (buffer: Buffer) =>
+    (promisify(zlib.gunzip) as (buf: Buffer) => Promise<Buffer>)(buffer).then(b => b.toString());
 
 export {
     headersToRemove,
