@@ -4,7 +4,7 @@ import { useSettings } from '../contexts/SettingsContext';
 import { useGeneration } from '../contexts/GenerationContext';
 import { API_LLAMA_CPP, API_KOBOLD_CPP, API_OPENAI_COMPAT, API_AI_HORDE, API_DEEPSEEK } from '../constants';
 import { InputBox } from './controls/InputBox';
-import { SelectBox, SelectBoxTemplate } from './controls/SelectBox';
+import { SelectBox } from './controls/SelectBox';
 import { Checkbox } from './controls/Checkbox';
 import { InputSlider } from './controls/InputSlider';
 import { CollapsibleGroup } from './controls/CollapsibleGroup';
@@ -358,8 +358,9 @@ export function Sidebar({ sidebarRef, toggleModal, currentThemeName, setCurrentT
 						<${InputBox} label="Max Preview Tokens" type="text" inputmode="numeric"
 							readOnly=${!!cancel} value=${promptPreviewTokens} onValueChange=${setPromptPreviewTokens}/>`}`}
 				<div className="buttons instructTemplateSidebar">
-					<${SelectBoxTemplate}
+					<${SelectBox}
 						label="Instruct Template"
+						template=${true}
 						disabled=${!!cancel}
 						value=${selectedTemplate}
 						onValueChange=${setSelectedTemplate}

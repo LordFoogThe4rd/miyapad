@@ -3,7 +3,7 @@ import { useState, useEffect } from 'react';
 import { Modal } from '../Modal';
 import { InputBox } from '../controls/InputBox';
 import { Checkbox } from '../controls/Checkbox';
-import { SelectBoxTemplate } from '../controls/SelectBox';
+import { SelectBox } from '../controls/SelectBox';
 import { exportText } from '../../api/common';
 import { defaultPresets } from '../../defaults/presets';
 import type { TemplateStorage } from '../../storage/TemplateStorage';
@@ -299,9 +299,10 @@ export function InstructTemplatesModal({ isOpen, closeModal, templateStorage, se
 				</button>
 			</div>
 			<div className="buttons instructTemplateSidebar">
-				<${SelectBoxTemplate}
+				<${SelectBox}
 					id="instructTemplatesModalSelect"
 					label="Instruct Template"
+					template=${true}
 					disabled=${!!cancel}
 					value=${newTemplateName ?? selectedTemplate}
 					onValueChange=${setSelectedTemplate}
