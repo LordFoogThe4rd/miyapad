@@ -1,6 +1,6 @@
 import express from 'express';
 import cors from 'cors';
-import bodyParser from 'body-parser';
+
 import path from 'path';
 import minimist from 'minimist';
 import open from 'open';
@@ -45,7 +45,7 @@ const backupKeep = rawKeep !== undefined ? parseInt(rawKeep, 10) : 10;
 
 const app = express();
 
-app.use(cors(), bodyParser.json({limit: "100mb"}));
+app.use(cors(), express.json({limit: "100mb"}));
 
 app.use(createAuthMiddleware(login, password));
 
