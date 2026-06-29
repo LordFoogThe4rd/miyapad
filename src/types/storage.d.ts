@@ -43,7 +43,7 @@ interface ConnectionData {
 }
 
 interface WorldInfoData {
-  miyaPediaVersion: number;
+  miyaPediaVersion: number; // ponytail: reserved, migrate mikuPediaVersion from old stored data before reading
   entries: WorldInfoEntry[];
   prefix: string;
   suffix: string;

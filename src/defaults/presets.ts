@@ -44,7 +44,7 @@ export const defaultPresets = {
 	authorNoteTokens: ({ "prefix":"", "text":"", "suffix":""}),
 	authorNoteDepth: 3,
 	worldInfo:({
-		"miyaPediaVersion": 1,
+		"miyaPediaVersion": 1, // ponytail: reserved, migrate mikuPediaVersion from old stored data before reading
 		"entries": [],
 		"prefix": "",
 		"suffix": ""
