@@ -68,66 +68,40 @@ export class AbstractStorage extends EventTarget {
 		throw new Error("Not Implemented");
 	}
 
-	async openDatabase(): Promise<DbConnection> {
+	async #wrap<T>(promise: Promise<T>): Promise<T> {
 		try {
-			return await this.dbAdapter.openDatabase();
+			return await promise;
 		} catch (e) {
 			this.dispatchErrorEvent(e);
 			throw e;
 		}
+	}
+
+	async openDatabase(): Promise<DbConnection> {
+		return await this.#wrap(this.dbAdapter.openDatabase());
 	}
 
 	async loadFromDatabase(db: DbConnection, key: string | number): Promise<unknown> {
-		try {
-			return await this.dbAdapter.loadFromDatabase(db, this.storeName, key);
-		} catch (e) {
-			this.dispatchErrorEvent(e);
-			throw e;
-		}
+		return await this.#wrap(this.dbAdapter.loadFromDatabase(db, this.storeName, key));
 	}
 
 	async loadAllFromDatabase(db: DbConnection): Promise<Record<string, unknown>> {
-		try {
-			return await this.dbAdapter.loadAllFromDatabase(db, this.storeName);
-		} catch (e) {
-			this.dispatchErrorEvent(e);
-			throw e;
-		}
+		return await this.#wrap(this.dbAdapter.loadAllFromDatabase(db, this.storeName));
 	}
 
 	async loadSessionInfoFromDatabase(db: DbConnection): Promise<Record<string, unknown>> {
-		try {
-			return await this.dbAdapter.loadSessionInfoFromDatabase(db, this.storeName);
-		} catch (e) {
-			this.dispatchErrorEvent(e);
-			throw e;
-		}
+		return await this.#wrap(this.dbAdapter.loadSessionInfoFromDatabase(db, this.storeName));
 	}
 
 	async saveToDatabase(db: DbConnection, key: string | number, data: unknown): Promise<void> {
-		try {
-			return await this.dbAdapter.saveToDatabase(db, this.storeName, key, data);
-		} catch (e) {
-			this.dispatchErrorEvent(e);
-			throw e;
-		}
+		return await this.#wrap(this.dbAdapter.saveToDatabase(db, this.storeName, key, data));
 	}
 
 	async renameSessionInDatabase(db: DbConnection, key: string | number, newName: string): Promise<void> {
-		try {
-			return await this.dbAdapter.renameSessionInDatabase(db, this.storeName, key, newName);
-		} catch (e) {
-			this.dispatchErrorEvent(e);
-			throw e;
-		}
+		return await this.#wrap(this.dbAdapter.renameSessionInDatabase(db, this.storeName, key, newName));
 	}
 
 	async deleteFromDatabase(db: DbConnection, key: string | number): Promise<void> {
-		try {
-			return await this.dbAdapter.deleteFromDatabase(db, this.storeName, key);
-		} catch (e) {
-			this.dispatchErrorEvent(e);
-			throw e;
-		}
+		return await this.#wrap(this.dbAdapter.deleteFromDatabase(db, this.storeName, key));
 	}
 }
