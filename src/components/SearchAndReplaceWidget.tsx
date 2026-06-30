@@ -178,7 +178,7 @@ export function SearchAndReplaceWidget({ isOpen, closeWidget, id, children, prom
 		try {
 			const gFlags = flags && !flags.includes('g') ? flags + 'g' : flags || 'g';
 			let re = new RegExp(String.raw`${search}`, String.raw`${gFlags}`);
-			const newVal = elem.value.replace(re,replace);
+			const newVal = elem.value.replace(re, replace.replace(/\\n/g, '\n'));
 			elem.focus();
 			elem.select();
 			document.execCommand('insertText', false, newVal);

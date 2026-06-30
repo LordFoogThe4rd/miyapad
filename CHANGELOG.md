@@ -4,6 +4,7 @@
 
 ### Fixed
 - Closing the terminal or stopping miyapad as a systemd/Docker/Windows service now triggers a graceful shutdown (saves data, runs maintenance, closes database cleanly)
+- Search and replace in regex mode now correctly replaces matched text with newlines when typing `\n` in the replace field
 
 ## [2.5.1] - 2026-06-27
 
