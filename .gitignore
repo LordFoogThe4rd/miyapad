@@ -42,3 +42,5 @@ server/*.dll
 server/*.dylib
 server/*.exe
 server/backups/
+server/dist-server/
+server/miyapad-dist/

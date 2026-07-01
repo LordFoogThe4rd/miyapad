@@ -19,6 +19,52 @@ From the `server/` directory:
 
 See [Backend Server](backend-server.md) for CLI options and environment variables.
 
+## Standalone Distribution
+
+Bundle the server and package it with a Node.js binary for "unzip and run" usage:
+
+```bash
+npm run build                      # Frontend production build → dist/
+cd server && npm run build:dist    # Bundle + pack → miyapad-dist/
+```
+
+The resulting `miyapad-dist/` folder is the redistributable:
+
+```
+miyapad-dist/
+  miyapad.sh / miyapad.bat  # Launch scripts
+  node / node.exe           # Node.js binary (from actions/setup-node)
+  server.cjs                # esbuild server bundle
+  dist/                     # Frontend assets (HTML, JS, CSS)
+  tokenizers/               # HuggingFace tokenizer model files
+  node_modules/             # Pre-installed native addons (sqlite3, tokenizers)
+```
+
+The user must supply the sqlite-zstd extension (`libsqlite_zstd.so`, `libsqlite_zstd.dylib`, or `sqlite_zstd.dll`) in the same directory. The launch scripts will error with a clear message if it's missing.
+
+### Deploying
+
+On the target machine:
+
+```bash
+# 1. Place the sqlite-zstd extension alongside the other files
+# 2. Run the launch script
+./miyapad.sh --port 3000
+```
+
+The server resolves `dist/`, `tokenizers/`, and `libsqlite_zstd.*` relative to the Node.js binary location (`process.execPath`), so the folder can be placed anywhere.
+
+### Cross-platform builds
+
+Each platform must build its own distribution (native addons are platform-specific):
+
+```bash
+# On the target platform:
+cd server && npm ci && npm run build:dist
+```
+
+CI (`.github/workflows/release.yml`) handles this via a matrix of `ubuntu-latest`, `macos-latest`, and `windows-latest`.
+
 ## CI/CD
 
 Two GitHub Actions workflows automate releases and deployment:
@@ -28,10 +74,14 @@ Two GitHub Actions workflows automate releases and deployment:
 **Trigger:** Pushing a tag matching `v*` (e.g., `v2.2.0`).
 
 **Steps:**
-1. Checkout repo, install Node 20 with npm caching
-2. `npm ci` → `npm run build` (produces `dist/miyapad.html`)
-3. Extract the relevant changelog section from `CHANGELOG.md` for the tagged version
-4. Create a **GitHub Release** with `dist/miyapad.html` attached as the release asset
+1. Matrix build across ubuntu-latest, macos-latest, windows-latest
+2. Each job: checkout → setup-node 24 → `npm ci` → `npm run build` (frontend)
+3. `cd server && npm ci` (gets platform-native addons)
+4. `npm run bundle` (esbuild → dist-server/server.cjs)
+5. `npm ci --omit=dev` (slim node_modules to production-only)
+6. `node scripts/pack-dist.mjs` (assembles miyapad-dist/ with node binary)
+7. Archive as tar.gz (unix) or zip (windows), upload as artifact
+8. Release job collects all artifacts + `dist/miyapad.html`, creates GitHub Release with changelog
 
 ### GitHub Pages (`pages.yml`)
 

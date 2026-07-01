@@ -1,10 +1,14 @@
 import sqlite3 from 'sqlite3';
+import fs from 'fs';
 import path from 'path';
 import { fileURLToPath } from 'url';
 import { getColumnName, compressData, decompressData } from './utils.js';
 import * as tokenizer from '../tokenizer.js';
 
-const __dirname = path.dirname(fileURLToPath(import.meta.url));
+const basedir = (() => {
+	if (typeof __dirname !== 'undefined') return __dirname as string;
+	return path.dirname(fileURLToPath(import.meta.url));
+})();
 
 const runMigrationToV3 = (db: sqlite3.Database) => {
     return new Promise<boolean>((resolve, reject) => {
@@ -338,7 +342,11 @@ const initDatabase = (storagePath: string) => {
                 'linux': 'libsqlite_zstd.so'
             } as Record<string, string | undefined>)[process.platform] || 'libsqlite_zstd.so';
 
-            db.loadExtension(path.join(__dirname, '..', zstdLibName), async (err) => {
+            const zstdDistPath = path.join(path.dirname(process.execPath), zstdLibName);
+            const zstdSrcPath = path.join(basedir, '..', zstdLibName);
+            const zstdPath = fs.existsSync(zstdDistPath) ? zstdDistPath : zstdSrcPath;
+
+            db.loadExtension(zstdPath, async (err) => {
                 if (err) {
                     return reject(err);
                 }

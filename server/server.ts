@@ -1,6 +1,7 @@
 import express from 'express';
 import cors from 'cors';
 
+import fs from 'fs';
 import path from 'path';
 import minimist from 'minimist';
 import open from 'open';
@@ -16,7 +17,10 @@ import proxyRoutes from './routes/proxy.js';
 import zstdRoutes from './routes/zstd.js';
 import tokenizerRoutes from './routes/tokenizer.js';
 
-const __dirname = path.dirname(fileURLToPath(import.meta.url));
+const basedir = (() => {
+	if (typeof __dirname !== 'undefined') return __dirname as string;
+	return path.dirname(fileURLToPath(import.meta.url));
+})();
 
 const args = minimist(process.argv.slice(2)) as Record<string, any>;
 const port = args.port || process.env.MIYAPAD_PORT || 3000;
@@ -49,7 +53,12 @@ app.use(cors(), express.json({limit: "100mb"}));
 
 app.use(createAuthMiddleware(login, password));
 
-app.use(express.static(path.join(__dirname, '..', 'dist')));
+const distDir = (() => {
+	const exeDist = path.join(path.dirname(process.execPath), 'dist');
+	if (fs.existsSync(exeDist)) return exeDist;
+	return path.join(basedir, '..', 'dist');
+})();
+app.use(express.static(distDir, { index: 'miyapad.html' }));
 
 initDatabase(storagePath).then((db) => {
     systemRoutes(app, db);
