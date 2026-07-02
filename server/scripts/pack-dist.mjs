@@ -9,7 +9,7 @@ const distDir = path.join(root, 'miyapad-dist');
 fs.rmSync(distDir, { recursive: true, force: true });
 fs.mkdirSync(distDir, { recursive: true });
 
-// ponytail: sqlite-zstd is user-provided, not bundled
+// sqlite-zstd is user-provided for now; will be built and bundled later
 const nodeDest = process.platform === 'win32' ? 'node.exe' : 'node';
 fs.copyFileSync(process.execPath, path.join(distDir, nodeDest));
 
