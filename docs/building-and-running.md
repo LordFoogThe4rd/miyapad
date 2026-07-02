@@ -30,7 +30,7 @@ cd server && npm run build:dist    # Bundle + pack → miyapad-dist/
 
 The resulting `miyapad-dist/` folder is the redistributable:
 
-```
+```text
 miyapad-dist/
   miyapad.sh / miyapad.bat  # Launch scripts
   node / node.exe           # Node.js binary (from actions/setup-node)
