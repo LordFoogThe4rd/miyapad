@@ -1,12 +1,7 @@
 import path from 'path';
 import fs from 'fs';
-import { fileURLToPath } from 'url';
 import type { Tokenizer } from '@huggingface/tokenizers';
-
-const basedir = (() => {
-	if (typeof __dirname !== 'undefined') return __dirname as string;
-	return path.dirname(fileURLToPath(import.meta.url));
-})();
+import { basedir } from './lib/paths.js';
 
 let TokenizerClass: typeof Tokenizer | null = null;
 let loadedTokenizer: Tokenizer | null = null;
