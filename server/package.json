@@ -5,9 +5,9 @@
     "start": "tsx server.ts",
     "check": "tsc --noEmit",
     "test": "echo \"Error: no test specified\" && exit 1",
-    "bundle": "esbuild server.ts --bundle --platform=node --format=cjs --outfile=dist-server/server.cjs --external:sqlite3 --external:@huggingface/tokenizers --log-level=error",
+    "bundle": "esbuild server.ts --bundle --platform=node --format=cjs --outfile=dist-server/server.cjs --external:sqlite3 --external:@huggingface/tokenizers --log-override:empty-import-meta=silent",
     "pack": "node scripts/pack-dist.mjs",
-    "build:dist": "npm run bundle && npm run pack"
+    "build:dist": "npm run bundle && npm ci --omit=dev && npm run pack"
   },
   "dependencies": {
     "@huggingface/tokenizers": "^0.1.3",

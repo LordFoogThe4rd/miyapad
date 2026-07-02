@@ -16,6 +16,18 @@ Express — MIT
   Copyright (c) 2009-2014 TJ Holowaychuk and contributors
   https://github.com/expressjs/express/blob/master/LICENSE
 
+cors — MIT
+  Copyright (c) 2013 Troy Goode
+  https://github.com/expressjs/cors/blob/master/LICENSE
+
+minimist — MIT
+  Copyright (c) 2014 James Halliday
+  https://github.com/minimistjs/minimist/blob/main/LICENSE
+
+open — MIT
+  Copyright (c) Sindre Sorhus
+  https://github.com/sindresorhus/open/blob/main/license
+
 Axios — MIT
   Copyright (c) 2014-present Matt Zabriskie and contributors
   https://github.com/axios/axios/blob/v1.x/LICENSE
