@@ -60,7 +60,7 @@ jobs:
         shell: pwsh
         run: Compress-Archive -Path server/miyapad-dist/* -DestinationPath ${{ matrix.archive }}
 
-      - uses: actions/upload-artifact@15ea491d1c9d239c967d4f6705e659c0bd6865ea # v5.0.0
+      - uses: actions/upload-artifact@330a01c490aca151604b8cf639adc76d48f6c5d4 # v5.0.0
         with:
           name: ${{ matrix.platform }}
           path: ${{ matrix.archive }}
@@ -83,7 +83,7 @@ jobs:
       - run: npm ci
       - run: npm run build
 
-      - uses: actions/download-artifact@291f5de43e9f360d0246de49095b1303d22c3989 # v6.0.0
+      - uses: actions/download-artifact@018cc2cf5baa6db3ef3c5f8a56943fffe632ef53 # v6.0.0
         with:
           pattern: '*'
           merge-multiple: true
