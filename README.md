@@ -47,7 +47,7 @@ For the full server + frontend, download the standalone distribution archive fro
 3. Place the sqlite-zstd extension (`libsqlite_zstd.so` / `libsqlite_zstd.dylib` / `sqlite_zstd.dll`) in the same directory
 4. Run `./miyapad.sh` (Linux/macOS) or `miyapad.bat` (Windows)
 
-No `npm install` required — Node.js and native addons are pre-packaged.
+No install needed — Node.js and native addons are pre-packaged.
 
 #### From Source
 
