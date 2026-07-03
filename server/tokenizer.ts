@@ -1,15 +1,21 @@
 import path from 'path';
 import fs from 'fs';
-import { fileURLToPath } from 'url';
 import type { Tokenizer } from '@huggingface/tokenizers';
-
-const __dirname = path.dirname(fileURLToPath(import.meta.url));
+import { basedir } from './lib/paths.js';
 
 let TokenizerClass: typeof Tokenizer | null = null;
 let loadedTokenizer: Tokenizer | null = null;
 let loadedModel: string | null = null;
 
-const TOKENIZERS_DIR = path.join(__dirname, 'tokenizers');
+const TOKENIZERS_DIR = (() => {
+	const exeDir = path.join(path.dirname(process.execPath), 'tokenizers');
+	const cwdDir = path.resolve(process.cwd(), 'tokenizers');
+	const srcDir = path.join(basedir, 'tokenizers');
+	if (fs.existsSync(exeDir)) return exeDir;
+	if (fs.existsSync(cwdDir)) return cwdDir;
+	if (fs.existsSync(srcDir)) return srcDir;
+	return srcDir; // ponytail: fresh install, gets created
+})();
 
 function getAvailableTokenizers(): string[] {
 	if (!fs.existsSync(TOKENIZERS_DIR)) {
@@ -23,10 +29,14 @@ function getAvailableTokenizers(): string[] {
 }
 
 async function ensureTokenizerModule() {
-	if (!TokenizerClass) {
-		const mod = await import('@huggingface/tokenizers');
-		TokenizerClass = mod.Tokenizer;
+	if (TokenizerClass) return;
+	let mod: any;
+	if (typeof require !== 'undefined') {
+		mod = require('@huggingface/tokenizers');
+	} else {
+		mod = await import('@huggingface/tokenizers');
 	}
+	TokenizerClass = mod.Tokenizer;
 }
 
 async function loadTokenizer(model: string) {

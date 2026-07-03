@@ -1,22 +1,21 @@
 import express from 'express';
 import cors from 'cors';
 
+import fs from 'fs';
 import path from 'path';
 import minimist from 'minimist';
 import open from 'open';
-import { fileURLToPath } from 'url';
 import readline from 'readline';
 
 import { initDatabase, getMaintenanceConfig, runZstdMaintenance, clearMaintenanceScheduler } from './lib/database.js';
 import { createAuthMiddleware } from './lib/auth.js';
 import { startAutoBackup, stopAutoBackup } from './lib/backup.js';
+import { basedir, resolveExeRelative } from './lib/paths.js';
 import systemRoutes from './routes/system.js';
 import dataRoutes from './routes/data.js';
 import proxyRoutes from './routes/proxy.js';
 import zstdRoutes from './routes/zstd.js';
 import tokenizerRoutes from './routes/tokenizer.js';
-
-const __dirname = path.dirname(fileURLToPath(import.meta.url));
 
 const args = minimist(process.argv.slice(2)) as Record<string, any>;
 const port = args.port || process.env.MIYAPAD_PORT || 3000;
@@ -49,7 +48,14 @@ app.use(cors(), express.json({limit: "100mb"}));
 
 app.use(createAuthMiddleware(login, password));
 
-app.use(express.static(path.join(__dirname, '..', 'dist')));
+const distDir = (() => {
+	const distPath = resolveExeRelative('dist', path.join(basedir, '..', 'dist'));
+	if (!fs.existsSync(distPath)) {
+		console.warn(`Warning: frontend dist not found at "${distPath}"`);
+	}
+	return distPath;
+})();
+app.use(express.static(distDir, { index: 'miyapad.html' }));
 
 initDatabase(storagePath).then((db) => {
     systemRoutes(app, db);

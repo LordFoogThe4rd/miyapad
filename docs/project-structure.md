@@ -5,7 +5,9 @@ miyapad/
 ├── .github/workflows/             # GitHub Actions CI/CD
 │   ├── release.yml                # Build & attach to GitHub Release on v* tags
 │   └── pages.yml                  # Deploy to GitHub Pages on v* tags
-├── dist/                          # Parcel build output (production bundle)
+├── dist/                          # Frontend production build output
+├── server/dist-server/            # esbuild server bundle output (generated)
+├── server/miyapad-dist/           # Standalone distribution folder (generated)
 ├── miyapad.html                   # HTML entry point (loads src/main.tsx as module)
 ├── package.json                   # Frontend dependencies and run scripts
 ├── tsconfig.base.json             # Shared TypeScript config (strict mode, noEmit)
@@ -22,13 +24,15 @@ miyapad/
 │   │   ├── system.ts              # /version, /vacuum, /log
 │   │   ├── tokenizer.ts           # /api/v1/tokenizer/* endpoints
 │   │   └── zstd.ts                # /zstd_* management endpoints
+│   ├── scripts/                   # Build scripts
+│   │   └── pack-dist.mjs          # Assembles miyapad-dist/ with node binary, bundle, deps, launch scripts
 │   ├── server.ts                  # Entrypoint: arg parsing, app setup, mount routes, start
 │   ├── tokenizer.ts               # Server-side tokenization (HuggingFace tokenizers)
 │   ├── types/                     # Ambient type declarations for the server
 │   │   ├── env.d.ts               # Environment variable type augmentation
 │   │   └── zstd.d.ts              # sqlite-zstd native addon type declarations
 │   ├── tsconfig.json              # Server TypeScript config (NodeNext resolution)
-│   ├── package.json               # Backend dependencies
+│   ├── package.json               # Backend dependencies, esbuild bundle + pack build scripts
 │   ├── start.sh / start.bat       # Startup scripts
 │   └── web-session-storage.db     # SQLite storage file (auto-generated)
 └── src/                           # Frontend React source code

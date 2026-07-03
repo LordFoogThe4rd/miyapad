@@ -1,0 +1,37 @@
+This distribution includes third-party software:
+
+Node.js — MIT
+  Copyright Joyent, Inc. and other Node contributors
+  https://github.com/nodejs/node/blob/main/LICENSE
+
+node-sqlite3 — BSD-3-Clause
+  Copyright (c) Mapbox
+  https://github.com/TryGhost/node-sqlite3/blob/main/LICENSE
+
+Huggingface Tokenizers — Apache 2.0
+  Copyright (c) 2023 Hugging Face
+  https://github.com/huggingface/tokenizers.js/blob/main/LICENSE
+
+Express — MIT
+  Copyright (c) 2009-2014 TJ Holowaychuk and contributors
+  https://github.com/expressjs/express/blob/master/LICENSE
+
+cors — MIT
+  Copyright (c) 2013 Troy Goode
+  https://github.com/expressjs/cors/blob/master/LICENSE
+
+minimist — MIT
+  Copyright (c) 2014 James Halliday
+  https://github.com/minimistjs/minimist/blob/main/LICENSE
+
+open — MIT
+  Copyright (c) Sindre Sorhus
+  https://github.com/sindresorhus/open/blob/main/license
+
+Axios — MIT
+  Copyright (c) 2014-present Matt Zabriskie and contributors
+  https://github.com/axios/axios/blob/v1.x/LICENSE
+
+Socket.IO — MIT
+  Copyright (c) 2014-present Guillermo Rauch and contributors
+  https://github.com/socketio/socket.io/blob/main/LICENSE

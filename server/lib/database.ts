@@ -1,10 +1,10 @@
+// ponytail: switch to better-sqlite3 for sync API + perf, needs port of callback-based callers
 import sqlite3 from 'sqlite3';
+import fs from 'fs';
 import path from 'path';
-import { fileURLToPath } from 'url';
 import { getColumnName, compressData, decompressData } from './utils.js';
+import { basedir, resolveExeRelative } from './paths.js';
 import * as tokenizer from '../tokenizer.js';
-
-const __dirname = path.dirname(fileURLToPath(import.meta.url));
 
 const runMigrationToV3 = (db: sqlite3.Database) => {
     return new Promise<boolean>((resolve, reject) => {
@@ -338,7 +338,9 @@ const initDatabase = (storagePath: string) => {
                 'linux': 'libsqlite_zstd.so'
             } as Record<string, string | undefined>)[process.platform] || 'libsqlite_zstd.so';
 
-            db.loadExtension(path.join(__dirname, '..', zstdLibName), async (err) => {
+            const zstdPath = resolveExeRelative(zstdLibName, path.join(basedir, '..', zstdLibName));
+
+            db.loadExtension(zstdPath, async (err) => {
                 if (err) {
                     return reject(err);
                 }

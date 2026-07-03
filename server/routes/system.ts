@@ -1,19 +1,11 @@
-import path from 'path';
-import { fileURLToPath } from 'url';
 import type { Express, Request, Response } from 'express';
 import type { Database } from 'sqlite3';
 import * as tokenizer from '../tokenizer.js';
 import { runZstdMaintenance, configureWAL, getMaintenanceConfig, saveMaintenanceConfig, clearMaintenanceScheduler, scheduleZstdMaintenance } from '../lib/database.js';
 
-const __dirname = path.dirname(fileURLToPath(import.meta.url));
-
 const SERVER_VERSION = 4;
 
 export default function(app: Express, db: Database): void {
-    app.get('/', (req: Request, res: Response) => {
-        res.sendFile(path.join(__dirname, '..', '..', 'dist', 'miyapad.html'));
-    });
-
     app.get('/version', (req: Request, res: Response) => {
         res.json({
             version: SERVER_VERSION,
