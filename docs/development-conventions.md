@@ -42,6 +42,23 @@ CHANGELOG.md is manually curated. After each non-`docs` or `ci` commit, add an e
 - Problem that was affecting the user's experience
 ```
 
+## Release Process
+
+1. Verify all user-facing changes have entries under `## [???] - unreleased` in `CHANGELOG.md`.
+2. Determine the new version using semver.
+3. Replace `[???] - unreleased` with `[<version>] - <YYYY-MM-DD>` at the top of `CHANGELOG.md`.
+4. Stage, commit, tag, and push in one shot:
+
+```bash
+git add CHANGELOG.md <other changed files> &&
+git commit -m "chore: release v<version>" &&
+git tag -a v<version> -m "v<version>" &&
+git push &&
+git push origin v<version>
+```
+
+5. After the release, add a fresh `## [???] - unreleased` heading to `CHANGELOG.md` for the next cycle.
+
 ## Safe Property Checks
 
 Use `Object.hasOwn(obj, prop)` (ES2022+) instead of `obj.hasOwnProperty(prop)` to avoid breakage if the object contains an own property named `hasOwnProperty`.
