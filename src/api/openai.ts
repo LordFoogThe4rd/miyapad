@@ -229,6 +229,7 @@ function openaiConvertOptions(options: SamplerOptions, endpoint: string, isChat:
 	const endpointHost = (() => { try { return new URL(endpoint).hostname; } catch { return ''; } })();
 	const isOpenAI = endpointHost === "api.openai.com" || endpointHost.endsWith(".openai.com");
 	const isTogetherAI = endpointHost === "api.together.xyz";
+	const isFireworks = endpointHost === "api.fireworks.ai";
 	const isOpenRouter = endpointHost === "openrouter.ai";
 	const swapOption = (lhs: string, rhs: string) => {
 		if (lhs in options) {
@@ -239,7 +240,7 @@ function openaiConvertOptions(options: SamplerOptions, endpoint: string, isChat:
 	if (options.n_predict === -1) {
 		options.n_predict = 1024;
 	}
-	if ((isOpenAI || endpointHost === "api.x.ai") && (options.n_probs ?? 0) > 5) {
+	if ((isOpenAI || isFireworks || endpointHost === "api.x.ai") && (options.n_probs ?? 0) > 5) {
 		options.n_probs = 5;
 	}
 	if (isTogetherAI && (options.n_probs ?? 0) > 1) {
@@ -276,7 +277,9 @@ function openaiConvertOptions(options: SamplerOptions, endpoint: string, isChat:
 	swapOption("repeat_last_n", "repetition_penalty_range");
 	swapOption("tfs_z", "tfs");
 	swapOption("mirostat", "mirostat_mode");
-	swapOption("ignore_eos", "ban_eos_token");
+	if (!isFireworks) {
+		swapOption("ignore_eos", "ban_eos_token");
+	}
 	swapOption("grammar", "grammar_string");
 	return options;
 }

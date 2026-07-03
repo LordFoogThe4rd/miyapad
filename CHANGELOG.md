@@ -5,6 +5,9 @@
 ### Fixed
 - Closing the terminal or stopping miyapad as a systemd/Docker/Windows service now triggers a graceful shutdown (saves data, runs maintenance, closes database cleanly)
 - Search and replace in regex mode now correctly replaces matched text with newlines when typing `\n` in the replace field
+- Fireworks.ai compatibility: Ignore EOS token option is fixed and logprobs are capped at 5 to match their API limits, so strict API mode is no longer required for Fireworks
+- TTS: fixed a regex bypass that could strip safety tokens when text contained newlines
+- Screenshot capture: user-controlled text in the screenshot HTML is now properly escaped to prevent XSS
 
 ## [2.5.1] - 2026-06-27
 
