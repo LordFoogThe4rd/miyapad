@@ -1,4 +1,3 @@
-// ponytail: switch to better-sqlite3 for sync API + perf, needs port of callback-based callers
 import sqlite3 from 'sqlite3';
 import fs from 'fs';
 import path from 'path';
