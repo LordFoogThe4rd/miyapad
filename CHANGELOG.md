@@ -1,5 +1,10 @@
 # Changelog
 
+## [2.5.3] - 2026-07-03
+
+### Fixed
+- Running the server directly with `tsx server.ts` no longer shows "Cannot GET /" due to an incorrect frontend path
+
 ## [2.5.2] - 2026-07-03
 
 ### Fixed
