@@ -49,7 +49,7 @@ app.use(cors(), express.json({limit: "100mb"}));
 app.use(createAuthMiddleware(login, password));
 
 const distDir = (() => {
-	const distPath = resolveExeRelative('dist', path.join(basedir, '..', 'dist'));
+	const distPath = resolveExeRelative('dist', path.join(basedir, '..', '..', 'dist'));
 	if (!fs.existsSync(distPath)) {
 		console.warn(`Warning: frontend dist not found at "${distPath}"`);
 	}
