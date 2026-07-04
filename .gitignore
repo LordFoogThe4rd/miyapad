@@ -44,3 +44,6 @@ server/*.exe
 server/backups/
 server/dist-server/
 server/miyapad-dist/
+
+# Opencode config
+.opencode/
