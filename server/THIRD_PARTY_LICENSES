@@ -35,3 +35,7 @@ Axios — MIT
 Socket.IO — MIT
   Copyright (c) 2014-present Guillermo Rauch and contributors
   https://github.com/socketio/socket.io/blob/main/LICENSE
+
+sqlite-zstd — LGPL-3.0
+  Copyright (c) 2022 phiresky
+  https://github.com/phiresky/sqlite-zstd/blob/master/LICENSE

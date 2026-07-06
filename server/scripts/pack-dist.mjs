@@ -9,7 +9,6 @@ const distDir = path.join(root, 'miyapad-dist');
 fs.rmSync(distDir, { recursive: true, force: true });
 fs.mkdirSync(distDir, { recursive: true });
 
-// sqlite-zstd is user-provided for now; will be built and bundled later
 const nodeDest = process.platform === 'win32' ? 'node.exe' : 'node';
 fs.copyFileSync(process.execPath, path.join(distDir, nodeDest));
 
@@ -17,6 +16,15 @@ fs.copyFileSync(
   path.join(root, 'dist-server', 'server.cjs'),
   path.join(distDir, 'server.cjs')
 );
+
+const zstdLibName = process.platform === 'win32' ? 'sqlite_zstd.dll'
+  : `libsqlite_zstd.${process.platform === 'darwin' ? 'dylib' : 'so'}`;
+const zstdSrc = path.join(root, zstdLibName);
+if (fs.existsSync(zstdSrc)) {
+  fs.copyFileSync(zstdSrc, path.join(distDir, zstdLibName));
+} else {
+  console.warn(`Warning: ${zstdLibName} not found, skipping`);
+}
 
 const copyDir = (src, dest) => {
   if (!fs.existsSync(src)) return;
@@ -34,25 +42,11 @@ fs.copyFileSync(path.join(root, 'THIRD_PARTY_LICENSES'), path.join(distDir, 'THI
 fs.writeFileSync(path.join(distDir, 'miyapad.sh'), `#!/bin/sh
 set -e
 DIR="\$(CDPATH='' cd -- "\$(dirname -- "\$0")" && pwd -P)"
-ZSTD="libsqlite_zstd.so"
-[ "\$(uname -s)" = "Darwin" ] && ZSTD="libsqlite_zstd.dylib"
-if [ ! -f "\$DIR/\$ZSTD" ]; then
-  echo "Error: \$ZSTD not found in \$DIR" >&2
-  echo "Download the sqlite-zstd extension for your platform from:" >&2
-  echo "  https://github.com/phiresky/sqlite-zstd" >&2
-  exit 1
-fi
 exec "\$DIR/node" "\$DIR/server.cjs" "\$@"
 `, { mode: 0o755 });
 
 fs.writeFileSync(path.join(distDir, 'miyapad.bat'), `@echo off
 set "DIR=%~dp0"
-set "ZSTD=%DIR%sqlite_zstd.dll"
-if not exist "%ZSTD%" (
-  echo Error: sqlite_zstd.dll not found
-  echo Download from https://github.com/phiresky/sqlite-zstd
-  exit /b 1
-)
 "%DIR%node.exe" "%DIR%server.cjs" %*
 `);
 

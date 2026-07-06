@@ -1,0 +1,3 @@
+[submodule "server/sqlite-zstd"]
+	path = server/sqlite-zstd
+	url = https://github.com/phiresky/sqlite-zstd.git
