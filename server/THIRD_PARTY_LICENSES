@@ -39,3 +39,6 @@ Socket.IO — MIT
 sqlite-zstd — LGPL-3.0
   Copyright (c) 2022 phiresky
   https://github.com/phiresky/sqlite-zstd/blob/master/LICENSE
+  Note: Cargo.toml metadata declares LGPL-2.0-or-later; the LICENSE file
+  bundled in the repository is LGPL-3.0. Pending upstream clarification,
+  we treat this as LGPL-3.0.
