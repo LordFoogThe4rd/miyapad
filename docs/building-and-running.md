@@ -35,20 +35,20 @@ miyapad-dist/
   miyapad.sh / miyapad.bat  # Launch scripts
   node / node.exe           # Node.js binary (from actions/setup-node)
   server.cjs                # esbuild server bundle
+  libsqlite_zstd.*          # sqlite-zstd SQLite extension (bundled)
   dist/                     # Frontend assets (HTML, JS, CSS)
   tokenizers/               # HuggingFace tokenizer model files
   node_modules/             # Pre-installed native addons (sqlite3, tokenizers)
 ```
 
-The user must supply the sqlite-zstd extension (`libsqlite_zstd.so`, `libsqlite_zstd.dylib`, or `sqlite_zstd.dll`) in the same directory. The launch scripts will error with a clear message if it's missing.
+The sqlite-zstd extension is bundled in the distribution.
 
 ### Deploying
 
 On the target machine:
 
 ```bash
-# 1. Place the sqlite-zstd extension alongside the other files
-# 2. Run the launch script
+# Run the launch script
 ./miyapad.sh --port 3000
 ```
 

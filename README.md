@@ -30,13 +30,11 @@ Miyapad is a user-friendly, browser-based interface for interacting with languag
 
 This refactored fork moves from a single monolithic HTML file to a **modular Parcel 2 project** (~60+ files across `src/`). The monolithic `styles.css` is split into 20 component-specific partials under `src/css/`, and global state is managed via **React Context API** (`SettingsContext`, `GenerationContext`) instead of inline global state.
 
-> **Note:** The server requires the `sqlite-zstd` extension (`libsqlite_zstd.so` / `sqlite_zstd.dll` / `libsqlite_zstd.dylib` depending on platform — the server auto-detects the correct one). Obtain it from [sqlite-zstd releases](https://github.com/phiresky/sqlite-zstd/releases) or build from source, then place it in `server/`.
-
 ## Getting Started
 
 Open [miyapad on GitHub Pages](https://lordfoogthe4rd.github.io/miyapad/) or download the pre-compiled `miyapad.html` from [Releases](https://github.com/LordFoogThe4rd/miyapad/releases/latest) and open it in your browser.
 
-For the full server + frontend, download the standalone distribution archive from [Releases](https://github.com/LordFoogThe4rd/miyapad/releases/latest) for your platform, extract, place the sqlite-zstd extension alongside the files, and run the launch script.
+For the full server + frontend, download the standalone distribution archive from [Releases](https://github.com/LordFoogThe4rd/miyapad/releases/latest) for your platform, extract, and run the launch script.
 
 ### Optional Server
 
@@ -44,8 +42,7 @@ For the full server + frontend, download the standalone distribution archive fro
 
 1. Download `miyapad-<platform>-x64.{tar.gz,zip}` from [Releases](https://github.com/LordFoogThe4rd/miyapad/releases/latest)
 2. Extract the archive
-3. Place the sqlite-zstd extension (`libsqlite_zstd.so` / `libsqlite_zstd.dylib` / `sqlite_zstd.dll`) in the same directory
-4. Run `./miyapad.sh` (Linux/macOS) or `miyapad.bat` (Windows)
+3. Run `./miyapad.sh` (Linux/macOS) or `miyapad.bat` (Windows)
 
 No install needed — Node.js and native addons are pre-packaged.
 
