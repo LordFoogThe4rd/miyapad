@@ -23,7 +23,8 @@ const zstdSrc = path.join(root, zstdLibName);
 if (fs.existsSync(zstdSrc)) {
   fs.copyFileSync(zstdSrc, path.join(distDir, zstdLibName));
 } else {
-  console.warn(`Warning: ${zstdLibName} not found, skipping`);
+  console.error(`Error: ${zstdLibName} not found`);
+  process.exit(1);
 }
 
 const copyDir = (src, dest) => {
