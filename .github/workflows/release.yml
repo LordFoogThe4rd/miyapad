@@ -45,6 +45,10 @@ jobs:
         with:
           toolchain: stable
 
+      - uses: Swatinem/rust-cache@42dc69e1aa15d09112580998cf2ef0119e2e91ae
+        with:
+          workspaces: server/sqlite-zstd
+
       - name: Build sqlite-zstd
         working-directory: server/sqlite-zstd
         run: cargo build --release --features build_extension
@@ -52,8 +56,10 @@ jobs:
       - name: Copy sqlite-zstd extension
         working-directory: server
         shell: bash
+        env:
+          PLATFORM: ${{ matrix.platform }}
         run: |
-          case "${{ matrix.platform }}" in
+          case "$PLATFORM" in
             linux) cp sqlite-zstd/target/release/libsqlite_zstd.so . ;;
             macos) cp sqlite-zstd/target/release/libsqlite_zstd.dylib . ;;
             win)   cp sqlite-zstd/target/release/sqlite_zstd.dll . ;;
