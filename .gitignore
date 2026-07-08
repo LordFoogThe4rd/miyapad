@@ -33,6 +33,7 @@ desktop.ini
 
 # Plans, notes, audit logs
 plans/
+knowledge-base/
 
 # Server-specific
 server/node_modules/
