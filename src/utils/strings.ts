@@ -3,7 +3,7 @@ export function joinPrompt(prompt: any) {
 }
 
 export function replaceUnprintableBytes(inputString: any) {
-	const unprintableBytesRegex = /[^\x20-\x7E\u00A0-\uFFFF]/g;
+		const unprintableBytesRegex = /[^\x20-\x7E\u00A0-\uD7FF\uE000-\uFFFF]/g;
 
 	const replacedString = inputString.replace(unprintableBytesRegex, (match: any) => {
 		const charCode = match.charCodeAt(0);
