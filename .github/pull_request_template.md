@@ -16,5 +16,6 @@
 
 - [ ] Build passes (`npm run build`)
 - [ ] Type check passes (`npx tsc --noEmit`)
+- [ ] Tests pass (`npm test`)
 - [ ] Changelog entry added (if user-facing change)
 - [ ] PR title follows conventional commit format (e.g. `feat:`, `fix:`, `test:`, `chore:`)
