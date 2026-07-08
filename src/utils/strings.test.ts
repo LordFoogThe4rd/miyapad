@@ -17,6 +17,19 @@ describe('replaceUnprintableBytes', () => {
 		expect(replaceUnprintableBytes('a' + String.fromCharCode(0) + 'b')).toBe('a<0x00>b');
 		expect(replaceUnprintableBytes('x' + String.fromCharCode(0x1f) + 'y')).toBe('x<0x1F>y');
 	});
+
+	it('passes valid astral characters (surrogate pairs) through unchanged', () => {
+		expect(replaceUnprintableBytes('😀')).toBe('😀');
+		expect(replaceUnprintableBytes('a😀b')).toBe('a😀b');
+	});
+
+	it('escapes lone high surrogates', () => {
+		expect(replaceUnprintableBytes(String.fromCharCode(0xd83d))).toBe('<0xD83D>');
+	});
+
+	it('escapes lone low surrogates', () => {
+		expect(replaceUnprintableBytes(String.fromCharCode(0xde00))).toBe('<0xDE00>');
+	});
 });
 
 describe('replaceNewlines', () => {

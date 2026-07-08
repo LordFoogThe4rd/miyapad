@@ -18,10 +18,10 @@ export function replaceUnprintableBytes(inputString: string): string {
 				result.push(inputString[i] + inputString[i + 1]);
 				i++;
 			} else {
-				result.push(`<0x${code.toString(16).toUpperCase()}>`);
+				result.push(`<0x${code.toString(16).toUpperCase().padStart(2, '0')}>`);
 			}
 		} else {
-			result.push(`<0x${code.toString(16).toUpperCase()}>`);
+			result.push(`<0x${code.toString(16).toUpperCase().padStart(2, '0')}>`);
 		}
 	}
 	return result.join('');
