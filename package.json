@@ -7,7 +7,10 @@
     "prebuild": "npm run clean",
     "build": "parcel build miyapad.html --no-cache",
     "postbuild": "node scripts/inline-dist.mjs && rm -rf .parcel-cache",
-    "build:dist": "npm run build && cd server && npm run build:dist"
+    "build:dist": "npm run build && cd server && npm run build:dist",
+    "test": "vitest run",
+    "test:watch": "vitest",
+    "typecheck": "tsc --noEmit"
   },
   "dependencies": {
     "dompurify": "^3.4.11",
@@ -21,11 +24,15 @@
   },
   "devDependencies": {
     "@parcel/transformer-inline-string": "^2.9.3",
+    "@testing-library/react": "^16.1.0",
     "@types/dompurify": "^3.0.5",
     "@types/react": "^19.2.17",
     "@types/react-dom": "^19.2.3",
+    "@vitest/ui": "^3.0.0",
+    "jsdom": "^25.0.0",
     "parcel": "^2.9.3",
     "process": "^0.11.10",
-    "typescript": "^6.0.3"
+    "typescript": "^6.0.3",
+    "vitest": "^3.0.0"
   }
 }
