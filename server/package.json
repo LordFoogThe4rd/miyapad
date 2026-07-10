@@ -24,6 +24,6 @@
     "@types/minimist": "^1.2.5",
     "esbuild": "^0.25.3",
     "tsx": "^4.22.4",
-    "typescript": "^6.0.3"
+    "typescript": "^7.0.0"
   }
 }

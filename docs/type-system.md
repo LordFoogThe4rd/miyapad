@@ -22,7 +22,6 @@ Three-file inheritance chain:
 
 - **`moduleResolution: "bundler"`** — Allows extensionless imports (Parcel resolves them at build time).
 - **`jsx: "react-jsx"`** — Automatic JSX runtime. Combined with `htm/react`, tagged templates produce React elements.
-- **`baseUrl: "."`** — Import paths are relative to the project root.
 
 ### Server Config (`server/tsconfig.json`)
 

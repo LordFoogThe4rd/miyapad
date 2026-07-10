@@ -4,9 +4,7 @@
     "module": "ESNext",
     "moduleResolution": "bundler",
     "jsx": "react-jsx",
-    "jsxImportSource": "react",
-    "ignoreDeprecations": "6.0",
-    "baseUrl": "."
+    "jsxImportSource": "react"
   },
   "include": ["src/**/*"]
 }
