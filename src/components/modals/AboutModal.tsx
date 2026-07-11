@@ -18,7 +18,7 @@ export function AboutModal({ isOpen, closeModal, isMiyapadEndpoint }: AboutModal
 			isOpen=${isOpen}
 			onClose=${closeModal}
 			title="About miyapad"
-			style=${{ 'max-width': '32em' }}>
+			style=${{ maxWidth: '32em' }}>
 			<div className="vbox" style=${{ gap: '1rem' }}>
 				<div>
 					<strong>Current version:</strong> ${currentVersion}

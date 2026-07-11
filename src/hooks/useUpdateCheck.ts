@@ -41,12 +41,13 @@ export function useUpdateCheck(isMiyapadEndpoint: boolean): UpdateState {
 			let latest: string | null = null;
 			let url = RELEASE_PAGE;
 			if (isMiyapadEndpoint) {
-				const res = await fetch('/version');
+				const res = await fetch('/version', { signal: AbortSignal.timeout(10000) });
+				if (!res.ok) throw new Error(`Server returned ${res.status}`);
 				const data = await res.json();
 				latest = data.latestVersion ?? null;
 				if (data.downloadUrl) url = data.downloadUrl;
 			} else {
-				const res = await fetch(GITHUB_API, { headers: { Accept: 'application/vnd.github+json' } });
+				const res = await fetch(GITHUB_API, { headers: { Accept: 'application/vnd.github+json' }, signal: AbortSignal.timeout(10000) });
 				if (!res.ok) throw new Error(`GitHub API returned ${res.status}`);
 				const data = await res.json();
 				latest = typeof data.tag_name === 'string' ? data.tag_name.replace(/^v/, '') : null;
