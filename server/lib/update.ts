@@ -13,11 +13,11 @@ interface UpdateInfo {
 }
 
 let cache: { at: number; ttl: number; info: UpdateInfo } | null = null;
+let inflight: Promise<UpdateInfo> | null = null;
 
-export async function checkForUpdate(): Promise<UpdateInfo> {
-    if (cache && Date.now() - cache.at < cache.ttl) {
-        return cache.info;
-    }
+const EMPTY: UpdateInfo = { latestVersion: null, downloadUrl: null };
+
+async function fetchUpdate(): Promise<UpdateInfo> {
     try {
         const { data } = await axios.get(RELEASE_URL, {
             headers: { Accept: 'application/vnd.github+json' },
@@ -31,8 +31,27 @@ export async function checkForUpdate(): Promise<UpdateInfo> {
         return info;
     } catch (err) {
         console.error('Update check failed:', (err as Error).message);
-        const info: UpdateInfo = { latestVersion: null, downloadUrl: null };
-        cache = { at: Date.now(), ttl: FAIL_TTL, info };
-        return info;
+        cache = { at: Date.now(), ttl: FAIL_TTL, info: EMPTY };
+        return EMPTY;
+    } finally {
+        inflight = null;
     }
+}
+
+// Coalesced fetch: concurrent cache misses share a single GitHub request.
+export function checkForUpdate(): Promise<UpdateInfo> {
+    if (cache && Date.now() - cache.at < cache.ttl) {
+        return Promise.resolve(cache.info);
+    }
+    inflight ??= fetchUpdate();
+    return inflight;
+}
+
+// Non-blocking: returns cached/stale data immediately and refreshes in the
+// background. Keeps the /version hot path off the 10s GitHub round-trip.
+export function getUpdateInfo(): UpdateInfo {
+    if (!cache || Date.now() - cache.at >= cache.ttl) {
+        void checkForUpdate();
+    }
+    return cache?.info ?? EMPTY;
 }
