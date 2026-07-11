@@ -29,7 +29,8 @@ export async function checkForUpdate(): Promise<UpdateInfo> {
         };
         cache = { at: Date.now(), ttl: TTL, info };
         return info;
-    } catch {
+    } catch (err) {
+        console.error('Update check failed:', (err as Error).message);
         const info: UpdateInfo = { latestVersion: null, downloadUrl: null };
         cache = { at: Date.now(), ttl: FAIL_TTL, info };
         return info;
