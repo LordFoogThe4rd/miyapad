@@ -9,6 +9,8 @@ From the root directory:
 3. Build for production: `npm run build` (Runs `parcel build miyapad.html --no-cache`)
 4. Type-check the frontend: `tsc --noEmit` (validates types without emitting files — Parcel handles transpilation independently)
 
+The `prebuild` and `prestart` hooks run `scripts/write-version.mjs`, which reads the root `package.json` version and writes `src/version.ts` (gitignored) exporting `APP_VERSION`.
+
 ## Backend Server
 
 From the `server/` directory:
@@ -33,6 +35,7 @@ The resulting `miyapad-dist/` folder is the redistributable:
 ```text
 miyapad-dist/
   miyapad.sh / miyapad.bat  # Launch scripts
+  miyapad-update.sh / .ps1  # In-place update scripts (download + extract latest release)
   node / node.exe           # Node.js binary (from actions/setup-node)
   server.cjs                # esbuild server bundle
   libsqlite_zstd.*          # sqlite-zstd SQLite extension (bundled)

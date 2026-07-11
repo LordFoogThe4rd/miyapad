@@ -2,7 +2,7 @@
 
 | Route | Method | Description |
 | :--- | :--- | :--- |
-| `/version` | GET | Returns backend API version (`4`) and features. |
+| `/version` | GET | Returns backend API version (`4`), features, available tokenizers, and update info (`latestVersion`, `downloadUrl`) from a cached GitHub latest-release check. |
 | `/vacuum` | GET | Runs a full SQLite `VACUUM` to compact database storage. |
 | `/zstd_maintenance` | POST | Runs `SELECT zstd_incremental_maintenance(duration, db_load)` with optional `duration` (sec, ≥0 or null) and `dbLoad` (0.0–1.0) from body. Validates both before passing to SQLite. Manually triggers zstd dictionary maintenance. |
 | `/maintenance_config` | GET | Returns the current scheduler/WAL configuration `{ duration, dbLoad, mode, interval, walEnabled }`. |
