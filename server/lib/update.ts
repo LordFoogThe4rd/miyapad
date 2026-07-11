@@ -1,5 +1,8 @@
 import axios from 'axios';
 
+// ponytail: repo slug also lives in src/hooks/useUpdateCheck.ts and the
+// miyapad-update scripts. Not shared config — spans 3 build contexts for a
+// value that never changes; centralize via build-time injection if it does.
 const RELEASE_URL = 'https://api.github.com/repos/lordfoogthe4rd/miyapad/releases/latest';
 const TTL = 60 * 60 * 1000;
 const FAIL_TTL = 5 * 60 * 1000;

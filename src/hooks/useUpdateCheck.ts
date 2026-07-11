@@ -1,6 +1,10 @@
 import { useCallback, useState } from 'react';
 import { APP_VERSION } from '../version';
 
+// ponytail: repo slug is duplicated in server/lib/update.ts and the
+// miyapad-update scripts. Kept inline rather than shared config — it spans
+// 3 build contexts (client/server bundles, shell) for a value that never
+// changes. Centralize via build-time injection if it ever does.
 const GITHUB_API = 'https://api.github.com/repos/lordfoogthe4rd/miyapad/releases/latest';
 const RELEASE_PAGE = 'https://github.com/lordfoogthe4rd/miyapad/releases/latest';
 const REPO_URL = 'https://github.com/lordfoogthe4rd/miyapad';
