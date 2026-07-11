@@ -2,16 +2,17 @@ import axios from 'axios';
 
 const RELEASE_URL = 'https://api.github.com/repos/lordfoogthe4rd/miyapad/releases/latest';
 const TTL = 60 * 60 * 1000;
+const FAIL_TTL = 5 * 60 * 1000;
 
 interface UpdateInfo {
     latestVersion: string | null;
     downloadUrl: string | null;
 }
 
-let cache: { at: number; info: UpdateInfo } | null = null;
+let cache: { at: number; ttl: number; info: UpdateInfo } | null = null;
 
 export async function checkForUpdate(): Promise<UpdateInfo> {
-    if (cache && Date.now() - cache.at < TTL) {
+    if (cache && Date.now() - cache.at < cache.ttl) {
         return cache.info;
     }
     try {
@@ -23,9 +24,11 @@ export async function checkForUpdate(): Promise<UpdateInfo> {
             latestVersion: typeof data.tag_name === 'string' ? data.tag_name.replace(/^v/, '') : null,
             downloadUrl: typeof data.html_url === 'string' ? data.html_url : null
         };
-        cache = { at: Date.now(), info };
+        cache = { at: Date.now(), ttl: TTL, info };
         return info;
     } catch {
-        return { latestVersion: null, downloadUrl: null };
+        const info: UpdateInfo = { latestVersion: null, downloadUrl: null };
+        cache = { at: Date.now(), ttl: FAIL_TTL, info };
+        return info;
     }
 }
