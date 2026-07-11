@@ -24,8 +24,18 @@ if (-not (Test-Path $archive) -or (Get-Item $archive).Length -eq 0) {
 }
 
 $dir = Split-Path -Parent $MyInvocation.MyCommand.Path
-Write-Host "Extracting into $dir"
-Expand-Archive -Path $archive -DestinationPath $dir -Force
-Remove-Item $archive -Force
+$stage = Join-Path $env:TEMP ("miyapad-stage-" + [System.Guid]::NewGuid().ToString('N'))
+# ponytail: extract to staging first so a bad/interrupted archive can't
+# half-overwrite the live install. Trusted GitHub source, no rollback.
+try {
+	Write-Host 'Staging update...'
+	Expand-Archive -Path $archive -DestinationPath $stage -Force
+	Write-Host "Installing into $dir"
+	Copy-Item -Path (Join-Path $stage '*') -Destination $dir -Recurse -Force
+}
+finally {
+	Remove-Item $archive -Force -ErrorAction SilentlyContinue
+	Remove-Item $stage -Recurse -Force -ErrorAction SilentlyContinue
+}
 
 Write-Host 'Update complete. Restart miyapad to apply.'

@@ -36,7 +36,8 @@ if [ -z "$ASSET_URL" ]; then
 fi
 
 ARCHIVE="$(mktemp "${TMPDIR:-/tmp}/miyapad-update.XXXXXX")"
-trap 'rm -f "$ARCHIVE"' EXIT
+STAGE="$(mktemp -d "${TMPDIR:-/tmp}/miyapad-stage.XXXXXX")"
+trap 'rm -rf "$ARCHIVE" "$STAGE"' EXIT
 echo "Downloading $ASSET_URL"
 curl -fSL "$ASSET_URL" -o "$ARCHIVE"
 
@@ -46,7 +47,12 @@ if [ ! -s "$ARCHIVE" ]; then
 fi
 
 DIR="$(CDPATH='' cd -- "$(dirname -- "$0")" && pwd -P)"
-echo "Extracting into $DIR"
-tar -xzf "$ARCHIVE" -C "$DIR"
+# ponytail: extract to staging first so a bad/interrupted archive can't
+# half-overwrite the live install. Trusted GitHub source, no rollback;
+# add rollback + path-entry validation if updates ever come from mirrors.
+echo "Staging update..."
+tar -xzf "$ARCHIVE" -C "$STAGE"
+echo "Installing into $DIR"
+cp -R "$STAGE"/. "$DIR"/
 
 echo "Update complete. Restart miyapad to apply."
