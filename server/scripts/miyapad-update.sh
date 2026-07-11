@@ -6,11 +6,13 @@ API="https://api.github.com/repos/$REPO/releases/latest"
 
 case "$(uname -s)" in
 	Darwin) OS="macos" ;;
-	*)      OS="linux" ;;
+	Linux)  OS="linux" ;;
+	*)      echo "Unsupported operating system." >&2; exit 1 ;;
 esac
 case "$(uname -m)" in
 	arm64|aarch64) ARCH="arm64" ;;
-	*)             ARCH="x64" ;;
+	x86_64|amd64)  ARCH="x64" ;;
+	*)             echo "Unsupported architecture." >&2; exit 1 ;;
 esac
 PLATFORM="$OS-$ARCH"
 
@@ -33,7 +35,8 @@ if [ -z "$ASSET_URL" ]; then
 	exit 1
 fi
 
-ARCHIVE="/tmp/miyapad-update.tar.gz"
+ARCHIVE="$(mktemp "${TMPDIR:-/tmp}/miyapad-update.XXXXXX")"
+trap 'rm -f "$ARCHIVE"' EXIT
 echo "Downloading $ASSET_URL"
 curl -fSL "$ASSET_URL" -o "$ARCHIVE"
 
@@ -45,6 +48,5 @@ fi
 DIR="$(CDPATH='' cd -- "$(dirname -- "$0")" && pwd -P)"
 echo "Extracting into $DIR"
 tar -xzf "$ARCHIVE" -C "$DIR"
-rm -f "$ARCHIVE"
 
 echo "Update complete. Restart miyapad to apply."
