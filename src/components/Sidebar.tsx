@@ -880,6 +880,7 @@ export function Sidebar({ sidebarRef, toggleModal, currentThemeName, setCurrentT
 				</button>
 			</div>
 			<button
+				title="About"
 				onClick=${() => toggleModal("about")}>
 				About
 			</button>
