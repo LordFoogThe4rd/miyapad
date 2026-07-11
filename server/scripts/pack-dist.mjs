@@ -40,6 +40,10 @@ fs.copyFileSync(path.join(root, '..', 'LICENSE'), path.join(distDir, 'LICENSE'))
 
 fs.copyFileSync(path.join(root, 'THIRD_PARTY_LICENSES'), path.join(distDir, 'THIRD_PARTY_LICENSES'));
 
+fs.copyFileSync(path.join(__dirname, 'miyapad-update.sh'), path.join(distDir, 'miyapad-update.sh'));
+fs.chmodSync(path.join(distDir, 'miyapad-update.sh'), 0o755);
+fs.copyFileSync(path.join(__dirname, 'miyapad-update.ps1'), path.join(distDir, 'miyapad-update.ps1'));
+
 fs.writeFileSync(path.join(distDir, 'miyapad.sh'), `#!/bin/sh
 set -e
 DIR="\$(CDPATH='' cd -- "\$(dirname -- "\$0")" && pwd -P)"

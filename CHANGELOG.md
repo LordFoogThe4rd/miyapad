@@ -1,5 +1,11 @@
 # Changelog
 
+## [???] - unreleased
+
+### Added
+- About dialog showing the current version, with a "Check for Updates" button that reports the latest release and links to the download
+- Bundled `miyapad-update.sh` / `miyapad-update.ps1` scripts in server distributions for one-command updates
+
 ## [2.5.3] - 2026-07-03
 
 ### Fixed

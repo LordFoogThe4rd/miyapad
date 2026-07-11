@@ -5,6 +5,9 @@ node_modules/
 dist/
 .parcel-cache/
 
+# Generated version file
+src/version.ts
+
 # Databases (SQLite)
 *.db
 *.db-journal
