@@ -879,6 +879,11 @@ export function Sidebar({ sidebarRef, toggleModal, currentThemeName, setCurrentT
 					<${SVG_MobileSidebar}/>
 				</button>
 			</div>
+			<button
+				title="About"
+				onClick=${() => toggleModal("about")}>
+				About
+			</button>
 			${!!lastError && html`
 				<span className="error-text">${lastError}</span>`}
 		</div>

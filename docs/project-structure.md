@@ -6,6 +6,8 @@ miyapad/
 │   ├── release.yml                # Build & attach to GitHub Release on v* tags
 │   └── pages.yml                  # Deploy to GitHub Pages on v* tags
 ├── dist/                          # Frontend production build output
+├── scripts/                       # Root build scripts
+│   └── write-version.mjs          # Generates src/version.ts from package.json (prebuild/prestart)
 ├── server/dist-server/            # esbuild server bundle output (generated)
 ├── server/miyapad-dist/           # Standalone distribution folder (generated)
 ├── miyapad.html                   # HTML entry point (loads src/main.tsx as module)
@@ -17,6 +19,7 @@ miyapad/
 │   │   ├── auth.ts                # Basic Auth middleware factory
 │   │   ├── backup.ts              # Auto-backup with VACUUM INTO, data_version check, rotation
 │   │   ├── database.ts            # DB connection, migrations, zstd setup, maintenance
+│   │   ├── update.ts              # Cached GitHub latest-release check for the update feature
 │   │   └── utils.ts               # Helpers (column names, compression, header filters)
 │   ├── routes/                    # Express route handlers by concern
 │   │   ├── data.ts                # /load, /save, /rename, /all, /sessions, /delete
@@ -25,7 +28,9 @@ miyapad/
 │   │   ├── tokenizer.ts           # /api/v1/tokenizer/* endpoints
 │   │   └── zstd.ts                # /zstd_* management endpoints
 │   ├── scripts/                   # Build scripts
-│   │   └── pack-dist.mjs          # Assembles miyapad-dist/ with node binary, bundle, deps, launch scripts
+│   │   ├── pack-dist.mjs          # Assembles miyapad-dist/ with node binary, bundle, deps, launch + update scripts
+│   │   ├── miyapad-update.sh      # POSIX in-place updater (Linux/macOS)
+│   │   └── miyapad-update.ps1     # PowerShell in-place updater (Windows)
 │   ├── server.ts                  # Entrypoint: arg parsing, app setup, mount routes, start
 │   ├── tokenizer.ts               # Server-side tokenization (HuggingFace tokenizers)
 │   ├── types/                     # Ambient type declarations for the server
@@ -41,6 +46,7 @@ miyapad/
     ├── constants.ts               # Application-wide constants and enum definitions
     ├── main.tsx                   # Entry point; detects database adapter and renders
     ├── polyfills.ts               # Browser polyfills
+    ├── version.ts                 # Generated (gitignored) — exports APP_VERSION from package.json
     ├── worldinfo.ts               # World info / lorebook data structures
     ├── api/                       # API modules for backends (.ts)
     ├── components/                # React components (Modals, Sidebar, controls, icons — .tsx)

@@ -1,10 +1,12 @@
 {
   "name": "miyapad",
+  "version": "2.5.3",
   "source": "miyapad.html",
   "scripts": {
+    "prestart": "node scripts/write-version.mjs",
     "start": "parcel",
     "clean": "rm -rf dist .parcel-cache",
-    "prebuild": "npm run clean",
+    "prebuild": "node scripts/write-version.mjs && npm run clean",
     "build": "parcel build miyapad.html --no-cache",
     "postbuild": "node scripts/inline-dist.mjs && rm -rf .parcel-cache",
     "build:dist": "npm run build && cd server && npm run build:dist",

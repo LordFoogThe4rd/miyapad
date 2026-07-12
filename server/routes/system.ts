@@ -2,15 +2,19 @@ import type { Express, Request, Response } from 'express';
 import type { Database } from 'sqlite3';
 import * as tokenizer from '../tokenizer.js';
 import { runZstdMaintenance, configureWAL, getMaintenanceConfig, saveMaintenanceConfig, clearMaintenanceScheduler, scheduleZstdMaintenance } from '../lib/database.js';
+import { getUpdateInfo } from '../lib/update.js';
 
 const SERVER_VERSION = 4;
 
 export default function(app: Express, db: Database): void {
     app.get('/version', (req: Request, res: Response) => {
+        const update = getUpdateInfo();
         res.json({
             version: SERVER_VERSION,
             features: { zstd_compression: true, server_tokenizer: true },
-            tokenizers: tokenizer.getAvailableTokenizers()
+            tokenizers: tokenizer.getAvailableTokenizers(),
+            latestVersion: update.latestVersion,
+            downloadUrl: update.downloadUrl
         });
     });
 

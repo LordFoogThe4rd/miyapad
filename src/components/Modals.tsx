@@ -23,6 +23,7 @@ import { AIHordeSettingsModal } from './modals/AIHordeSettingsModal';
 import { CompressionInfoModal } from './modals/CompressionInfoModal';
 import { ConnectionManagerModal } from './modals/ConnectionManagerModal';
 import { SessionsModal } from './modals/SessionsModal';
+import { AboutModal } from './modals/AboutModal';
 import { QuickSwitcher } from './QuickSwitcher';
 import { EditorContextMenu } from './EditorContextMenu';
 import type { ModalsProps } from '../types/components';
@@ -354,6 +355,11 @@ export function Modals({ toggleModal, currentThemeName, setCurrentThemeName, all
 			closeModal=${() => closeModal("sessions")}
 			sessionStorage=${sessionStorage}
 			cancel=${cancel}/>
+
+		<${AboutModal}
+			isOpen=${modalState.about}
+			closeModal=${() => closeModal("about")}
+			isMiyapadEndpoint=${isMiyapadEndpoint}/>
 
 		<${QuickSwitcher}
 			isOpen=${modalState.quickSwitcher}
