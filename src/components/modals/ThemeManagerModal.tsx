@@ -107,7 +107,7 @@ export function ThemeManagerModal({ isOpen, closeModal, allThemes, setAllThemes,
         while (allThemes.hasOwnProperty(newName) || defaultThemes.hasOwnProperty(newName)) {
             newName = t('themeManager.newThemeDefaultNameWithCounter', { counter: ++counter });
         }
-		const className = newName.toLowerCase().replace(/[^a-z0-9]+/g, '-').replace(/^-|-$/g, '');
+		const className = `t${Date.now().toString(36)}-${Math.random().toString(36).slice(2, 6)}`;
 
         setAllThemes((prevThemes: any) => {
             const maxOrder = Math.max(0, ...Object.values(prevThemes).map((t: any) => t.order ?? 0));
