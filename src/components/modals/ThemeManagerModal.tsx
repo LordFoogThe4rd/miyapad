@@ -105,7 +105,7 @@ export function ThemeManagerModal({ isOpen, closeModal, allThemes, setAllThemes,
         let newName = t('themeManager.newThemeDefaultName');
         let counter = 1;
         while (allThemes.hasOwnProperty(newName) || defaultThemes.hasOwnProperty(newName)) {
-            newName = `${t('themeManager.newThemeDefaultName')} ${++counter}`;
+            newName = t('themeManager.newThemeDefaultNameWithCounter', { counter: ++counter });
         }
 		const className = newName.toLowerCase().replace(/[^a-z0-9]+/g, '-').replace(/^-|-$/g, '');
 

@@ -475,6 +475,7 @@
   "themeManager.importTheme": "Import Theme",
   "themeManager.new": "New",
   "themeManager.newThemeDefaultName": "New Theme",
+  "themeManager.newThemeDefaultNameWithCounter": "New Theme {{counter}}",
   "themeManager.newTitle": "New Theme",
   "themeManager.reAddDefaults": "Re-Add Defaults",
   "themeManager.reAddDefaultsConfirm": "This will restore all default themes and overwrite any of your themes that share the same name. Are you sure?",
