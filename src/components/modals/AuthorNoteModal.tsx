@@ -25,7 +25,6 @@ export function AuthorNoteModal({ isOpen, closeModal, authorNoteTokens, handleau
 					<textarea
 						readOnly=${!!cancel}
 						placeholder=${t('authorNote.placeholder', { depth: authorNoteDepth })}
-						defaultValue=${authorNoteTokens.text}
 						value=${authorNoteTokens.text}
 						onInput=${(e: any) => handleauthorNoteTokensChange("text", e.target.value) }
 						class="expanded-text-area-settings"

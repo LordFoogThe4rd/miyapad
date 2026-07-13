@@ -36,7 +36,7 @@ export function useT() {
 		let result: string = strings[key] ?? key;
 		if (params) {
 			for (const [k, v] of Object.entries(params)) {
-				result = result.replaceAll(`{{${k}}}`, String(v));
+				result = result.replaceAll(`{{${k}}}`, () => String(v));
 			}
 		}
 		return result;
