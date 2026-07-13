@@ -4,6 +4,7 @@ import { Modal } from '../Modal';
 import { InputBox } from '../controls/InputBox';
 import { API_LLAMA_CPP, API_KOBOLD_CPP, API_AI_HORDE, API_OPENAI_COMPAT, API_DEEPSEEK } from '../../constants';
 import { getTokens, serverTokenize } from '../../api/index';
+import { useT } from '../../i18n';
 
 type TokenizeResult = { ids: number[]; str: string | string[] };
 
@@ -17,6 +18,7 @@ type BiasItem = {
 type BiasTempState = { positive: BiasItem[]; negative: BiasItem[]; [key: string]: BiasItem[] };
 
 export function LogitBiasModal({ isOpen, closeModal, biasState, apiConfig, cancel }: any) {
+	const t = useT();
 	const { logitBias, setLogitBias, logitBiasParam, setLogitBiasParam, setRejectedAPIKey } = biasState;
 	const { sessionStorage, endpoint, endpointAPI, endpointAPIKey, isMiyapadEndpoint, useServerTokenization } = apiConfig;
 	const [lastBiasError, setLastBiasError] = useState<string | undefined>(undefined);
@@ -40,7 +42,7 @@ export function LogitBiasModal({ isOpen, closeModal, biasState, apiConfig, cance
 			return;
 		}
 		if (isNaN(+biasPower) || biasPower == "") { 
-			setLastBiasError("Error: Bias must be a number");
+			setLastBiasError(t('logitBias.errorBiasMustBeNumber'));
 			return;
 		}
 		const biasPowerNum = Number(biasPower);
@@ -50,7 +52,7 @@ export function LogitBiasModal({ isOpen, closeModal, biasState, apiConfig, cance
 		// delete entry if power 0 or empty
 		if (biasPowerNum == 0) {	
 			if (!logitBias.bias[biasString]) {
-				setLastBiasError("Error: Bias 0 = no Bias");
+				setLastBiasError(t('logitBias.errorBiasZero'));
 				return;
 			}
 			console.log("delete",biasString);
@@ -83,17 +85,6 @@ export function LogitBiasModal({ isOpen, closeModal, biasState, apiConfig, cance
 			}
 			// else process like normal
 			else {
-				// KNOWN ISSUE: some models automatically prepend a space to any tokenization 
-				// input. to work around this, I'm prepending the input with a "!==", then 
-				// slicing the output array by the number of tokens of "!==".
-				// This could cause issues when trying to bias a token starting with ? where
-				// ? is any character that forms a single token together with " !==", like 
-				// this: " !==?" I've chosen "!==" because it seems to be a very conserved
-				// token between models.
-				//
-				// Now granted, I have not found any strings where this is actually an issue in 
-				// the tokenizers of the models I use, but this is still a huge hackjob of a 
-				// workaround. If anyone can think of a better solution, please let me know.
 			const useServerTk = useServerTokenization && isMiyapadEndpoint && sessionStorage?.sessionEndpoint;
 			const serverEp = sessionStorage?.sessionEndpoint;
 			const tokenResult = await (useServerTk
@@ -108,7 +99,7 @@ export function LogitBiasModal({ isOpen, closeModal, biasState, apiConfig, cance
 				})
 			) as TokenizeResult | [];
 			if (Array.isArray(tokenResult)) {
-				setLastBiasError("Error: Tokenizer endpoint unavailable.");
+				setLastBiasError(t('logitBias.errorTokenizerUnavailable'));
 				return;
 			}
 			tokens = tokenResult;
@@ -151,10 +142,10 @@ export function LogitBiasModal({ isOpen, closeModal, biasState, apiConfig, cance
 				reportError(e);
 				const errStr = String(e);
 				if ((endpointAPI == API_OPENAI_COMPAT || endpointAPI == API_LLAMA_CPP || endpointAPI == API_DEEPSEEK) && errStr.includes("401")) {
-					setLastBiasError("Error: Rejected API Key");
+					setLastBiasError(t('logitBias.errorRejectedApiKey'));
 					setRejectedAPIKey(true);
 				} else if ((endpointAPI == API_OPENAI_COMPAT || endpointAPI == API_DEEPSEEK) && errStr.includes("429")) {
-					setLastBiasError("Error: Insufficient Quota");
+					setLastBiasError(t('logitBias.errorInsufficientQuota'));
 				} else {
 					setLastBiasError(errStr);
 				}
@@ -272,28 +263,24 @@ export function LogitBiasModal({ isOpen, closeModal, biasState, apiConfig, cance
 
 	return html`
 		<${Modal} isOpen=${isOpen} onClose=${closeModal}
-			title="Logit Bias"
-			description="Make certain tokens more or less likely to be generated. Recommended ranges are 100 to -100, with -100 being a total ban of the token.
-			Note: Multi-token strings will apply the bias globally to all constituent tokens, not as a sequence-aware phrase bias.
-			You can bias IDs directly in a comma separated list, wrapped in '/'. Example: /382,1449,1802/
-
-			Different models might tokenize words differently. Always Re-Tokenize your biases when switching models by pressing the '+' button again for every entry.">
+			title=${t('logitBias.title')}
+			description=${t('logitBias.description')}>
 			${isOpen 
 				&& html`
 					<div className="hbox-flex logitBiasContainer">
 						<div class="small-inputBox">
-							<${InputBox} label="Bias" className="logitBiasPower-container"
+							<${InputBox} label=${t('logitBias.bias')} className="logitBiasPower-container"
 								type="enumber"  max=100 min=-100 step=1
 								readOnly=${!!cancel}
 								onValueChange=${(value: any) => { handleLogitBiasInput("power",value)} }
 								value=${logitBiasInput.power} 
 								id="logitBiasPower"/>
 						</div>
-						<${InputBox} label="Token" type="text"
-							tooltip="Currently, only the first token of multi-token strings will be biased."
+						<${InputBox} label=${t('logitBias.token')} type="text"
+							tooltip=${t('logitBias.tokenTooltip')}
 							readOnly=${!!cancel}
 							value=${logitBiasInput.string}
-							placeholder="String or /ID,.../"
+							placeholder=${t('logitBias.tokenPlaceholder')}
 							onValueChange=${() => {} }
 							onInput=${(e: any) => {handleLogitBiasInput("string",e.target.value)} }
 							/>
@@ -311,18 +298,18 @@ export function LogitBiasModal({ isOpen, closeModal, biasState, apiConfig, cance
 								${logitBiasTemp[key].map((bias: any, index: any) => {
 									return html`
 										<div class="lb-modal-entry lb-modal-grid-row" key=${index}>
-											<${InputBox} label="Bias" class="lb-modal-power"
+											<${InputBox} label=${t('logitBias.bias')} class="lb-modal-power"
 												type="enumber" max=100 min=-100 step=1
 												id="lb-modal-power-${index}"
 												readOnly=${!!cancel}
 												onValueChange=${(value: any) => {handleBiasTempChange(key,"power", index, value)} }
 												value=${bias.power}/>
 
-											<${InputBox} label="Token" type="text"
-												tooltip="Currently, only the first token of multi-token strings will be biased."
+											<${InputBox} label=${t('logitBias.token')} type="text"
+												tooltip=${t('logitBias.tokenTooltip')}
 												readOnly=${!!cancel}
 												value=${bias.value}
-												placeholder="String or /ID,.../"
+												placeholder=${t('logitBias.tokenPlaceholder')}
 												onValueChange=${() => {} }
 												onInput=${(e: any) => handleBiasTempChange(key,"value", index, e.target.value) }
 												/>

@@ -8,6 +8,7 @@ import { useTTS } from '../hooks/useTTS';
 import { useGenerationLogic } from '../hooks/useGenerationLogic';
 import { exportText } from '../api/common';
 import { defaultPresets } from '../defaults/presets';
+import { useT } from '../i18n';
 import { PreferencesModal } from './modals/PreferencesModal';
 import { MemoryModal } from './modals/MemoryModal';
 import { AuthorNoteModal } from './modals/AuthorNoteModal';
@@ -29,7 +30,8 @@ import { EditorContextMenu } from './EditorContextMenu';
 import type { ModalsProps } from '../types/components';
 
 export function Modals({ toggleModal, currentThemeName, setCurrentThemeName, allThemes, setAllThemes, applyChatTemplate }: ModalsProps) {
-	const { endpoint, setEndpointAPIKey, endpointAPIKey, endpointAPI, endpointModel, setEndpointModel, templates, selectedTemplate, setSelectedTemplate, templatesImport, setTemplates, templateStorage, grammar, setGrammar, isMiyapadEndpoint, sessionStorage, fontSizeMultiplier, setFontSizeMultiplier, spellCheck, setSpellCheck, attachSidebar, setAttachSidebar, preserveCursorPosition, setPreserveCursorPosition, tokenHighlightMode, setTokenHighlightMode, tokenColorMode, setTokenColorMode, showProbsMode, setShowProbsMode, ttsEnabled, setTTSEnabled, ttsVoiceId, setTTSVoiceId, ttsPitch, setTTSPitch, ttsRate, setTTSRate, ttsVolume, setTTSVolume, ttsSpeakInputs, setTTSSpeakInputs, ttsMaxUserInput, setTTSMaxUserInput, useChatAPI, setUseChatAPI, memoryTokens, authorNoteTokens, authorNoteDepth, setAuthorNoteDepth, worldInfo, setWorldInfo, sillyTarvernWorldInfoJSON, setSillyTarvernWorldInfoJSON, logitBias, setLogitBias, logitBiasParam, setLogitBiasParam, templateList, setTemplateList,
+	const t = useT();
+	const { endpoint, setEndpointAPIKey, endpointAPIKey, endpointAPI, endpointModel, setEndpointModel, templates, selectedTemplate, setSelectedTemplate, templatesImport, setTemplates, templateStorage, grammar, setGrammar, isMiyapadEndpoint, sessionStorage, locale, setLocale, fontSizeMultiplier, setFontSizeMultiplier, spellCheck, setSpellCheck, attachSidebar, setAttachSidebar, preserveCursorPosition, setPreserveCursorPosition, tokenHighlightMode, setTokenHighlightMode, tokenColorMode, setTokenColorMode, showProbsMode, setShowProbsMode, ttsEnabled, setTTSEnabled, ttsVoiceId, setTTSVoiceId, ttsPitch, setTTSPitch, ttsRate, setTTSRate, ttsVolume, setTTSVolume, ttsSpeakInputs, setTTSSpeakInputs, ttsMaxUserInput, setTTSMaxUserInput, useChatAPI, setUseChatAPI, memoryTokens, authorNoteTokens, authorNoteDepth, setAuthorNoteDepth, worldInfo, setWorldInfo, sillyTarvernWorldInfoJSON, setSillyTarvernWorldInfoJSON, logitBias, setLogitBias, logitBiasParam, setLogitBiasParam, templateList, setTemplateList,
 		screenshotIncludeSessionName, setScreenshotIncludeSessionName,
 		screenshotIncludeDate, setScreenshotIncludeDate,
 		screenshotBackgroundUrl, setScreenshotBackgroundUrl,
@@ -63,12 +65,12 @@ export function Modals({ toggleModal, currentThemeName, setCurrentThemeName, all
 			exportText('miyapad_db_export.json', jsonString);
 		} catch (error) {
 			console.error('Failed to export database:', error);
-			alert('Failed to export database. See console for details.');
+			alert(t('modals.exportDbError'));
 		}
 	};
 
 	const handleImportDB = () => {
-		if (!confirm('This will overwrite your current database and reload the page. Are you sure you want to continue?')) {
+		if (!confirm(t('modals.importDbConfirm'))) {
 			return;
 		}
 		const fileInput = document.createElement('input');
@@ -88,7 +90,7 @@ export function Modals({ toggleModal, currentThemeName, setCurrentThemeName, all
 					window.location.reload();
 				} catch (error) {
 					console.error('Failed to import database:', error);
-					alert('Failed to import database. Make sure the file is a valid export. See console for details.');
+					alert(t('modals.importDbError'));
 				}
 			};
 			reader.readAsText(file);
@@ -190,6 +192,7 @@ export function Modals({ toggleModal, currentThemeName, setCurrentThemeName, all
 			isOpen=${modalState.preferences}
 			closeModal=${() => closeModal("preferences")}
 			settings=${{
+				locale, setLocale,
 				fontSizeMultiplier, setFontSizeMultiplier,
 		spellCheck, setSpellCheck,
 		attachSidebar, setAttachSidebar,
@@ -374,7 +377,7 @@ export function Modals({ toggleModal, currentThemeName, setCurrentThemeName, all
 			y=${contextMenuState.y}
 			menuItems=${[
 				{
-					label: 'Instruct Here...',
+					label: t('modals.instructHere'),
 					action: () => {
 						const elem = promptArea.current;
 						if (!elem)
@@ -394,7 +397,7 @@ export function Modals({ toggleModal, currentThemeName, setCurrentThemeName, all
 					disabled: false
 				},
 				{
-					label: 'Predict Here',
+					label: t('modals.predictHere'),
 					action: () => {
 						const elem = promptArea.current;
 						if (!elem)
@@ -420,7 +423,7 @@ export function Modals({ toggleModal, currentThemeName, setCurrentThemeName, all
 					disabled: false
 				},
 				{
-					label: 'Fill-In-The-Middle Here',
+					label: t('modals.fillInTheMiddleHere'),
 					action: () => {
 						const elem = promptArea.current;
 						if (!elem)
@@ -441,10 +444,10 @@ export function Modals({ toggleModal, currentThemeName, setCurrentThemeName, all
 					disabled: templates[selectedTemplate]?.fimTemplate === undefined || templates[selectedTemplate]?.fimTemplate.length === 0
 				},
 				{
-					label: 'Insert...',
+					label: t('modals.insert'),
 					subItems: [
-						{ 'label': 'System Template', action: () => insertTemplate("sys"), disabled: false },
-						{ 'label': 'Instruct Template', action: () => insertTemplate("inst"), disabled: false },
+						{ 'label': t('modals.systemTemplate'), action: () => insertTemplate("sys"), disabled: false },
+						{ 'label': t('modals.instructTemplate'), action: () => insertTemplate("inst"), disabled: false },
 					],
 					disabled: false
 				},

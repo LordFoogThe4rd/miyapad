@@ -13,6 +13,7 @@ import { useSessionState } from './hooks/useSessionState';
 import { useStorageState } from './hooks/useStorageState';
 import { CrashScreenFallback } from './components/CrashScreenFallback';
 import { App } from './App';
+import en from './i18n/en.json';
 
 async function main() {
 	let dbAdapter: IndexedDBAdapter | ServerDBAdapter = new IndexedDBAdapter();
@@ -47,7 +48,7 @@ async function main() {
     await connectionStorage.init();
 
 	const rootEl = document.getElementById('root');
-	if (!rootEl) throw new Error('Root element not found');
+	if (!rootEl) throw new Error(en['main.rootNotFound']);
 	const boundUseSessionState = <T,>(name: string, initialState: T) => useSessionState(sessionStorage, name, initialState);
 
 	createRoot(rootEl).render(html`

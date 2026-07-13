@@ -1,5 +1,6 @@
 import { html } from 'htm/react';
 import { useState, useEffect, useRef } from 'react';
+import { useT } from '../../i18n';
 import { Modal } from '../Modal';
 import { Checkbox } from '../controls/Checkbox';
 import type { InstructModalState } from '../../types/contexts';
@@ -19,6 +20,7 @@ interface InstructModalProps {
 }
 
 export function InstructModal({ isOpen, closeModal, predict, cancel, modalState, templates, selectedTemplate, lastError, sessionEndpointConnecting, predictStartTokens, tokens }: InstructModalProps) {
+	const t = useT();
 	const [prompt, setPrompt] = useState("");
 	const [includeContext, setIncludeContext] = useState(true);
 	const [result, setResult] = useState("");
@@ -116,21 +118,21 @@ export function InstructModal({ isOpen, closeModal, predict, cancel, modalState,
 
     return html`
         <${Modal} isOpen=${isOpen} onClose=${closeModal}
-            title="Instruct"
-            description="Instruct the language model without directly modifying the existing prompt text.\\nYou can incorporate any selected text by using the placeholder '{selectedText}' in your prompt.">
+            title=${t('instruct.title')}
+            description=${t('instruct.description')}>
             ${isOpen && html`
                 <div className="vbox instruct-modal-container">
                     <textarea
-                        label="Prompt"
+                        label=${t('instruct.prompt')}
 						autoFocus
 						style=${{height: "200px"}}
                         value=${prompt}
                         onChange=${(e: Event) => setPrompt((e.target as HTMLTextAreaElement).value)}
-                        placeholder="Enter your prompt here..."
+                        placeholder=${t('instruct.placeholder')}
 						className="wi-textarea"
 						readOnly=${!!cancel}/>
 
-					<${Checkbox} label="Include Context"
+					<${Checkbox} label=${t('instruct.includeContext')}
 						value=${includeContext}
 						onValueChange=${(v: boolean) => setIncludeContext(v)}/>
 
@@ -138,20 +140,20 @@ export function InstructModal({ isOpen, closeModal, predict, cancel, modalState,
 						${!cancel && html`
 							<button
 								onClick=${handlePredictInModal}>
-								Predict
+								${t('instruct.predict')}
 							</button>`}
 						${cancel && html`
 							<button
 								onClick=${() => cancel()}
 								className=${cancel !== null && !sessionEndpointConnecting ? (predictStartTokens === tokens ? 'processing' : 'completing') : ''}>
-								Cancel
+								${t('instruct.cancel')}
 							</button>`}
 						${!!lastError && html`
 							<span className="error-text">${lastError}</span>`}
                     </div>
 
 					<textarea
-						label="Result"
+						label=${t('instruct.result')}
 						style=${{height: "200px"}}
 						value=${result}
 						onChange=${(e: Event) => setResult((e.target as HTMLTextAreaElement).value)}
@@ -161,13 +163,13 @@ export function InstructModal({ isOpen, closeModal, predict, cancel, modalState,
 					<button
 						onClick=${() => finish(false)}
 						disabled=${!!cancel}>
-						Insert At Cursor
+						${t('instruct.insertAtCursor')}
 					</button>
 
 					<button
 						onClick=${() => finish(true)}
 						disabled=${!modalState.selectedText || !!cancel}>
-						Replace Selected
+						${t('instruct.replaceSelected')}
 					</button>
                 </div>
             `}

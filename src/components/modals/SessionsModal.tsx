@@ -5,6 +5,7 @@ import { InputBox } from '../controls/InputBox';
 import { SelectBox } from '../controls/SelectBox';
 import { SVG_Confirm, SVG_Cancel, SVG_Rename, SVG_Trash, SVG_Star, SVG_StarOutline } from '../icons/index';
 import { exportText } from '../../api/common';
+import { useT } from '../../i18n';
 import type { SessionStorage } from '../../storage/SessionStorage';
 
 interface SessionsModalProps {
@@ -12,13 +13,6 @@ interface SessionsModalProps {
   closeModal: () => void;
   sessionStorage: SessionStorage;
   cancel: (() => void) | null;
-}
-
-function formatDate(ts: number | null | undefined) {
-	if (!ts) return '—';
-	const d = new Date(ts);
-	const pad = (n: number) => String(n).padStart(2, '0');
-	return `${d.getFullYear()}-${pad(d.getMonth() + 1)}-${pad(d.getDate())} ${pad(d.getHours())}:${pad(d.getMinutes())}`;
 }
 
 type TagGroup = Array<{ pattern: string; negate: boolean; regex: RegExp | null }>;
@@ -93,6 +87,15 @@ export function SessionsModal({ isOpen, closeModal, sessionStorage, cancel }: Se
 			return next;
 		});
 	};
+
+	const t = useT();
+
+	function formatDate(ts: number | null | undefined) {
+		if (!ts) return t('sessions.noDate');
+		const d = new Date(ts);
+		const pad = (n: number) => String(n).padStart(2, '0');
+		return `${d.getFullYear()}-${pad(d.getMonth() + 1)}-${pad(d.getDate())} ${pad(d.getHours())}:${pad(d.getMinutes())}`;
+	}
 
 	useEffect(() => {
 		const incrementVersion = () => setVersion(v => v + 1);
@@ -173,7 +176,7 @@ export function SessionsModal({ isOpen, closeModal, sessionStorage, cancel }: Se
 	};
 
 	const startCreateSession = () => {
-		setNewSessionName(`MiyaPad #${(sessionStorage.nextId ?? 0) + 1}`);
+		setNewSessionName(`${t('sessions.defaultNamePrefix')}${(sessionStorage.nextId ?? 0) + 1}`);
 		setIsCreating(true);
 	};
 
@@ -235,7 +238,7 @@ export function SessionsModal({ isOpen, closeModal, sessionStorage, cancel }: Se
 	};
 
 	const exportAll = async () => {
-		if (confirm("Warning: This can take a lot of time and space. Be patient if you proceed.")) {
+		if (confirm(t('sessions.exportAllWarning'))) {
 			const db = await sessionStorage.openDatabase();
 			const sessionKeys = Object.keys(sessionStorage.sessions);
 			for (const sessionKey of sessionKeys) {
@@ -281,42 +284,42 @@ export function SessionsModal({ isOpen, closeModal, sessionStorage, cancel }: Se
 
 	return html`
 		<${Modal} isOpen=${isOpen} onClose=${closeModal}
-			title="Sessions"
+			title=${t('sessions.title')}
 			description="">
 			<div className="sessions-modal-toolbar">
 				<div className="sessions-modal-toolbar-row">
-					<${InputBox} label="Search"
+					<${InputBox} label=${t('sessions.search')}
 						value=${searchQuery}
 						onValueChange=${setSearchQuery}
-						placeholder="Filter sessions…"/>
-					<${InputBox} label="Tags"
+						placeholder=${t('sessions.searchPlaceholder')}/>
+					<${InputBox} label=${t('sessions.tags')}
 						value=${tagFilterQuery}
 						onValueChange=${setTagFilterQuery}
-						placeholder="Filter tags…"
-						tooltip="Filter tags. Use AND (implicit), OR, NOT, and * wildcards. Examples: wip OR writing, NOT archived, wip*"/>
+						placeholder=${t('sessions.tagsPlaceholder')}
+						tooltip=${t('sessions.tagsTooltip')}/>
 					<${SelectBox}
-						label="Sort By"
+						label=${t('sessions.sortBy')}
 						value=${sortBy}
 						onValueChange=${setSortBy}
 						options=${[
-							{ name: 'Last Modified', value: 'modified' },
-							{ name: 'Created', value: 'created' },
-							{ name: 'Name', value: 'name' },
+							{ name: t('sessions.sortLastModified'), value: 'modified' },
+							{ name: t('sessions.sortCreated'), value: 'created' },
+							{ name: t('sessions.sortName'), value: 'name' },
 						]}/>
 					<button
 						className="sessions-modal-sort-btn"
-						title=${sortAsc ? "Ascending" : "Descending"}
+						title=${sortAsc ? t('sessions.sortAscending') : t('sessions.sortDescending')}
 						onClick=${() => setSortAsc((v: boolean) => !v)}
 						style=${{ transform: sortAsc ? 'rotate(0deg)' : 'rotate(180deg)' }}>
 						↑
 					</button>
 				</div>
 				<div className="sessions-modal-toolbar-row">
-					<button disabled=${disabled} onClick=${startCreateSession}>Create</button>
-					<button disabled=${disabled} onClick=${importSession}>Import</button>
-					<button disabled=${disabled || noSession} onClick=${exportSession}>Export</button>
-					<button disabled=${disabled} onClick=${exportAll}>Export All</button>
-					<button disabled=${disabled || noSession} onClick=${cloneSession}>Clone</button>
+					<button disabled=${disabled} onClick=${startCreateSession}>${t('sessions.create')}</button>
+					<button disabled=${disabled} onClick=${importSession}>${t('sessions.import')}</button>
+					<button disabled=${disabled || noSession} onClick=${exportSession}>${t('sessions.export')}</button>
+					<button disabled=${disabled} onClick=${exportAll}>${t('sessions.exportAll')}</button>
+					<button disabled=${disabled || noSession} onClick=${cloneSession}>${t('sessions.clone')}</button>
 				</div>
 			</div>
 			<div className="sessions-modal-list overflow-container">
@@ -324,10 +327,10 @@ export function SessionsModal({ isOpen, closeModal, sessionStorage, cancel }: Se
 					<thead>
 						<tr>
 							<th className="sessions-col-star"></th>
-							<th className="sessions-col-name">Name</th>
-							<th className="sessions-col-modified">Modified</th>
-							<th className="sessions-col-created">Created</th>
-							<th className="sessions-col-actions">Actions</th>
+							<th className="sessions-col-name">${t('sessions.name')}</th>
+							<th className="sessions-col-modified">${t('sessions.modified')}</th>
+							<th className="sessions-col-created">${t('sessions.created')}</th>
+							<th className="sessions-col-actions">${t('sessions.actions')}</th>
 						</tr>
 					</thead>
 					<tbody>
@@ -359,7 +362,7 @@ onClick=${(e: MouseEvent) => e.stopPropagation()}
 								onClick=${() => switchSession(sessionId)}>
 								<td className="sessions-col-star" onClick=${(e: MouseEvent) => e.stopPropagation()}>
 									<button className="sessions-action-btn"
-										title=${session.pinned ? "Unpin session" : "Pin session"}
+										title=${session.pinned ? t('sessions.unpinSession') : t('sessions.pinSession')}
 										onClick=${() => sessionStorage.togglePinSession(sessionId)}>
 										${session.pinned ? html`<${SVG_Star}/>` : html`<${SVG_StarOutline}/>`}
 									</button>
@@ -399,7 +402,7 @@ onKeyDown=${(e: KeyboardEvent<HTMLInputElement>) => {
 														}}
 													onClick=${(e: MouseEvent) => e.stopPropagation()}
 													autoFocus
-													title="Enter comma-separated tags."/>
+													title=${t('sessions.tagsHint')}/>
 											` : html`
 												<span className="sessions-modal-tags ${session.tags && session.tags.length > 0 ? '' : 'sessions-modal-tags-empty'}"
 													onClick=${(e: MouseEvent) => {
@@ -407,7 +410,7 @@ onKeyDown=${(e: KeyboardEvent<HTMLInputElement>) => {
 														setEditTagsValue(session.tags ? session.tags.join(', ') : '');
 														setEditingTagsId(sessionId);
 													}}>
-													${session.tags && session.tags.length > 0 ? session.tags.join(', ') : '+ add tags'}
+													${session.tags && session.tags.length > 0 ? session.tags.join(', ') : t('sessions.addTags')}
 												</span>
 											`}
 										</div>

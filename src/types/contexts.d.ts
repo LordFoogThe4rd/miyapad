@@ -19,6 +19,8 @@ export interface SettingsState {
   useDBThemes: (initialState: Record<string, ThemeData>) => [Record<string, ThemeData>, Dispatch<SetStateAction<Record<string, ThemeData>>>];
   useDBConnections: (initialState: Record<string, ConnectionData>) => [Record<string, ConnectionData>, Dispatch<SetStateAction<Record<string, ConnectionData>>>];
   isMiyapadEndpoint: boolean;
+  locale: string;
+  setLocale: Dispatch<SetStateAction<string>>;
   connections: Record<string, ConnectionData>;
   setConnections: Dispatch<SetStateAction<Record<string, ConnectionData>>>;
   selectedConnectionId: string;

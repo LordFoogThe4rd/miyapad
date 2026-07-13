@@ -32,6 +32,7 @@ import {
 import { useSettings } from './contexts/SettingsContext';
 import { useGeneration } from './contexts/GenerationContext';
 import { isAbortError } from './utils/errors';
+import { useT } from './i18n';
 
 export function AppLayout() {
 	const {
@@ -90,6 +91,8 @@ export function AppLayout() {
 
 	const { handleauthorNoteTokensChange, handleMemoryTokensChange } = useTokenCounters();
 
+	const t = useT();
+
 
 
 
@@ -134,7 +137,7 @@ export function AppLayout() {
 
 	function setTitleToSession() {
 		const sessionName = sessionStorage.getProperty('name');
-		document.title = sessionName ? 'miyapad - ' + sessionName : 'miyapad';
+		document.title = sessionName ? t('appLayout.titlePrefix') + sessionName : 'miyapad';
 	}
 
 	useEffect(() => {
@@ -459,7 +462,7 @@ export function AppLayout() {
 		}
 
 		if (bestMessages.length === 0) {
-			alert("Could not detect any chat template in the current text.");
+			alert(t('appLayout.noChatTemplate'));
 			return;
 		}
 
@@ -506,7 +509,7 @@ export function AppLayout() {
 					}
 				}, 1000);
 			}
-			setSessionEndpointError("Miyapad server is unreachable!");
+			setSessionEndpointError(t('appLayout.serverUnreachable'));
 			setCurrentPromptChunk(undefined);
 			setUndoHovered(false);
 		}
