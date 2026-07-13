@@ -148,7 +148,7 @@ export function ThemeManagerModal({ isOpen, closeModal, allThemes, setAllThemes,
 	};
 
     const handleDeleteTheme = () => {
-        if (!window.confirm(`${t('themeManager.deleteConfirmBefore')}${editingThemeName}${t('themeManager.deleteConfirmAfter')}`)) {
+        if (!window.confirm(t('themeManager.deleteConfirm', { name: editingThemeName }))) {
             return;
         }
 

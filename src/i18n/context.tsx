@@ -1,5 +1,5 @@
 import { html } from 'htm/react';
-import { createContext, useContext, useEffect, useState, type ReactNode } from 'react';
+import { createContext, useCallback, useContext, useEffect, useState, type ReactNode } from 'react';
 import en from './en.json';
 import { AVAILABLE_LOCALES, type LocaleCode } from './locales';
 
@@ -28,5 +28,13 @@ export function I18nProvider({ locale = 'en', children }: { locale?: string; chi
 
 export function useT() {
 	const strings = useContext(I18nContext);
-	return (key: TranslationKey): string => strings[key] ?? key;
+	return useCallback((key: TranslationKey, params?: Record<string, string | number>): string => {
+		let result: string = strings[key] ?? key;
+		if (params) {
+			for (const [k, v] of Object.entries(params)) {
+				result = result.replaceAll(`{{${k}}}`, String(v));
+			}
+		}
+		return result;
+	}, [strings]);
 }

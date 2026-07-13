@@ -30,7 +30,7 @@ export function WorldInfoModal({ isOpen, closeModal, worldInfo, setWorldInfo, ca
 		});
 	};
 	const handleWorldInfoDel = (index: any) => {
-		if (!window.confirm(t('worldInfo.confirmDeleteEntry') + (index + 1) + ': ' + worldInfo.entries[index].displayName + t('worldInfo.confirmDeleteUndone')))
+		if (!window.confirm(t('worldInfo.confirmDeleteEntry', { index: index + 1, name: worldInfo.entries[index].displayName })))
 			return;
 		if (index > -1 && index < worldInfo.entries.length) {
 			setWorldInfo((prevWorldInfo: any) => {
@@ -42,7 +42,7 @@ export function WorldInfoModal({ isOpen, closeModal, worldInfo, setWorldInfo, ca
 			});
 		}
 		else {
-			alert(t('worldInfo.indexOutOfRangePrefix') + index + t('worldInfo.indexOutOfRangeSuffix'));
+			alert(t('worldInfo.indexOutOfRange', { index }));
 		}
 	};
 	const handleWorldInfoChange = (key: any,index: any,value: any) => {

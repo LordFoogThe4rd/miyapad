@@ -452,7 +452,7 @@ export function Sidebar({ sidebarRef, toggleModal, currentThemeName, setCurrentT
 						disabled=${!!cancel}
 						value=${enabledSamplers.includes('pres_pen')}
 						onValueChange=${toggleSampler('pres_pen')}/>
-					<${Checkbox} label=${t('sidebar.frequencePenalty')}
+					<${Checkbox} label=${t('sidebar.frequencyPenalty')}
 						disabled=${!!cancel}
 						value=${enabledSamplers.includes('freq_pen')}
 						onValueChange=${toggleSampler('freq_pen')}/>
