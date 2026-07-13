@@ -20,6 +20,21 @@ export function Widget({ title }: WidgetProps) {
 
 In `AppLayout.tsx`, the main prompt textarea updates in an uncontrolled manner during prediction. This ensures the user does not lose cursor positions, highlights, or scrolling alignments when text chunks stream in at high frequencies. Always maintain this pattern when updating prompt-related text structures.
 
+## UI Strings (Localization)
+
+User-facing text must not be hardcoded. Pull strings through the `useT()` hook from `src/i18n` and add the key to `src/i18n/en.json` (keys are dot-namespaced by feature, e.g. `preferences.language`, and kept alphabetically sorted).
+
+```tsx
+import { useT } from '../i18n';
+
+export function Widget() {
+  const t = useT();
+  return html`<button>${t('preferences.language')}</button>`;
+}
+```
+
+Compose dynamic text in the component (e.g. `` `${t('sidebar.depth')}: ${n}` ``) — `useT` returns plain strings with no interpolation. See [Localization](architecture.md#6-localization-i18n) for how locales are loaded and added.
+
 ## Storage Modifications
 
 When modifying session storage columns or tables, preserve the adapter architecture so changes apply to both IndexedDB and the SQLite server implementation. Always ensure schema migrations are coded gracefully (such as the database V3-to-V4 migration step).

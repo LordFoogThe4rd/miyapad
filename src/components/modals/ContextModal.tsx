@@ -5,6 +5,7 @@ import { CollapsibleGroup } from '../controls/CollapsibleGroup';
 import { getTokenCount, serverTokenCount } from '../../api/index';
 import { API_OPENAI_COMPAT, API_LLAMA_CPP, API_DEEPSEEK } from '../../constants';
 import { isAbortError } from '../../utils/errors';
+import { useT } from '../../i18n';
 import type { SessionStorage } from '../../storage/SessionStorage';
 
 interface ContextModalProps {
@@ -28,6 +29,7 @@ interface ContextModalProps {
 }
 
 export function ContextModal({ isOpen, closeModal, tokens, memoryTokens, authorNoteTokens, handleMemoryTokensChange, finalPromptText, defaultPresets, cancel, apiConfig }: ContextModalProps) {
+	const t = useT();
 	const { sessionStorage, endpoint, endpointAPI, endpointAPIKey, isMiyapadEndpoint, useServerTokenization } = apiConfig;
 	const [contextPlayground, setContextPlayground] = useState(finalPromptText);
 	const [playgroundTokens, setPlaygroundTokens] = useState(tokens);
@@ -69,24 +71,24 @@ export function ContextModal({ isOpen, closeModal, tokens, memoryTokens, authorN
 	}, [isOpen, contextPlayground, endpoint, endpointAPI, endpointAPIKey, isMiyapadEndpoint, useServerTokenization, sessionStorage]);
 	return html`
 		<${Modal} isOpen=${isOpen} onClose=${closeModal}
-			title="Context"
-			description="This is the prompt being sent to your large language model.">
+			title=${t('context.title')}
+			description=${t('context.description')}>
 			<div id="advancedContextPlaceholders">
 			<table id="contextTokensTable" border="1" frame="void" rules="all">
 				<thead>
 					<tr>
 						<th></th>
-						<th>Memory</th>
-						<th>World Info</th>
-						<th>Author's Note</th>
-						<th>Prompt</th>
+						<th>${t('context.memory')}</th>
+						<th>${t('context.worldInfo')}</th>
+						<th>${t('context.authorsNote')}</th>
+						<th>${t('context.prompt')}</th>
 						<th></th>
-						<th>Total</th>
+						<th>${t('context.total')}</th>
 					</tr>
 				</thead>
 				<tbody>
 					<tr>
-						<th>Tokens</th>
+						<th>${t('context.tokens')}</th>
 						<td>${memoryTokens.tokens ?? 0}</td>
 						<td>${memoryTokens.tokensWI ?? 0}</td>
 						<td>${authorNoteTokens.tokens ?? 0}</td>
@@ -97,34 +99,34 @@ export function ContextModal({ isOpen, closeModal, tokens, memoryTokens, authorN
 				</tbody>
 			</table>
 			</div>
-			<${CollapsibleGroup} label="Advanced Context Ordering">
+			<${CollapsibleGroup} label=${t('context.advancedContextOrdering')}>
 				<div id="context-order-desc">
-					You can use the following placeholders to order the context according to your needs:<br />
+					${t('context.contextOrderDesc1')}<br />
 					<div id="advancedContextPlaceholders">
 						<table border="1" frame="void" rules="all">
 							<thead>
 							<tr>
 								<th></th>
-								<th>Prefix</th>
-								<th>Text</th>
-								<th>Suffix</th>
+								<th>${t('context.prefix')}</th>
+								<th>${t('context.text')}</th>
+								<th>${t('context.suffix')}</th>
 							</tr>
 							</thead>
 							<tbody>
 							<tr>
-								<th>Memory</th>
+								<th>${t('context.memory')}</th>
 								<td>{memPrefix}</td>
 								<td>{memText}</td>
 								<td>{memSuffix}</td>
 							</tr>
 							<tr>
-								<th>World Info</th>
+								<th>${t('context.worldInfo')}</th>
 								<td>{wiPrefix}</td>
 								<td>{wiText}</td>
 								<td>{wiSuffix}</td>
 							</tr>
 							<tr>
-								<th>Prompt</th>
+								<th>${t('context.prompt')}</th>
 								<td></td>
 								<td>{prompt}</td>
 								<td></td>
@@ -132,7 +134,7 @@ export function ContextModal({ isOpen, closeModal, tokens, memoryTokens, authorN
 							</tbody>
 						</table>
 					</div>
-					Any text that is not a placeholder will be added into the context as is.
+					${t('context.contextOrderDesc2')}
 				</div>
 				<textarea
 					readOnly=${!!cancel}
@@ -150,7 +152,7 @@ export function ContextModal({ isOpen, closeModal, tokens, memoryTokens, authorN
 				id="context-area-settings" />
 			<div class="hbox" style=${{ justifyContent: 'flex-end', marginTop: '8px' }}>
 				<button onClick=${() => setContextPlayground(finalPromptText)}>
-					Reset Context
+					${t('context.resetContext')}
 				</button>
 			</div>
 		</${Modal}>`;

@@ -3,6 +3,7 @@ import { useEffect, useRef } from 'react';
 import { useSettings } from '../contexts/SettingsContext';
 import { useGeneration } from '../contexts/GenerationContext';
 import { usePromptBuilder } from '../hooks/usePromptBuilder';
+import { useT } from '../i18n';
 import { SVG_Settings, SVG_SearchAndReplace, SVG_SplitView, SVG_Camera } from './icons/index';
 import { SearchAndReplaceWidget } from './SearchAndReplaceWidget';
 import { useScreenshotCapture } from '../hooks/useScreenshotCapture';
@@ -12,6 +13,7 @@ export function PromptContainer({ sidebarHeight }: PromptContainerProps) {
 	const { showMarkdownPreview, setShowMarkdownPreview, isMobile, tokenHighlightMode, tokenColorMode, showPromptPreview, promptAreaWidth, setPromptAreaWidth, showProbsMode, setShowProbsMode, spellCheck } = useSettings();
 	const { promptArea, promptOverlay, cancel, promptPreviewElement, promptChunks, setPromptChunks, currentPromptChunk, setCurrentPromptChunk, undoHovered, setUndoHovered, undoStack, redoStack, showProbs, setShowProbs, promptPreviewChunks, setPromptPreviewChunks, modalState, closeModal, toggleModal, markdownPreviewRef, isSyncingScroll, setSavedScrollTop, keyState, probsDelayTimer, setTriggerPredict } = useGeneration();
 	const { promptText, displayPromptChunks, cleanPromptText, origToClean, cleanToOrig } = usePromptBuilder();
+	const t = useT();
 	const { takeScreenshot } = useScreenshotCapture();
 	const lastMouseToken = useRef<string | null>(null);
 	const lastMousePos = useRef({ x: 0, y: 0 });
@@ -335,27 +337,27 @@ export function PromptContainer({ sidebarHeight }: PromptContainerProps) {
 	return html`
 		<div id="prompt-container" onMouseMove=${onPromptMouseMove} style=${{ 'margin-bottom': isMobile && !showMarkdownPreview ? sidebarHeight + 'px' : 0 }}>
 			<button
-				title="Preferences"
+				title=${t('prompt.preferences')}
 				className="textAreaSettings"
 				onClick=${() => toggleModal("preferences")}>
 				<${SVG_Settings}/>
 			</button>
 			<button
-				title="Search & Replace"
+				title=${t('prompt.searchAndReplace')}
 				style=${{ "margin-top": "1.5em" }}
 				className="textAreaSettings"
 				onClick=${() => toggleModal("searchAndReplace")}>
 				<${SVG_SearchAndReplace} style=${{ "height": "1.3em" }} />
 			</button>
 			<button
-				title="Toggle Markdown Preview"
+				title=${t('prompt.toggleMarkdownPreview')}
 				style=${{ "margin-top": "3em" }}
 				className="textAreaSettings"
 				onClick=${() => setShowMarkdownPreview((p: boolean) => !p)}>
 				<${SVG_SplitView}/>
 			</button>
 			<button
-				title="Take Screenshot"
+				title=${t('prompt.takeScreenshot')}
 				style=${{ "margin-top": "4.5em" }}
 				className="textAreaSettings"
 				onClick=${takeScreenshot}>
@@ -415,7 +417,7 @@ export function PromptContainer({ sidebarHeight }: PromptContainerProps) {
 	})}
 					${(showPromptPreview && promptPreviewChunks.length) ? html`
 						<span ref=${promptPreviewElement} className="preview"></span>
-						<span class="preview nudge">Tab</span>` : null}` : null}
+						<span class="preview nudge">${t('prompt.tab')}</span>` : null}` : null}
 			</div>
 			<${SearchAndReplaceWidget}
 				isOpen=${modalState.searchAndReplace}

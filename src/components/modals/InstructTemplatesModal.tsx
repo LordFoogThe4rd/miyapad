@@ -1,5 +1,6 @@
 import { html } from 'htm/react';
 import { useState, useEffect } from 'react';
+import { useT } from '../../i18n';
 import { Modal } from '../Modal';
 import { InputBox } from '../controls/InputBox';
 import { Checkbox } from '../controls/Checkbox';
@@ -24,6 +25,7 @@ interface InstructTemplatesModalProps {
 }
 
 export function InstructTemplatesModal({ isOpen, closeModal, templateStorage, selectedTemplate, setSelectedTemplate, templateList, setTemplateList, templates, templatesImport, setTemplates, cancel, applyChatTemplate }: InstructTemplatesModalProps) {
+	const t = useT();
 	const [addDeleteTemplate, setAddDeleteTemplate] = useState(false);
 	const [templateDuplicate, setTemplateDuplicate] = useState<string | false>(false);
 	const [newTemplateName, setNewTemplateName] = useState<string | undefined>(undefined);
@@ -90,12 +92,12 @@ export function InstructTemplatesModal({ isOpen, closeModal, templateStorage, se
 		const index = templateList.findIndex((obj: any) => obj.name === selectedTemplate)
 		const reselectTemplate = templateList[index == -1 ? 0 : index]?.nameNew
 		await updateTemplateDB()
-		await setTemplateDuplicate(reselectTemplate + " (Duplicate)")
+		await setTemplateDuplicate(reselectTemplate + t('instructTemplates.duplicateSuffix'))
 		setTemplates((prevState: any) => {
 			var newState = {
 				...prevState
 			}
-			newState[reselectTemplate + " (Duplicate)"] = {
+			newState[reselectTemplate + t('instructTemplates.duplicateSuffix')] = {
 				"sysPre": templates[selectedTemplate]?.sysPre,
 				"sysSuf": templates[selectedTemplate]?.sysSuf,
 				"instPre": templates[selectedTemplate]?.instPre,
@@ -109,7 +111,7 @@ export function InstructTemplatesModal({ isOpen, closeModal, templateStorage, se
 	async function handleInstructTemplateDelete(name: any) {
 		if (Object.keys(templates).length < 2)
 			return
-		if (!window.confirm("Are you sure you want to delete this template? This action can't be undone."))
+		if (!window.confirm(t('instructTemplates.confirmDelete')))
 			return;
 
 		console.warn("Deleting Template",name,":",templates[name])
@@ -199,13 +201,13 @@ export function InstructTemplatesModal({ isOpen, closeModal, templateStorage, se
 	};
 		const importTemplates = async (importDefaults: any = false) => {
 		if (importDefaults) {
-			if (!window.confirm("This will add all default templates, and overwrite any changes you made to the default templates. This action cannot be undone. Do you wish to continue?"))
+			if (!window.confirm(t('instructTemplates.confirmImportDefaults')))
 				return;
 			try {
 				await templateStorage.performFullSave(defaultPresets.instructTemplates, true)
 				window.location.reload()
 			} catch {
-				alert('Failed to save default templates to database.');
+				alert(t('instructTemplates.saveDefaultsFailed'));
 			}
 			return
 		}
@@ -223,7 +225,7 @@ export function InstructTemplatesModal({ isOpen, closeModal, templateStorage, se
 				try {
 					await onFileLoad?.(contents);
 				} catch {
-					alert('Failed to import templates. Check that the file is valid JSON.');
+					alert(t('instructTemplates.importFailed'));
 				}
 			}
 			reader.readAsText(file);
@@ -233,7 +235,7 @@ export function InstructTemplatesModal({ isOpen, closeModal, templateStorage, se
 				await templateStorage.performFullSave(JSON.parse(text), true)
 				window.location.reload()
 			} catch {
-				alert('Failed to import templates. Check that the file is valid JSON.');
+				alert(t('instructTemplates.importFailed'));
 			}
 		};
 		document.body.appendChild(fileInput);
@@ -243,27 +245,25 @@ export function InstructTemplatesModal({ isOpen, closeModal, templateStorage, se
 
 	return html`
 		<${Modal} isOpen=${isOpen} onClose=${closeModal}
-			title="Instruct Templates"
-			description="Use placeholders to insert the selected prompt template formats when sending your prompt to the model.
-			Placeholders are listed below. You can insert newlines with '\\n'.
-			When Chat Mode is active, the 'Instruct Suffix' field of the current template will be added at the end of your prompt, before it is processed by the model. Similarly, the 'Instruct Prefix' field will be added at the end of the model's response.">
+			title=${t('instructTemplates.instructTemplates')}
+			description=${t('instructTemplates.description')}>
 			<div id="advancedContextPlaceholders">
 				<table border="1" frame="void" rules="all">
 					<thead>
 					<tr>
 						<th></th>
-						<th>Prefix</th>
-						<th>Suffix</th>
+						<th>${t('instructTemplates.prefix')}</th>
+						<th>${t('instructTemplates.suffix')}</th>
 					</tr>
 					</thead>
 					<tbody>
 					<tr>
-						<th>System Prompt</th>
+						<th>${t('instructTemplates.systemPrompt')}</th>
 						<td>{sys}</td>
 						<td>{/sys}</td>
 					</tr>
 					<tr>
-						<th>Instructions</th>
+						<th>${t('instructTemplates.instructions')}</th>
 						<td>{inst}</td>
 						<td>{/inst}</td>
 					</tr>
@@ -273,66 +273,66 @@ export function InstructTemplatesModal({ isOpen, closeModal, templateStorage, se
 			<hr/>
 			<div class="instructTemplatesImportExport">
 				<button
-					title="Import Instruct Templates"
+					title=${t('instructTemplates.importTitle')}
 					disabled=${!!cancel}
 					onClick=${() => importTemplates()}>
-					Import
+					${t('instructTemplates.importButton')}
 				</button>
 				<button
-					title="Export Instruct Templates"
+					title=${t('instructTemplates.exportTitle')}
 					disabled=${!!cancel}
 					onClick=${() => exportTemplates()}>
-					Export
+					${t('instructTemplates.exportButton')}
 				</button>
 				<button
-					title="Re-Add Default Instruct Templates"
+					title=${t('instructTemplates.reAddDefaultsTitle')}
 					disabled=${!!cancel}
 					onClick=${() => importTemplates(true)}>
-					Re-Add Defaults
+					${t('instructTemplates.reAddDefaultsButton')}
 				</button>
 				<button
-					title="Apply Chat Template to Editor"
+					title=${t('instructTemplates.applyChatTitle')}
 					disabled=${!!cancel}
 					class="hbox-button"
 					onClick=${() => applyChatTemplate()}>
-					Apply
+					${t('instructTemplates.applyButton')}
 				</button>
 			</div>
 			<div className="buttons instructTemplateSidebar">
 				<${SelectBox}
 					id="instructTemplatesModalSelect"
-					label="Instruct Template"
+					label=${t('instructTemplates.instructTemplate')}
 					template=${true}
 					disabled=${!!cancel}
 					value=${newTemplateName ?? selectedTemplate}
 					onValueChange=${setSelectedTemplate}
 					options=${templateList}/>
 				<button
-					title="Duplicate Currently Selected Instruct Template"
+					title=${t('instructTemplates.duplicateTitle')}
 					disabled=${!!cancel}
 					class="hbox-button"
 					onClick=${() => handleInstructTemplateDuplicate()}>
-					Duplicate
+					${t('instructTemplates.duplicateButton')}
 				</button>
 				<button
-					title="Add Instruct Template"
+					title=${t('instructTemplates.addTitle')}
 					disabled=${!!cancel}
 					class="hbox-button"
 					onClick=${() => handleInstructTemplateAdd()}>
-					New
+					${t('instructTemplates.newButton')}
 				</button>
 				<button
-					title="Delete Selected Instruct Template"
+					title=${t('instructTemplates.deleteTitle')}
 					disabled=${!!cancel}
 					class="hbox-button"
 					onClick=${() => handleInstructTemplateDelete(selectedTemplate)}>
-					Delete
+					${t('instructTemplates.deleteButton')}
 				</button>
 			</div>
 			<hr/>
 			<div class="instructtemplatesmodal-edits">
-				<${InputBox} label="Name"
-						placeholder="Name of This Template"
+				<${InputBox} label=${t('instructTemplates.nameLabel')}
+						placeholder=${t('instructTemplates.namePlaceholder')}
 						id="instructtemplatesmodal-name"
 						className=""
 						tooltip=""
@@ -342,7 +342,7 @@ export function InstructTemplatesModal({ isOpen, closeModal, templateStorage, se
 						onValueChange=${() => {}}/>
 
 				<div className="hbox">
-					<${InputBox} label="Instruct Prefix {inst}"
+					<${InputBox} label=${t('instructTemplates.instructPrefixLabel')}
 						placeholder="[INST]"
 						className=""
 						tooltip=""
@@ -351,7 +351,7 @@ export function InstructTemplatesModal({ isOpen, closeModal, templateStorage, se
 						onInput=${(e: any) => handleInstructTemplateChange(selectedTemplate,"instPre",e.target.value)}
 						onValueChange=${() => {}}/>
 
-					<${InputBox} label="Instruct Suffix {/inst}"
+					<${InputBox} label=${t('instructTemplates.instructSuffixLabel')}
 						placeholder="[/INST]"
 						className=""
 						tooltip=""
@@ -362,7 +362,7 @@ export function InstructTemplatesModal({ isOpen, closeModal, templateStorage, se
 				</div>
 
 				<div className="hbox">
-					<${InputBox} label="System Prompt Prefix {sys}"
+					<${InputBox} label=${t('instructTemplates.systemPrefixLabel')}
 						placeholder="<<SYS>>\\n"
 						className=""
 						tooltip=""
@@ -371,7 +371,7 @@ export function InstructTemplatesModal({ isOpen, closeModal, templateStorage, se
 						onInput=${(e: any) => handleInstructTemplateChange(selectedTemplate,"sysPre",e.target.value)}
 						onValueChange=${() => {}}/>
 
-					<${InputBox} label="System Prompt Suffix {/sys}"
+					<${InputBox} label=${t('instructTemplates.systemSuffixLabel')}
 						placeholder="<</SYS>>\\n\\n"
 						className=""
 						tooltip=""
@@ -383,11 +383,11 @@ export function InstructTemplatesModal({ isOpen, closeModal, templateStorage, se
 
 				<div className="hbox">
 					<div className="vbox">
-						<${Checkbox} label="Supports Fill-In-The-Middle"
+						<${Checkbox} label=${t('instructTemplates.supportsFim')}
 								value=${getArrObjByName(templateList,selectedTemplate)?.affixes?.fimTemplate !== undefined}
 								onValueChange=${(value: any) => handleInstructTemplateChange(selectedTemplate,"fimTemplate", value ? '' : undefined)}/>
 						${getArrObjByName(templateList,selectedTemplate)?.affixes?.fimTemplate !== undefined && html`
-								<${InputBox} label="Fill-In-The-Middle Template"
+								<${InputBox} label=${t('instructTemplates.fimTemplateLabel')}
 								placeholder="[SUFFIX]{suffix}[PREFIX]{prefix}"
 								className=""
 								tooltip=""
@@ -399,11 +399,11 @@ export function InstructTemplatesModal({ isOpen, closeModal, templateStorage, se
 					<div id="advancedContextPlaceholders">
 						${getArrObjByName(templateList,selectedTemplate)?.affixes?.fimTemplate !== undefined
 							? html`
-								<div>Use the <b>{fill}</b> placeholder to seamlessly apply the Fill-In-The-Middle template and start the prediction from that point.</div>
-								<div><b>{prefix}</b> represents the text before the placeholder, and <b>{suffix}</b> represents the text after it.</div>`
+								<div>${t('instructTemplates.fimHelpPre')}<b>{fill}</b>${t('instructTemplates.fimHelpPost')}</div>
+								<div><b>{prefix}</b>${t('instructTemplates.fimPrefixHelp1')}<b>{suffix}</b>${t('instructTemplates.fimPrefixHelp2')}</div>`
 							: html`
-								<div>This template doesn't have a Fill-In-The-Middle template.</div>
-								<div>You can use the <b>{predict}</b> placeholder to start the prediction from that point, but the model won't be aware of the text after the placeholder.</div>`}
+								<div>${t('instructTemplates.noFimTemplate')}</div>
+								<div>${t('instructTemplates.noFimHelpPre')}<b>{predict}</b>${t('instructTemplates.noFimHelpPost')}</div>`}
 					</div>
 				</div>
 			</div>

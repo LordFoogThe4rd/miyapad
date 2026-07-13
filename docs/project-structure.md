@@ -54,6 +54,7 @@ miyapad/
     ├── css/                       # CSS partials (20 files, imported by styles.css)
     ├── defaults/                  # Hardcoded defaults (.ts) — presets.ts, prompt.ts, templates.ts, themes.ts
     ├── hooks/                     # Custom hooks (.ts)
+    ├── i18n/                      # UI localization — context.tsx (provider + useT), locales.ts (registry), {code}.json string tables
     ├── storage/                   # Storage adapters (.ts) — IndexedDB, Server REST API, etc.
     ├── types/                     # Ambient type declarations (.d.ts) — api, components, contexts, storage, defaults, global
     ├── utils/                     # Helpers (.ts) — regex, strings, errors

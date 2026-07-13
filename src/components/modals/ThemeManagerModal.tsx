@@ -6,6 +6,7 @@ import { SelectBox } from '../controls/SelectBox';
 import { exportText } from '../../api/common';
 import { escapeRegExp } from '../../utils/regex';
 import { defaultThemes } from '../../defaults/themes';
+import { useT } from '../../i18n';
 
 interface ThemeManagerModalProps {
   isOpen: boolean;
@@ -18,6 +19,7 @@ interface ThemeManagerModalProps {
 }
 
 export function ThemeManagerModal({ isOpen, closeModal, allThemes, setAllThemes, currentThemeName, setCurrentThemeName, cancel }: ThemeManagerModalProps) {
+    const t = useT();
     const [editingThemeName, setEditingThemeName] = useState(currentThemeName);
     const [newThemeName, setNewThemeName] = useState<string | undefined>(undefined);
     const [newClassName, setNewClassName] = useState<string | undefined>(undefined);
@@ -41,7 +43,7 @@ export function ThemeManagerModal({ isOpen, closeModal, allThemes, setAllThemes,
             return;
         }
         if (allThemes.hasOwnProperty(trimmedNewName)) {
-            alert("A theme with this name already exists.");
+            alert(t('themeManager.duplicateNameError'));
             setNewThemeName(undefined);
             return;
         }
@@ -100,12 +102,12 @@ export function ThemeManagerModal({ isOpen, closeModal, allThemes, setAllThemes,
     };
 
     const handleNewTheme = () => {
-        let newName = "New Theme";
+        let newName = t('themeManager.newThemeDefaultName');
         let counter = 1;
         while (allThemes.hasOwnProperty(newName) || defaultThemes.hasOwnProperty(newName)) {
-            newName = `New Theme ${++counter}`;
+            newName = t('themeManager.newThemeDefaultNameWithCounter', { counter: ++counter });
         }
-		const className = newName.toLowerCase().replace(/[^a-z0-9]+/g, '-').replace(/^-|-$/g, '');
+		const className = `t${Date.now().toString(36)}-${Math.random().toString(36).slice(2, 6)}`;
 
         setAllThemes((prevThemes: any) => {
             const maxOrder = Math.max(0, ...Object.values(prevThemes).map((t: any) => t.order ?? 0));
@@ -115,7 +117,7 @@ export function ThemeManagerModal({ isOpen, closeModal, allThemes, setAllThemes,
                     order: maxOrder + 1,
                     isDefault: false,
                     className: className,
-                    css: `html.${className} {\n\t/* Your CSS here */\n}`
+                    css: `html.${className} {\n\t/* ${t('themeManager.yourCssHere')} */\n}`
                 }
             };
         });
@@ -123,10 +125,10 @@ export function ThemeManagerModal({ isOpen, closeModal, allThemes, setAllThemes,
     };
 
 	const handleDuplicateTheme = () => {
-		let newName = `${editingThemeName} (Copy)`;
+		let newName = t('themeManager.copySuffix', { name: editingThemeName });
 		let counter = 1;
 		while (allThemes.hasOwnProperty(newName) || defaultThemes.hasOwnProperty(newName)) {
-			newName = `${editingThemeName} (Copy ${++counter})`;
+			newName = t('themeManager.copySuffixNum', { name: editingThemeName, counter: ++counter });
 		}
 
 		setAllThemes((prevThemes: any) => {
@@ -146,7 +148,7 @@ export function ThemeManagerModal({ isOpen, closeModal, allThemes, setAllThemes,
 	};
 
     const handleDeleteTheme = () => {
-        if (!window.confirm(`Are you sure you want to delete the theme "${editingThemeName}"? This cannot be undone.`)) {
+        if (!window.confirm(t('themeManager.deleteConfirm', { name: editingThemeName }))) {
             return;
         }
 
@@ -187,7 +189,7 @@ export function ThemeManagerModal({ isOpen, closeModal, allThemes, setAllThemes,
                     const importedThemes = JSON.parse((e.target as FileReader).result as string);
                     setAllThemes((prevThemes: any) => ({ ...prevThemes, ...importedThemes }));
                 } catch (e: unknown) {
-                    alert("Failed to import themes. Please check if you selected the right file.");
+                    alert(t('themeManager.importError'));
                     console.error(e);
                 }
             };
@@ -197,7 +199,7 @@ export function ThemeManagerModal({ isOpen, closeModal, allThemes, setAllThemes,
     };
 
     const handleReAddDefaults = () => {
-        if (!window.confirm("This will restore all default themes and overwrite any of your themes that share the same name. Are you sure?")) {
+        if (!window.confirm(t('themeManager.reAddDefaultsConfirm'))) {
             return;
         }
         setAllThemes((prevThemes: any) => ({
@@ -213,26 +215,26 @@ export function ThemeManagerModal({ isOpen, closeModal, allThemes, setAllThemes,
 
     return html`
         <${Modal} isOpen=${isOpen} onClose=${closeModal}
-            title="Theme Editor">
+            title=${t('themeManager.title')}>
             <div class="instructTemplatesImportExport">
-                <button disabled=${!!cancel} onClick=${handleImportTheme}>Import Theme</button>
-                <button disabled=${!!cancel || editingThemeName === 'Serif Light'} onClick=${handleExportTheme}>Export Theme</button>
-                <button disabled=${!!cancel} onClick=${handleReAddDefaults}>Re-Add Defaults</button>
+                <button disabled=${!!cancel} onClick=${handleImportTheme}>${t('themeManager.importTheme')}</button>
+                <button disabled=${!!cancel || editingThemeName === 'Serif Light'} onClick=${handleExportTheme}>${t('themeManager.exportTheme')}</button>
+                <button disabled=${!!cancel} onClick=${handleReAddDefaults}>${t('themeManager.reAddDefaults')}</button>
             </div>
             <div className="buttons instructTemplateSidebar">
                 <${SelectBox}
-                    label="Theme to Edit"
+                    label=${t('themeManager.themeToEdit')}
                     disabled=${!!cancel}
                     value=${editingThemeName}
                     onValueChange=${(val: any) => { setEditingThemeName(val); setNewThemeName(undefined); }}
                     options=${themeOptions}/>
-				<button title="Duplicate Theme" disabled=${!!cancel || editingThemeName === 'Serif Light'} class="hbox-button" onClick=${handleDuplicateTheme}>Duplicate</button>
-                <button title="New Theme" disabled=${!!cancel} class="hbox-button" onClick=${handleNewTheme}>New</button>
-                <button title="Delete Theme" disabled=${!!cancel || editingThemeName === 'Serif Light'} class="hbox-button" onClick=${handleDeleteTheme}>Delete</button>
+				<button title=${t('themeManager.duplicateTitle')} disabled=${!!cancel || editingThemeName === 'Serif Light'} class="hbox-button" onClick=${handleDuplicateTheme}>${t('themeManager.duplicate')}</button>
+                <button title=${t('themeManager.newTitle')} disabled=${!!cancel} class="hbox-button" onClick=${handleNewTheme}>${t('themeManager.new')}</button>
+                <button title=${t('themeManager.deleteTitle')} disabled=${!!cancel || editingThemeName === 'Serif Light'} class="hbox-button" onClick=${handleDeleteTheme}>${t('themeManager.delete')}</button>
             </div>
             <hr/>
 			<div class="instructtemplatesmodal-edits">
-				<${InputBox} label="Theme Name"
+				<${InputBox} label=${t('themeManager.themeName')}
 					id="thememodal-name"
 					readOnly=${!!cancel}
 					value=${newThemeName ?? editingThemeName}
@@ -241,7 +243,7 @@ export function ThemeManagerModal({ isOpen, closeModal, allThemes, setAllThemes,
 					onInput=${(e: any) => setNewThemeName(e.target.value)}
 					onValueChange=${() => {}}
 					/>
-				<${InputBox} label="CSS Class Name"
+				<${InputBox} label=${t('themeManager.cssClassName')}
 					id="thememodal-classname"
 					readOnly=${!!cancel}
 					value=${newClassName ?? editingThemeData.className ?? ''}
@@ -251,7 +253,7 @@ export function ThemeManagerModal({ isOpen, closeModal, allThemes, setAllThemes,
 					onValueChange=${() => {}}
 					/>
 				<label class="TextArea">
-					CSS
+					${t('themeManager.css')}
 					<textarea
 						readOnly=${!!cancel}
 						value=${editingThemeData.css || ''}

@@ -5,8 +5,11 @@ import { Widget } from './Widget';
 import { InputBox } from './controls/InputBox';
 import { SelectBox } from './controls/SelectBox';
 import { SVG_ArrowUp, SVG_ArrowDown } from './icons/index';
+import { useT } from '../i18n';
 
 export function SearchAndReplaceWidget({ isOpen, closeWidget, id, children, promptArea, promptText, cancel, ...props }: any) {
+	const t = useT();
+	const modeLabels: Record<number, string> = { 0: t('search.plaintext'), 1: t('search.regex'), 2: 'Template' };
 	const [searchAndReplaceError, setSearchAndReplaceError] = useState<string | undefined>(undefined);
 	const [searchAndReplaceMode, setSearchAndReplaceMode] = usePersistentState('searchAndReplaceMode', 0);
 	// Normalise persisted value that was removed from the UI
@@ -137,7 +140,7 @@ export function SearchAndReplaceWidget({ isOpen, closeWidget, id, children, prom
 		positions.current = findAllMatches(mode, search, flags, elem);
 		setCurrentIndex(-1); 
 		if (!searchAndReplaceError && positions.current.length === 0)
-			setSearchAndReplaceError(`Warning: No matches found for ${ (mode==0?"Plaintext":mode==1?"RegEx":"Template") } \'${search}\'`)
+			setSearchAndReplaceError(`${t('search.warningNoMatches')} ${modeLabels[mode] ?? modeLabels[0]} '${search}'`)
 	}
 
 	function handleSearchAndReplace(mode: any,search: any,flags: any,replace: any) {
@@ -148,7 +151,7 @@ export function SearchAndReplaceWidget({ isOpen, closeWidget, id, children, prom
 			return
 		positions.current = findAllMatches(mode, search, flags, inputElement);
 		if (!searchAndReplaceError && positions.current.length === 0) {
-			setSearchAndReplaceError(`Warning: No matches found for ${ (mode==0?"Plaintext":mode==1?"RegEx":"Template") } \'${search}\'`)
+			setSearchAndReplaceError(`${t('search.warningNoMatches')} ${modeLabels[mode] ?? modeLabels[0]} '${search}'`)
 			return
 		}
 		setReplacedTrigger((prev) => !prev)
@@ -214,63 +217,63 @@ export function SearchAndReplaceWidget({ isOpen, closeWidget, id, children, prom
 
 	return html`
 		<${Widget} isOpen=${isOpen} onClose=${closeWidget}
-			title="Search and Replace"
+			title=${t('search.title')}
 			id="${id}">
 				${children}
 				<div class="searchAndReplace-inputs">
 					<${SelectBox}
-						label="Mode"
+						label=${t('search.mode')}
 						value=${searchAndReplaceMode}
 						onValueChange=${setSearchAndReplaceMode}
 						options=${[
-							{ name: 'Plaintext', value: 0 },
-							{ name: 'RegEx', value: 1 },
+							{ name: t('search.plaintext'), value: 0 },
+							{ name: t('search.regex'), value: 1 },
 							// { name: 'Template', value: 2 },
 						]}/>
 					${searchAndReplaceMode == 0 && html`
-						<${InputBox} label="Search This" type="text"
-							placeholder="Hatsune Miku"
+						<${InputBox} label=${t('search.searchThis')} type="text"
+							placeholder=${t('search.searchPlaceholder')}
 							value=${searchTerm} onValueChange=${setSearchTerm}/>
-						<${InputBox} label="Replace With" type="text"
-							placeholder="GUMI"
+						<${InputBox} label=${t('search.replaceWith')} type="text"
+							placeholder=${t('search.replacePlaceholder')}
 							readOnly=${!!cancel} value=${replaceTerm} onValueChange=${setReplaceTerm}/>
 					`}
 					${searchAndReplaceMode == 1 && html`
-						<${InputBox} label="Search This RegEx" type="text"
-							placeholder="(\\w+) Miku"
+						<${InputBox} label=${t('search.searchThisRegex')} type="text"
+							placeholder=${t('search.regexSearchPlaceholder')}
 							value=${searchTerm} onValueChange=${setSearchTerm}/>
 						<div style=${{ 'flex':'0 1 min-content' }}>
-							<${InputBox} label="Flags" type="text"
+							<${InputBox} label=${t('search.flags')} type="text"
 								placeholder="gi"
 								value=${searchFlags} onValueChange=${setSearchFlags}/>
 						</div>
-						<${InputBox} label="Replace With" type="text"
-							placeholder="$1 GUMI"
+						<${InputBox} label=${t('search.replaceWith')} type="text"
+							placeholder=${t('search.regexReplacePlaceholder')}
 							value=${replaceTerm} onValueChange=${setReplaceTerm}/>
 					`}
 				</div>
 				<div class="searchAndReplace-buttons">
 					<div class="flexfiller"/>
 					<div class="number-matches">
-						${currentIndex >= 0 ? (currentIndex+1) + " /" : ""} ${ searchTerm != "" ? numMatches + (numMatches == 1 ? " Match" : " Matches") : ""}
+						${currentIndex >= 0 ? (currentIndex+1) + " /" : ""} ${ searchTerm != "" ? numMatches + (numMatches == 1 ? t('search.matchOne') : t('search.matchMany')) : ""}
 					</div>
 					<button
 						class="findButton"
-						title="Find Previous Match"
+						title=${t('search.findPrev')}
 						onClick=${() => handleFindPrev(searchAndReplaceMode,searchTerm,searchFlags)}>
 						<${SVG_ArrowUp}/>
 					</button>
 					<button
 						class="findButton"
-						title="Find Next Match"
+						title=${t('search.findNext')}
 						onClick=${() => handleFindNext(searchAndReplaceMode,searchTerm,searchFlags)}>
 							<${SVG_ArrowDown}/>
 					</button>
 					<button
-						title="Replace All Matches"
+						title=${t('search.replaceAllTitle')}
 						disabled=${!!cancel}
 						onClick=${() => handleSearchAndReplace(searchAndReplaceMode,searchTerm,searchFlags,replaceTerm)}>
-							Replace All
+							${t('search.replaceAll')}
 					</button>
 				</div>
 				${!!searchAndReplaceError && html`

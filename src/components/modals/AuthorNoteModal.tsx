@@ -1,30 +1,30 @@
 import { html } from 'htm/react';
+import { useT } from '../../i18n';
 import { Modal } from '../Modal';
 import { InputBox } from '../controls/InputBox';
 
 export function AuthorNoteModal({ isOpen, closeModal, authorNoteTokens, handleauthorNoteTokensChange, authorNoteDepth, setAuthorNoteDepth, cancel }: any) {
+	const t = useT();
 	const handleAuthorNoteDepthChange = (value: any) => {
 		setAuthorNoteDepth(!isNaN(+value) && value >= 0 ? value : 0);
 	};
 
 	return html`
 		<${Modal} isOpen=${isOpen} onClose=${closeModal}
-			title="Author's Note"
-			description="This text will be injected N newlines from the bottom of your prompt.
-			Prefix and suffix will be attached at the beginning or end of your author's note respectively. \\n for newlines in pre/suffix.">
+			title=${t('authorNote.title')}
+			description=${t('authorNote.description')}>
 				<div className="hbox">
-					<${InputBox} label="Prefix" type="text" placeholder="[INST]"
+					<${InputBox} label=${t('authorNote.prefix')} type="text" placeholder=${t('authorNote.prefixPlaceholder')}
 						readOnly=${!!cancel} value=${authorNoteTokens.prefix} onValueChange=${(value: any) => handleauthorNoteTokensChange("prefix", value)}/>
-					<${InputBox} label="Suffix" type="text" placeholder="[/INST]"
+					<${InputBox} label=${t('authorNote.suffix')} type="text" placeholder=${t('authorNote.suffixPlaceholder')}
 						readOnly=${!!cancel} value=${authorNoteTokens.suffix} onValueChange=${(value: any) => handleauthorNoteTokensChange("suffix", value)}/>
-					<${InputBox} label="AN Injection Depth (0-N)" type="number" step="1"
+					<${InputBox} label=${t('authorNote.depth')} type="number" step="1"
 						readOnly=${!!cancel} value=${authorNoteDepth} onValueChange=${handleAuthorNoteDepthChange}/>
 				</div>
 				<div class="relative">
 					<textarea
 						readOnly=${!!cancel}
-						placeholder="Anything written here will be injected ${authorNoteDepth} newlines from bottom into context."
-						defaultValue=${authorNoteTokens.text}
+						placeholder=${t('authorNote.placeholder', { depth: authorNoteDepth })}
 						value=${authorNoteTokens.text}
 						onInput=${(e: any) => handleauthorNoteTokensChange("text", e.target.value) }
 						class="expanded-text-area-settings"

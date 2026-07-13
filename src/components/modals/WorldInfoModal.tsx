@@ -4,13 +4,15 @@ import { InputBox } from '../controls/InputBox';
 import { CollapsibleGroup } from '../controls/CollapsibleGroup';
 import { SVG_ArrowUp, SVG_ArrowDown } from '../icons/index';
 import { importSillyTavernWorldInfo } from '../../worldinfo';
+import { useT } from '../../i18n';
 
 export function WorldInfoModal({ isOpen, closeModal, worldInfo, setWorldInfo, cancel, toggleModal, setSillyTarvernWorldInfoJSON }: any) {
+	const t = useT();
 	const handleWorldInfoNew = () => {
 		setWorldInfo((prevWorldInfo: any) => {
 			return {
 				...prevWorldInfo,
-				entries: [ { "displayName":"New Entry","text":"","keys":[], "search":"" },...prevWorldInfo.entries ],
+				entries: [ { "displayName": t('worldInfo.entryDefaultName'), "text":"","keys":[], "search":"" },...prevWorldInfo.entries ],
 			};
 		});
 	};
@@ -28,7 +30,7 @@ export function WorldInfoModal({ isOpen, closeModal, worldInfo, setWorldInfo, ca
 		});
 	};
 	const handleWorldInfoDel = (index: any) => {
-		if (!window.confirm("Are you sure you want to delete the world info entry #" + (index + 1) + ": "+ worldInfo.entries[index].displayName + "?\nThis action cannot be undone."))
+		if (!window.confirm(t('worldInfo.confirmDeleteEntry', { index: index + 1, name: worldInfo.entries[index].displayName })))
 			return;
 		if (index > -1 && index < worldInfo.entries.length) {
 			setWorldInfo((prevWorldInfo: any) => {
@@ -40,7 +42,7 @@ export function WorldInfoModal({ isOpen, closeModal, worldInfo, setWorldInfo, ca
 			});
 		}
 		else {
-			alert("Index " + index + " out of range!");
+			alert(t('worldInfo.indexOutOfRange', { index }));
 		}
 	};
 	const handleWorldInfoChange = (key: any,index: any,value: any) => {
@@ -87,7 +89,7 @@ export function WorldInfoModal({ isOpen, closeModal, worldInfo, setWorldInfo, ca
 						importSillyTavernWorldInfo(json, setWorldInfo, "append");
 					}
 				} catch (e: unknown) {
-					alert("The JSON data could not be parsed. Please check that it is valid JSON.");
+					alert(t('worldInfo.importParseError'));
 					console.error(e);
 				}
 			};
@@ -148,26 +150,23 @@ export function WorldInfoModal({ isOpen, closeModal, worldInfo, setWorldInfo, ca
 
 	return html`
 		<${Modal} isOpen=${isOpen} onClose=${closeModal}
-			title="World Info"
-			description="Additional information that is added when specific keywords are found in context.
-			World info will be added at the top of your memory, in the order specified here.
-
-			Each entry will begin on a newline. Keys will be interpreted as case-insensitive regular expressions. Search Range specifies how many tokens back into the context will be searched for activation keys. Search range 0 to disable an entry.">
+			title=${t('worldInfo.title')}
+			description=${t('worldInfo.description')}>
 			<div id="modal-wi-global">
-				<button id="button-wi-import" disabled=${!!cancel} onClick=${handleWorldInfoImport}>Import entries</button>
-				<button id="button-wi-export" disabled=${!!cancel} onClick=${handleWorldInfoExport}>Export entries</button>
+				<button id="button-wi-import" disabled=${!!cancel} onClick=${handleWorldInfoImport}>${t('worldInfo.importEntries')}</button>
+				<button id="button-wi-export" disabled=${!!cancel} onClick=${handleWorldInfoExport}>${t('worldInfo.exportEntries')}</button>
 				<br/>
-				<${CollapsibleGroup} label="Prefix/Suffix" stateLabel="Prefix/Suffix-WI">
-					The prefix and suffix will be added at the beginning or end of all your active World Info entries respectively.
+				<${CollapsibleGroup} label=${t('worldInfo.prefixSuffix')} stateLabel="Prefix/Suffix-WI">
+					${t('worldInfo.prefixSuffixDescription')}
 					<br />
 					<div className="hbox">
-						<${InputBox} label="Prefix" type="text" placeholder="\\n"
+						<${InputBox} label=${t('worldInfo.prefix')} type="text" placeholder="\\n"
 							readOnly=${!!cancel} value=${worldInfo.prefix} onValueChange=${(value: any) => handleWorldInfoAffixChange("prefix", value)}/>
-						<${InputBox} label="Suffix" type="text" placeholder="\\n"
+						<${InputBox} label=${t('worldInfo.suffix')} type="text" placeholder="\\n"
 							readOnly=${!!cancel} value=${worldInfo.suffix} onValueChange=${(value: any) => handleWorldInfoAffixChange("suffix", value)}/>
 					</div>
 				</${CollapsibleGroup}>
-				<button id="button-wi-new" disabled=${!!cancel} onClick=${handleWorldInfoNew}>New Entry</button>
+				<button id="button-wi-new" disabled=${!!cancel} onClick=${handleWorldInfoNew}>${t('worldInfo.newEntry')}</button>
 			</div>
 			<div className="modal-wi-content overflow-container">
 				${!Array.isArray(worldInfo.entries) ? null : worldInfo.entries.map((entry: any, index: any) => html`
@@ -176,10 +175,10 @@ export function WorldInfoModal({ isOpen, closeModal, worldInfo, setWorldInfo, ca
 							<div class="wi-entry-filler" />
 							<div class="wi-entry-name">
 								<${InputBox}
-								label="Entry #${index+1}"
+								label=${`${t('worldInfo.entryLabel')}${index+1}`}
 								type="text"
 								readOnly=${!!cancel}
-								placeholder="Name of this entry"
+								placeholder=${t('worldInfo.entryNamePlaceholder')}
 								value=${entry.displayName}
 								onValueChange=${(value: any) => handleWorldInfoChange("displayName",index,value)}
 								/>
@@ -200,16 +199,16 @@ export function WorldInfoModal({ isOpen, closeModal, worldInfo, setWorldInfo, ca
 							<div class="wi-entry-text">
 								<div class="hbox">
 									<${InputBox}
-										label="Comma Separated RegEx Keys"
+										label=${t('worldInfo.regexKeys')}
 										type="text"
 										readOnly=${!!cancel}
 										value=${entry.keys.join(',')}
-										placeholder="Required to activate entry"
+										placeholder=${t('worldInfo.regexKeysPlaceholder')}
 										onValueChange=${(value: any) => handleWorldInfoChange("keys",index,value)}
 										/>
 									<${InputBox}
-										label="Search Range (0 = disabled)"
-										tooltip="Currently not accurate to the token count, it will be used as an estimate."
+										label=${t('worldInfo.searchRange')}
+										tooltip=${t('worldInfo.searchRangeTooltip')}
 
 										type="text"
 										readOnly=${!!cancel}
@@ -220,10 +219,10 @@ export function WorldInfoModal({ isOpen, closeModal, worldInfo, setWorldInfo, ca
 										/>
 								</div>
 								<label class="TextArea">
-									Text
+									${t('worldInfo.text')}
 									<textarea
 										readOnly=${!!cancel}
-										placeholder="Information to be inserted into context when key is found"
+										placeholder=${t('worldInfo.textPlaceholder')}
 										value=${entry.text ? entry.text : ""}
 										defaultValue=${entry.text ? entry.text : ""}
 										onInput=${(e: any) => handleWorldInfoChange("text",index, e.target.value)}

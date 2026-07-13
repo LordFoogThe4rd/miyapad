@@ -1,6 +1,7 @@
 import { html } from 'htm/react';
 import { createContext, useContext, useState, useEffect, type Dispatch, type SetStateAction, type ReactNode } from 'react';
 import { usePersistentState } from '../hooks/usePersistentState';
+import { AVAILABLE_LOCALES, type LocaleCode } from '../i18n/locales';
 import { defaultPresets } from '../defaults/presets';
 import { defaultThemes } from '../defaults/themes';
 import type { SessionStorage } from '../storage/SessionStorage';
@@ -10,6 +11,11 @@ import type { ConnectionStorage } from '../storage/ConnectionStorage';
 import type { SettingsState } from '../types/contexts';
 
 export const SettingsContext = createContext<SettingsState | null>(null);
+
+function detectLocale(): string {
+	const browserLang = navigator.language.split('-')[0];
+	return AVAILABLE_LOCALES.includes(browserLang as LocaleCode) ? browserLang : 'en';
+}
 
 export function SettingsProvider({ children, sessionStorage, templateStorage, themeStorage, connectionStorage, useSessionState, useDBTemplates, useDBThemes, useDBConnections, isMiyapadEndpoint }: {
 	children: ReactNode;
@@ -24,6 +30,7 @@ export function SettingsProvider({ children, sessionStorage, templateStorage, th
 	isMiyapadEndpoint: boolean;
 }) {
 	const [templates, setTemplates] = useDBTemplates(defaultPresets.instructTemplates);
+	const [locale, setLocale] = usePersistentState('locale', detectLocale());
 	const [templateReplacements, setTemplateReplacements] = useState<Record<string, string>>({});
 	const [templatesImport, setTemplatesImport] = useState(false);
 	const [selectedTemplate, setSelectedTemplate] = useSessionState('template', "Mistral");
@@ -155,6 +162,7 @@ export function SettingsProvider({ children, sessionStorage, templateStorage, th
 
 	const state = {
 		sessionStorage, templateStorage, themeStorage, connectionStorage, useSessionState, useDBTemplates, useDBThemes, useDBConnections, isMiyapadEndpoint,
+		locale, setLocale,
 		connections, setConnections, selectedConnectionId, setSelectedConnectionId,
 		templates, setTemplates, templateReplacements, setTemplateReplacements, templatesImport, setTemplatesImport,
 		selectedTemplate, setSelectedTemplate, chatMode, setChatMode, templateList, setTemplateList,

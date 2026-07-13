@@ -1,8 +1,10 @@
 import { html } from 'htm/react';
 import { useState, useEffect, useMemo, useRef } from 'react';
+import { useT } from '../i18n';
 import { SVG_Star } from './icons/index';
 
 export function QuickSwitcher({ isOpen, closeModal, sessionStorage, cancel }: any) {
+	const t = useT();
 	const [query, setQuery] = useState('');
 	const [selectedIndex, setSelectedIndex] = useState(-1);
 	const inputRef = useRef<HTMLInputElement | null>(null);
@@ -79,7 +81,7 @@ export function QuickSwitcher({ isOpen, closeModal, sessionStorage, cancel }: an
 					ref=${inputRef}
 					className="quick-switcher-input"
 					type="text"
-					placeholder="Search sessions…"
+					placeholder=${t('quickSwitcher.searchPlaceholder')}
 					value=${query}
 					onChange=${(e: any) => { setQuery(e.target.value); setSelectedIndex(-1); }}
 					onKeyDown=${handleKeyDown}
@@ -87,7 +89,7 @@ export function QuickSwitcher({ isOpen, closeModal, sessionStorage, cancel }: an
 				/>
 				<div className="quick-switcher-list">
 					${results.length === 0 ? html`
-						<div className="quick-switcher-empty">No sessions found</div>
+						<div className="quick-switcher-empty">${t('quickSwitcher.noSessions')}</div>
 					` : results.map((session, i) => html`
 						<div
 							key=${session.id}

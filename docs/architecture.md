@@ -24,7 +24,7 @@ graph TD
 
 ## 2. Context APIs & State Management
 
-- **`SettingsContext` (`src/contexts/SettingsContext.tsx`)**: Holds global settings and generation hyperparameters (e.g., Temperature, Top-K, Min-P, Mirostat, Dry Sampler options, selected model endpoints, OpenAI keys, instruction templates, active themes, TTS voice settings). Also manages connection presets (`connections` via `useDBConnections`) and per-session connection binding (`selectedConnectionId` via `useSessionState`).
+- **`SettingsContext` (`src/contexts/SettingsContext.tsx`)**: Holds global settings and generation hyperparameters (e.g., Temperature, Top-K, Min-P, Mirostat, Dry Sampler options, selected model endpoints, OpenAI keys, instruction templates, active themes, TTS voice settings). Also manages connection presets (`connections` via `useDBConnections`), per-session connection binding (`selectedConnectionId` via `useSessionState`), and the persisted UI `locale` (see [Localization](#6-localization-i18n)).
 - **`GenerationContext` (`src/contexts/GenerationContext.tsx`)**: Manages runtime generation and prompt state (e.g., prompt text chunks, total token count, generation speed, active abort controllers, undo/redo stacks, open modal states, and UI view toggles).
 
 ## 3. Type System
@@ -73,3 +73,17 @@ The router in `src/api/index.ts` dispatches calls based on the `endpointAPI` con
 - **`usePromptBuilder` (`src/hooks/usePromptBuilder.ts`)**: Assembles the raw prompt injected into the LLM. It parses text, inserts instruct template tags (e.g. system messages, user instruction blocks, assistant headers), processes World Info (checking prompt text against regex keys), formats memory blocks, injects Author Notes at specified line depths, handles Fill-In-The-Middle (FIM) placeholders `{fill}` / `{predict}`, and converts conversational history to OpenAI-compatible messages.
 - **`useGenerationLogic` (`src/hooks/useGenerationLogic.ts`)**: Manages the core prediction loop. It calls API completion engines, streams tokens back to the UI chunk by chunk, calculates generation speeds (tokens/sec), manages cancellation/abort signals, manages undo/redo state histories, and passes completed generation blocks to the Text-To-Speech queue.
 - **`useTTS` (`src/hooks/useTTS.ts`)**: Interfaces with the Web Speech API to provide read-aloud capabilities for incoming tokens.
+
+## 6. Localization (i18n)
+
+UI strings are localized through a lightweight context in `src/i18n/`:
+
+- **`locales.ts`** — `AVAILABLE_LOCALES` registry (e.g. `['en']`) and the derived `LocaleCode` type. This is the single source of truth for which languages exist.
+- **`{code}.json`** — a flat `key → string` table per locale (`en.json` is the reference). Keys are dot-namespaced (e.g. `preferences.language`) and kept alphabetically sorted.
+- **`context.tsx`** — `I18nProvider` and the `useT()` hook. `en.json` is statically imported as the default/fallback; any non-`en` locale in `AVAILABLE_LOCALES` is loaded lazily via dynamic `import()`. If loading fails or a locale is unregistered, it falls back to `en`. `useT()` returns `strings[key] ?? key`, so a missing key renders as the raw key.
+
+The active locale lives in `SettingsContext` as `locale` (persisted to `localStorage` via `usePersistentState`). On first visit `detectLocale()` picks the browser language (`navigator.language` → primary subtag) if it's in `AVAILABLE_LOCALES`, otherwise `en`; once the user picks a language in **Preferences → General**, their stored choice wins. `App.tsx` reads `locale` from settings and passes it to `I18nProvider`, so switching languages re-renders the whole tree.
+
+**Adding a language:** drop a `{code}.json` next to `en.json` and add its code to `AVAILABLE_LOCALES`. No other code changes are needed — the Preferences language selector (which renders each option's autonym via `Intl.DisplayNames`) and lazy loader pick it up automatically.
+
+Out of scope: RTL layout, pluralization/interpolation (callers compose template strings themselves), and server-side strings.

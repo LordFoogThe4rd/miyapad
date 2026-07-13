@@ -1,5 +1,6 @@
 import { html } from 'htm/react';
-import { SettingsProvider } from './contexts/SettingsContext';
+import { I18nProvider } from './i18n';
+import { SettingsProvider, useSettings } from './contexts/SettingsContext';
 import { GenerationProvider } from './contexts/GenerationContext';
 import { AppLayout } from './AppLayout';
 import type { SessionStorage } from './storage/SessionStorage';
@@ -32,9 +33,18 @@ export function App({ sessionStorage, templateStorage, themeStorage, connectionS
 			useDBConnections=${useDBConnections}
 			isMiyapadEndpoint=${isMiyapadEndpoint}
 		>
+			<${LocalizedApp} useSessionState=${useSessionState} />
+		</${SettingsProvider}>
+	`;
+}
+
+function LocalizedApp({ useSessionState }: { useSessionState: AppProps['useSessionState'] }) {
+	const { locale } = useSettings();
+	return html`
+		<${I18nProvider} locale=${locale}>
 			<${GenerationProvider} useSessionState=${useSessionState}>
 				<${AppLayout} />
 			</${GenerationProvider}>
-		</${SettingsProvider}>
+		</${I18nProvider}>
 	`;
 }

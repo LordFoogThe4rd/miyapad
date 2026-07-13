@@ -1,8 +1,10 @@
 import { html } from 'htm/react';
+import { useT } from '../../i18n';
 import { Modal } from '../Modal';
 import { API_OPENAI_COMPAT, API_DEEPSEEK } from '../../constants';
 
 export function GrammarModal({ isOpen, closeModal, grammar, setGrammar, endpointAPI, cancel }: any) {
+	const t = useT();
 	const grammarExample = `# "root" specifies the pattern for the overall output
 root ::= (
     # it must start with the characters "1. " followed by a sequence
@@ -39,8 +41,8 @@ eol       ::= "\\n"`;
 
 	return html`
 		<${Modal} isOpen=${isOpen} onClose=${closeModal}
-			title="Grammar"
-			description=${html`<div>Grammar is a set of rules to generate predictions. Each rule has a name and defines how to create specific text patterns.</div><br/><div>For more information see: ${endpointAPI == API_OPENAI_COMPAT || endpointAPI == API_DEEPSEEK ? grammarEBNFHelpUrl : grammarHelpUrl}</div>`}>
+			title=${t('grammar.title')}
+			description=${html`<div>${t('grammar.description')}</div><br/><div>${t('grammar.forMoreInfo')} ${endpointAPI == API_OPENAI_COMPAT || endpointAPI == API_DEEPSEEK ? grammarEBNFHelpUrl : grammarHelpUrl}</div>`}>
 			<textarea
 				readOnly=${!!cancel}
 				value=${grammar}

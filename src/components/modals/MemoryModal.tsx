@@ -1,23 +1,24 @@
 import { html } from 'htm/react';
+import { useT } from '../../i18n';
 import { Modal } from '../Modal';
 import { InputBox } from '../controls/InputBox';
 
 export function MemoryModal({ isOpen, closeModal, memoryTokens, handleMemoryTokensChange, cancel }: any) {
+	const t = useT();
 	return html`
 		<${Modal} isOpen=${isOpen} onClose=${closeModal}
-			title="Memory"
-			description="This text will be added at the very top of your context.
-			Prefix and suffix will be attached at the beginning or end of your memory respectively. \\n for newlines in pre/suffix.">
+			title=${t('memory.title')}
+			description=${t('memory.description')}>
 				<div className="hbox">
-					<${InputBox} label="Prefix" type="text" placeholder="[INST]"
+					<${InputBox} label=${t('memory.prefix')} type="text" placeholder=${t('memory.prefixPlaceholder')}
 						readOnly=${!!cancel} value=${memoryTokens.prefix} onValueChange=${(value: any) => handleMemoryTokensChange("prefix", value)}/>
-					<${InputBox} label="Suffix" type="text" placeholder="[/INST]"
+					<${InputBox} label=${t('memory.suffix')} type="text" placeholder=${t('memory.suffixPlaceholder')}
 						readOnly=${!!cancel} value=${memoryTokens.suffix} onValueChange=${(value: any) => handleMemoryTokensChange("suffix", value)}/>
 				</div>
 				<div class="relative">
 					<textarea
 						readOnly=${!!cancel}
-						placeholder="Anything written here will be injected at the head of the prompt. Tokens here DO count towards the Context Limit."
+						placeholder=${t('memory.textareaPlaceholder')}
 						defaultValue=${memoryTokens.text}
 						value=${memoryTokens.text}
 						onInput=${(e: any) => handleMemoryTokensChange("text", e.target.value) }
