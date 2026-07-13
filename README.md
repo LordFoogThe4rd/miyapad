@@ -1,4 +1,4 @@
-# miyapad
+# 🐈 miyapad
 
 Miyapad is a user-friendly, browser-based interface for interacting with language models. It is a fork of [mikupad](https://github.com/lmg-anon/mikupad) by lmg-anon with a major architectural overhaul, modern tooling and expanded features.
 
@@ -81,3 +81,7 @@ Contributions are welcome. To contribute:
 ## License
 
 This project is licensed under the GNU Affero General Public License v3.0 — see the [LICENSE](LICENSE) file for details.
+
+## Miya
+
+<img align="center" src="docs/assets/miya.gif" alt="Miya" />
