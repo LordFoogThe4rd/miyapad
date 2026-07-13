@@ -11,16 +11,20 @@ export function I18nProvider({ locale = 'en', children }: { locale?: string; chi
 	const [strings, setStrings] = useState<Record<string, string>>(en);
 
 	useEffect(() => {
+		let cancelled = false;
 		if (locale === 'en' || !AVAILABLE_LOCALES.includes(locale as LocaleCode)) {
 			setStrings(en);
 			return;
 		}
 		import(`./${locale}.json`)
-			.then(mod => setStrings(mod.default))
+			.then(mod => { if (!cancelled) setStrings({ ...en, ...mod.default }); })
 			.catch(() => {
-				console.warn(`Locale '${locale}' not found, falling back to en`);
-				setStrings(en);
+				if (!cancelled) {
+					console.warn(`Locale '${locale}' not found, falling back to en`);
+					setStrings(en);
+				}
 			});
+		return () => { cancelled = true; };
 	}, [locale]);
 
 	return html`<${I18nContext.Provider} value=${strings}>${children}</${I18nContext.Provider}>`;

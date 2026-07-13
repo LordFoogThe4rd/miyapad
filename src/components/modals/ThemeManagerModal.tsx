@@ -125,10 +125,10 @@ export function ThemeManagerModal({ isOpen, closeModal, allThemes, setAllThemes,
     };
 
 	const handleDuplicateTheme = () => {
-		let newName = `${editingThemeName}${t('themeManager.copySuffix')}`;
+		let newName = t('themeManager.copySuffix', { name: editingThemeName });
 		let counter = 1;
 		while (allThemes.hasOwnProperty(newName) || defaultThemes.hasOwnProperty(newName)) {
-			newName = `${editingThemeName}${t('themeManager.copySuffixNum')}${++counter})`;
+			newName = t('themeManager.copySuffixNum', { name: editingThemeName, counter: ++counter });
 		}
 
 		setAllThemes((prevThemes: any) => {

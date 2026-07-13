@@ -403,7 +403,7 @@ export function Sidebar({ sidebarRef, toggleModal, currentThemeName, setCurrentT
 					readOnly=${!!cancel} value=${seed} onValueChange=${setSeed}/>
 				<${InputBox} tooltip=${t('sidebar.maxContextLengthTooltip')} label=${t('sidebar.maxContextLength')} type="text" inputmode="numeric"
 					readOnly=${!!cancel} value=${contextLength} onValueChange=${setContextLength}/>
-				<${InputBox} label="${t('sidebar.maxPredictTokens')}${endpointAPI != API_LLAMA_CPP ? (endpointAPI == API_AI_HORDE ? t('sidebar.maxPredictTokens.limited512') : t('sidebar.maxPredictTokens.limited1024')) : t('sidebar.maxPredictTokens.infinite')}" type="text" inputmode="numeric"
+				<${InputBox} label=${endpointAPI === API_AI_HORDE ? t('sidebar.maxPredictTokensLimited512') : endpointAPI !== API_LLAMA_CPP ? t('sidebar.maxPredictTokensLimited1024') : t('sidebar.maxPredictTokensInfinite')} type="text" inputmode="numeric"
 					readOnly=${!!cancel} value=${maxPredictTokens} onValueChange=${setMaxPredictTokens}/>
 				<div className="hbox-flex" style=${{ "flex-wrap": "unset", "align-items": "flex-end" }}>
 					<div style=${{ "flex": "1" }}>
@@ -641,7 +641,7 @@ export function Sidebar({ sidebarRef, toggleModal, currentThemeName, setCurrentT
 					<div>${t('sidebar.authorsNote')} ${(authorNoteTokens.tokens ?? 0) > 0 ? html`<small>(${authorNoteTokens.tokens} ${t('sidebar.tokens')})</small>` : ""}</div>
 					<textarea
 						readOnly=${!!cancel}
-						placeholder="${t('sidebar.authorsNotePlaceholderPre')}${authorNoteDepth}${t('sidebar.authorsNotePlaceholderPost')}"
+						placeholder=${t('sidebar.authorsNotePlaceholder', { depth: authorNoteDepth })}
 						defaultValue=${authorNoteTokens.text}
 						value=${authorNoteTokens.text}
 						onInput=${(e: FormEvent<HTMLTextAreaElement>) => handleauthorNoteTokensChange("text", e.currentTarget.value)}
