@@ -84,4 +84,6 @@ This project is licensed under the GNU Affero General Public License v3.0 — se
 
 ## Miya
 
-<img align="center" src="docs/assets/miya.gif" alt="Miya" />
+<div style="text-align: center;">
+    <img width="100%" src="docs/assets/miya.gif">
+</div>
