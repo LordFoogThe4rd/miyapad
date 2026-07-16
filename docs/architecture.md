@@ -13,6 +13,7 @@ graph TD
     TemplateStorage[TemplateStorage.ts] --> AbstractStorage
     ThemeStorage[ThemeStorage.ts] --> AbstractStorage
     ConnectionStorage[ConnectionStorage.ts] --> AbstractStorage
+    SamplerPresetStorage[SamplerPresetStorage.ts] --> AbstractStorage
     AbstractStorage -->|calls| DBAdapter
 ```
 
@@ -20,6 +21,7 @@ graph TD
 - **`IndexedDBAdapter` (`src/storage/IndexedDBAdapter.ts`)**: Communicates with the browser's IndexedDB engine (Database `MiyaPad`, version 5). Handles database upgrades, persistence requests, exports, and imports.
 - **`ServerDBAdapter` (`src/storage/ServerDBAdapter.ts`)**: Converts database calls to HTTP POST requests hitting the Express server REST endpoints.
 - **`ConnectionStorage` (`src/storage/ConnectionStorage.ts`)**: Extends `AbstractStorage` to persist named connection presets (endpoint, API type, API key, model, per-API options). Follows the same pattern as `ThemeStorage` — `performFullSave` replaces the entire connections object (wrapped in try-catch with error dispatch), and `loadConnections` loads all records on init. The `Connections` store is available in both IndexedDB (v5) and SQLite server-side.
+- **`SamplerPresetStorage` (`src/storage/SamplerPresetStorage.ts`)**: Extends `AbstractStorage` to persist named sampler parameter presets with all generation parameters (temperature, top-k, top-p, mirostat, DRY, XTC, etc.). Follows the same pattern as `ConnectionStorage` — `performFullSave` replaces the entire presets object, and `loadPresets` loads all records on init. The `SamplerPresets` store is available in both IndexedDB (v5) and SQLite server-side.
 - **Named Storage Optimization**: To prevent massive performance degradation, session titles and metadata are indexed separately in a `names` table/store as a JSON object `{name, created, modified, pinned, tags}`. This allows the dedicated Sessions Modal to quickly search, list, and sort sessions by creation or modification timestamps (and to float pinned sessions to the top) without pulling heavy compressed session history from the database.
 
 ## 2. Context APIs & State Management

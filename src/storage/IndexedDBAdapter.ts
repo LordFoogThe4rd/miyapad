@@ -37,7 +37,7 @@ export class IndexedDBAdapter {
 				const db = request.result;
 				const transaction = request.transaction!;
 
-				for (const storeName of ["Sessions", "Templates", "Names", "Themes", "Connections"]) {
+				for (const storeName of ["Sessions", "Templates", "Names", "Themes", "Connections", "SamplerPresets"]) {
 					if (!db.objectStoreNames.contains(storeName)) {
 						db.createObjectStore(storeName);
 					}

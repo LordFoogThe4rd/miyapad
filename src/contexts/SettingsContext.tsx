@@ -8,6 +8,7 @@ import type { SessionStorage } from '../storage/SessionStorage';
 import type { TemplateStorage } from '../storage/TemplateStorage';
 import type { ThemeStorage } from '../storage/ThemeStorage';
 import type { ConnectionStorage } from '../storage/ConnectionStorage';
+import type { SamplerPresetStorage } from '../storage/SamplerPresetStorage';
 import type { SettingsState } from '../types/contexts';
 
 export const SettingsContext = createContext<SettingsState | null>(null);
@@ -17,18 +18,22 @@ function detectLocale(): string {
 	return AVAILABLE_LOCALES.includes(browserLang as LocaleCode) ? browserLang : 'en';
 }
 
-export function SettingsProvider({ children, sessionStorage, templateStorage, themeStorage, connectionStorage, useSessionState, useDBTemplates, useDBThemes, useDBConnections, isMiyapadEndpoint }: {
+interface ProviderProps {
 	children: ReactNode;
 	sessionStorage: SessionStorage;
 	templateStorage: TemplateStorage;
 	themeStorage: ThemeStorage;
 	connectionStorage: ConnectionStorage;
+	samplerPresetStorage: SamplerPresetStorage;
 	useSessionState: <T>(name: string, initialState: T) => [T, Dispatch<SetStateAction<T>>];
 	useDBTemplates: (initialState: Record<string, InstructTemplate>) => [Record<string, InstructTemplate>, Dispatch<SetStateAction<Record<string, InstructTemplate>>>];
 	useDBThemes: (initialState: Record<string, ThemeData>) => [Record<string, ThemeData>, Dispatch<SetStateAction<Record<string, ThemeData>>>];
 	useDBConnections: (initialState: Record<string, ConnectionData>) => [Record<string, ConnectionData>, Dispatch<SetStateAction<Record<string, ConnectionData>>>];
+	useDBSamplerPresets: (initialState: Record<string, SamplerPresetData>) => [Record<string, SamplerPresetData>, Dispatch<SetStateAction<Record<string, SamplerPresetData>>>];
 	isMiyapadEndpoint: boolean;
-}) {
+}
+
+export function SettingsProvider({ children, sessionStorage, templateStorage, themeStorage, connectionStorage, samplerPresetStorage, useSessionState, useDBTemplates, useDBThemes, useDBConnections, useDBSamplerPresets, isMiyapadEndpoint }: ProviderProps) {
 	const [templates, setTemplates] = useDBTemplates(defaultPresets.instructTemplates);
 	const [locale, setLocale] = usePersistentState('locale', detectLocale());
 	const [templateReplacements, setTemplateReplacements] = useState<Record<string, string>>({});
@@ -144,6 +149,8 @@ export function SettingsProvider({ children, sessionStorage, templateStorage, th
 
 		const [connections, setConnections] = useDBConnections({});
 	const [selectedConnectionId, setSelectedConnectionId] = useSessionState('connectionId', 'custom');
+	const [samplerPresets, setSamplerPresets] = useDBSamplerPresets({});
+	const [selectedSamplerPresetId, setSelectedSamplerPresetId] = useSessionState('samplerPresetId', 'custom');
 	const [useServerTokenization, setUseServerTokenization] = usePersistentState('useServerTokenization', false);
 	const [tokenizerModel, setTokenizerModel] = usePersistentState('tokenizerModel', null);
 
@@ -161,9 +168,10 @@ export function SettingsProvider({ children, sessionStorage, templateStorage, th
 	const [screenshotModelAvatarUrl, setScreenshotModelAvatarUrl] = usePersistentState('screenshotModelAvatarUrl', '');
 
 	const state = {
-		sessionStorage, templateStorage, themeStorage, connectionStorage, useSessionState, useDBTemplates, useDBThemes, useDBConnections, isMiyapadEndpoint,
+		sessionStorage, templateStorage, themeStorage, connectionStorage, samplerPresetStorage, useSessionState, useDBTemplates, useDBThemes, useDBConnections, useDBSamplerPresets, isMiyapadEndpoint,
 		locale, setLocale,
 		connections, setConnections, selectedConnectionId, setSelectedConnectionId,
+		samplerPresets, setSamplerPresets, selectedSamplerPresetId, setSelectedSamplerPresetId,
 		templates, setTemplates, templateReplacements, setTemplateReplacements, templatesImport, setTemplatesImport,
 		selectedTemplate, setSelectedTemplate, chatMode, setChatMode, templateList, setTemplateList,
 		fontSizeMultiplier, setFontSizeMultiplier, spellCheck, setSpellCheck, attachSidebar, setAttachSidebar,

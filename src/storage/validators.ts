@@ -43,6 +43,48 @@ export function isThemeData(value: unknown): value is ThemeData {
   );
 }
 
+function hasStringArray(value: unknown): value is string[] {
+  return Array.isArray(value) && value.every(v => typeof v === 'string');
+}
+
+export function isSamplerPresetData(value: unknown): value is SamplerPresetData {
+  if (!isRecord(value)) return false;
+  return (
+    typeof value.id === 'string' &&
+    typeof value.name === 'string' &&
+    typeof value.enabled === 'boolean' &&
+    typeof value.seed === 'number' &&
+    typeof value.maxPredictTokens === 'number' &&
+    typeof value.temperature === 'number' &&
+    typeof value.dynaTempRange === 'number' &&
+    typeof value.dynaTempExp === 'number' &&
+    typeof value.repeatPenalty === 'number' &&
+    typeof value.repeatLastN === 'number' &&
+    typeof value.penalizeNl === 'boolean' &&
+    typeof value.presencePenalty === 'number' &&
+    typeof value.frequencyPenalty === 'number' &&
+    typeof value.topK === 'number' &&
+    typeof value.topP === 'number' &&
+    typeof value.typicalP === 'number' &&
+    typeof value.minP === 'number' &&
+    typeof value.tfsZ === 'number' &&
+    typeof value.mirostat === 'number' &&
+    typeof value.mirostatTau === 'number' &&
+    typeof value.mirostatEta === 'number' &&
+    typeof value.xtcThreshold === 'number' &&
+    typeof value.xtcProbability === 'number' &&
+    typeof value.dryMultiplier === 'number' &&
+    typeof value.dryBase === 'number' &&
+    typeof value.dryAllowedLength === 'number' &&
+    typeof value.dryPenaltyRange === 'number' &&
+    typeof value.drySequenceBreakers === 'string' &&
+    typeof value.bannedTokens === 'string' &&
+    typeof value.ignoreEos === 'boolean' &&
+    hasStringArray(value.enabledSamplers) &&
+    typeof value.grammar === 'string'
+  );
+}
+
 export function coerceThemeData(value: unknown): ThemeData | null {
   if (!isRecord(value)) return null;
   if (typeof value.className !== 'string' || typeof value.css !== 'string') return null;

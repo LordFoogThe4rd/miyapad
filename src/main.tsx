@@ -9,6 +9,7 @@ import { SessionStorage } from './storage/SessionStorage';
 import { TemplateStorage } from './storage/TemplateStorage';
 import { ThemeStorage } from './storage/ThemeStorage';
 import { ConnectionStorage } from './storage/ConnectionStorage';
+import { SamplerPresetStorage } from './storage/SamplerPresetStorage';
 import { useSessionState } from './hooks/useSessionState';
 import { useStorageState } from './hooks/useStorageState';
 import { CrashScreenFallback } from './components/CrashScreenFallback';
@@ -47,6 +48,9 @@ async function main() {
     const connectionStorage = new ConnectionStorage(dbAdapter);
     await connectionStorage.init();
 
+    const samplerPresetStorage = new SamplerPresetStorage(dbAdapter);
+    await samplerPresetStorage.init();
+
 	const rootEl = document.getElementById('root');
 	if (!rootEl) throw new Error(en['main.rootNotFound']);
 	const boundUseSessionState = <T,>(name: string, initialState: T) => useSessionState(sessionStorage, name, initialState);
@@ -58,10 +62,12 @@ async function main() {
 				templateStorage=${templateStorage}
 				themeStorage=${themeStorage}
 				connectionStorage=${connectionStorage}
+				samplerPresetStorage=${samplerPresetStorage}
 				useSessionState=${boundUseSessionState}
 				useDBTemplates=${(initialState: Record<string, InstructTemplate>) => useStorageState(templateStorage, initialState)}
 				useDBThemes=${(initialState: Record<string, ThemeData>) => useStorageState(themeStorage, initialState)}
 				useDBConnections=${(initialState: Record<string, ConnectionData>) => useStorageState(connectionStorage, initialState)}
+				useDBSamplerPresets=${(initialState: Record<string, SamplerPresetData>) => useStorageState(samplerPresetStorage, initialState)}
 				isMiyapadEndpoint=${isMiyapadEndpoint}/>
 		</${ErrorBoundary}>`);
 }

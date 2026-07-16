@@ -4,14 +4,15 @@ The server (`server/server.ts` — entrypoint that loads modules from `lib/` and
 
 ## Database Schema (v4)
 
-The database has six main tables:
+The database has seven main tables:
 
 1. **`meta`**: Stores metadata (e.g., database schema `version = 4`).
 2. **`sessions`**: Stores main session data blobs. Uses column `session_data`.
 3. **`templates`**: Stores template configuration data. Uses column `template_data`.
 4. **`themes`**: Stores custom user CSS themes. Uses column `theme_data`.
 5. **`connections`**: Stores connection preset data (endpoint, API type, API key, model, per-API options). Uses column `connection_data`.
-6. **`names`**: Stores lightweight key-to-metadata mapping `{name, created, modified, pinned}` (as JSON) for session listing, searching, sorting, and pinning.
+6. **`samplerpresets`**: Stores sampler preset data (all generation parameters). Uses column `sampler_preset_data`.
+7. **`names`**: Stores lightweight key-to-metadata mapping `{name, created, modified, pinned}` (as JSON) for session listing, searching, sorting, and pinning.
 
 ### Schema Column Constraints
 
@@ -21,6 +22,7 @@ The `sqlite-zstd` extension can experience index naming collisions if multiple t
 - `templates` table uses **`template_data`**
 - `themes` table uses **`theme_data`**
 - `connections` table uses **`connection_data`**
+- `samplerpresets` table uses **`sampler_preset_data`**
 
 ## Database Compaction & Compression Settings
 

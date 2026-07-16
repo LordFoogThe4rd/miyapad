@@ -37,7 +37,9 @@ export function Sidebar({ sidebarRef, toggleModal, currentThemeName, setCurrentT
 		isMiyapadEndpoint, sessionStorage, chatMode, setChatMode, seed, setSeed, contextLength, setContextLength,
 		memoryTokens, authorNoteTokens, authorNoteDepth, templateList, tokenHighlightMode,
 		connections, setConnections, selectedConnectionId, setSelectedConnectionId,
-		stoppingStringsError, drySequenceBreakersError, bannedTokensError
+		stoppingStringsError, drySequenceBreakersError, bannedTokensError,
+		samplerPresets, setSamplerPresets, selectedSamplerPresetId, setSelectedSamplerPresetId,
+		grammar, setGrammar, logitBias, setLogitBias
 	} = useSettings();
 
 	const {
@@ -221,6 +223,91 @@ export function Sidebar({ sidebarRef, toggleModal, currentThemeName, setCurrentT
 			handleApplyConnection(connections[selectedConnectionId]);
 		}
 	}, [selectedConnectionId]);
+
+	const handleApplySamplerPreset = (preset: SamplerPresetData) => {
+		setSeed(preset.seed);
+		setMaxPredictTokens(preset.maxPredictTokens);
+		setTemperature(preset.temperature);
+		setDynaTempRange(preset.dynaTempRange);
+		setDynaTempExp(preset.dynaTempExp);
+		setRepeatPenalty(preset.repeatPenalty);
+		setRepeatLastN(preset.repeatLastN);
+		setPenalizeNl(preset.penalizeNl);
+		setPresencePenalty(preset.presencePenalty);
+		setFrequencyPenalty(preset.frequencyPenalty);
+		setTopK(preset.topK);
+		setTopP(preset.topP);
+		setTypicalP(preset.typicalP);
+		setMinP(preset.minP);
+		setTfsZ(preset.tfsZ);
+		setMirostat(preset.mirostat);
+		setMirostatTau(preset.mirostatTau);
+		setMirostatEta(preset.mirostatEta);
+		setXtcThreshold(preset.xtcThreshold);
+		setXtcProbability(preset.xtcProbability);
+		setDryMultiplier(preset.dryMultiplier);
+		setDryBase(preset.dryBase);
+		setDryAllowedLength(preset.dryAllowedLength);
+		setDryPenaltyRange(preset.dryPenaltyRange);
+		setDrySequenceBreakers(preset.drySequenceBreakers);
+		setBannedTokens(preset.bannedTokens);
+		setIgnoreEos(preset.ignoreEos);
+		setEnabledSamplers(preset.enabledSamplers);
+		setGrammar(preset.grammar);
+	};
+
+	useEffect(() => {
+		if (selectedSamplerPresetId !== 'custom' && samplerPresets[selectedSamplerPresetId]) {
+			handleApplySamplerPreset(samplerPresets[selectedSamplerPresetId]);
+		}
+	}, [selectedSamplerPresetId, samplerPresets]);
+
+	const handleSaveCurrentPreset = () => {
+		let counter = 1;
+		let newName = t('samplerPreset.newPresetPrefix') + counter;
+		const existingNames = (Object.values(samplerPresets) as SamplerPresetData[]).map(p => p.name);
+		while (existingNames.includes(newName)) {
+			counter++;
+			newName = t('samplerPreset.newPresetPrefix') + counter;
+		}
+		const newId = crypto.randomUUID();
+		const newPreset: SamplerPresetData = {
+			id: newId,
+			name: newName,
+			enabled: true,
+			seed,
+			maxPredictTokens,
+			temperature,
+			dynaTempRange,
+			dynaTempExp,
+			repeatPenalty,
+			repeatLastN,
+			penalizeNl,
+			presencePenalty,
+			frequencyPenalty,
+			topK,
+			topP,
+			typicalP,
+			minP,
+			tfsZ,
+			mirostat,
+			mirostatTau,
+			mirostatEta,
+			xtcThreshold,
+			xtcProbability,
+			dryMultiplier,
+			dryBase,
+			dryAllowedLength,
+			dryPenaltyRange,
+			drySequenceBreakers,
+			bannedTokens,
+			ignoreEos,
+			enabledSamplers,
+			grammar,
+		};
+		setSamplerPresets(prev => ({ ...prev, [newId]: newPreset }));
+		setSelectedSamplerPresetId(newId);
+	};
 
 	function isMixedContent() {
 		const isHttps = window.location.protocol === 'https:';
@@ -435,7 +522,34 @@ export function Sidebar({ sidebarRef, toggleModal, currentThemeName, setCurrentT
 					</button>
 				</div>
 			</${CollapsibleGroup} >
-			<${CollapsibleGroup} label=${t('sidebar.sampling')} expanded menu=${html`
+			<${CollapsibleGroup} label=${t('sidebar.sampling')} expanded menu=${(closeMenu: () => void) => html`
+					<div className="buttons instructTemplateSidebar" style=${{marginBottom: '4px'}}>
+						<${SelectBox}
+							label=${t('sidebar.samplerPreset')}
+							value=${selectedSamplerPresetId}
+							options=${() => {
+								const result = [{ name: t('sidebar.customInlineEdit'), value: 'custom' }];
+								for (const [id, p] of Object.entries(samplerPresets) as [string, SamplerPresetData][]) {
+									if (p.enabled) result.push({ name: p.name, value: id });
+								}
+								return result;
+							}}
+							onValueChange=${(val: string) => {
+								if (val !== 'custom' && samplerPresets[val])
+									handleApplySamplerPreset(samplerPresets[val]);
+								setSelectedSamplerPresetId(val);
+							}}
+						/>
+						<button onClick=${handleSaveCurrentPreset}
+							title=${t('sidebar.saveCurrentPreset')}
+							className="symbol-button"
+							style=${{width: 'auto', padding: '0 6px'}}>${t('sidebar.save')}</button>
+						<button onClick=${() => { closeMenu(); toggleModal("samplerPresets"); }}
+							title=${t('sidebar.manageSamplerPresets')} className="symbol-button" style=${{ padding: 0 }}>
+							<${SVG_Settings} style=${{ 'width':'.95em','transform':'translate(-50%, -45%)' }}/>
+						</button>
+						<div className="horz-separator"/>
+					</div>
 					<${Checkbox} label=${t('sidebar.temperature')}
 						disabled=${!!cancel}
 						value=${enabledSamplers.includes('temperature')}

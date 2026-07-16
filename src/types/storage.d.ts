@@ -73,9 +73,50 @@ interface AuthorNoteData {
   tokens?: number;
 }
 
+interface LogitBiasEntry {
+  ids: number[];
+  strings: string[];
+  power: number;
+}
+
 interface LogitBiasState {
-  bias: Record<string, number>;
+  bias: Record<string, LogitBiasEntry>;
   model: string;
+}
+
+interface SamplerPresetData {
+  id: string;
+  name: string;
+  enabled: boolean;
+  seed: number;
+  maxPredictTokens: number;
+  temperature: number;
+  dynaTempRange: number;
+  dynaTempExp: number;
+  repeatPenalty: number;
+  repeatLastN: number;
+  penalizeNl: boolean;
+  presencePenalty: number;
+  frequencyPenalty: number;
+  topK: number;
+  topP: number;
+  typicalP: number;
+  minP: number;
+  tfsZ: number;
+  mirostat: number;
+  mirostatTau: number;
+  mirostatEta: number;
+  xtcThreshold: number;
+  xtcProbability: number;
+  dryMultiplier: number;
+  dryBase: number;
+  dryAllowedLength: number;
+  dryPenaltyRange: number;
+  drySequenceBreakers: string;
+  bannedTokens: string;
+  ignoreEos: boolean;
+  enabledSamplers: string[];
+  grammar: string;
 }
 
 type DbConnection = IDBDatabase | ((route: string, options?: unknown) => Promise<unknown>);

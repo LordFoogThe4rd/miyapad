@@ -194,6 +194,7 @@ const runMigrationToV4 = (db: sqlite3.Database) => {
                 await migrateTableToZstd('templates');
                 await migrateTableToZstd('themes');
                 await migrateTableToZstd('connections');
+                await migrateTableToZstd('samplerpresets');
 
                 console.log("Running initial zstd incremental maintenance (training dictionaries)...");
                 await new Promise<void>((res, rej) => db.run(`SELECT zstd_incremental_maintenance(null, 1)`, (err) => err ? rej(err) : res()));
@@ -363,10 +364,12 @@ const initDatabase = (storagePath: string) => {
                             const templateCol = getColumnName('templates');
                             const themeCol = getColumnName('themes');
                             const connectionCol = getColumnName('connections');
+                            const samplerPresetCol = getColumnName('samplerpresets');
                             db.run(`CREATE TABLE IF NOT EXISTS sessions (key TEXT PRIMARY KEY, ${sessionCol} BLOB)`);
                             db.run(`CREATE TABLE IF NOT EXISTS templates (key TEXT PRIMARY KEY, ${templateCol} BLOB)`);
                             db.run(`CREATE TABLE IF NOT EXISTS themes (key TEXT PRIMARY KEY, ${themeCol} BLOB)`);
                             db.run(`CREATE TABLE IF NOT EXISTS connections (key TEXT PRIMARY KEY, ${connectionCol} BLOB)`);
+                            db.run(`CREATE TABLE IF NOT EXISTS samplerpresets (key TEXT PRIMARY KEY, ${samplerPresetCol} BLOB)`);
                             db.run(`CREATE TABLE IF NOT EXISTS meta (key TEXT PRIMARY KEY, value TEXT)`, (err) => {
                                 if (err) rej(err);
                                 else res();
@@ -398,7 +401,8 @@ const initDatabase = (storagePath: string) => {
                         enableTransparentCompressionIfMissing(db, 'sessions'),
                         enableTransparentCompressionIfMissing(db, 'templates'),
                         enableTransparentCompressionIfMissing(db, 'themes'),
-                        enableTransparentCompressionIfMissing(db, 'connections')
+                        enableTransparentCompressionIfMissing(db, 'connections'),
+                        enableTransparentCompressionIfMissing(db, 'samplerpresets')
                     ]);
 
                     await new Promise<void>((res, rej) => {

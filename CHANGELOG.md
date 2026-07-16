@@ -6,7 +6,7 @@
 - Language selector in Preferences (new "General" tab) with locale persistence and browser-language auto-detection on first visit; see the [Localization guide](https://github.com/LordFoogThe4rd/miyapad/wiki/Localization) to add or contribute a translation
 - About dialog showing the current version, with a "Check for Updates" button that reports the latest release and links to the download
 - Bundled `miyapad-update.sh` / `miyapad-update.ps1` scripts in server distributions for one-command updates
-
+- Sampler Presets: save, load, and manage named sampler parameter presets (temperature, top-k, top-p, mirostat, DRY, XTC, etc.). Includes a manager modal, preset dropdown in the sidebar, preset cloning, and import from SillyTavern or NovelAI preset formats (experimental, please backup frequently and report any issues)
 ## [2.5.3] - 2026-07-03
 
 ### Fixed

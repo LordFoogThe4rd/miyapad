@@ -23,6 +23,7 @@ import { ThemeManagerModal } from './modals/ThemeManagerModal';
 import { AIHordeSettingsModal } from './modals/AIHordeSettingsModal';
 import { CompressionInfoModal } from './modals/CompressionInfoModal';
 import { ConnectionManagerModal } from './modals/ConnectionManagerModal';
+import { SamplerPresetManagerModal } from './modals/SamplerPresetManagerModal';
 import { SessionsModal } from './modals/SessionsModal';
 import { AboutModal } from './modals/AboutModal';
 import { QuickSwitcher } from './QuickSwitcher';
@@ -46,6 +47,7 @@ export function Modals({ toggleModal, currentThemeName, setCurrentThemeName, all
 		screenshotAiTextColor, setScreenshotAiTextColor,
 		screenshotModelAvatarUrl, setScreenshotModelAvatarUrl,
 		connections, setConnections, selectedConnectionId,
+		samplerPresets, setSamplerPresets, selectedSamplerPresetId,
 		stoppingStringsError, drySequenceBreakersError, bannedTokensError
 	} = useSettings();
 	const { cancel, modalState, closeModal, instructModalState, setInstructModalState, promptArea, lastError, sessionEndpointConnecting, predictStartTokens, tokens, contextMenuState, setContextMenuState, setTriggerPredict, sessionEndpointError, setRejectedAPIKey } = useGeneration();
@@ -352,6 +354,13 @@ export function Modals({ toggleModal, currentThemeName, setCurrentThemeName, all
 			connections=${connections}
 			setConnections=${setConnections}
 			activeConnectionId=${selectedConnectionId}/>
+
+		<${SamplerPresetManagerModal}
+			isOpen=${modalState.samplerPresets}
+			closeModal=${() => closeModal("samplerPresets")}
+			presets=${samplerPresets}
+			setPresets=${setSamplerPresets}
+			activePresetId=${selectedSamplerPresetId}/>
 
 		<${SessionsModal}
 			isOpen=${modalState.sessions}
