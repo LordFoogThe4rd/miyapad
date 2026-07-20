@@ -1,5 +1,5 @@
 import { html } from 'htm/react';
-import { createContext, useContext, useState, useEffect, type Dispatch, type SetStateAction, type ReactNode } from 'react';
+import { createContext, useContext, useState, useEffect, useMemo, type Dispatch, type SetStateAction, type ReactNode } from 'react';
 import { usePersistentState } from '../hooks/usePersistentState';
 import { AVAILABLE_LOCALES, type LocaleCode } from '../i18n/locales';
 import { defaultPresets } from '../defaults/presets';
@@ -104,7 +104,19 @@ export function SettingsProvider({ children, sessionStorage, templateStorage, th
 	const [stoppingStringsError, setStoppingStringsError] = useState(undefined);
 	const [useBasicStoppingMode, setUseBasicStoppingMode] = useSessionState('useBasicStoppingMode', stoppingStrings != '[]' ? false : defaultPresets.useBasicStoppingMode);
 	const [basicStoppingModeType, setBasicStoppingModeType] = useSessionState('basicStoppingModeType', defaultPresets.basicStoppingModeType);
-	const [logitBias, setLogitBias] = useSessionState('logitBias', defaultPresets.logitBias);
+	const [rawLogitBias, setLogitBias] = useSessionState('logitBias', defaultPresets.logitBias);
+	const logitBias = useMemo(() => {
+		if (rawLogitBias && typeof rawLogitBias === 'object' && !('bias' in rawLogitBias)) {
+			const bias: Record<string, LogitBiasEntry> = {};
+			for (const [key, val] of Object.entries(rawLogitBias as Record<string, unknown>)) {
+				if (typeof val === 'number') {
+					bias[key] = { ids: [], strings: [key], power: val };
+				}
+			}
+			return { bias, model: 'none' };
+		}
+		return rawLogitBias;
+	}, [rawLogitBias]);
 	const [logitBiasParam, setLogitBiasParam] = useState({});
 	const [contextLength, setContextLength] = useSessionState('contextLength', defaultPresets.contextLength);
 	const [memoryTokens, setMemoryTokens] = useSessionState('memoryTokens', defaultPresets.memoryTokens);
