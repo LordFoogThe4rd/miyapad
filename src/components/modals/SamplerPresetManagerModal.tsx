@@ -215,7 +215,12 @@ export function SamplerPresetManagerModal({ isOpen, closeModal, presets, setPres
     const newId = crypto.randomUUID();
     const newPreset = structuredClone(preset);
     newPreset.id = newId;
-    newPreset.name = preset.name + t('samplerPreset.copySuffix');
+    const existingNames = (Object.values(presets) as SamplerPresetData[]).map(p => p.name);
+    let name = preset.name + t('samplerPreset.copySuffix');
+    for (let i = 1; existingNames.includes(name); i++) {
+      name = preset.name + t('samplerPreset.copySuffix') + i;
+    }
+    newPreset.name = name;
     setPresets(prev => ({ ...prev, [newId]: newPreset }));
     setSelectedId(newId);
     setMobileShowDetails(true);
