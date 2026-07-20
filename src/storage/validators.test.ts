@@ -93,6 +93,14 @@ describe('isSamplerPresetData', () => {
        bad[field] = 'true';
       expect(isSamplerPresetData(bad)).toBe(false);
     }
+
+    const badSamplers = clone(valid);
+    badSamplers.enabledSamplers = ['top_p', 1];
+    expect(isSamplerPresetData(badSamplers)).toBe(false);
+
+    const validSamplers = makeValid();
+    validSamplers.enabledSamplers = ['top_p'];
+    expect(isSamplerPresetData(validSamplers)).toBe(true);
   });
 
   it('accepts edge values', () => {
