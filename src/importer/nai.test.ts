@@ -200,4 +200,20 @@ describe('importNaiPreset', () => {
     expect(result.grammar).toBe('');
     expect(result.ignoreEos).toBe(false);
   });
+
+  it('phrase_rep_pen disabled in order excludes dry from enabledSamplers', () => {
+    const nai = {
+      name: 'test',
+      parameters: {
+        temperature: 0.7, repetition_penalty: 0, repetition_penalty_frequency: 0,
+        repetition_penalty_presence: 0, phrase_rep_pen: 'aggressive', mirostat_tau: 0,
+        order: [
+          { id: 'temperature', enabled: true },
+          { id: 'phrase_rep_pen', enabled: false },
+        ],
+      },
+    };
+    const result = importNaiPreset(nai, []);
+    expect(result.enabledSamplers).not.toContain('dry');
+  });
 });

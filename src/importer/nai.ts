@@ -27,8 +27,12 @@ function getNaiSamplers(params: Record<string, unknown>): string[] {
   const seen = new Set<string>();
 
   const order = params.order as NaiOrderEntry[] | undefined;
+  let dryExplicitlyDisabled = false;
   if (Array.isArray(order)) {
     for (const entry of order) {
+      if (entry.id === 'phrase_rep_pen' && !entry.enabled) {
+        dryExplicitlyDisabled = true;
+      }
       if (!entry.enabled) continue;
       const mapped = NAI_SAMPLER_MAP[entry.id];
       if (mapped && !seen.has(mapped)) {
@@ -50,7 +54,7 @@ function getNaiSamplers(params: Record<string, unknown>): string[] {
     seen.add('freq_pen');
     result.push('freq_pen');
   }
-  if (typeof params.phrase_rep_pen === 'string' && params.phrase_rep_pen !== 'none' && !seen.has('dry')) {
+  if (!dryExplicitlyDisabled && typeof params.phrase_rep_pen === 'string' && params.phrase_rep_pen !== 'none' && !seen.has('dry')) {
     seen.add('dry');
     result.push('dry');
   }
