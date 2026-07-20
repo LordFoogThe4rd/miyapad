@@ -3,6 +3,16 @@ import type { Database } from 'sqlite3';
 import { getColumnName, normalizeStoreName } from '../lib/utils.js';
 
 export default function(app: Express, db: Database): void {
+    // ponytail: single global queue; per-store lock if contention shows up
+    const txQueue: (() => void)[] = [];
+    let txRunning = false;
+    function beginTx(fn: (done: () => void) => void) {
+        const task = () => fn(() => {
+            txQueue.length ? txQueue.shift()!() : (txRunning = false);
+        });
+        if (!txRunning) { txRunning = true; task(); }
+        else { txQueue.push(task); }
+    }
     app.post('/load', (req: Request, res: Response) => {
         const { storeName, key } = req.body as { storeName: string; key: string };
         const normStoreName = normalizeStoreName(storeName);
@@ -175,27 +185,34 @@ export default function(app: Express, db: Database): void {
         if (!normStoreName) {
             return res.status(400).json({ ok: false, message: 'Invalid store name provided' });
         }
-        db.serialize(() => {
-            db.run("BEGIN TRANSACTION");
-
-            db.run(`DELETE FROM ${normStoreName} WHERE key = ?`, [key]);
-
-            if (normStoreName === 'sessions') {
-                db.run(`DELETE FROM names WHERE key = ?`, [key]);
-            }
-
-            db.run("COMMIT", (err) => {
-                if (err) {
-                    db.run("ROLLBACK");
-                    return res.status(500).json({ ok: false, message: 'Error deleting from the database' });
-                }
-                res.json({ ok: true, result: 'Session deleted successfully' });
+        beginTx((done) => {
+            db.serialize(() => {
+                db.run("BEGIN TRANSACTION", (err) => {
+                    if (err) {
+                        res.status(500).json({ ok: false, message: 'Transaction begin failed' });
+                        done();
+                        return;
+                    }
+                    db.run(`DELETE FROM ${normStoreName} WHERE key = ?`, [key]);
+                    if (normStoreName === 'sessions') {
+                        db.run(`DELETE FROM names WHERE key = ?`, [key]);
+                    }
+                    db.run("COMMIT", (err) => {
+                        if (err) {
+                            db.run("ROLLBACK");
+                            res.status(500).json({ ok: false, message: 'Error deleting from the database' });
+                        } else {
+                            res.json({ ok: true, result: 'Session deleted successfully' });
+                        }
+                        done();
+                    });
+                });
             });
         });
     });
 
     app.post('/batch', (req: Request, res: Response) => {
-        const { storeName, ops } = req.body as { storeName: string; ops: { type: 'save' | 'delete'; key: string; data?: any }[] };
+        const { storeName, ops } = req.body as { storeName: string; ops: { type: 'save' | 'delete'; key: string | number; data?: any }[] };
         const normStoreName = normalizeStoreName(storeName);
         if (!normStoreName) {
             return res.status(400).json({ ok: false, message: 'Invalid store name provided' });
@@ -218,47 +235,57 @@ export default function(app: Express, db: Database): void {
             }
         }
 
-        db.serialize(() => {
-            db.run("BEGIN TRANSACTION", (err) => {
-                if (err) {
-                    return res.status(500).json({ ok: false, message: 'Transaction begin failed' });
-                }
-
-                let i = 0;
-                function next() {
-                    if (i >= ops.length) {
-                        db.run("COMMIT", (err) => {
-                            if (err) {
-                                db.run("ROLLBACK");
-                                return res.status(500).json({ ok: false, message: 'Batch operation failed' });
-                            }
-                            res.json({ ok: true, result: 'Batch completed' });
-                        });
+        beginTx((done) => {
+            db.serialize(() => {
+                db.run("BEGIN TRANSACTION", (err) => {
+                    if (err) {
+                        res.status(500).json({ ok: false, message: 'Transaction begin failed' });
+                        done();
                         return;
                     }
 
-                    const op = ops[i++];
-                    if (op.type === 'save') {
-                        const dataToStore = normStoreName !== 'names' ? JSON.stringify(op.data) : op.data;
-                        db.run(`INSERT OR REPLACE INTO ${normStoreName} (key, ${colName}) VALUES (?, ?)`, [op.key, dataToStore], (err) => {
-                            if (err) {
-                                db.run("ROLLBACK");
-                                return res.status(500).json({ ok: false, message: 'Batch operation failed' });
-                            }
-                            next();
-                        });
-                    } else {
-                        db.run(`DELETE FROM ${normStoreName} WHERE key = ?`, [op.key], (err) => {
-                            if (err) {
-                                db.run("ROLLBACK");
-                                return res.status(500).json({ ok: false, message: 'Batch operation failed' });
-                            }
-                            next();
-                        });
-                    }
-                }
+                    let i = 0;
+                    function next() {
+                        if (i >= ops.length) {
+                            db.run("COMMIT", (err) => {
+                                if (err) {
+                                    db.run("ROLLBACK");
+                                    res.status(500).json({ ok: false, message: 'Batch operation failed' });
+                                } else {
+                                    res.json({ ok: true, result: 'Batch completed' });
+                                }
+                                done();
+                            });
+                            return;
+                        }
 
-                next();
+                        const op = ops[i++];
+                        if (op.type === 'save') {
+                            const dataToStore = normStoreName !== 'names' ? JSON.stringify(op.data) : op.data;
+                            db.run(`INSERT OR REPLACE INTO ${normStoreName} (key, ${colName}) VALUES (?, ?)`, [op.key, dataToStore], (err) => {
+                                 if (err) {
+                                    db.run("ROLLBACK");
+                                    res.status(500).json({ ok: false, message: 'Batch operation failed' });
+                                    done();
+                                    return;
+                                }
+                                next();
+                            });
+                        } else {
+                            db.run(`DELETE FROM ${normStoreName} WHERE key = ?`, [op.key], (err) => {
+                                if (err) {
+                                    db.run("ROLLBACK");
+                                    res.status(500).json({ ok: false, message: 'Batch operation failed' });
+                                    done();
+                                    return;
+                                }
+                                next();
+                            });
+                        }
+                    }
+
+                    next();
+                });
             });
         });
     });
