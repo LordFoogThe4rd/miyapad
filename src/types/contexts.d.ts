@@ -14,10 +14,12 @@ export interface SettingsState {
   templateStorage: TemplateStorage;
   themeStorage: ThemeStorage;
   connectionStorage: ConnectionStorage;
+  samplerPresetStorage: SamplerPresetStorage;
   useSessionState: <T>(name: string, initialState: T) => [T, Dispatch<SetStateAction<T>>];
   useDBTemplates: (initialState: Record<string, InstructTemplate>) => [Record<string, InstructTemplate>, Dispatch<SetStateAction<Record<string, InstructTemplate>>>];
   useDBThemes: (initialState: Record<string, ThemeData>) => [Record<string, ThemeData>, Dispatch<SetStateAction<Record<string, ThemeData>>>];
   useDBConnections: (initialState: Record<string, ConnectionData>) => [Record<string, ConnectionData>, Dispatch<SetStateAction<Record<string, ConnectionData>>>];
+  useDBSamplerPresets: (initialState: Record<string, SamplerPresetData>) => [Record<string, SamplerPresetData>, Dispatch<SetStateAction<Record<string, SamplerPresetData>>>];
   isMiyapadEndpoint: boolean;
   locale: string;
   setLocale: Dispatch<SetStateAction<string>>;
@@ -25,6 +27,10 @@ export interface SettingsState {
   setConnections: Dispatch<SetStateAction<Record<string, ConnectionData>>>;
   selectedConnectionId: string;
   setSelectedConnectionId: Dispatch<SetStateAction<string>>;
+  samplerPresets: Record<string, SamplerPresetData>;
+  setSamplerPresets: Dispatch<SetStateAction<Record<string, SamplerPresetData>>>;
+  selectedSamplerPresetId: string;
+  setSelectedSamplerPresetId: Dispatch<SetStateAction<string>>;
   templates: Record<string, InstructTemplate>;
   setTemplates: Dispatch<SetStateAction<Record<string, InstructTemplate>>>;
   templateReplacements: Record<string, string>;

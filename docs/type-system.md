@@ -36,7 +36,7 @@ Shared domain types are declared as global ambient declarations in `src/types/*.
 | File | Contents |
 |------|----------|
 | `src/types/api.d.ts` | `CompletionChunk`, `ApiEndpointConfig`, `CompletionOptions`, `SamplerOptions`, `TokenCounterParams`, `LogprobToken` |
-| `src/types/storage.d.ts` | `SessionData`, `ChatMessage`, `InstructTemplate`, `ThemeData`, `ConnectionData`, `WorldInfoData`, `DatabaseAdapter` |
+| `src/types/storage.d.ts` | `SessionData`, `ChatMessage`, `InstructTemplate`, `ThemeData`, `ConnectionData`, `SamplerPresetData`, `WorldInfoData`, `DatabaseAdapter` |
 | `src/types/defaults.d.ts` | `DefaultPresets` interface |
 | `src/types/global.d.ts` | Ambient module declarations (`*.css`, `html-to-image`), global interface augmentations (`Window`, `Document`, `HTMLTextAreaElement`, `ViewTransition`) |
 

@@ -82,7 +82,7 @@ export function CollapsibleGroup({ label, stateLabel, menu, expanded, children }
 					</button>
 					${isMenuVisible && html`
 						<div ref=${menuRef} className="floating-menu" onClick=${(e: any) => e.stopPropagation()}>
-							${menu}
+							${typeof menu === 'function' ? menu(() => setIsMenuVisible(false)) : menu}
 						</div>`}
 					`}
 			</div>

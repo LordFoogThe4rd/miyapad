@@ -27,7 +27,7 @@ export class IndexedDBAdapter {
 
 	async openDatabase(): Promise<IDBDatabase> {
 		return new Promise((resolve, reject) => {
-			const openRequest = indexedDB.open(this.dbName, 5);
+			const openRequest = indexedDB.open(this.dbName, 6);
 
 			openRequest.onerror = () => reject(openRequest.error);
 			openRequest.onsuccess = () => resolve(openRequest.result);
@@ -37,7 +37,7 @@ export class IndexedDBAdapter {
 				const db = request.result;
 				const transaction = request.transaction!;
 
-				for (const storeName of ["Sessions", "Templates", "Names", "Themes", "Connections"]) {
+				for (const storeName of ["Sessions", "Templates", "Names", "Themes", "Connections", "SamplerPresets"]) {
 					if (!db.objectStoreNames.contains(storeName)) {
 						db.createObjectStore(storeName);
 					}
@@ -166,6 +166,24 @@ export class IndexedDBAdapter {
 
 			request.onsuccess = () => resolve(undefined);
 			request.onerror = () => reject(request.error);
+		});
+	}
+
+	async batchMutation(db: IDBDatabase, storeName: string, ops: BatchOp[]) {
+		return new Promise<void>((resolve, reject) => {
+			const tx = db.transaction(storeName, 'readwrite');
+			const store = tx.objectStore(storeName);
+
+			for (const op of ops) {
+				if (op.type === 'save') {
+					store.put(op.data, op.key);
+				} else {
+					store.delete(op.key);
+				}
+			}
+
+			tx.oncomplete = () => resolve();
+			tx.onerror = () => reject(tx.error);
 		});
 	}
 

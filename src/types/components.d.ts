@@ -87,10 +87,12 @@ export interface AppProps {
   templateStorage: TemplateStorage;
   themeStorage: ThemeStorage;
   connectionStorage: ConnectionStorage;
+  samplerPresetStorage: SamplerPresetStorage;
   useSessionState: <T>(name: string, initialState: T) => [T, Dispatch<T>];
   useDBTemplates: <T>(initialState: T) => [Record<string, InstructTemplate>, Dispatch<Record<string, InstructTemplate>>];
   useDBThemes: <T>(initialState: T) => [Record<string, ThemeData>, Dispatch<Record<string, ThemeData>>];
   useDBConnections: <T>(initialState: T) => [Record<string, ConnectionData>, Dispatch<Record<string, ConnectionData>>];
+  useDBSamplerPresets: <T>(initialState: T) => [Record<string, SamplerPresetData>, Dispatch<Record<string, SamplerPresetData>>];
   isMiyapadEndpoint: boolean;
 }
 

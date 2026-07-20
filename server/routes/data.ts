@@ -3,6 +3,16 @@ import type { Database } from 'sqlite3';
 import { getColumnName, normalizeStoreName } from '../lib/utils.js';
 
 export default function(app: Express, db: Database): void {
+    // ponytail: single global queue; per-store lock if contention shows up
+    const txQueue: (() => void)[] = [];
+    let txRunning = false;
+    function beginTx(fn: (done: () => void) => void) {
+        const task = () => fn(() => {
+            txQueue.length ? txQueue.shift()!() : (txRunning = false);
+        });
+        if (!txRunning) { txRunning = true; task(); }
+        else { txQueue.push(task); }
+    }
     app.post('/load', (req: Request, res: Response) => {
         const { storeName, key } = req.body as { storeName: string; key: string };
         const normStoreName = normalizeStoreName(storeName);
@@ -175,21 +185,107 @@ export default function(app: Express, db: Database): void {
         if (!normStoreName) {
             return res.status(400).json({ ok: false, message: 'Invalid store name provided' });
         }
-        db.serialize(() => {
-            db.run("BEGIN TRANSACTION");
+        beginTx((done) => {
+            db.serialize(() => {
+                db.run("BEGIN TRANSACTION", (err) => {
+                    if (err) {
+                        res.status(500).json({ ok: false, message: 'Transaction begin failed' });
+                        done();
+                        return;
+                    }
+                    db.run(`DELETE FROM ${normStoreName} WHERE key = ?`, [key]);
+                    if (normStoreName === 'sessions') {
+                        db.run(`DELETE FROM names WHERE key = ?`, [key]);
+                    }
+                    db.run("COMMIT", (err) => {
+                        if (err) {
+                            db.run("ROLLBACK");
+                            res.status(500).json({ ok: false, message: 'Error deleting from the database' });
+                        } else {
+                            res.json({ ok: true, result: 'Session deleted successfully' });
+                        }
+                        done();
+                    });
+                });
+            });
+        });
+    });
 
-            db.run(`DELETE FROM ${normStoreName} WHERE key = ?`, [key]);
+    app.post('/batch', (req: Request, res: Response) => {
+        const { storeName, ops } = req.body as { storeName: string; ops: { type: 'save' | 'delete'; key: string | number; data?: any }[] };
+        const normStoreName = normalizeStoreName(storeName);
+        if (!normStoreName) {
+            return res.status(400).json({ ok: false, message: 'Invalid store name provided' });
+        }
+        if (!Array.isArray(ops) || ops.length === 0) {
+            return res.status(400).json({ ok: false, message: 'ops must be a non-empty array' });
+        }
 
-            if (normStoreName === 'sessions') {
-                db.run(`DELETE FROM names WHERE key = ?`, [key]);
+        const colName = getColumnName(normStoreName);
+
+        for (const op of ops) {
+            if (!op || typeof op !== 'object' || (op.type !== 'save' && op.type !== 'delete')) {
+                return res.status(400).json({ ok: false, message: `Unknown operation type: ${op?.type}` });
             }
+            if (op.key === undefined || op.key === null || (typeof op.key !== 'string' && typeof op.key !== 'number')) {
+                return res.status(400).json({ ok: false, message: 'Missing key in operation' });
+            }
+            if (op.type === 'save' && !Object.hasOwn(op, 'data')) {
+                return res.status(400).json({ ok: false, message: 'Missing data in save operation' });
+            }
+        }
 
-            db.run("COMMIT", (err) => {
-                if (err) {
-                    db.run("ROLLBACK");
-                    return res.status(500).json({ ok: false, message: 'Error deleting from the database' });
-                }
-                res.json({ ok: true, result: 'Session deleted successfully' });
+        beginTx((done) => {
+            db.serialize(() => {
+                db.run("BEGIN TRANSACTION", (err) => {
+                    if (err) {
+                        res.status(500).json({ ok: false, message: 'Transaction begin failed' });
+                        done();
+                        return;
+                    }
+
+                    let i = 0;
+                    function next() {
+                        if (i >= ops.length) {
+                            db.run("COMMIT", (err) => {
+                                if (err) {
+                                    db.run("ROLLBACK");
+                                    res.status(500).json({ ok: false, message: 'Batch operation failed' });
+                                } else {
+                                    res.json({ ok: true, result: 'Batch completed' });
+                                }
+                                done();
+                            });
+                            return;
+                        }
+
+                        const op = ops[i++];
+                        if (op.type === 'save') {
+                            const dataToStore = normStoreName !== 'names' ? JSON.stringify(op.data) : op.data;
+                            db.run(`INSERT OR REPLACE INTO ${normStoreName} (key, ${colName}) VALUES (?, ?)`, [op.key, dataToStore], (err) => {
+                                 if (err) {
+                                    db.run("ROLLBACK");
+                                    res.status(500).json({ ok: false, message: 'Batch operation failed' });
+                                    done();
+                                    return;
+                                }
+                                next();
+                            });
+                        } else {
+                            db.run(`DELETE FROM ${normStoreName} WHERE key = ?`, [op.key], (err) => {
+                                if (err) {
+                                    db.run("ROLLBACK");
+                                    res.status(500).json({ ok: false, message: 'Batch operation failed' });
+                                    done();
+                                    return;
+                                }
+                                next();
+                            });
+                        }
+                    }
+
+                    next();
+                });
             });
         });
     });

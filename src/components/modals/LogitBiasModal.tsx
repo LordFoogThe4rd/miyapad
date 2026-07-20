@@ -17,6 +17,7 @@ type BiasItem = {
 };
 type BiasTempState = { positive: BiasItem[]; negative: BiasItem[]; [key: string]: BiasItem[] };
 
+// ponytail: logit bias list import/export to be added as a separate feature
 export function LogitBiasModal({ isOpen, closeModal, biasState, apiConfig, cancel }: any) {
 	const t = useT();
 	const { logitBias, setLogitBias, logitBiasParam, setLogitBiasParam, setRejectedAPIKey } = biasState;
