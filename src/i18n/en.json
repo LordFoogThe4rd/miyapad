@@ -285,6 +285,7 @@
   "samplerPreset.copySuffix": " (Copy)",
   "samplerPreset.copyToClipboard": "Copy to Clipboard",
   "samplerPreset.delete": "Delete",
+  "samplerPreset.goBack": "Go back",
   "samplerPreset.description": "Manage your sampler parameter presets.",
   "samplerPreset.disabled": "Disabled",
   "samplerPreset.emptyState": "Select a preset or create a new one.",

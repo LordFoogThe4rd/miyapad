@@ -288,6 +288,7 @@ export function SamplerPresetManagerModal({ isOpen, closeModal, presets, setPres
             <div className="sampler-preset-header">
               <div className="sampler-preset-header-title">
                 <div className="sampler-preset-back-btn" role="button" tabIndex=${0}
+                  aria-label=${t('samplerPreset.goBack')}
                   onKeyDown=${(e: KeyboardEvent) => { if (e.key === 'Enter' || e.key === ' ') { e.preventDefault(); setMobileShowDetails(false); } }}
                   onClick=${() => setMobileShowDetails(false)}>
                   ${iconBack}
