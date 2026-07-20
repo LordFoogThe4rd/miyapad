@@ -302,6 +302,7 @@ export function SamplerPresetManagerModal({ isOpen, closeModal, presets, setPres
               </div>
               <div className="sampler-preset-actions">
                 <div className="sampler-preset-action-btn" role="button" tabIndex=${0}
+                  aria-disabled=${isActivePreset}
                   style=${isActivePreset ? { opacity: '0.5', cursor: 'not-allowed' } : {}}
                   title=${isActivePreset ? t('samplerPreset.cannotDisableActive') : t('samplerPreset.toggleStatus')}
                   onKeyDown=${(e: KeyboardEvent) => { if ((e.key === 'Enter' || e.key === ' ') && !isActivePreset) { e.preventDefault(); handleUpdatePreset(selectedId, 'enabled', !currentPreset.enabled); } }}
@@ -324,6 +325,7 @@ export function SamplerPresetManagerModal({ isOpen, closeModal, presets, setPres
                   <svg width="1em" height="1em" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M16 4h2a2 2 0 0 1 2 2v14a2 2 0 0 1-2 2H6a2 2 0 0 1-2-2V6a2 2 0 0 1 2-2h2"/><rect x="8" y="2" width="8" height="4" rx="1" ry="1"/></svg>
                 </button>
                 <button className="sampler-preset-action-btn"
+                  disabled=${isActivePreset}
                   style=${isActivePreset ? { opacity: '0.5', cursor: 'not-allowed' } : {}}
                   title=${isActivePreset ? t('samplerPreset.cannotDeleteActive') : t('samplerPreset.delete')}
                   onClick=${() => handleDeletePreset(selectedId)}>
