@@ -207,11 +207,14 @@ export default function(app: Express, db: Database): void {
         const colName = getColumnName(normStoreName);
 
         for (const op of ops) {
-            if (op.type !== 'save' && op.type !== 'delete') {
-                return res.status(400).json({ ok: false, message: `Unknown operation type: ${op.type}` });
+            if (!op || typeof op !== 'object' || (op.type !== 'save' && op.type !== 'delete')) {
+                return res.status(400).json({ ok: false, message: `Unknown operation type: ${op?.type}` });
             }
-            if (!op.key) {
+            if (op.key === undefined || op.key === null || (typeof op.key !== 'string' && typeof op.key !== 'number')) {
                 return res.status(400).json({ ok: false, message: 'Missing key in operation' });
+            }
+            if (op.type === 'save' && !Object.hasOwn(op, 'data')) {
+                return res.status(400).json({ ok: false, message: 'Missing data in save operation' });
             }
         }
 
