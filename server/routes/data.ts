@@ -219,28 +219,46 @@ export default function(app: Express, db: Database): void {
         }
 
         db.serialize(() => {
-            db.run("BEGIN TRANSACTION");
-
-            let failed = false;
-            for (const op of ops) {
-                if (op.type === 'save') {
-                    const dataToStore = normStoreName !== 'names' ? JSON.stringify(op.data) : op.data;
-                    db.run(`INSERT OR REPLACE INTO ${normStoreName} (key, ${colName}) VALUES (?, ?)`, [op.key, dataToStore], (err) => {
-                        if (err) failed = true;
-                    });
-                } else {
-                    db.run(`DELETE FROM ${normStoreName} WHERE key = ?`, [op.key], (err) => {
-                        if (err) failed = true;
-                    });
+            db.run("BEGIN TRANSACTION", (err) => {
+                if (err) {
+                    return res.status(500).json({ ok: false, message: 'Transaction begin failed' });
                 }
-            }
 
-            db.run("COMMIT", (err) => {
-                if (err || failed) {
-                    db.run("ROLLBACK");
-                    return res.status(500).json({ ok: false, message: 'Batch operation failed' });
+                let i = 0;
+                function next() {
+                    if (i >= ops.length) {
+                        db.run("COMMIT", (err) => {
+                            if (err) {
+                                db.run("ROLLBACK");
+                                return res.status(500).json({ ok: false, message: 'Batch operation failed' });
+                            }
+                            res.json({ ok: true, result: 'Batch completed' });
+                        });
+                        return;
+                    }
+
+                    const op = ops[i++];
+                    if (op.type === 'save') {
+                        const dataToStore = normStoreName !== 'names' ? JSON.stringify(op.data) : op.data;
+                        db.run(`INSERT OR REPLACE INTO ${normStoreName} (key, ${colName}) VALUES (?, ?)`, [op.key, dataToStore], (err) => {
+                            if (err) {
+                                db.run("ROLLBACK");
+                                return res.status(500).json({ ok: false, message: 'Batch operation failed' });
+                            }
+                            next();
+                        });
+                    } else {
+                        db.run(`DELETE FROM ${normStoreName} WHERE key = ?`, [op.key], (err) => {
+                            if (err) {
+                                db.run("ROLLBACK");
+                                return res.status(500).json({ ok: false, message: 'Batch operation failed' });
+                            }
+                            next();
+                        });
+                    }
                 }
-                res.json({ ok: true, result: 'Batch completed' });
+
+                next();
             });
         });
     });
