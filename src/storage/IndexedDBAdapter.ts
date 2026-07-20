@@ -27,7 +27,7 @@ export class IndexedDBAdapter {
 
 	async openDatabase(): Promise<IDBDatabase> {
 		return new Promise((resolve, reject) => {
-			const openRequest = indexedDB.open(this.dbName, 5);
+			const openRequest = indexedDB.open(this.dbName, 6);
 
 			openRequest.onerror = () => reject(openRequest.error);
 			openRequest.onsuccess = () => resolve(openRequest.result);
