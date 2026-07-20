@@ -257,9 +257,13 @@ export function Sidebar({ sidebarRef, toggleModal, currentThemeName, setCurrentT
 	};
 
 	useEffect(() => {
-		if (selectedSamplerPresetId !== 'custom' && samplerPresets[selectedSamplerPresetId]) {
-			handleApplySamplerPreset(samplerPresets[selectedSamplerPresetId]);
+		if (selectedSamplerPresetId === 'custom') return;
+		const preset = samplerPresets[selectedSamplerPresetId];
+		if (!preset || !preset.enabled) {
+			setSelectedSamplerPresetId('custom');
+			return;
 		}
+		handleApplySamplerPreset(preset);
 	}, [selectedSamplerPresetId, samplerPresets]);
 
 	const handleSaveCurrentPreset = () => {
