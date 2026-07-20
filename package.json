@@ -1,6 +1,6 @@
 {
   "name": "miyapad",
-  "version": "2.5.3",
+  "version": "2.6.0",
   "source": "miyapad.html",
   "scripts": {
     "prestart": "node scripts/write-version.mjs",
