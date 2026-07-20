@@ -205,20 +205,35 @@ export default function(app: Express, db: Database): void {
         }
 
         const colName = getColumnName(normStoreName);
+
+        for (const op of ops) {
+            if (op.type !== 'save' && op.type !== 'delete') {
+                return res.status(400).json({ ok: false, message: `Unknown operation type: ${op.type}` });
+            }
+            if (!op.key) {
+                return res.status(400).json({ ok: false, message: 'Missing key in operation' });
+            }
+        }
+
         db.serialize(() => {
             db.run("BEGIN TRANSACTION");
 
+            let failed = false;
             for (const op of ops) {
                 if (op.type === 'save') {
                     const dataToStore = normStoreName !== 'names' ? JSON.stringify(op.data) : op.data;
-                    db.run(`INSERT OR REPLACE INTO ${normStoreName} (key, ${colName}) VALUES (?, ?)`, [op.key, dataToStore]);
-                } else if (op.type === 'delete') {
-                    db.run(`DELETE FROM ${normStoreName} WHERE key = ?`, [op.key]);
+                    db.run(`INSERT OR REPLACE INTO ${normStoreName} (key, ${colName}) VALUES (?, ?)`, [op.key, dataToStore], (err) => {
+                        if (err) failed = true;
+                    });
+                } else {
+                    db.run(`DELETE FROM ${normStoreName} WHERE key = ?`, [op.key], (err) => {
+                        if (err) failed = true;
+                    });
                 }
             }
 
             db.run("COMMIT", (err) => {
-                if (err) {
+                if (err || failed) {
                     db.run("ROLLBACK");
                     return res.status(500).json({ ok: false, message: 'Batch operation failed' });
                 }
