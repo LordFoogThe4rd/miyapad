@@ -67,7 +67,12 @@ function handleImport(
 
   for (const raw of entries) {
     if (typeof raw !== 'object' || raw === null) continue;
-    const imported = importPreset(raw as Record<string, unknown>, existingNames);
+    let imported: Omit<SamplerPresetData, 'id'> | null;
+    try {
+      imported = importPreset(raw as Record<string, unknown>, existingNames);
+    } catch {
+      continue;
+    }
     if (!imported) continue;
     const id = crypto.randomUUID();
     newPresets[id] = { ...imported, id } as SamplerPresetData;
@@ -146,9 +151,9 @@ export function SamplerPresetManagerModal({ isOpen, closeModal, presets, setPres
 
   useLayoutEffect(() => {
     if (isOpen) {
-      if (selectedId !== 'custom' && selectedId !== activePresetId) {
+      if (activePresetId in presets && selectedId !== activePresetId) {
         setSelectedId(activePresetId);
-      } else if (!selectedId && Object.keys(presets).length > 0) {
+      } else if ((!selectedId || !(selectedId in presets)) && Object.keys(presets).length > 0) {
         setSelectedId(Object.keys(presets)[0]);
       }
       setMobileShowDetails(false);
@@ -265,8 +270,9 @@ export function SamplerPresetManagerModal({ isOpen, closeModal, presets, setPres
           </div>
           <div className="sampler-preset-list">
             ${(Object.entries(presets) as [string, SamplerPresetData][]).map(([id, preset]) => html`
-              <div key=${id}
+              <div key=${id} role="button" tabIndex=${0}
                 className="sampler-preset-item ${selectedId === id ? 'selected' : ''} ${preset.enabled ? 'enabled' : ''}"
+                onKeyDown=${(e: KeyboardEvent) => { if (e.key === 'Enter' || e.key === ' ') { e.preventDefault(); setSelectedId(id); setMobileShowDetails(true); } }}
                 onClick=${() => {
                   setSelectedId(id);
                   setMobileShowDetails(true);
@@ -281,15 +287,18 @@ export function SamplerPresetManagerModal({ isOpen, closeModal, presets, setPres
           ${currentPreset ? html`
             <div className="sampler-preset-header">
               <div className="sampler-preset-header-title">
-                <div className="sampler-preset-back-btn" onClick=${() => setMobileShowDetails(false)}>
+                <div className="sampler-preset-back-btn" role="button" tabIndex=${0}
+                  onKeyDown=${(e: KeyboardEvent) => { if (e.key === 'Enter' || e.key === ' ') { e.preventDefault(); setMobileShowDetails(false); } }}
+                  onClick=${() => setMobileShowDetails(false)}>
                   ${iconBack}
                 </div>
                 ${currentPreset.name}
               </div>
               <div className="sampler-preset-actions">
-                <div className="sampler-preset-action-btn"
+                <div className="sampler-preset-action-btn" role="button" tabIndex=${0}
                   style=${isActivePreset ? { opacity: '0.5', cursor: 'not-allowed' } : {}}
                   title=${isActivePreset ? t('samplerPreset.cannotDisableActive') : t('samplerPreset.toggleStatus')}
+                  onKeyDown=${(e: KeyboardEvent) => { if ((e.key === 'Enter' || e.key === ' ') && !isActivePreset) { e.preventDefault(); handleUpdatePreset(selectedId, 'enabled', !currentPreset.enabled); } }}
                   onClick=${() => {
                     if (isActivePreset) return;
                     handleUpdatePreset(selectedId, 'enabled', !currentPreset.enabled);
