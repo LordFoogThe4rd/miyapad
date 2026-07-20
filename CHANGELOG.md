@@ -1,6 +1,6 @@
 # Changelog
 
-## [???] - unreleased
+## [2.6.0] - 2026-07-20
 
 ### Added
 - Language selector in Preferences (new "General" tab) with locale persistence and browser-language auto-detection on first visit; see the [Localization guide](https://github.com/LordFoogThe4rd/miyapad/wiki/Localization) to add or contribute a translation
