@@ -16,16 +16,38 @@ export class SamplerPresetStorage extends AbstractStorage {
 	async performFullSave(newPresets: Record<string, SamplerPresetData>) {
 		try {
 			const db = await this.openDatabase();
+			const oldPresets = this.presets;
 
-			for (const key of Object.keys(this.presets)) {
-				if (!Object.hasOwn(newPresets, key)) {
-					await this.deleteFromDatabase(db, key);
+			if (this.dbAdapter.batchMutation) {
+				const ops: BatchOp[] = [];
+
+				for (const key of Object.keys(oldPresets)) {
+					if (!Object.hasOwn(newPresets, key)) {
+						ops.push({ type: 'delete', key });
+					}
 				}
-			}
 
-			for (const [key, value] of Object.entries(newPresets)) {
-				if (JSON.stringify(value) !== JSON.stringify(this.presets[key])) {
-					await this.saveToDatabase(db, key, value);
+				for (const [key, value] of Object.entries(newPresets)) {
+					if (JSON.stringify(value) !== JSON.stringify(oldPresets[key])) {
+						ops.push({ type: 'save', key, data: value });
+					}
+				}
+
+				if (ops.length > 0) {
+					await this.dbAdapter.batchMutation(db, this.storeName, ops);
+				}
+			} else {
+				// ponytail: fallback for adapters without batchMutation; non-atomic but preserves old behavior
+				for (const key of Object.keys(oldPresets)) {
+					if (!Object.hasOwn(newPresets, key)) {
+						await this.deleteFromDatabase(db, key);
+					}
+				}
+
+				for (const [key, value] of Object.entries(newPresets)) {
+					if (JSON.stringify(value) !== JSON.stringify(oldPresets[key])) {
+						await this.saveToDatabase(db, key, value);
+					}
 				}
 			}
 

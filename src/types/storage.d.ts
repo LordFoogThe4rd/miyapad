@@ -121,6 +121,8 @@ interface SamplerPresetData {
 
 type DbConnection = IDBDatabase | ((route: string, options?: unknown) => Promise<unknown>);
 
+type BatchOp = { type: 'save'; key: string | number; data: unknown } | { type: 'delete'; key: string | number };
+
 interface DatabaseAdapter {
   sessionEndpoint?: string;
   init?(): Promise<void>;
@@ -131,6 +133,7 @@ interface DatabaseAdapter {
   saveToDatabase(db: DbConnection, storeName: string, key: string | number, data: unknown): Promise<void>;
   renameSessionInDatabase(db: DbConnection, storeName: string, key: string | number, newName: string): Promise<void>;
   deleteFromDatabase(db: DbConnection, storeName: string, key: string | number): Promise<void>;
+  batchMutation?(db: DbConnection, storeName: string, ops: BatchOp[]): Promise<void>;
 }
 
 interface SillyTavernWorldInfoEntry {

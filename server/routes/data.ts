@@ -193,4 +193,37 @@ export default function(app: Express, db: Database): void {
             });
         });
     });
+
+    app.post('/batch', (req: Request, res: Response) => {
+        const { storeName, ops } = req.body as { storeName: string; ops: { type: 'save' | 'delete'; key: string; data?: any }[] };
+        const normStoreName = normalizeStoreName(storeName);
+        if (!normStoreName) {
+            return res.status(400).json({ ok: false, message: 'Invalid store name provided' });
+        }
+        if (!Array.isArray(ops) || ops.length === 0) {
+            return res.status(400).json({ ok: false, message: 'ops must be a non-empty array' });
+        }
+
+        const colName = getColumnName(normStoreName);
+        db.serialize(() => {
+            db.run("BEGIN TRANSACTION");
+
+            for (const op of ops) {
+                if (op.type === 'save') {
+                    const dataToStore = normStoreName !== 'names' ? JSON.stringify(op.data) : op.data;
+                    db.run(`INSERT OR REPLACE INTO ${normStoreName} (key, ${colName}) VALUES (?, ?)`, [op.key, dataToStore]);
+                } else if (op.type === 'delete') {
+                    db.run(`DELETE FROM ${normStoreName} WHERE key = ?`, [op.key]);
+                }
+            }
+
+            db.run("COMMIT", (err) => {
+                if (err) {
+                    db.run("ROLLBACK");
+                    return res.status(500).json({ ok: false, message: 'Batch operation failed' });
+                }
+                res.json({ ok: true, result: 'Batch completed' });
+            });
+        });
+    });
 };

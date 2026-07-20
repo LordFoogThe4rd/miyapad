@@ -169,6 +169,24 @@ export class IndexedDBAdapter {
 		});
 	}
 
+	async batchMutation(db: IDBDatabase, storeName: string, ops: BatchOp[]) {
+		return new Promise<void>((resolve, reject) => {
+			const tx = db.transaction(storeName, 'readwrite');
+			const store = tx.objectStore(storeName);
+
+			for (const op of ops) {
+				if (op.type === 'save') {
+					store.put(op.data, op.key);
+				} else {
+					store.delete(op.key);
+				}
+			}
+
+			tx.oncomplete = () => resolve();
+			tx.onerror = () => reject(tx.error);
+		});
+	}
+
 	async exportDatabase() {
 		const db = await this.openDatabase();
 		const exportObject: Record<string, any> = {};

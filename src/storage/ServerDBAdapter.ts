@@ -92,4 +92,11 @@ export class ServerDBAdapter {
 			throw new Error(String(res.status));
 		}
 	}
+
+	async batchMutation(db: ServerDbFn, storeName: string, ops: BatchOp[]) {
+		const res = await db("/batch", { storeName, ops });
+		if (!res.ok) {
+			throw new Error(String(res.status));
+		}
+	}
 }
