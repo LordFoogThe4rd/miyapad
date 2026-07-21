@@ -186,7 +186,7 @@
   "instructTemplates.systemPrompt": "System Prompt",
   "instructTemplates.systemSuffixLabel": "System Prompt Suffix {/sys}",
   "logitBias.bias": "Bias",
-  "logitBias.description": "Make certain tokens more or less likely to be generated. Recommended ranges are 100 to -100, with -100 being a total ban of the token.\n\t\t\tNote: Multi-token strings will apply the bias globally to all constituent tokens, not as a sequence-aware phrase bias.\n\t\t\tYou can bias IDs directly in a comma separated list, wrapped in '/'. Example: /382,1449,1802/\n\n\t\t\tDifferent models might tokenize words differently. Always Re-Tokenize your biases when switching models by pressing the '+' button again for every entry.",
+  "logitBias.description": "Make certain tokens more or less likely to be generated. Recommended ranges are 100 to -100, with -100 being a total ban of the token.\n\t\t\tNote: Multi-token strings will apply the bias globally to all constituent tokens, not as a sequence-aware phrase bias.\n\t\t\tYou can bias IDs directly in a comma separated list, wrapped in '/'. Example: /382,1449,1802/\n\n\t\t\tDifferent models might tokenize words differently. Always Re-Tokenize your biases when switching models by pressing the regenerate button again for every entry.",
   "logitBias.errorBiasMustBeNumber": "Error: Bias must be a number",
   "logitBias.errorBiasZero": "Error: Bias 0 = no Bias",
   "logitBias.errorInsufficientQuota": "Error: Insufficient Quota",

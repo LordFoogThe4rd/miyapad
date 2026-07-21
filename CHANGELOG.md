@@ -1,5 +1,10 @@
 # Changelog
 
+## [???] - unreleased
+
+### Changed
+- Re-tokenize button in the logit bias modal now shows a regenerate icon instead of a plain `+` text
+
 ## [2.6.0] - 2026-07-20
 
 ### Added

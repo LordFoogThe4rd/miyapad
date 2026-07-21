@@ -5,6 +5,7 @@ import { InputBox } from '../controls/InputBox';
 import { API_LLAMA_CPP, API_KOBOLD_CPP, API_AI_HORDE, API_OPENAI_COMPAT, API_DEEPSEEK } from '../../constants';
 import { getTokens, serverTokenize } from '../../api/index';
 import { useT } from '../../i18n';
+import { SVG_Regen } from '../icons';
 
 type TokenizeResult = { ids: number[]; str: string | string[] };
 
@@ -324,7 +325,7 @@ export function LogitBiasModal({ isOpen, closeModal, biasState, apiConfig, cance
 												disabled=${!!cancel}
 												class="hbox-button lb-modal-button lb-modal-button-add"
 												onClick=${() => logitBiasAdd(bias.power, bias.value, bias.valueBack)}>
-												+
+												<${SVG_Regen}/>
 											</button>
 											<button
 												disabled=${!!cancel}
