@@ -1,0 +1,12 @@
+node_modules/
+server/node_modules/
+dist/
+server/dist-server/
+server/miyapad-dist/
+.git/
+*.db
+*.db-shm
+*.db-wal
+backups/
+logs/
+.env

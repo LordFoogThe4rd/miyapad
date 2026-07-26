@@ -1,19 +1,17 @@
 FROM node:20.19.3
 
-COPY server /app/server
-COPY project /app/project
-COPY miyapad.html /app/miyapad.html
-COPY compile.sh /app/compile.sh
-
-# Compile HTML
 WORKDIR /app
-RUN /bin/bash compile.sh
 
-# Server expects miyapad.html
-RUN mv /app/mikupad_compiled.html /app/miyapad.html
+COPY package.json package-lock.json ./
+RUN npm ci --no-audit && npm cache clean --force
 
-# Compile server
+COPY . .
+RUN npm run build
+
 WORKDIR /app/server
-RUN npm install --no-audit
+RUN npm ci --no-audit && npm cache clean --force
+
+EXPOSE 3000
 USER node
-ENTRYPOINT [ "node", "--import", "tsx", "server.ts" ]
+ENV NODE_ENV=production
+CMD [ "node", "--import", "tsx", "server.ts" ]
