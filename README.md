@@ -9,7 +9,7 @@ Miyapad is a user-friendly, browser-based interface for interacting with languag
 * **Multiple Backends**: Supports **llama.cpp**, **koboldcpp**, **AI Horde**, **DeepSeek** and any **OpenAI Compatible** API.
 * **Connection Manager**: Save named connection presets (endpoint, API type, API key, model) and switch between them per-session. Each session remembers its selected connection. Presets include per-API-type settings, a model browser, and CRUD operations (create, clone, delete, enable/disable).
 * **Session Persistence**: Your prompt is automatically saved and restored across multiple sessions. Import and export sessions for sharing or backups. The dedicated Sessions modal provides search, sort by name/created/modified, and a table layout for managing sessions.
-* **Optional Server**: Can be hosted on a local Node.js server for remote or LAN access. Features a modular architecture (`routes/` and `lib/` instead of monolithic `server.js`), **sqlite-zstd** transparent Zstandard compression with auto-vacuum and background dictionary training, and optional **server-side tokenization** — drop a `tokenizer.json` into `server/tokenizers/<name>/` and enable via Preferences → Server.
+* **Optional Server**: Can be hosted on a local Node.js server for remote or LAN access. Features **sqlite-zstd** transparent Zstandard compression with auto-vacuum and background dictionary training, and optional **server-side tokenization** — drop a `tokenizer.json` into `server/tokenizers/<name>/` and enable via Preferences → Server.
 * **Persistent Context**:
   * **Memory**: Seamlessly inject text at the beginning of the context.
   * **Author's Note**: Seamlessly inject text at the end of the context, with adjustable depth.
@@ -23,7 +23,7 @@ Miyapad is a user-friendly, browser-based interface for interacting with languag
   * **Completion**: Have the model directly continue your prompt.
   * **Chat**: Automatically adds the right delimiters based on your selected template, structuring prompts into messages compatible with the Chat Completions API.
 * **Screenshot Capture**: Select text in the editor, click the camera icon, and render a styled quote PNG with AI vs User color coding. Customize via the gear icon — fonts, colors, background image, avatar, and metadata toggles.
-* **Themes**: Customize your environment with a variety of themes. Token highlight colors (`--color-prob-low`, `--color-prob-mid`, `--color-prob-high`) and erase highlight (`--color-highlight-erase`) are CSS variables, customizable per theme instead of hardcoded.
+* **Themes**: Customize your environment with a variety of themes.
 * **... and more!**
 
 ### Architecture
