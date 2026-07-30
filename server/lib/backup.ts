@@ -47,6 +47,23 @@ const rotateBackups = (dir: string, keep: number) => {
     }
 };
 
+const runIntegrityCheck = (db: import('sqlite3').Database): Promise<boolean> => {
+    return new Promise((resolve) => {
+        db.all("PRAGMA integrity_check", (err, rows: { integrity_check: string }[]) => {
+            if (err) {
+                console.error("Backup: integrity check failed to run:", err.message);
+                resolve(false);
+                return;
+            }
+            const ok = rows.length === 1 && rows[0].integrity_check === 'ok';
+            if (!ok) {
+                console.error("Backup: integrity check failed, skipping backup to preserve last good copy:", rows);
+            }
+            resolve(ok);
+        });
+    });
+};
+
 const runBackup = (db: import('sqlite3').Database, dbPath: string, dir: string, keep: number, lastMtimeRef: { current: number | null }) => {
     const currentMtime = getDbFileMtime(dbPath);
 
@@ -71,32 +88,36 @@ const runBackup = (db: import('sqlite3').Database, dbPath: string, dir: string, 
     const backupPath = path.join(dir, backupName);
     const tmpPath = backupPath + '.tmp';
 
-    db.run("VACUUM INTO ?", [tmpPath], (err) => {
-        if (err) {
-            console.error("Backup: VACUUM INTO failed:", err.message);
-            return;
-        }
+    runIntegrityCheck(db).then((ok) => {
+        if (!ok) return;
 
-        const cleanup = () => {
-            try { fs.unlinkSync(tmpPath); } catch { /* ok */ }
-        };
-
-        pipeline(
-            fs.createReadStream(tmpPath),
-            zlib.createGzip(),
-            fs.createWriteStream(backupPath + '.gz'),
-            (err: Error | null) => {
-                if (err) {
-                    console.error("Backup: compression failed:", err.message);
-                    cleanup();
-                    return;
-                }
-                cleanup();
-                lastMtimeRef.current = currentMtime;
-                console.log(`Backup created: ${backupName}.gz`);
-                rotateBackups(dir, keep);
+        db.run("VACUUM INTO ?", [tmpPath], (err) => {
+            if (err) {
+                console.error("Backup: VACUUM INTO failed:", err.message);
+                return;
             }
-        );
+
+            const cleanup = () => {
+                try { fs.unlinkSync(tmpPath); } catch { /* ok */ }
+            };
+
+            pipeline(
+                fs.createReadStream(tmpPath),
+                zlib.createGzip(),
+                fs.createWriteStream(backupPath + '.gz'),
+                (err: Error | null) => {
+                    if (err) {
+                        console.error("Backup: compression failed:", err.message);
+                        cleanup();
+                        return;
+                    }
+                    cleanup();
+                    lastMtimeRef.current = currentMtime;
+                    console.log(`Backup created: ${backupName}.gz`);
+                    rotateBackups(dir, keep);
+                }
+            );
+        });
     });
 };
 
