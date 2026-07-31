@@ -50,7 +50,7 @@ export function Modals({ toggleModal, currentThemeName, setCurrentThemeName, all
 		samplerPresets, setSamplerPresets, selectedSamplerPresetId,
 		stoppingStringsError, drySequenceBreakersError, bannedTokensError
 	} = useSettings();
-	const { cancel, modalState, closeModal, instructModalState, setInstructModalState, promptArea, lastError, sessionEndpointConnecting, predictStartTokens, tokens, contextMenuState, setContextMenuState, setTriggerPredict, sessionEndpointError, setRejectedAPIKey } = useGeneration();
+	const { cancel, modalState, closeModal, instructModalState, setInstructModalState, promptEditorView, replaceEditorText, lastError, sessionEndpointConnecting, predictStartTokens, tokens, contextMenuState, setContextMenuState, setTriggerPredict, sessionEndpointError, setRejectedAPIKey } = useGeneration();
 
 	const { handleauthorNoteTokensChange, handleMemoryTokensChange } = useTokenCounters();
 	const { finalPromptText, convertChatToJSON } = usePromptBuilder();
@@ -101,9 +101,9 @@ export function Modals({ toggleModal, currentThemeName, setCurrentThemeName, all
 	};
 
 	const exportPrompt = () => {
-		const elem = promptArea.current;
-		if (!elem) return;
-		exportText(`${sessionStorage.getProperty('name')}.txt`, elem.value);
+		const adapter = promptEditorView.current;
+		if (!adapter) return;
+		exportText(`${sessionStorage.getProperty('name')}.txt`, adapter.getText());
 	};
 
 	const insertTemplate = (sysInst: "sys" | "inst") => {
@@ -116,15 +116,15 @@ export function Modals({ toggleModal, currentThemeName, setCurrentThemeName, all
 		prefix = prefix.replace(/\\n/g,'\n');
 		suffix = suffix.replace(/\\n/g,'\n');
 
-		const elem = promptArea.current;
-		if (!elem)
+		const adapter = promptEditorView.current;
+		if (!adapter)
 			return;
 
-		const startPos = elem.selectionStart;
-		const endPos = elem.selectionEnd;
-		const textBefore = elem.value.substring(0, startPos) || "";
-		const textAfter = (sysInst !== "sys" && elem.selectionEnd !== elem.value.length ? "{predict}" : "") + elem.value.substring(endPos);
-		const selectedText = elem.value.substring(startPos, endPos);
+		const { from: startPos, to: endPos } = adapter.getSelection();
+		const currentText = adapter.getText();
+		const textBefore = currentText.substring(0, startPos) || "";
+		const textAfter = (sysInst !== "sys" && endPos !== currentText.length ? "{predict}" : "") + currentText.substring(endPos);
+		const selectedText = currentText.substring(startPos, endPos);
 
 		const finalText = textBefore 
 						+ prefix
@@ -132,9 +132,7 @@ export function Modals({ toggleModal, currentThemeName, setCurrentThemeName, all
 						+ suffix
 						+ textAfter;
 
-		const scrollTop = elem.scrollTop;
-		
-		elem.value = finalText;
+		adapter.replaceText(finalText);
 
 		let newCursorPos;
 		if (selectedText.length === 0) {
@@ -145,11 +143,8 @@ export function Modals({ toggleModal, currentThemeName, setCurrentThemeName, all
 				+ selectedText.length 
 				+ suffix.length;
 		}
-		elem.focus();
-		elem.setSelectionRange(newCursorPos, newCursorPos);
-		if (elem.onInputHandler) elem.onInputHandler({ currentTarget: elem });
-
-		elem.scrollTop = scrollTop;
+		adapter.focus();
+		adapter.setSelection(newCursorPos, newCursorPos);
 	};
 
 	// handle instruct modal result
@@ -158,23 +153,22 @@ export function Modals({ toggleModal, currentThemeName, setCurrentThemeName, all
 		if (!result)
 			return;
 		
-		const elem = promptArea.current;
-		if (!elem)
+		const adapter = promptEditorView.current;
+		if (!adapter)
 			return;
 
 		const startPos = instructModalState.selectionStart ?? 0;
 		const endPos = instructModalState.selectionEnd ?? 0;
-		const textBefore = elem.value.substring(0, startPos) || "";
-		const textAfter = elem.value.substring(endPos);
-		const selectedText = elem.value.substring(startPos, endPos);
+		const currentText = adapter.getText();
+		const textBefore = currentText.substring(0, startPos) || "";
+		const textAfter = currentText.substring(endPos);
+		const selectedText = currentText.substring(startPos, endPos);
 
 		const finalText = textBefore 
 					+ (result.replace ? (result.content) : (result.content + selectedText))
 					+ textAfter;
 
-		const scrollTop = elem.scrollTop;
-
-		elem.value = finalText;
+		adapter.replaceText(finalText);
 
 		let newCursorPos;
 		if (result.replace) {
@@ -182,11 +176,8 @@ export function Modals({ toggleModal, currentThemeName, setCurrentThemeName, all
 		} else {
 			newCursorPos = startPos + result.content.length + selectedText.length;
 		}
-		elem.focus();
-		elem.setSelectionRange(newCursorPos, newCursorPos);
-		if (elem.onInputHandler) elem.onInputHandler({ currentTarget: elem });
-
-		elem.scrollTop = scrollTop;
+		adapter.focus();
+		adapter.setSelection(newCursorPos, newCursorPos);
 	}, [instructModalState.result]);
 
 	return html`
@@ -304,10 +295,10 @@ export function Modals({ toggleModal, currentThemeName, setCurrentThemeName, all
 			isOpen=${modalState.instruct}
 			closeModal=${() => {
 				closeModal("instruct");
-				const elem = promptArea.current;
-				if (elem) {
-					elem.focus();
-					elem.setSelectionRange(instructModalState.selectionStart ?? 0, instructModalState.selectionEnd ?? 0);
+				const adapter = promptEditorView.current;
+				if (adapter) {
+					adapter.focus();
+					adapter.setSelection(instructModalState.selectionStart ?? 0, instructModalState.selectionEnd ?? 0);
 				}
 			}}
 			predict=${predict}
@@ -388,18 +379,18 @@ export function Modals({ toggleModal, currentThemeName, setCurrentThemeName, all
 				{
 					label: t('modals.instructHere'),
 					action: () => {
-						const elem = promptArea.current;
-						if (!elem)
+						const adapter = promptEditorView.current;
+						if (!adapter)
 							return;
 
-						const startPos = elem.selectionStart;
-						const endPos = elem.selectionEnd;
+						const { from: startPos, to: endPos } = adapter.getSelection();
+						const currentText = adapter.getText();
 
 						setInstructModalState({
 							selectionStart: startPos,
 							selectionEnd: endPos,
-							instructContext: elem.value.substring(0, startPos) || "",
-							selectedText: elem.value.substring(startPos, endPos),
+							instructContext: currentText.substring(0, startPos) || "",
+							selectedText: currentText.substring(startPos, endPos),
 						});
 						toggleModal("instruct");
 					},
@@ -408,25 +399,26 @@ export function Modals({ toggleModal, currentThemeName, setCurrentThemeName, all
 				{
 					label: t('modals.predictHere'),
 					action: () => {
-						const elem = promptArea.current;
-						if (!elem)
+						const adapter = promptEditorView.current;
+						if (!adapter)
 							return;
 
-						if (elem.selectionStart === elem.value.length) {
+						const { from: startPos } = adapter.getSelection();
+						const currentText = adapter.getText();
+
+						if (startPos === currentText.length) {
 							predict();
 							return;
 						}
 
-						const startPos = elem.selectionStart;
-						const textBefore = elem.value.substring(0, startPos) || "";
-						const textAfter = elem.value.substring(startPos);
+						const textBefore = currentText.substring(0, startPos) || "";
+						const textAfter = currentText.substring(startPos);
 
 						const finalText = textBefore 
 										+ '{predict}'
 										+ textAfter;
 
-						elem.value = finalText;
-						if (elem.onInputHandler) elem.onInputHandler({ currentTarget: elem });
+						replaceEditorText(finalText);
 						setTriggerPredict(true);
 					},
 					disabled: false
@@ -434,20 +426,21 @@ export function Modals({ toggleModal, currentThemeName, setCurrentThemeName, all
 				{
 					label: t('modals.fillInTheMiddleHere'),
 					action: () => {
-						const elem = promptArea.current;
-						if (!elem)
+						const adapter = promptEditorView.current;
+						if (!adapter)
 							return;
 
-						const startPos = elem.selectionStart;
-						const textBefore = elem.value.substring(0, startPos) || "";
-						const textAfter = elem.value.substring(startPos);
+						const { from: startPos } = adapter.getSelection();
+						const currentText = adapter.getText();
+
+						const textBefore = currentText.substring(0, startPos) || "";
+						const textAfter = currentText.substring(startPos);
 
 						const finalText = textBefore 
 										+ '{fill}'
 										+ textAfter;
 
-						elem.value = finalText;
-						if (elem.onInputHandler) elem.onInputHandler({ currentTarget: elem });
+						replaceEditorText(finalText);
 						setTriggerPredict(true);
 					},
 					disabled: templates[selectedTemplate]?.fimTemplate === undefined || templates[selectedTemplate]?.fimTemplate.length === 0

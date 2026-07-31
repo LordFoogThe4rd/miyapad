@@ -12,8 +12,8 @@ import { isAbortError } from '../utils/errors';
 type PredictionCallback = (chunk: CompletionChunk) => boolean;
 
 export function useGenerationLogic() {
-	const { endpoint, endpointAPI, endpointAPIKey, endpointModel, seed, maxPredictTokens, temperature, dynaTempRange, dynaTempExp, repeatPenalty, repeatLastN, penalizeNl, presencePenalty, frequencyPenalty, topK, topP, typicalP, minP, tfsZ, mirostat, mirostatTau, mirostatEta, xtcThreshold, xtcProbability, dryMultiplier, dryBase, dryAllowedLength, dryPenaltyRange, drySequenceBreakers, bannedTokens, ignoreEos, openaiPresets, stoppingStrings, useBasicStoppingMode, basicStoppingModeType, logitBias, logitBiasParam, enabledSamplers, grammar, useChatAPI, useTokenStreaming, disableLogprobs, postSamplingProbs, showPromptPreview, promptPreviewTokens, templates, selectedTemplate, chatMode, setChatMode, setUseChatAPI, setSelectedTemplate, isMiyapadEndpoint, sessionStorage, ttsEnabled, useServerTokenization } = useSettings();
-	const { promptArea, promptOverlay, undoStack, redoStack, probsDelayTimer, keyState, sessionReconnectTimer, useScrollSmoothing, hordeTaskId, promptPreviewElement, markdownPreviewRef, isSyncingScroll, promptChunks, setPromptChunks, currentPromptChunk, setCurrentPromptChunk, undoHovered, setUndoHovered, showProbs, setShowProbs, cancel, setCancel, sessionEndpointConnecting, setSessionEndpointConnecting, sessionEndpointError, setSessionEndpointError, rejectedAPIKey, setRejectedAPIKey, openaiModels, setOpenaiModels, tokens, setTokens, tokensPerSec, setTokensPerSec, predictStartTokens, setPredictStartTokens, lastError, setLastError, savedScrollTop, setSavedScrollTop, modalState, setModalState, contextMenuState, setContextMenuState, instructModalState, setInstructModalState, hordeQueuePos, setHordeQueuePos, hordeProcessing, setHordeProcessing, promptPreviewChunks, setPromptPreviewChunks, promptPreviewReroll, setPromptPreviewReroll, ttsAvailable, setTTSAvailable, ttsNewText, ttsLastChunk, ttsQueue, ttsVoices, ttsPaused, activeGenId, abortControllerRef, triggerPredict, setTriggerPredict, restartedPredict, setRestartedPredict } = useGeneration();
+	const { endpoint, endpointAPI, endpointAPIKey, endpointModel, seed, maxPredictTokens, temperature, dynaTempRange, dynaTempExp, repeatPenalty, repeatLastN, penalizeNl, presencePenalty, frequencyPenalty, topK, topP, typicalP, minP, tfsZ, mirostat, mirostatTau, mirostatEta, xtcThreshold, xtcProbability, dryMultiplier, dryBase, dryAllowedLength, dryPenaltyRange, drySequenceBreakers, bannedTokens, ignoreEos, openaiPresets, stoppingStrings, useBasicStoppingMode, basicStoppingModeType, logitBias, logitBiasParam, enabledSamplers, grammar, useChatAPI, useTokenStreaming, disableLogprobs, postSamplingProbs, templates, selectedTemplate, chatMode, setChatMode, setUseChatAPI, setSelectedTemplate, isMiyapadEndpoint, sessionStorage, ttsEnabled, useServerTokenization } = useSettings();
+	const { promptEditorView, undoStack, redoStack, lastEditMsRef, probsDelayTimer, keyState, sessionReconnectTimer, useScrollSmoothing, hordeTaskId, markdownPreviewRef, isSyncingScroll, promptChunks, setPromptChunks, currentPromptChunk, setCurrentPromptChunk, undoHovered, setUndoHovered, showProbs, setShowProbs, cancel, setCancel, sessionEndpointConnecting, setSessionEndpointConnecting, sessionEndpointError, setSessionEndpointError, rejectedAPIKey, setRejectedAPIKey, openaiModels, setOpenaiModels, tokens, setTokens, tokensPerSec, setTokensPerSec, predictStartTokens, setPredictStartTokens, lastError, setLastError, savedScrollTop, setSavedScrollTop, modalState, setModalState, contextMenuState, setContextMenuState, instructModalState, setInstructModalState, hordeQueuePos, setHordeQueuePos, hordeProcessing, setHordeProcessing, ttsAvailable, setTTSAvailable, ttsNewText, ttsLastChunk, ttsQueue, ttsVoices, ttsPaused, activeGenId, abortControllerRef, triggerPredict, setTriggerPredict, restartedPredict, setRestartedPredict } = useGeneration();
 	const { fimPromptInfo, finalPromptText, convertChatToJSON } = usePromptBuilder();
 	const { ttsProcessQueue, ttsStop, ttsPushUserInput, ttsAddChunk, listTTSVoices } = useTTS();
 
@@ -40,6 +40,18 @@ export function useGenerationLogic() {
 
 	async function predict(prompt = finalPromptText, chunkCount = promptChunks.length, callback: PredictionCallback | undefined = undefined, abortController: AbortController | undefined = undefined, invalidatesUndo = false, customParams: Record<string, unknown> = {}) {
 		const myId = ++activeGenId.current;
+
+		// Register the generation boundary up front so undo/regenerate stay available
+		// while the (possibly slow) token-count request is in flight. The finally block
+		// pops it again if the generation produces no tokens.
+		if (!callback) {
+			while (undoStack.current.length > 0) {
+				const last = undoStack.current[undoStack.current.length - 1];
+				if (typeof last === 'number' && last >= chunkCount) undoStack.current.pop();
+				else break;
+			}
+			if (Array.isArray(undoStack.current)) undoStack.current.push(chunkCount);
+		}
 
 		if (!abortController && cancel) {
 			cancel?.();
@@ -92,7 +104,6 @@ export function useGenerationLogic() {
 			// sometimes "getTokenCount" can take a while because the server is busy
 			// so let's set the predictStartTokens beforehand.
 			setPredictStartTokens(tokens);
-			if (showPromptPreview) setPromptPreviewChunks([]); // Discard current preview.
 
 			if (!callback) {
 				const tokenCount = await (useServerTokenization && isMiyapadEndpoint && sessionStorage?.sessionEndpoint
@@ -122,13 +133,6 @@ export function useGenerationLogic() {
 					}
 				}
 				setRestartedPredict(false)
-
-				if (myId === activeGenId.current) {
-					const lastUndo = undoStack.current.length > 0 ? undoStack.current[undoStack.current.length - 1] : -1;
-					while (lastUndo >= chunkCount && undoStack.current.length > 0)
-						undoStack.current.pop();
-					if (Array.isArray(undoStack.current)) undoStack.current.push(chunkCount);
-				}
 			}
 			if (invalidatesUndo && myId === activeGenId.current) {
 				undoStack.current = [];
@@ -137,8 +141,6 @@ export function useGenerationLogic() {
 				redoStack.current = [];
 				setUndoHovered(false);
 				setRejectedAPIKey(false);
-				const pa = promptArea.current;
-				if (pa) pa.scrollTarget = undefined;
 				useScrollSmoothing.current = true;
 			}
 
@@ -362,10 +364,17 @@ export function useGenerationLogic() {
 		if (!undoStack.current || !Array.isArray(undoStack.current) || !undoStack.current.length)
 			return false;
 		activeGenId.current++; // Invalidate any active generation
-		if (showPromptPreview) setPromptPreviewChunks([]); // Discard current preview so that a new one is generated.
-		const lastUndoPos = undoStack.current[undoStack.current.length - 1];
-		if (Array.isArray(redoStack.current)) redoStack.current.push(promptChunks.slice(lastUndoPos));
-		setPromptChunks((p: PromptChunk[]) => p.slice(0, undoStack.current.pop()));
+		lastEditMsRef.current = 0; // end any coalescing burst so the next edit starts a fresh checkpoint
+		const last = undoStack.current.pop()!;
+		if (Array.isArray(redoStack.current)) redoStack.current.push(promptChunks);
+		if (typeof last === 'number') {
+			// Generation boundary: undo back to the chunk count before it streamed.
+			setPromptChunks((p: PromptChunk[]) => p.slice(0, last));
+		} else {
+			// User-edit checkpoint: restore the exact pre-edit chunk array.
+			setPromptChunks(last);
+		}
+		if (!undoStack.current.length) setUndoHovered(false);
 		return true;
 	}
 
@@ -373,9 +382,10 @@ export function useGenerationLogic() {
 		if (!redoStack.current || !Array.isArray(redoStack.current) || !redoStack.current.length)
 			return false;
 		activeGenId.current++; // Invalidate any active generation
-		if (showPromptPreview) setPromptPreviewChunks([]); // Discard current preview so that a new one is generated.
-		if (Array.isArray(undoStack.current)) undoStack.current.push(promptChunks.length);
-		setPromptChunks((p: PromptChunk[]) => [...p, ...(redoStack.current.pop() ?? [])]);
+		lastEditMsRef.current = 0; // end any coalescing burst so the next edit starts a fresh checkpoint
+		const forward = redoStack.current.pop()!;
+		if (Array.isArray(undoStack.current)) undoStack.current.push(promptChunks);
+		setPromptChunks(forward);
 		setUndoHovered(false);
 		return true;
 	}

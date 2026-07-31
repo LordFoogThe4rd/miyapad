@@ -15,7 +15,7 @@ export function useScreenshotCapture() {
 		sessionStorage, endpointModel
 	} = useSettings();
 
-	const { promptArea, promptChunks } = useGeneration();
+	const { promptEditorView, promptChunks } = useGeneration();
 
 	const toDataURL = useCallback(async (url: any) => {
 		if (!url) return '';
@@ -39,17 +39,18 @@ export function useScreenshotCapture() {
 	}, [sessionStorage]);
 
 	const takeScreenshot = useCallback(async () => {
-		const area = promptArea.current;
-		if (!area) return;
+		const adapter = promptEditorView.current;
+		if (!adapter) return;
 
-		let start = area.selectionStart;
-		let end = area.selectionEnd;
-		let storyText = area.value.substring(start, end);
+		const { from: selStart, to: selEnd } = adapter.getSelection();
+		let start = selStart;
+		let end = selEnd;
+		let storyText = adapter.getText().substring(start, end);
 
 		if (!storyText) {
 			start = 0;
-			end = area.value.length;
-			storyText = area.value;
+			end = adapter.getText().length;
+			storyText = adapter.getText();
 		}
 		let formattedStoryHTML = "";
 		let currentPos = 0;
@@ -207,7 +208,7 @@ export function useScreenshotCapture() {
 			staging.removeChild(captureContainer);
 		}
 	}, [
-		promptArea, promptChunks,
+		promptEditorView, promptChunks,
 		screenshotIncludeSessionName, screenshotIncludeDate,
 		screenshotBackgroundUrl, screenshotBackgroundColor,
 		screenshotStoryFont, screenshotGeneralFont,

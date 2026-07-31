@@ -9,7 +9,7 @@ The ordering in `src/styles.css` is intentional — variables and base reset loa
 ```
 @import './css/_variables.css';         # CSS custom properties (colors, spacing, fonts)
 @import './css/_base.css';              # Reset, body, typography, scrollbar
-@import './css/_prompt-overlay.css';    # Prompt textarea overlay for log-probs
+@import './css/_prompt-overlay.css';    # Retired — prompt overlay replaced by inline ProseMirror decorations
 @import './css/_probs.css';             # Token probability visualization
 @import './css/_widget.css';            # Sidebar widgets (stats, presets)
 @import './css/_search-replace.css';    # Search & replace modal
@@ -36,7 +36,7 @@ The ordering in `src/styles.css` is intentional — variables and base reset loa
 | :--- | :------ |
 | `_variables.css` | CSS custom properties: color palette, font stacks, spacing scale, border radii, z-index layers, transition timings. |
 | `_base.css` | Element reset, body defaults, scrollbar styling, link styles, selection colors. |
-| `_prompt-overlay.css` | Transparent overlay on the prompt textarea for rendering log-probability highlights. |
+| `_prompt-overlay.css` | Retired — prompt overlay removed; log-probability highlights render inline via ProseMirror decorations. |
 | `_probs.css` | Token probability bar chart and hover tooltip styles used in the log-probability viewer. |
 | `_widget.css` | Sidebar information widgets (token counters, generation stats, quick presets). |
 | `_search-replace.css` | Find-and-replace text modal. |

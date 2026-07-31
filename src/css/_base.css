@@ -19,6 +19,8 @@ body {
 	display: flex;
 	flex: auto;
 	flex-direction: row;
+	height: 100vh;
+	overflow: hidden;
 
 	--font-size-multiplier: 1.0;
 }
@@ -36,25 +38,57 @@ body {
 	flex: 1;
 	display: flex;
 	flex-direction: column;
+	min-height: 0;
+	overflow-y: auto;
 }
 
-#prompt-area, #prompt-overlay {
+#pm-editor {
 	flex: 1;
+	display: flex;
+	flex-direction: column;
+}
+
+.ProseMirror {
+	flex: 1;
+	display: flex;
+	flex-direction: column;
 	border: none;
 	outline: none;
 	resize: none;
 	background: var(--color-bg-prompt);
 	color: var(--color-text-prompt);
-	padding: 2em 3em;
 	margin: 0;
 	scrollbar-gutter: stable;
 	font: inherit;
-	box-sizing: content-box;
+	padding: 2em 3em 8em;
+	caret-color: currentColor;
 	text-size-adjust: 100%;
 	-webkit-text-size-adjust: 100%;
 	-moz-text-size-adjust: 100%;
 	word-wrap: break-word;
-	overflow-y: scroll;
+	white-space: pre-wrap;
+	box-sizing: border-box;
+}
+
+.ProseMirror p {
+	margin: 0;
+}
+
+.ProseMirror .machine {
+	background-color: color-mix(in srgb, var(--bg-color, var(--color-miku)) 30%, transparent);
+	transition: background-color 0.2s;
+}
+
+.ProseMirror .machine:hover {
+	background-color: color-mix(in srgb, var(--bg-color) 10%, transparent);
+}
+
+.ProseMirror .machine.current {
+	outline: 1px solid var(--color-highlight-current);
+}
+
+.ProseMirror .machine.erase {
+	background-color: color-mix(in srgb, var(--color-highlight-erase) 10%, transparent);
 }
 
 .modal .wi-textarea {

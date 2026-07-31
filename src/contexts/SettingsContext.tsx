@@ -130,8 +130,6 @@ export function SettingsProvider({ children, sessionStorage, templateStorage, th
 	const [useTokenStreaming, setUseTokenStreaming] = useSessionState('tokenStreaming', defaultPresets.tokenStreaming);
 	const [disableLogprobs, setDisableLogprobs] = useSessionState('disableLogprobs', defaultPresets.disableLogprobs);
 	const [postSamplingProbs, setPostSamplingProbs] = useSessionState('postSamplingProbs', true);
-	const [showPromptPreview, setShowPromptPreview] = useSessionState('promptPreview', defaultPresets.promptPreview);
-	const [promptPreviewTokens, setPromptPreviewTokens] = useSessionState('promptPreviewTokens', defaultPresets.promptPreviewTokens);
     const [currentThemeName, setCurrentThemeName] = usePersistentState('themeName', (() => {
 		switch (__theme) {
 		case 1: return "Serif Dark";
@@ -204,8 +202,7 @@ export function SettingsProvider({ children, sessionStorage, templateStorage, th
 		logitBiasParam, setLogitBiasParam, contextLength, setContextLength, memoryTokens, setMemoryTokens, authorNoteTokens, setAuthorNoteTokens,
 		authorNoteDepth, setAuthorNoteDepth, worldInfo, setWorldInfo, sillyTarvernWorldInfoJSON, setSillyTarvernWorldInfoJSON,
 		enabledSamplers, setEnabledSamplers, grammar, setGrammar, useChatAPI, setUseChatAPI, useTokenStreaming, setUseTokenStreaming,
-		disableLogprobs, setDisableLogprobs, postSamplingProbs, setPostSamplingProbs, showPromptPreview, setShowPromptPreview,
-		promptPreviewTokens, setPromptPreviewTokens, isMobile, setIsMobile, currentThemeName, setCurrentThemeName, allThemes, setAllThemes,
+		disableLogprobs, setDisableLogprobs, postSamplingProbs, setPostSamplingProbs, isMobile, setIsMobile, currentThemeName, setCurrentThemeName, allThemes, setAllThemes,
 		showMarkdownPreview, setShowMarkdownPreview, ttsEnabled, setTTSEnabled, ttsVoiceId, setTTSVoiceId, ttsPitch, setTTSPitch,
 		ttsRate, setTTSRate, ttsVolume, setTTSVolume, ttsSpeakInputs, setTTSSpeakInputs, ttsMaxUserInput, setTTSMaxUserInput,
 		useServerTokenization, setUseServerTokenization, tokenizerModel, setTokenizerModel,

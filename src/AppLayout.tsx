@@ -1,5 +1,5 @@
 import { html } from 'htm/react';
-import { useEffect, useLayoutEffect, useMemo, useRef, useState } from 'react';
+import { useEffect, useLayoutEffect, useRef, useState } from 'react';
 import { usePromptBuilder } from './hooks/usePromptBuilder';
 import { useTokenCounters } from './hooks/useTokenCounters';
 import { useTTS } from './hooks/useTTS';
@@ -19,7 +19,7 @@ import { defaultPrompt } from './defaults/prompt';
 import { defaultThemes } from './defaults/themes';
 import { exportText, normalizeEndpoint } from './api/common';
 import { getTokenCount, serverTokenCount, getTokens, getModels, completion, chatCompletion, abortCompletion, loadServerTokenizer } from './api/index';
-import { joinPrompt, replaceUnprintableBytes, replaceNewlines } from './utils/strings';
+import { replaceUnprintableBytes, replaceNewlines } from './utils/strings';
 import { regexSplitString, regexIndexOf, regexLastIndexOf, memoize, createLenientPrefixRegex, createLenientRegex, prefixMatchLength, escapeRegExp } from './utils/regex';
 import {
   SVG, SVG_Close, SVG_Confirm, SVG_Cancel, SVG_Trash, SVG_Rename,
@@ -57,8 +57,7 @@ export function AppLayout() {
 		logitBiasParam, setLogitBiasParam, contextLength, setContextLength, memoryTokens, setMemoryTokens, authorNoteTokens, setAuthorNoteTokens,
 		authorNoteDepth, setAuthorNoteDepth, worldInfo, setWorldInfo, sillyTarvernWorldInfoJSON, setSillyTarvernWorldInfoJSON,
 		enabledSamplers, setEnabledSamplers, grammar, setGrammar, useChatAPI, setUseChatAPI, useTokenStreaming, setUseTokenStreaming,
-		disableLogprobs, setDisableLogprobs, postSamplingProbs, setPostSamplingProbs, showPromptPreview, setShowPromptPreview,
-		promptPreviewTokens, setPromptPreviewTokens, currentThemeName, setCurrentThemeName, allThemes, setAllThemes,
+		disableLogprobs, setDisableLogprobs, postSamplingProbs, setPostSamplingProbs, currentThemeName, setCurrentThemeName, allThemes, setAllThemes,
 		showMarkdownPreview, setShowMarkdownPreview, ttsEnabled, setTTSEnabled, ttsVoiceId, setTTSVoiceId, ttsPitch, setTTSPitch,
 		ttsRate, setTTSRate, ttsVolume, setTTSVolume, ttsSpeakInputs, setTTSSpeakInputs, ttsMaxUserInput, setTTSMaxUserInput,
 		useServerTokenization,
@@ -67,15 +66,15 @@ export function AppLayout() {
 	} = useSettings();
 
 	const {
-		promptArea, promptOverlay, undoStack, redoStack, probsDelayTimer, keyState, sessionReconnectTimer,
-		useScrollSmoothing, hordeTaskId, promptPreviewElement, markdownPreviewRef, isSyncingScroll,
+		promptEditorView, replaceEditorText, undoStack, redoStack, probsDelayTimer, keyState, sessionReconnectTimer,
+		useScrollSmoothing, hordeTaskId, markdownPreviewRef, isSyncingScroll,
 		promptChunks, setPromptChunks, currentPromptChunk, setCurrentPromptChunk, undoHovered, setUndoHovered,
 		showProbs, setShowProbs, cancel, setCancel, sessionEndpointConnecting, setSessionEndpointConnecting,
 		sessionEndpointError, setSessionEndpointError, rejectedAPIKey, setRejectedAPIKey, openaiModels, setOpenaiModels,
 		tokens, setTokens, tokensPerSec, setTokensPerSec, predictStartTokens, setPredictStartTokens, lastError, setLastError,
 		savedScrollTop, setSavedScrollTop, modalState, setModalState, contextMenuState, setContextMenuState,
 		instructModalState, setInstructModalState, hordeQueuePos, setHordeQueuePos, hordeProcessing, setHordeProcessing,
-		promptPreviewChunks, setPromptPreviewChunks, promptPreviewReroll, setPromptPreviewReroll, ttsAvailable, setTTSAvailable,
+		ttsAvailable, setTTSAvailable,
 		ttsNewText, ttsLastChunk, ttsQueue, ttsVoices, ttsPaused, activeGenId, triggerPredict, setTriggerPredict, restartedPredict, setRestartedPredict,
 		toggleModal, closeModal
 	} = useGeneration();
@@ -101,37 +100,6 @@ export function AppLayout() {
 
 
 
-
-	// predicts the prompt preview
-	useEffect(() => {
-		if (promptPreviewChunks.length) // Don't predict a new preview if we already have one.
-			return;
-		
-		if (fimPromptInfo !== undefined || cancel || endpointAPI == API_AI_HORDE || tokenHighlightMode === -1 || !showPromptPreview)
-			return;
-
-		const ac = new AbortController();
-		const signal = ac.signal;
-		const to = setTimeout(async () => {
-			if (signal.aborted) {
-				return;
-			}
-
-			const customParams = {
-				n_predict: promptPreviewTokens
-			};
-
-			const predicted = await predict(finalPromptText, promptChunks.length, (chunk: CompletionChunk) => {
-				setPromptPreviewChunks((c) => [...c, chunk]);
-				return true;
-			}, ac, false, customParams);
-		}, 500);
-
-		ac.signal.addEventListener('abort', () => clearTimeout(to));
-		return () => ac.abort();
-	}, [finalPromptText, showPromptPreview, promptPreviewReroll, cancel, endpoint, endpointAPI, endpointAPIKey]);
-
-	const promptPreviewText = useMemo(() => joinPrompt(promptPreviewChunks), [promptPreviewChunks]);
 
 	const { predict, undo, redo, undoAndPredict, fillPredict } = useGenerationLogic();
 
@@ -316,78 +284,6 @@ export function AppLayout() {
 
 	useTouchGestures();
 
-	// Update the textarea in an uncontrolled way so the user doesn't lose their
-	// selection or cursor position during prediction
-	useLayoutEffect(() => {
-		const elem = promptArea.current;
-		if (!elem) return;
-		const activePromptText = promptText;
-		if (elem.value === activePromptText) {
-			return;
-		} else if (elem.value.length && activePromptText.startsWith(elem.value)) {
-			const isTextSelected = elem.selectionStart !== elem.selectionEnd;
-			const oldHeight = elem.scrollHeight;
-			const atBottom = (elem.scrollTarget ?? elem.scrollTop) + elem.clientHeight + 1 > oldHeight;
-			const oldLen = elem.value.length;
-			// disable preserveCursorPosition in chatMode
-			if ( (!isTextSelected && !preserveCursorPosition) || (chatMode || useChatAPI)) {
-				elem.value = activePromptText;
-			} else {
-				elem.setRangeText(activePromptText.slice(oldLen), oldLen, oldLen, 'preserve');
-			}
-			const newHeight = elem.scrollHeight;
-			if (atBottom && oldHeight !== newHeight) {
-				if (elem.scrollHeight - (elem.scrollTop + elem.clientHeight + 1) >= 100) {
-					// smooth scroll isn't keeping up with prediction speed =(
-					useScrollSmoothing.current = false;
-				}
-				elem.scrollTarget = newHeight - elem.clientHeight;
-				elem.scrollTo({
-					top: newHeight - elem.clientHeight,
-					behavior: useScrollSmoothing.current ? 'smooth' : 'instant',
-				});
-			}
-		} else {
-			elem.value = activePromptText;
-		}
-	}, [promptText]);
-
-	useLayoutEffect(() => {
-		const elem = promptArea.current;
-		const previewElem = promptPreviewElement.current;
-		if (!elem || !previewElem)
-			return;
-		const oldHeight = elem.scrollHeight;
-		const atBottom = (elem.scrollTarget ?? elem.scrollTop) + elem.clientHeight + 1 > oldHeight;
-		previewElem.textContent = promptPreviewText;
-		elem.style.paddingBottom = previewElem.offsetHeight + 'px';
-		requestAnimationFrame(() => {
-			const newHeight = elem.scrollHeight;
-			if (atBottom && oldHeight !== newHeight) {
-				if (elem.scrollHeight - (elem.scrollTop + elem.clientHeight + 1) >= 100) {
-					// smooth scroll isn't keeping up with prediction speed =(
-					useScrollSmoothing.current = false;
-				}
-				elem.scrollTarget = newHeight - elem.clientHeight;
-				elem.scrollTo({
-					top: newHeight - elem.clientHeight,
-					behavior: useScrollSmoothing.current ? 'smooth' : 'instant',
-				});
-			}
-		});
-	}, [promptPreviewText]);
-
-	useLayoutEffect(() => {
-		if (cancel || promptPreviewText)
-			return;
-		const elem = promptArea.current;
-		const overlay = promptOverlay.current;
-		if (!elem || !overlay) return;
-		elem.scrollTarget = undefined;
-		elem.scrollTop = savedScrollTop;
-		overlay.scrollTop = savedScrollTop;
-	}, [savedScrollTop, tokenHighlightMode, showProbsMode]);
-
 	useEffect(() => {
 		if (cancel)
 			return;
@@ -448,9 +344,9 @@ export function AppLayout() {
 	useKeyboardShortcuts();
 
 	const applyChatTemplate = () => {
-		const elem = promptArea.current;
-		if (!elem) return;
-		const promptString = elem.value;
+		const adapter = promptEditorView.current;
+		if (!adapter) return;
+		const promptString = adapter.getText();
 		if (!promptString.trim()) return;
 
 		let bestMessages: ChatMessage[] = [];
@@ -481,10 +377,7 @@ export function AppLayout() {
 			else if (msg.role === 'assistant') newPrompt += msg.content;
 		}
 
-		elem.value = newPrompt;
-		if (elem.onInputHandler) {
-			elem.onInputHandler({ currentTarget: elem });
-		}
+		replaceEditorText(newPrompt);
 	};
 
 	useEffect(() => {
@@ -493,7 +386,6 @@ export function AppLayout() {
 			redoStack.current = [];
 			undoStack.current = [];
 			setUndoHovered(false);
-			setPromptPreviewChunks([]);
 			setTitleToSession();
 		}
 		function onSessionError() {

@@ -2,10 +2,10 @@ import { useEffect } from 'react';
 import { useGeneration } from '../contexts/GenerationContext';
 
 export function useTouchGestures() {
-	const { promptArea, cancel, setContextMenuState } = useGeneration();
+	const { promptEditorView, cancel, setContextMenuState } = useGeneration();
 
 	useEffect(() => {
-		const element = promptArea.current;
+		const element = promptEditorView.current?.dom;
 		if (!element) return;
 
 		const isTouchDevice = () => {
@@ -117,5 +117,5 @@ export function useTouchGestures() {
 				element.removeEventListener('contextmenu', handleContextMenu);
 			};
 		}
-	}, [promptArea, cancel, setContextMenuState]);
+	}, [promptEditorView, cancel, setContextMenuState]);
 }

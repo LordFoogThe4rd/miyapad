@@ -32,8 +32,7 @@ export function Sidebar({ sidebarRef, toggleModal, currentThemeName, setCurrentT
 		stoppingStrings, setStoppingStrings, useBasicStoppingMode, setUseBasicStoppingMode,
 		basicStoppingModeType, setBasicStoppingModeType, enabledSamplers, setEnabledSamplers,
 		useChatAPI, setUseChatAPI, useTokenStreaming, setUseTokenStreaming, disableLogprobs, setDisableLogprobs,
-		postSamplingProbs, setPostSamplingProbs, showPromptPreview, setShowPromptPreview,
-		promptPreviewTokens, setPromptPreviewTokens, templates, selectedTemplate, setSelectedTemplate,
+		postSamplingProbs, setPostSamplingProbs, templates, selectedTemplate, setSelectedTemplate,
 		isMiyapadEndpoint, sessionStorage, chatMode, setChatMode, seed, setSeed, contextLength, setContextLength,
 		memoryTokens, authorNoteTokens, authorNoteDepth, templateList, tokenHighlightMode,
 		connections, setConnections, selectedConnectionId, setSelectedConnectionId,
@@ -45,7 +44,7 @@ export function Sidebar({ sidebarRef, toggleModal, currentThemeName, setCurrentT
 	const {
 		cancel, openaiModels, hordeQueuePos, hordeProcessing, tokens, tokensPerSec, undoStack, redoStack,
 		undoHovered, setUndoHovered, lastError, sessionEndpointConnecting, predictStartTokens,
-		modalState, promptArea,
+		modalState, promptEditorView,
 		rejectedAPIKey
 	} = useGeneration();
 
@@ -166,15 +165,15 @@ export function Sidebar({ sidebarRef, toggleModal, currentThemeName, setCurrentT
 		prefix = prefix.replace(/\\n/g,'\n');
 		suffix = suffix.replace(/\\n/g,'\n');
 
-		const elem = promptArea.current;
-		if (!elem)
+		const adapter = promptEditorView.current;
+		if (!adapter)
 			return;
 
-		const startPos = elem.selectionStart;
-		const endPos = elem.selectionEnd;
-		const textBefore = elem.value.substring(0, startPos) || "";
-		const textAfter = (sysInst !== "sys" && elem.selectionEnd !== elem.value.length ? "{predict}" : "") + elem.value.substring(endPos);
-		const selectedText = elem.value.substring(startPos, endPos);
+		const { from: startPos, to: endPos } = adapter.getSelection();
+		const currentText = adapter.getText();
+		const textBefore = currentText.substring(0, startPos) || "";
+		const textAfter = (sysInst !== "sys" && endPos !== currentText.length ? "{predict}" : "") + currentText.substring(endPos);
+		const selectedText = currentText.substring(startPos, endPos);
 
 		const finalText = textBefore 
 						+ prefix
@@ -182,9 +181,7 @@ export function Sidebar({ sidebarRef, toggleModal, currentThemeName, setCurrentT
 						+ suffix
 						+ textAfter;
 
-		const scrollTop = elem.scrollTop;
-		
-		elem.value = finalText;
+		adapter.replaceText(finalText);
 
 		let newCursorPos;
 		if (selectedText.length === 0) {
@@ -195,11 +192,8 @@ export function Sidebar({ sidebarRef, toggleModal, currentThemeName, setCurrentT
 				+ selectedText.length 
 				+ suffix.length;
 		}
-		elem.focus();
-		elem.setSelectionRange(newCursorPos, newCursorPos);
-		if (elem.onInputHandler) elem.onInputHandler({ currentTarget: elem });
-
-		elem.scrollTop = scrollTop;
+		adapter.focus();
+		adapter.setSelection(newCursorPos, newCursorPos);
 	};
 
 	const handleApplyConnection = (conn: ConnectionData) => {
@@ -445,11 +439,7 @@ export function Sidebar({ sidebarRef, toggleModal, currentThemeName, setCurrentT
 					<${Checkbox} label=${t('sidebar.disableLogprobs')}
 						title=${t('sidebar.disableLogprobsTooltip')}
 						disabled=${!!cancel} value=${disableLogprobs} onValueChange=${setDisableLogprobs}/>
-					<${Checkbox} label=${t('sidebar.predictionPreview')}
-						disabled=${!!cancel || tokenHighlightMode === -1} value=${showPromptPreview && tokenHighlightMode !== -1} onValueChange=${setShowPromptPreview}/>
-					${showPromptPreview && html`
-						<${InputBox} label=${t('sidebar.maxPreviewTokens')} type="text" inputmode="numeric"
-							readOnly=${!!cancel} value=${promptPreviewTokens} onValueChange=${setPromptPreviewTokens}/>`}`}
+				`}
 				<div className="buttons instructTemplateSidebar">
 					<${SelectBox}
 						label=${t('sidebar.instructTemplate')}

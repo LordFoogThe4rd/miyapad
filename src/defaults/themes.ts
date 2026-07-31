@@ -142,8 +142,7 @@ html.nockoffAI {
 html.nockoffAI body {
 	background: var(--color-bg-prompt);
 }
-html.nockoffAI #prompt-area,
-html.nockoffAI #prompt-overlay {
+html.nockoffAI .ProseMirror {
 	text-indent: 1em each-line;
 }
 html.nockoffAI #memory-area,
@@ -239,7 +238,7 @@ html.ereader {
 
 	background: var(--color-base-10);
 }
-html.ereader #prompt-container:hover #prompt-overlay > .machine {
+html.ereader #prompt-container:hover .ProseMirror .machine {
 	background: color-mix(in srgb, var(--bg-color, var(--color-miku)) 20%, transparent);
 }
 html.ereader #sidebar {

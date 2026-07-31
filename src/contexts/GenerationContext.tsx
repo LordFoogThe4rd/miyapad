@@ -1,23 +1,23 @@
 import { html } from 'htm/react';
-import { createContext, useContext, useState, useRef, type ReactNode, type Dispatch, type SetStateAction } from 'react';
+import { createContext, useContext, useState, useRef, useCallback, type ReactNode, type Dispatch, type SetStateAction } from 'react';
 import { defaultPresets } from '../defaults/presets';
 import type { GenerationState, InstructModalState, ProbsDelayTimerValue } from '../types/contexts';
+import type { EditorAdapter } from '../editor/EditorAdapter';
 
 export const GenerationContext = createContext<GenerationState | null>(null);
 
 export function GenerationProvider({ children, useSessionState }: { children: ReactNode; useSessionState: <T>(name: string, initialState: T) => [T, Dispatch<SetStateAction<T>>] }) {
-	const promptArea = useRef<HTMLTextAreaElement>(null);
-	const promptOverlay = useRef<HTMLDivElement>(null);
-	const undoStack = useRef<number[]>([]);
+	const promptEditorView = useRef<EditorAdapter>(null);
+	const undoStack = useRef<(number | PromptChunk[])[]>([]);
 	const redoStack = useRef<PromptChunk[][]>([]);
 	const probsDelayTimer = useRef<ProbsDelayTimerValue | undefined>(undefined);
 	const keyState = useRef<Record<string, boolean>>({});
 	const sessionReconnectTimer = useRef<number | undefined>(undefined);
 	const useScrollSmoothing = useRef(true);
 	const hordeTaskId = useRef<string | undefined>(undefined);
-	const promptPreviewElement = useRef<HTMLSpanElement>(null);
 	const markdownPreviewRef = useRef<HTMLDivElement>(null);
 	const isSyncingScroll = useRef(false);
+	const lastEditMsRef = useRef(0);
 
 	const [promptChunks, setPromptChunks] = useSessionState('prompt', defaultPresets.prompt);
 	const [currentPromptChunk, setCurrentPromptChunk] = useState(undefined);
@@ -38,8 +38,6 @@ export function GenerationProvider({ children, useSessionState }: { children: Re
 	const [instructModalState, setInstructModalState] = useState<InstructModalState>({});
 	const [hordeQueuePos, setHordeQueuePos] = useState(undefined);
 	const [hordeProcessing, setHordeProcessing] = useState(false);
-	const [promptPreviewChunks, setPromptPreviewChunks] = useState([]);
-	const [promptPreviewReroll, setPromptPreviewReroll] = useState(0);
 	const [ttsAvailable, setTTSAvailable] = useState(true);
 	
 	const toggleModal = (modalKey: string) => {
@@ -69,16 +67,22 @@ export function GenerationProvider({ children, useSessionState }: { children: Re
 	const [triggerPredict, setTriggerPredict] = useState(false);
 	const [restartedPredict, setRestartedPredict] = useState(false);
 
+	const replaceEditorText = useCallback((newText: string) => {
+		const adapter = promptEditorView.current;
+		if (!adapter) return;
+		adapter.replaceText(newText);
+	}, []);
+
 	const state = {
-		promptArea, promptOverlay, undoStack, redoStack, probsDelayTimer, keyState, sessionReconnectTimer,
-		useScrollSmoothing, hordeTaskId, promptPreviewElement, markdownPreviewRef, isSyncingScroll,
+		promptEditorView, replaceEditorText, undoStack, redoStack, probsDelayTimer, keyState, sessionReconnectTimer,
+		useScrollSmoothing, hordeTaskId, markdownPreviewRef, isSyncingScroll, lastEditMsRef,
 		promptChunks, setPromptChunks, currentPromptChunk, setCurrentPromptChunk, undoHovered, setUndoHovered,
 		showProbs, setShowProbs, cancel, setCancel, sessionEndpointConnecting, setSessionEndpointConnecting,
 		sessionEndpointError, setSessionEndpointError, rejectedAPIKey, setRejectedAPIKey, openaiModels, setOpenaiModels,
 		tokens, setTokens, tokensPerSec, setTokensPerSec, predictStartTokens, setPredictStartTokens, lastError, setLastError,
 		savedScrollTop, setSavedScrollTop, modalState, setModalState, contextMenuState, setContextMenuState,
 		instructModalState, setInstructModalState, hordeQueuePos, setHordeQueuePos, hordeProcessing, setHordeProcessing,
-		promptPreviewChunks, setPromptPreviewChunks, promptPreviewReroll, setPromptPreviewReroll, ttsAvailable, setTTSAvailable,
+		ttsAvailable, setTTSAvailable,
 		ttsNewText, ttsLastChunk, ttsQueue, ttsVoices, ttsPaused, activeGenId, abortControllerRef, triggerPredict, setTriggerPredict, restartedPredict, setRestartedPredict,
 		toggleModal, closeModal
 	};

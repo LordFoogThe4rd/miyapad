@@ -1,5 +1,5 @@
 import { html } from 'htm/react';
-import { useState, useEffect, useRef } from 'react';
+import { useState, useEffect, useRef, useCallback } from 'react';
 import { usePersistentState } from '../hooks/usePersistentState';
 import { Widget } from './Widget';
 import { InputBox } from './controls/InputBox';
@@ -7,12 +7,11 @@ import { SelectBox } from './controls/SelectBox';
 import { SVG_ArrowUp, SVG_ArrowDown } from './icons/index';
 import { useT } from '../i18n';
 
-export function SearchAndReplaceWidget({ isOpen, closeWidget, id, children, promptArea, promptText, cancel, ...props }: any) {
+export function SearchAndReplaceWidget({ isOpen, closeWidget, id, children, editorView, promptText, cancel, ...props }: any) {
 	const t = useT();
 	const modeLabels: Record<number, string> = { 0: t('search.plaintext'), 1: t('search.regex'), 2: 'Template' };
 	const [searchAndReplaceError, setSearchAndReplaceError] = useState<string | undefined>(undefined);
 	const [searchAndReplaceMode, setSearchAndReplaceMode] = usePersistentState('searchAndReplaceMode', 0);
-	// Normalise persisted value that was removed from the UI
 	useEffect(() => {
 		if (searchAndReplaceMode === 2) {
 			setSearchAndReplaceMode(0);
@@ -22,174 +21,122 @@ export function SearchAndReplaceWidget({ isOpen, closeWidget, id, children, prom
 	const [searchFlags, setSearchFlags] = usePersistentState('searchFlags','gi');
 	const [replaceTerm, setReplaceTerm] = usePersistentState('replaceTerm','');
 	const [numMatches, setNumMatches] = useState(0);
-	const [inputElement, setInputElement] = useState<HTMLElement | null>(null);
 	const [replacedTrigger, setReplacedTrigger] = useState(false);
 	const positions = useRef<{ start: number; end: number }[]>([]);
 	const [currentIndex, setCurrentIndex] = useState(-1);
 
-	useEffect(() => {
-		if (promptArea.current) {
-			setInputElement(promptArea.current);
-		}
-	}, [promptArea]);
+	const getText = useCallback((): string => {
+		return editorView?.current?.getText() ?? '';
+	}, [editorView]);
 
-	function handleFindNext(mode: any,search: any,flags: any) {
+	function findAllMatches(mode: any, search: any, flags: any) {
 		setSearchAndReplaceError(undefined)
 		if (!search)
-			return
-		switch(mode) {
-			case 0:
-				findNextMatch(mode,search,flags,inputElement)
-				break;
-			case 1:
-				findNextMatch(mode,search,flags,inputElement)
-				break;
-		}
-	}
-	function handleFindPrev(mode: any,search: any,flags: any) {
-		setSearchAndReplaceError(undefined)
-		if (!search)
-			return
-		switch(mode) {
-			case 0:
-				findPrevMatch(mode,search,flags,inputElement)
-				break;
-			case 1:
-				findPrevMatch(mode,search,flags,inputElement)
-				break;
-		}
-	}
-
-	function findAllMatches(mode: any, search: any, flags: any, elem: any) {
-		if (!inputElement)
-			return [];
-		setSearchAndReplaceError(undefined)
+			return []
 		let startIndex = 0;
 		let index;
 		let match;
-		let positions = [];
-		let text = elem.value;
+		const result: { start: number; end: number }[] = [];
+		const text = getText();
 
 		if (mode == 0) {
 			while ((index = text.indexOf(search, startIndex)) > -1) {
-					positions.push({ start: index, end: index + search.length });
-					startIndex = index + search.length;
+				result.push({ start: index, end: index + search.length });
+				startIndex = index + search.length;
 			}
-		}
-		else if (mode == 1) {
+		} else if (mode == 1) {
 			try {
-				if (flags && !flags.includes("g"))
-					flags += "g" // if no global flag, while loop is infinite
-				else if (flags == "")
-					flags = "g"
-				let re = new RegExp(String.raw`${search}`, String.raw`${flags ?? "g"}`);
+				let reFlags = flags;
+				if (reFlags && !reFlags.includes("g")) reFlags += "g";
+				else if (reFlags == "") reFlags = "g";
+				let re = new RegExp(String.raw`${search}`, String.raw`${reFlags ?? "g"}`);
 				while ((match = re.exec(text)) !== null) {
-					positions.push({ start: match.index, end: re.lastIndex });
+					result.push({ start: match.index, end: re.lastIndex });
 					if (match.index === re.lastIndex) {
 						re.lastIndex++;
 					}
 				}
-			}
-			catch (e: unknown) {
+			} catch (e: unknown) {
 				reportError(e);
-				const errStr = String(e);
-				setSearchAndReplaceError(errStr);
+				setSearchAndReplaceError(String(e));
 				return [];
 			}
 		}
-		return positions;
+		return result;
 	}
-	function highlightIndex(elem: any, index: any) {
+
+	function highlightIndex(index: any) {
+		const adapter = editorView?.current;
+		if (!adapter) return;
 		if (positions.current.length > 0 && index >= 0 && index < positions.current.length) {
-			const position = positions.current[index];
-			elem.focus();
-			elem.scrollTop = 0;
-
-			// Scroll to selection position.
-			const fullText = elem.value;
-			elem.value = fullText.substring(0, position.end);
-			elem.scrollTop = elem.scrollHeight;
-			elem.value = fullText;
-
-			elem.setSelectionRange(position.start, position.end);
+			const pos = positions.current[index];
+			adapter.focus();
+			adapter.setSelection(pos.start, pos.end);
+			adapter.scrollIntoView(pos.start, { y: 'center' });
 		}
 	}
-	function findNextMatch(mode: any,search: any,flags: any,elem: any) {
+
+	function findNextMatch(mode: any, search: any, flags: any) {
 		if (positions.current.length === 0) {
-			findAndStorePositions(mode,search,flags,elem);
+			findAndStorePositions(mode, search, flags);
 		}
 		if (positions.current.length > 0) {
 			let index = (currentIndex + 1) % positions.current.length;
 			setCurrentIndex(index);
-			highlightIndex(inputElement, index);
+			highlightIndex(index);
 		}
 	}
 
-	function findPrevMatch(mode: any,search: any,flags: any,elem: any) {
+	function findPrevMatch(mode: any, search: any, flags: any) {
 		if (positions.current.length === 0) {
-			findAndStorePositions(mode,search,flags,elem);
+			findAndStorePositions(mode, search, flags);
 		}
 		if (positions.current.length > 0) {
 			let index = (currentIndex - 1 + positions.current.length) % positions.current.length;
 			setCurrentIndex(index);
-			highlightIndex(inputElement, index);
+			highlightIndex(index);
 		}
 	}
 
-	function findAndStorePositions(mode: any,search: any,flags: any,elem: any) {
-		positions.current = findAllMatches(mode, search, flags, elem);
-		setCurrentIndex(-1); 
+	function findAndStorePositions(mode: any, search: any, flags: any) {
+		positions.current = findAllMatches(mode, search, flags);
+		setCurrentIndex(-1);
 		if (!searchAndReplaceError && positions.current.length === 0)
 			setSearchAndReplaceError(`${t('search.warningNoMatches')} ${modeLabels[mode] ?? modeLabels[0]} '${search}'`)
 	}
 
-	function handleSearchAndReplace(mode: any,search: any,flags: any,replace: any) {
-		// TODO
-		// Add this to undo/redo
+	function handleSearchAndReplace(mode: any, search: any, flags: any, replace: any) {
 		setSearchAndReplaceError(undefined)
-		if (!search)
-			return
-		positions.current = findAllMatches(mode, search, flags, inputElement);
+		if (!search) return
+		positions.current = findAllMatches(mode, search, flags);
 		if (!searchAndReplaceError && positions.current.length === 0) {
 			setSearchAndReplaceError(`${t('search.warningNoMatches')} ${modeLabels[mode] ?? modeLabels[0]} '${search}'`)
 			return
 		}
-		setReplacedTrigger((prev) => !prev)
-
-		switch(mode) {
-			case 0:
-				plaintextReplace(search,replace,inputElement)
-				break;
-			case 1:
-				regexReplace(search,flags,replace,inputElement)
-				break;
-		}
-	}
-
-	function plaintextReplace(search: any,replace: any,elem: any) {
-		try {
-			const newVal = elem.value.replaceAll(search,replace);
-			elem.focus();
-			elem.select();
-			document.execCommand('insertText', false, newVal);
-		}
-		catch (e: unknown) {
-			reportError(e);
-		}
-	}
-	function regexReplace(search: any,flags: any,replace: any,elem: any) {
-		try {
+		setReplacedTrigger((prev: boolean) => !prev)
+		const adapter = editorView?.current;
+		if (!adapter) return;
+		const text = adapter.getText();
+		if (mode === 0) {
+			const parts = positions.current.map(p => ({ from: p.start, to: p.end, insert: replace }));
+			if (parts.length > 0) {
+				adapter.replaceRanges(parts.reverse());
+				adapter.focus();
+			}
+		} else if (mode === 1) {
 			const gFlags = flags && !flags.includes('g') ? flags + 'g' : flags || 'g';
-			let re = new RegExp(String.raw`${search}`, String.raw`${gFlags}`);
-			const newVal = elem.value.replace(re, replace.replace(/\\n/g, '\n'));
-			elem.focus();
-			elem.select();
-			document.execCommand('insertText', false, newVal);
-		}
-		catch (e: unknown) {
-			reportError(e);
-			const errStr = String(e)
-			setSearchAndReplaceError(errStr)
+			try {
+				let re = new RegExp(String.raw`${search}`, String.raw`${gFlags}`);
+				const newVal = text.replace(re, replace.replace(/\\n/g, '\n'));
+				if (newVal !== text) {
+					adapter.replaceText(newVal);
+					adapter.focus();
+					return;
+				}
+			} catch (e: unknown) {
+				reportError(e);
+				setSearchAndReplaceError(String(e));
+			}
 		}
 	}
 
@@ -199,11 +146,10 @@ export function SearchAndReplaceWidget({ isOpen, closeWidget, id, children, prom
 			setNumMatches(0)
 			return
 		}
-		positions.current = findAllMatches(mode, search, flags, inputElement);
+		positions.current = findAllMatches(mode, search, flags);
 		try {
 			setNumMatches(positions.current.length ?? 0)
-		}
-		catch {
+		} catch {
 			setNumMatches(0)
 		}
 		if (positions.current.length <= currentIndex) {
@@ -212,8 +158,8 @@ export function SearchAndReplaceWidget({ isOpen, closeWidget, id, children, prom
 	}
 
 	useEffect(() => {
-		countMatches(searchAndReplaceMode,searchTerm,searchFlags)
-	}, [searchAndReplaceMode,searchTerm,searchFlags,isOpen,replacedTrigger,promptText]);
+		countMatches(searchAndReplaceMode, searchTerm, searchFlags)
+	}, [searchAndReplaceMode, searchTerm, searchFlags, isOpen, replacedTrigger, promptText]);
 
 	return html`
 		<${Widget} isOpen=${isOpen} onClose=${closeWidget}
@@ -228,7 +174,6 @@ export function SearchAndReplaceWidget({ isOpen, closeWidget, id, children, prom
 						options=${[
 							{ name: t('search.plaintext'), value: 0 },
 							{ name: t('search.regex'), value: 1 },
-							// { name: 'Template', value: 2 },
 						]}/>
 					${searchAndReplaceMode == 0 && html`
 						<${InputBox} label=${t('search.searchThis')} type="text"
@@ -260,19 +205,19 @@ export function SearchAndReplaceWidget({ isOpen, closeWidget, id, children, prom
 					<button
 						class="findButton"
 						title=${t('search.findPrev')}
-						onClick=${() => handleFindPrev(searchAndReplaceMode,searchTerm,searchFlags)}>
+						onClick=${() => findPrevMatch(searchAndReplaceMode, searchTerm, searchFlags)}>
 						<${SVG_ArrowUp}/>
 					</button>
 					<button
 						class="findButton"
 						title=${t('search.findNext')}
-						onClick=${() => handleFindNext(searchAndReplaceMode,searchTerm,searchFlags)}>
+						onClick=${() => findNextMatch(searchAndReplaceMode, searchTerm, searchFlags)}>
 							<${SVG_ArrowDown}/>
 					</button>
 					<button
 						title=${t('search.replaceAllTitle')}
 						disabled=${!!cancel}
-						onClick=${() => handleSearchAndReplace(searchAndReplaceMode,searchTerm,searchFlags,replaceTerm)}>
+						onClick=${() => handleSearchAndReplace(searchAndReplaceMode, searchTerm, searchFlags, replaceTerm)}>
 							${t('search.replaceAll')}
 					</button>
 				</div>

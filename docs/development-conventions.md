@@ -16,9 +16,9 @@ export function Widget({ title }: WidgetProps) {
 }
 ```
 
-## Uncontrolled Textarea Scroll Preservation
+## ProseMirror Prompt Editor
 
-In `AppLayout.tsx`, the main prompt textarea updates in an uncontrolled manner during prediction. This ensures the user does not lose cursor positions, highlights, or scrolling alignments when text chunks stream in at high frequencies. Always maintain this pattern when updating prompt-related text structures.
+The main prompt editor is a ProseMirror view (see `src/components/PromptContainer.tsx` and `src/editor/`). It is not an uncontrolled textarea: streaming chunks are applied to the doc via `EditorAdapter` / `applyChunksToPM`, and user edits flow back to React state through the view's `dispatchTransaction`. Chunk highlighting is rendered by `chunkDecorationPlugin` as inline decorations — keep text sync and decoration state in lockstep (pass the same `chunkDecorationKey` meta), rebuild decorations on every state change that alters chunks, and never mutate chunk objects when re-deriving chunks (`diffPromptChunks`). All text offsets exchanged with the editor are flat offsets including `\n` paragraph separators (`getText`, `getSelection`, `replaceRange`).
 
 ## UI Strings (Localization)
 

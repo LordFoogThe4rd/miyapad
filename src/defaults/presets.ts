@@ -59,6 +59,4 @@ export const defaultPresets = {
 	chatAPI: false,
 	tokenStreaming: true,
 	disableLogprobs: false,
-	promptPreview: false,
-	promptPreviewTokens: 20,
 };

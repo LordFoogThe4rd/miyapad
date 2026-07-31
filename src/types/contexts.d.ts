@@ -1,4 +1,5 @@
 import type { Dispatch, RefObject, SetStateAction } from 'react';
+import type { EditorAdapter } from '../editor/EditorAdapter';
 
 declare global {
   interface PromptChunk {
@@ -169,10 +170,6 @@ export interface SettingsState {
   setDisableLogprobs: Dispatch<SetStateAction<boolean>>;
   postSamplingProbs: boolean;
   setPostSamplingProbs: Dispatch<SetStateAction<boolean>>;
-  showPromptPreview: boolean;
-  setShowPromptPreview: Dispatch<SetStateAction<boolean>>;
-  promptPreviewTokens: number;
-  setPromptPreviewTokens: Dispatch<SetStateAction<number>>;
   currentThemeName: string;
   setCurrentThemeName: Dispatch<SetStateAction<string>>;
   allThemes: Record<string, ThemeData>;
@@ -240,18 +237,18 @@ export interface ProbsDelayTimerValue {
 }
 
 export interface GenerationState {
-  promptArea: RefObject<HTMLTextAreaElement | null>;
-  promptOverlay: RefObject<HTMLDivElement | null>;
-  undoStack: RefObject<number[]>;
+  promptEditorView: RefObject<EditorAdapter | null>;
+  replaceEditorText: (newText: string) => void;
+  undoStack: RefObject<(number | PromptChunk[])[]>;
   redoStack: RefObject<PromptChunk[][]>;
   probsDelayTimer: RefObject<ProbsDelayTimerValue | undefined>;
   keyState: RefObject<Record<string, boolean>>;
   sessionReconnectTimer: RefObject<number | undefined>;
   useScrollSmoothing: RefObject<boolean>;
   hordeTaskId: RefObject<string | undefined>;
-  promptPreviewElement: RefObject<HTMLSpanElement | null>;
   markdownPreviewRef: RefObject<HTMLDivElement | null>;
   isSyncingScroll: RefObject<boolean>;
+  lastEditMsRef: RefObject<number>;
   ttsNewText: RefObject<string>;
   ttsLastChunk: RefObject<string>;
   ttsQueue: RefObject<string[]>;
@@ -297,10 +294,6 @@ export interface GenerationState {
   setHordeQueuePos: Dispatch<SetStateAction<number | undefined>>;
   hordeProcessing: boolean;
   setHordeProcessing: Dispatch<SetStateAction<boolean>>;
-  promptPreviewChunks: PromptChunk[];
-  setPromptPreviewChunks: Dispatch<SetStateAction<PromptChunk[]>>;
-  promptPreviewReroll: number;
-  setPromptPreviewReroll: Dispatch<SetStateAction<number>>;
   ttsAvailable: boolean;
   setTTSAvailable: Dispatch<SetStateAction<boolean>>;
   triggerPredict: boolean;

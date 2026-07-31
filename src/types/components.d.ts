@@ -1,4 +1,5 @@
 import type { Dispatch, ReactNode, RefObject } from 'react';
+import type { EditorAdapter } from '../editor/EditorAdapter';
 
 export interface WidgetProps {
   isOpen: boolean;
@@ -45,7 +46,7 @@ export interface SearchAndReplaceWidgetProps {
   closeWidget: () => void;
   id: string;
   children?: ReactNode;
-  promptArea: RefObject<HTMLTextAreaElement | null>;
+  editorView: RefObject<EditorAdapter | null>;
   promptText: string;
   cancel: (() => void) | null;
 }

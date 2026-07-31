@@ -1,12 +1,10 @@
 import { useEffect, useEffectEvent } from 'react';
-import { useSettings } from '../contexts/SettingsContext';
 import { useGeneration } from '../contexts/GenerationContext';
 import { useTTS } from './useTTS';
 import { useGenerationLogic } from './useGenerationLogic';
 
 export function useKeyboardShortcuts() {
-	const { showPromptPreview } = useSettings();
-	const { modalState, keyState, promptChunks, setPromptChunks, promptPreviewChunks, setPromptPreviewChunks, setPromptPreviewReroll, tokens, setTokens, cancel, toggleModal } = useGeneration();
+	const { modalState, keyState, promptChunks, setPromptChunks, tokens, setTokens, cancel, toggleModal } = useGeneration();
 	const { predict, undoAndPredict, undo, redo } = useGenerationLogic();
 	const { ttsStop } = useTTS();
 
@@ -25,67 +23,27 @@ export function useKeyboardShortcuts() {
 			case 'false:false:false:false:Escape':
 				if (cancel) {
 					cancel();
-				} else if (showPromptPreview && promptPreviewChunks.length !== 0) {
-					setPromptPreviewChunks([]);
-					setPromptPreviewReroll((r: number) => r + 1);
 				}
-				break;
-			case 'false:false:false:false:Tab':
-				if (!showPromptPreview || promptPreviewChunks.length === 0)
-					break;
-
-				setPromptChunks((p: PromptChunk[]) => [
-					...p,
-					...promptPreviewChunks
-				]);
-				setTokens((t: number) => t + promptPreviewChunks.length);
-				setPromptPreviewChunks([]);
 				break;
 			case 'false:true:false:false:ArrowRight': {
-				if (!showPromptPreview || promptPreviewChunks.length === 0) {
-					preventDefaultAction = false;
-					break;
-				}
-
-				const newPromptChunks = [ ...promptChunks ];
-				const newPromptPreviewChunks = [ ...promptPreviewChunks ];
-				let newTokens = tokens;
-
-				do {
-					newPromptChunks.push(...newPromptPreviewChunks.splice(0, 1));
-					newTokens++;
-				} while (
-					newPromptPreviewChunks.length > 0 &&
-					newPromptPreviewChunks[0].content[0] != " " &&
-					(
-						newPromptChunks.length == 0 ||
-						(
-							newPromptChunks.length > 0 &&
-							newPromptChunks[newPromptChunks.length - 1].content[newPromptChunks[newPromptChunks.length - 1].content.length - 1] != " "
-						)
-					)
-				);
-				
-				setPromptChunks(newPromptChunks);
-				setPromptPreviewChunks(newPromptPreviewChunks);
-				setTokens(newTokens);
+				preventDefaultAction = false;
 				break;
 			}
 			case 'false:true:false:false:r':
 			case 'false:false:false:true:r':
 				undoAndPredict();
 				break;
-			case 'false:true:false:false:z':
-			case 'false:false:false:true:z':
-				if (showPromptPreview) setPromptPreviewChunks([]);
-				if (cancel || !undo()) return;
-				break;
-			case 'false:true:false:true:Z':
-			case 'false:true:false:false:y':
-			case 'false:false:false:true:y':
-				if (showPromptPreview) setPromptPreviewChunks([]);
-				if (cancel || !redo()) return;
-				break;
+		case 'false:true:false:false:z':
+		case 'false:false:false:true:z':
+			if (cancel) cancel();
+			if (!undo()) return;
+			break;
+		case 'false:true:false:true:Z':
+		case 'false:true:false:false:y':
+		case 'false:false:false:true:y':
+			if (cancel) cancel();
+			if (!redo()) return;
+			break;
 			case 'false:true:false:false:e':
 			case 'false:false:false:true:e':
 				ttsStop();
