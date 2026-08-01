@@ -1,5 +1,5 @@
 import { html } from 'htm/react';
-import { useEffect, useRef } from 'react';
+import { useEffect, useLayoutEffect, useRef } from 'react';
 import { EditorState, Plugin } from 'prosemirror-state';
 import { EditorView } from 'prosemirror-view';
 import { keymap } from 'prosemirror-keymap';
@@ -22,11 +22,12 @@ const UNDO_COALESCE_MS = 500;
 
 function scrollSyncPlugin(
 	isSyncingScroll: { current: boolean },
-	markdownPreviewRef: { current: HTMLDivElement | null }
+	markdownPreviewRef: { current: HTMLDivElement | null },
+	promptContainerRef: { current: HTMLDivElement | null }
 ) {
 	return new Plugin({
-		view(editorView: EditorView) {
-			const container = editorView.dom.closest('#prompt-container') as HTMLElement | null;
+		view() {
+			const container = promptContainerRef.current;
 			if (!container) return { destroy() {} };
 			const scrollEl: HTMLElement = container;
 			function onScroll() {
@@ -89,7 +90,7 @@ export function PromptContainer({ sidebarHeight }: PromptContainerProps) {
 				}),
 				keymap({ 'Mod-Enter': () => { setTriggerPredict(true); return true; } }),
 				keymap(baseKeymap),
-				scrollSyncPlugin(isSyncingScroll, markdownPreviewRef),
+				scrollSyncPlugin(isSyncingScroll, markdownPreviewRef, promptContainerRef),
 			],
 		});
 		const view = new EditorView(editorRef.current, {
@@ -123,7 +124,7 @@ export function PromptContainer({ sidebarHeight }: PromptContainerProps) {
 			},
 		});
 		viewRef.current = view;
-		promptEditorView.current = new ProseMirrorAdapter(view);
+		promptEditorView.current = new ProseMirrorAdapter(view, promptContainerRef.current);
 		lastPromptChunksRef.current = promptChunks;
 		const decoState: ChunkDecorationState = {
 			chunks: promptChunks, tokenColorMode, tokenHighlightMode,
@@ -150,7 +151,7 @@ export function PromptContainer({ sidebarHeight }: PromptContainerProps) {
 		};
 		suppressSyncRef.current = true;
 		if (textChanged) {
-			applyChunksToPM(view, promptChunks, decoState, !!cancel);
+			applyChunksToPM(view, promptChunks, decoState, !!cancel, promptContainerRef.current);
 		} else {
 			view.dispatch(view.state.tr.setMeta(chunkDecorationKey, decoState));
 		}
@@ -205,6 +206,16 @@ export function PromptContainer({ sidebarHeight }: PromptContainerProps) {
 			window.removeEventListener('keyup', onKeyUp);
 		};
 	}, [showProbsMode, setShowProbs]);
+
+	// apply the persisted prompt area width
+	useLayoutEffect(() => {
+		if (promptAreaWidth) {
+			const container = promptContainerRef.current;
+			if (!container) return;
+			container.style.setProperty('min-width', promptAreaWidth);
+			container.style.setProperty('max-width', promptAreaWidth);
+		}
+	}, [promptAreaWidth]);
 
 	// container resize (operates on #prompt-container boundaries)
 	useEffect(() => {

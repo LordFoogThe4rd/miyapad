@@ -21,7 +21,7 @@ export interface EditorAdapter {
 }
 
 export class ProseMirrorAdapter implements EditorAdapter {
-  constructor(private view: PMEditorView) {}
+  constructor(private view: PMEditorView, private scroller?: HTMLElement | null) {}
 
   getText(): string {
     return this.view.state.doc.textBetween(0, this.view.state.doc.content.size, '\n');
@@ -66,11 +66,9 @@ export class ProseMirrorAdapter implements EditorAdapter {
 
   scrollIntoView(pos: number, options?: { y?: string }): void {
     const coords = this.coordsAtPos(pos);
-    if (!coords) return;
-    const el = this.view.dom;
-    const viewRect = el.getBoundingClientRect();
-    const scroller = el.closest('#prompt-container') as HTMLElement | null;
-    if (!scroller) return;
+    const scroller = this.scroller;
+    if (!coords || !scroller) return;
+    const viewRect = this.view.dom.getBoundingClientRect();
     if (options?.y === 'center') {
       scroller.scrollTop = coords.top - viewRect.top - scroller.clientHeight / 2;
     } else if (options?.y === 'end') {

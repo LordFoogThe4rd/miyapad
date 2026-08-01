@@ -59,6 +59,7 @@ export function applyChunksToPM(
 	newChunks: PromptChunk[],
 	decoState: ChunkDecorationState,
 	scrollToEnd?: boolean,
+	scroller?: HTMLElement | null,
 ): void {
 	const newText = newChunks.map((c) => c.content).join('');
 	const oldText = view.state.doc.textBetween(0, view.state.doc.content.size, '\n');
@@ -76,11 +77,11 @@ export function applyChunksToPM(
 		// at the bottom. PM's selection-based scrollIntoView is unreliable: the
 		// selection sits mid-doc or at the start after a regenerate/undo, so it never
 		// scrolls. atBottom is measured before dispatch, while the old height stands.
-		const scroller = scrollToEnd ? (view.dom.closest('#prompt-container') as HTMLElement | null) : null;
-		const atBottom = scroller ? scroller.scrollTop + scroller.clientHeight + 1 >= scroller.scrollHeight : false;
+		const scrollerEl = scrollToEnd && scroller ? scroller : null;
+		const atBottom = scrollerEl ? scrollerEl.scrollTop + scrollerEl.clientHeight + 1 >= scrollerEl.scrollHeight : false;
 		view.dispatch(tr);
-		if (atBottom && scroller) {
-			scroller.scrollTop = scroller.scrollHeight;
+		if (atBottom && scrollerEl) {
+			scrollerEl.scrollTop = scrollerEl.scrollHeight;
 		}
 	} else {
 		const newDoc = textToDoc(view.state.schema, newText);

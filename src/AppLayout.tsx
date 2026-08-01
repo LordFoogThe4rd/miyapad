@@ -182,14 +182,6 @@ export function AppLayout() {
 			document.body.classList.remove('attachSidebar');
 	}, [attachSidebar]);
 
-	useLayoutEffect(() => {
-		if (promptAreaWidth) {
-			const container = document.querySelector('#prompt-container') as HTMLElement | null;
-			if (!container) return;
-			container.style.setProperty('min-width', promptAreaWidth);
-			container.style.setProperty('max-width', promptAreaWidth);
-		}
-	}, [promptAreaWidth]);
 	
 	useLayoutEffect(() => {
 		const applyTheme = () => {
