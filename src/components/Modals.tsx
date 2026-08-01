@@ -6,6 +6,7 @@ import { useTokenCounters } from '../hooks/useTokenCounters';
 import { usePromptBuilder } from '../hooks/usePromptBuilder';
 import { useTTS } from '../hooks/useTTS';
 import { useGenerationLogic } from '../hooks/useGenerationLogic';
+import { useInsertTemplate } from '../hooks/useInsertTemplate';
 import { exportText } from '../api/common';
 import { defaultPresets } from '../defaults/presets';
 import { useT } from '../i18n';
@@ -106,46 +107,7 @@ export function Modals({ toggleModal, currentThemeName, setCurrentThemeName, all
 		exportText(`${sessionStorage.getProperty('name')}.txt`, adapter.getText());
 	};
 
-	const insertTemplate = (sysInst: "sys" | "inst") => {
-		let [prefix,suffix] = sysInst === "sys"
-			? [templates[selectedTemplate]?.sysPre  || "", templates[selectedTemplate]?.sysSuf  || ""]
-			: [templates[selectedTemplate]?.instPre || "", templates[selectedTemplate]?.instSuf || ""];
-		if (!(prefix || suffix))
-			return;
-
-		prefix = prefix.replace(/\\n/g,'\n');
-		suffix = suffix.replace(/\\n/g,'\n');
-
-		const adapter = promptEditorView.current;
-		if (!adapter)
-			return;
-
-		const { from: startPos, to: endPos } = adapter.getSelection();
-		const currentText = adapter.getText();
-		const textBefore = currentText.substring(0, startPos) || "";
-		const textAfter = (sysInst !== "sys" && endPos !== currentText.length ? "{predict}" : "") + currentText.substring(endPos);
-		const selectedText = currentText.substring(startPos, endPos);
-
-		const finalText = textBefore 
-						+ prefix
-						+ selectedText 
-						+ suffix
-						+ textAfter;
-
-		adapter.replaceText(finalText);
-
-		let newCursorPos;
-		if (selectedText.length === 0) {
-			newCursorPos = startPos + prefix.length;
-		} else {
-			newCursorPos = startPos 
-				+ prefix.length
-				+ selectedText.length 
-				+ suffix.length;
-		}
-		adapter.focus();
-		adapter.setSelection(newCursorPos, newCursorPos);
-	};
+	const { insertTemplate } = useInsertTemplate();
 
 	// handle instruct modal result
 	useEffect(() => {

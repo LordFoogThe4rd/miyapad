@@ -14,6 +14,7 @@ import {
   SVG_ChatMode, SVG_CompletionMode, SVG_Regen, SVG_Undo, SVG_Redo, SVG_MobileSidebar
 } from './icons/index';
 import { useTokenCounters } from '../hooks/useTokenCounters';
+import { useInsertTemplate } from '../hooks/useInsertTemplate';
 import { useGenerationLogic } from '../hooks/useGenerationLogic';
 import type { SidebarProps } from '../types/components';
 
@@ -155,46 +156,7 @@ export function Sidebar({ sidebarRef, toggleModal, currentThemeName, setCurrentT
 		setEndpointAPI(value);
 	}
 
-	const insertTemplate = (sysInst: "sys" | "inst") => {
-		let [prefix,suffix] = sysInst === "sys"
-			? [templates[selectedTemplate]?.sysPre  || "", templates[selectedTemplate]?.sysSuf  || ""]
-			: [templates[selectedTemplate]?.instPre || "", templates[selectedTemplate]?.instSuf || ""];
-		if (!(prefix || suffix))
-			return;
-
-		prefix = prefix.replace(/\\n/g,'\n');
-		suffix = suffix.replace(/\\n/g,'\n');
-
-		const adapter = promptEditorView.current;
-		if (!adapter)
-			return;
-
-		const { from: startPos, to: endPos } = adapter.getSelection();
-		const currentText = adapter.getText();
-		const textBefore = currentText.substring(0, startPos) || "";
-		const textAfter = (sysInst !== "sys" && endPos !== currentText.length ? "{predict}" : "") + currentText.substring(endPos);
-		const selectedText = currentText.substring(startPos, endPos);
-
-		const finalText = textBefore 
-						+ prefix
-						+ selectedText 
-						+ suffix
-						+ textAfter;
-
-		adapter.replaceText(finalText);
-
-		let newCursorPos;
-		if (selectedText.length === 0) {
-			newCursorPos = startPos + prefix.length;
-		} else {
-			newCursorPos = startPos 
-				+ prefix.length
-				+ selectedText.length 
-				+ suffix.length;
-		}
-		adapter.focus();
-		adapter.setSelection(newCursorPos, newCursorPos);
-	};
+	const { insertTemplate } = useInsertTemplate();
 
 	const handleApplyConnection = (conn: ConnectionData) => {
 		setEndpointAPI(conn.api);
