@@ -3,10 +3,12 @@
 ## [???] - unreleased
 
 ### Changed
+
 - Editor engine migrated from simple HTML textarea to ProseMirror
 - Re-tokenize button in the logit bias modal now shows a regenerate icon instead of a plain `+` text
 
 ### Removed
+
 - Prompt preview feature
 
 ## [2.6.0] - 2026-07-20
