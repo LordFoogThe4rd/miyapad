@@ -32,7 +32,7 @@ export function SearchAndReplaceWidget({ isOpen, closeWidget, id, children, edit
 	function findAllMatches(mode: any, search: any, flags: any) {
 		setSearchAndReplaceError(undefined)
 		if (!search)
-			return []
+			return { matches: [], error: undefined }
 		let startIndex = 0;
 		let index;
 		let match;
@@ -58,11 +58,12 @@ export function SearchAndReplaceWidget({ isOpen, closeWidget, id, children, edit
 				}
 			} catch (e: unknown) {
 				reportError(e);
-				setSearchAndReplaceError(String(e));
-				return [];
+				const error = String(e);
+				setSearchAndReplaceError(error);
+				return { matches: [], error };
 			}
 		}
-		return result;
+		return { matches: result, error: undefined };
 	}
 
 	function highlightIndex(index: any) {
@@ -99,17 +100,19 @@ export function SearchAndReplaceWidget({ isOpen, closeWidget, id, children, edit
 	}
 
 	function findAndStorePositions(mode: any, search: any, flags: any) {
-		positions.current = findAllMatches(mode, search, flags);
+		const { matches, error } = findAllMatches(mode, search, flags);
+		positions.current = matches;
 		setCurrentIndex(-1);
-		if (!searchAndReplaceError && positions.current.length === 0)
+		if (!error && matches.length === 0)
 			setSearchAndReplaceError(`${t('search.warningNoMatches')} ${modeLabels[mode] ?? modeLabels[0]} '${search}'`)
 	}
 
 	function handleSearchAndReplace(mode: any, search: any, flags: any, replace: any) {
 		setSearchAndReplaceError(undefined)
 		if (!search) return
-		positions.current = findAllMatches(mode, search, flags);
-		if (!searchAndReplaceError && positions.current.length === 0) {
+		const { matches, error } = findAllMatches(mode, search, flags);
+		positions.current = matches;
+		if (!error && matches.length === 0) {
 			setSearchAndReplaceError(`${t('search.warningNoMatches')} ${modeLabels[mode] ?? modeLabels[0]} '${search}'`)
 			return
 		}
@@ -146,14 +149,15 @@ export function SearchAndReplaceWidget({ isOpen, closeWidget, id, children, edit
 			setNumMatches(0)
 			return
 		}
-		positions.current = findAllMatches(mode, search, flags);
+		const { matches, error } = findAllMatches(mode, search, flags);
+		positions.current = matches;
 		try {
-			setNumMatches(positions.current.length ?? 0)
+			setNumMatches(matches.length ?? 0)
 		} catch {
 			setNumMatches(0)
 		}
-		if (positions.current.length <= currentIndex) {
-			setCurrentIndex(positions.current.length - 1);
+		if (matches.length <= currentIndex) {
+			setCurrentIndex(matches.length - 1);
 		}
 	}
 
