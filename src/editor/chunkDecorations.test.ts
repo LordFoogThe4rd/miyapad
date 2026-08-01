@@ -2,6 +2,7 @@ import { describe, it, expect } from 'vitest';
 import { EditorState } from 'prosemirror-state';
 import { EditorView } from 'prosemirror-view';
 import { schema } from './schema';
+import { textToDoc } from './syncReactToPM';
 import {
 	getRatioColor,
 	chunkDecorationKey,
@@ -35,10 +36,7 @@ function makeDecoState(overrides: Partial<ChunkDecorationState> = {}): ChunkDeco
 }
 
 function createDoc(text: string) {
-	const paragraphs = text.split('\n').map(line =>
-		schema.node('paragraph', null, line ? [schema.text(line)] : [])
-	);
-	return schema.node('doc', null, paragraphs);
+	return textToDoc(schema, text);
 }
 
 function createState(text: string) {
