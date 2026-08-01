@@ -52,12 +52,18 @@ function dispatchDeco(state: EditorState, deco: ChunkDecorationState) {
 
 function createView(text: string): { view: EditorView; container: HTMLDivElement } {
 	const container = document.createElement('div');
+	document.body.appendChild(container);
 	const state = EditorState.create({
 		doc: createDoc(text),
 		plugins: [chunkDecorationPlugin],
 	});
 	const view = new EditorView(container, { state });
 	return { view, container };
+}
+
+function disposeView(view: EditorView, container: HTMLDivElement) {
+	view.destroy();
+	container.remove();
 }
 
 describe('getRatioColor', () => {
@@ -171,7 +177,7 @@ describe('integration: PM editor with chunk decorations', () => {
 		expect(spans[0].textContent).toBe('hello');
 		expect(spans[1].textContent).toBe(' world');
 
-		view.destroy();
+		disposeView(view, container);
 	});
 
 	it('marks current chunk with .current class', () => {
@@ -182,7 +188,7 @@ describe('integration: PM editor with chunk decorations', () => {
 		expect(spans[0].className).toContain('current');
 		expect(spans[1].className).not.toContain('current');
 
-		view.destroy();
+		disposeView(view, container);
 	});
 
 	it('marks erase range from undoHovered', () => {
@@ -198,7 +204,7 @@ describe('integration: PM editor with chunk decorations', () => {
 		expect(spans[2].className).toContain('erase');
 		expect(spans[3].className).toContain('erase');
 
-		view.destroy();
+		disposeView(view, container);
 	});
 
 	it('color mode 1 applies background-color from prob', () => {
@@ -211,7 +217,7 @@ describe('integration: PM editor with chunk decorations', () => {
 		const span = container.querySelector('[data-promptchunk]') as HTMLElement;
 		expect(span.style.getPropertyValue('--bg-color')).toContain('color-mix');
 
-		view.destroy();
+		disposeView(view, container);
 	});
 
 	it('color mode 1 colors prob=1 chunks (deterministic)', () => {
@@ -224,7 +230,7 @@ describe('integration: PM editor with chunk decorations', () => {
 		const span = container.querySelector('[data-promptchunk]') as HTMLElement;
 		expect(span.style.getPropertyValue('--bg-color')).toContain('color-mix');
 
-		view.destroy();
+		disposeView(view, container);
 	});
 
 	it('color mode 2 uses normalized relative prob from completion_probabilities', () => {
@@ -237,7 +243,7 @@ describe('integration: PM editor with chunk decorations', () => {
 		const span = container.querySelector('[data-promptchunk]') as HTMLElement;
 		expect(span.style.getPropertyValue('--bg-color')).toContain('color-mix');
 
-		view.destroy();
+		disposeView(view, container);
 	});
 
 	it('updates decorations in DOM on text change', () => {
@@ -250,6 +256,6 @@ describe('integration: PM editor with chunk decorations', () => {
 		const spans = container.querySelectorAll('[data-promptchunk]');
 		expect(spans.length).toBeGreaterThanOrEqual(2);
 
-		view.destroy();
+		disposeView(view, container);
 	});
 });
