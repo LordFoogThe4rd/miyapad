@@ -56,6 +56,7 @@ export function PromptContainer({ sidebarHeight }: PromptContainerProps) {
 	const t = useT();
 	const { takeScreenshot } = useScreenshotCapture();
 
+	const promptContainerRef = useRef<HTMLDivElement>(null);
 	const editorRef = useRef<HTMLDivElement>(null);
 	const viewRef = useRef<EditorView>(null);
 	const lastPromptChunksRef = useRef<PromptChunk[]>([]);
@@ -93,7 +94,7 @@ export function PromptContainer({ sidebarHeight }: PromptContainerProps) {
 		});
 		const view = new EditorView(editorRef.current, {
 			state: startState,
-			editable: () => !cancel,
+			editable: () => !cancelRef.current,
 			attributes: { spellcheck: String(spellCheck) },
 			handleDOMEvents: {
 				keydown: (_v, e) => { keyState.current[(e as KeyboardEvent).key] = true; return false; },
@@ -181,6 +182,10 @@ export function PromptContainer({ sidebarHeight }: PromptContainerProps) {
 	}, [setShowProbs, setCurrentPromptChunk]);
 
 	useEffect(() => {
+		viewRef.current?.setProps({ editable: () => !cancelRef.current });
+	}, [cancel]);
+
+	useEffect(() => {
 		viewRef.current?.setProps({ attributes: { spellcheck: String(spellCheck) } });
 	}, [spellCheck]);
 
@@ -201,17 +206,18 @@ export function PromptContainer({ sidebarHeight }: PromptContainerProps) {
 		};
 	}, [showProbsMode, setShowProbs]);
 
-	// textarea resize (operates on #prompt-container boundaries, unchanged from original)
+	// container resize (operates on #prompt-container boundaries)
 	useEffect(() => {
-		const container = document.querySelector('#prompt-container') as HTMLElement;
+		const container = promptContainerRef.current;
 		if (!container) return;
+		const el = container;
 		let isDragging = false;
 		let startX: number | undefined;
 		let startEdge: string | undefined;
 		let startNumericWidth: number | undefined;
 		const edgeDetectionZone = 5;
 		function getNearEdge(e: MouseEvent) {
-			const rect = container.getBoundingClientRect();
+			const rect = el.getBoundingClientRect();
 			if (e.clientX - rect.left < edgeDetectionZone && e.clientX - rect.left > 0) {
 				return 'left';
 			} else if (rect.right - e.clientX < edgeDetectionZone && rect.right - e.clientX > 0) {
@@ -223,41 +229,41 @@ export function PromptContainer({ sidebarHeight }: PromptContainerProps) {
 			const edge = getNearEdge(e);
 			if (!edge) return;
 			isDragging = true;
-			const invEdgePos = edge === 'right' ? container.getBoundingClientRect().left : container.getBoundingClientRect().right;
+			const invEdgePos = edge === 'right' ? el.getBoundingClientRect().left : el.getBoundingClientRect().right;
 			startX = e.clientX - invEdgePos;
-			startNumericWidth = container.getBoundingClientRect().width;
+			startNumericWidth = el.getBoundingClientRect().width;
 			startEdge = edge;
 		}
 		function drag(e: MouseEvent) {
 			switch (getNearEdge(e)) {
 				case 'right':
-					container.style.cursor = 'col-resize';
-					container.style.borderRight = '2px dotted var(--color-light)';
+					el.style.cursor = 'col-resize';
+					el.style.borderRight = '2px dotted var(--color-light)';
 					break;
 				case 'left':
-					container.style.cursor = 'col-resize';
-					container.style.borderLeft = '2px dotted var(--color-light)';
+					el.style.cursor = 'col-resize';
+					el.style.borderLeft = '2px dotted var(--color-light)';
 					break;
 				default:
-					container.style.cursor = '';
-					container.style.borderRight = '2px dotted transparent';
-					container.style.borderLeft = '2px dotted transparent';
+					el.style.cursor = '';
+					el.style.borderRight = '2px dotted transparent';
+					el.style.borderLeft = '2px dotted transparent';
 					break;
 			}
 			if (!isDragging) return;
 			const minWidth = 200;
-			const invEdgePos = startEdge === 'right' ? container.getBoundingClientRect().left : container.getBoundingClientRect().right;
+			const invEdgePos = startEdge === 'right' ? el.getBoundingClientRect().left : el.getBoundingClientRect().right;
 			const currentX = e.clientX - invEdgePos;
 			const delta = (currentX - startX!) * (startEdge === 'right' ? 1 : -1);
 			setPromptAreaWidth(`${Math.max(minWidth, startNumericWidth! + delta)}px`);
 		}
 		function stopDragging() { isDragging = false; }
-		container.addEventListener('mousedown', startDragging);
+		el.addEventListener('mousedown', startDragging);
 		document.addEventListener('mousemove', drag);
 		document.addEventListener('mouseup', stopDragging);
 		document.addEventListener('mouseleave', stopDragging);
 		return () => {
-			container.removeEventListener('mousedown', startDragging);
+			el.removeEventListener('mousedown', startDragging);
 			document.removeEventListener('mousemove', drag);
 			document.removeEventListener('mouseup', stopDragging);
 			document.removeEventListener('mouseleave', stopDragging);
@@ -347,7 +353,7 @@ export function PromptContainer({ sidebarHeight }: PromptContainerProps) {
 	}
 
 	return html`
-		<div id="prompt-container" onMouseMove=${onEditorMouseMove} style=${{ 'margin-bottom': isMobile && !showMarkdownPreview ? sidebarHeight + 'px' : 0 }}>
+		<div ref=${promptContainerRef} id="prompt-container" onMouseMove=${onEditorMouseMove} style=${{ 'margin-bottom': isMobile && !showMarkdownPreview ? sidebarHeight + 'px' : 0 }}>
 			<div style=${{ position: 'sticky', top: 0, zIndex: 1 }}>
 				<button
 					title=${t('prompt.preferences')}
