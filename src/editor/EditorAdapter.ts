@@ -1,6 +1,7 @@
 import type { EditorView as PMEditorView } from 'prosemirror-view';
 import { TextSelection } from 'prosemirror-state';
 import { textOffsetToPMPos, pmPosToTextOffset } from './chunkDecorations';
+import { textToDoc } from './syncReactToPM';
 
 export interface EditorAdapter {
   getText(): string;
@@ -33,15 +34,9 @@ export class ProseMirrorAdapter implements EditorAdapter {
 
   replaceText(newText: string): void {
     const { doc } = this.view.state;
-    // ponytail: uses doc.textContent (no \n separators) — won't no-op for multi-paragraph text
-    // that matches the current doc. Harmless here since replaceText intends a full replace anyway.
-    const oldText = doc.textContent;
-    if (newText === oldText) return;
-    // Build new paragraphs from text
-    const paragraphs = newText.split('\n').map(line =>
-      this.view.state.schema.node('paragraph', null, line ? [this.view.state.schema.text(line)] : [])
-    );
-    const newDoc = this.view.state.schema.node('doc', null, paragraphs);
+    // Compare using the same \n-separated representation as getText()
+    if (newText === doc.textBetween(0, doc.content.size, '\n')) return;
+    const newDoc = textToDoc(this.view.state.schema, newText);
     this.view.dispatch(
       this.view.state.tr.replaceWith(0, doc.content.size, newDoc.content)
     );
