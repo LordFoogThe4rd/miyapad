@@ -152,6 +152,13 @@ describe('chunkDecorationPlugin', () => {
 		expect(found[0].to).toBe(5);
 	});
 
+	it('breaks on chunks extending beyond the flat text length', () => {
+		const state = createState('ab\ncd');
+		const s = dispatchDeco(state, makeDecoState({ chunks: [u('ab'), m('\ncd'), m('x')] }));
+		const found = chunkDecorationKey.getState(s)!.find();
+		expect(found.length).toBe(2);
+	});
+
 	it('color mode 2 skips when minProb === maxProb', () => {
 		const state = createState('x');
 		const s = dispatchDeco(state, makeDecoState({

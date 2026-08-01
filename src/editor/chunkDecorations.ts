@@ -54,7 +54,7 @@ export function pmPosToTextOffset(doc: Node, pmPos: number): number {
 	return offset;
 }
 
-function buildDecorations(state: ChunkDecorationState, doc: Node, docLength: number): Decoration[] {
+function buildDecorations(state: ChunkDecorationState, doc: Node, flatTextLen: number): Decoration[] {
 	const decorations: Decoration[] = [];
 	let pos = 0;
 
@@ -62,7 +62,7 @@ function buildDecorations(state: ChunkDecorationState, doc: Node, docLength: num
 		const chunk = state.chunks[i];
 		const chunkLen = chunk.content.length;
 		if (chunkLen === 0) continue;
-		if (pos + chunkLen > docLength) break;
+		if (pos + chunkLen > flatTextLen) break;
 		const end = pos + chunkLen;
 
 		const chunkProb = chunk.prob ?? 1;
@@ -109,7 +109,8 @@ export const chunkDecorationPlugin = new Plugin({
 		apply(tr, decorations) {
 			const meta = tr.getMeta(chunkDecorationKey);
 			if (meta) {
-				return DecorationSet.create(tr.doc, buildDecorations(meta, tr.doc, tr.doc.content.size));
+				const flatTextLen = tr.doc.textBetween(0, tr.doc.content.size, '\n').length;
+				return DecorationSet.create(tr.doc, buildDecorations(meta, tr.doc, flatTextLen));
 			}
 			return decorations.map(tr.mapping, tr.doc);
 		},
