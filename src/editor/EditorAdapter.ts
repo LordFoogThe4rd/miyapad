@@ -4,6 +4,8 @@ import { textOffsetToPMPos, pmPosToTextOffset } from './chunkDecorations';
 
 export interface EditorAdapter {
   getText(): string;
+  // All positions below are flat text offsets into getText() (e.g. substring indexes),
+  // NOT ProseMirror document positions. Implementations convert internally.
   getSelection(): { from: number; to: number };
   replaceText(newText: string): void;
   replaceRange(from: number, to: number, insert: string): void;
