@@ -7,9 +7,9 @@ import {
 	chunkDecorationKey,
 	textOffsetToPMPos,
 	pmPosToTextOffset,
+	chunkDecorationPlugin,
 	type ChunkDecorationState,
 } from './chunkDecorations';
-import { chunkDecorationPlugin } from './chunkDecorations';
 
 function u(content: string): PromptChunk {
 	return { type: 'user', content };
