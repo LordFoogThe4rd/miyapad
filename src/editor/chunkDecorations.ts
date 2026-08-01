@@ -58,6 +58,24 @@ function buildDecorations(state: ChunkDecorationState, doc: Node, flatTextLen: n
 	const decorations: Decoration[] = [];
 	let pos = 0;
 
+	// Incremental flat-offset → PM-pos cursor, only advances forward
+	let paraIdx = 0;
+	let pmStart = 1; // PM pos of first char in current paragraph
+	let offStart = 0; // flat offset of first char in current paragraph
+	const toPMPos = (offset: number): number => {
+		while (paraIdx < doc.childCount) {
+			const para = doc.child(paraIdx);
+			const paraTextLen = para.textContent.length;
+			if (offset <= offStart + paraTextLen) {
+				return Math.min(pmStart + (offset - offStart), doc.content.size - 1);
+			}
+			offStart += paraTextLen + 1;
+			pmStart += para.nodeSize;
+			paraIdx++;
+		}
+		return doc.content.size - 1;
+	};
+
 	for (let i = 0; i < state.chunks.length; i++) {
 		const chunk = state.chunks[i];
 		const chunkLen = chunk.content.length;
@@ -92,8 +110,8 @@ function buildDecorations(state: ChunkDecorationState, doc: Node, flatTextLen: n
 		const attrs: Record<string, string> = { 'data-promptchunk': String(i) };
 		if (bgColor) attrs.style = `--bg-color: ${bgColor}`;
 
-		const pmFrom = textOffsetToPMPos(doc, pos);
-		const pmTo = textOffsetToPMPos(doc, end);
+		const pmFrom = toPMPos(pos);
+		const pmTo = toPMPos(end);
 		decorations.push(Decoration.inline(pmFrom, pmTo, { class: classes.join(' '), ...attrs }));
 
 		pos = end;
