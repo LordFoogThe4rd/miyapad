@@ -74,6 +74,11 @@ body {
 	margin: 0;
 }
 
+.ProseMirror ::selection {
+	background: color-mix(in srgb, var(--color-miku) 60%, transparent);
+	color: var(--color-text-prompt);
+}
+
 .ProseMirror .machine {
 	background-color: color-mix(in srgb, var(--bg-color, var(--color-miku)) 30%, transparent);
 	transition: background-color 0.2s;
