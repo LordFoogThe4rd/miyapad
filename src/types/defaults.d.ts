@@ -51,6 +51,4 @@ interface DefaultPresets {
   chatAPI: boolean;
   tokenStreaming: boolean;
   disableLogprobs: boolean;
-  promptPreview: boolean;
-  promptPreviewTokens: number;
 }
