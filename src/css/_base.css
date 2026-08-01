@@ -80,7 +80,7 @@ body {
 }
 
 .ProseMirror .machine:hover {
-	background-color: color-mix(in srgb, var(--bg-color) 10%, transparent);
+	background-color: color-mix(in srgb, var(--bg-color, var(--color-miku)) 10%, transparent);
 }
 
 .ProseMirror .machine.current {
