@@ -61,11 +61,11 @@ body {
 	scrollbar-gutter: stable;
 	font: inherit;
 	padding: 2em 3em 8em;
-	caret-color: currentColor;
+	caret-color: currentcolor;
 	text-size-adjust: 100%;
 	-webkit-text-size-adjust: 100%;
 	-moz-text-size-adjust: 100%;
-	word-wrap: break-word;
+	overflow-wrap: break-word;
 	white-space: pre-wrap;
 	box-sizing: border-box;
 }
