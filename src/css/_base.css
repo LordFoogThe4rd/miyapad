@@ -19,7 +19,7 @@ body {
 	display: flex;
 	flex: auto;
 	flex-direction: row;
-	height: 100vh;
+	height: 100dvh;
 	overflow: hidden;
 
 	--font-size-multiplier: 1.0;
