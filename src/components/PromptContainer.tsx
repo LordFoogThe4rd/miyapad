@@ -309,12 +309,12 @@ export function PromptContainer({ sidebarHeight }: PromptContainerProps) {
 		let targetIndex = -1;
 		for (let i = 0; i < promptChunks.length; i++) {
 			const end = offset + promptChunks[i].content.length;
-			if (pos >= offset && pos <= end) { targetIndex = i; break; }
+			if (targetIndex === -1 && pos >= offset && pos <= end) { targetIndex = i; }
 			offset = end;
 		}
 		if (targetIndex === -1) return;
 
-		const coords = adapter.coordsAtPos(Math.min(pos, adapter.getText().length));
+		const coords = adapter.coordsAtPos(Math.min(pos, offset));
 		if (!coords) return;
 		const top = coords.top;
 		const left = coords.left + (coords.right - coords.left) / 2;
