@@ -85,7 +85,7 @@ export function applyChunksToPM(
 	// selection sits mid-doc or at the start after a regenerate/undo, so it never
 	// scrolls. atBottom is measured before dispatch, while the old height stands.
 	const scrollerEl = scrollToEnd && scroller ? scroller : null;
-	const atBottom = scrollerEl ? scrollerEl.scrollTop + scrollerEl.clientHeight + 1 >= scrollerEl.scrollHeight : false;
+	const atBottom = scrollerEl ? scrollerEl.scrollTop + scrollerEl.clientHeight + 4 >= scrollerEl.scrollHeight : false;
 
 	const suffix = newText.length > oldText.length && newText.startsWith(oldText) ? newText.slice(oldText.length) : null;
 	// insertText would embed a literal \n inside a paragraph's text node, but
