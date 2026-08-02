@@ -227,11 +227,14 @@ export function PromptContainer({ sidebarHeight }: PromptContainerProps) {
 
 	// apply the persisted prompt area width
 	useLayoutEffect(() => {
+		const container = promptContainerRef.current;
+		if (!container) return;
 		if (promptAreaWidth) {
-			const container = promptContainerRef.current;
-			if (!container) return;
 			container.style.setProperty('min-width', promptAreaWidth);
 			container.style.setProperty('max-width', promptAreaWidth);
+		} else {
+			container.style.removeProperty('min-width');
+			container.style.removeProperty('max-width');
 		}
 	}, [promptAreaWidth]);
 
