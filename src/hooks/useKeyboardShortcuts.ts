@@ -14,6 +14,7 @@ export function useKeyboardShortcuts() {
 			return;
 		if (Object.values(modalState).some((s) => s))
 			return;
+		keyState.current[key] = true;
 		let preventDefaultAction = true;
 		switch (`${altKey}:${ctrlKey}:${metaKey}:${shiftKey}:${key}`) {
 		case 'false:false:false:true:Enter':
@@ -58,8 +59,7 @@ export function useKeyboardShortcuts() {
 				break;
 			
 			default:
-		keyState.current = { altKey, ctrlKey, metaKey, shiftKey };
-		return;
+				return;
 		}
 
 		if (preventDefaultAction)
@@ -67,10 +67,10 @@ export function useKeyboardShortcuts() {
 	});
 
 	const onKeyUp = useEffectEvent((e: KeyboardEvent) => {
-		const { altKey, ctrlKey, metaKey, shiftKey, key, defaultPrevented } = e;
+		const { key, defaultPrevented } = e;
 		if (defaultPrevented)
 			return;
-		keyState.current = { altKey, ctrlKey, metaKey, shiftKey };
+		keyState.current[key] = false;
 	});
 
 	useEffect(() => {
