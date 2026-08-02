@@ -41,18 +41,6 @@ export function useGenerationLogic() {
 	async function predict(prompt = finalPromptText, chunkCount = promptChunks.length, callback: PredictionCallback | undefined = undefined, abortController: AbortController | undefined = undefined, invalidatesUndo = false, customParams: Record<string, unknown> = {}) {
 		const myId = ++activeGenId.current;
 
-		// Register the generation boundary up front so undo/regenerate stay available
-		// while the (possibly slow) token-count request is in flight. The finally block
-		// pops it again if the generation produces no tokens.
-		if (!callback) {
-			while (undoStack.current.length > 0) {
-				const last = undoStack.current[undoStack.current.length - 1];
-				if (typeof last === 'number' && last >= chunkCount) undoStack.current.pop();
-				else break;
-			}
-			if (Array.isArray(undoStack.current)) undoStack.current.push(chunkCount);
-		}
-
 		if (!abortController && cancel) {
 			cancel?.();
 
@@ -68,6 +56,18 @@ export function useGenerationLogic() {
 		// predict the fill placeholder if it is present in the prompt.
 		if (!callback && !restartedPredict && await fillPredict())
 			return true;
+
+		// Register the generation boundary after the early returns so cancel/fill
+		// paths don't push a phantom entry, but still before the (possibly slow)
+		// token-count request. The finally block pops it if no tokens are produced.
+		if (!callback) {
+			while (undoStack.current.length > 0) {
+				const last = undoStack.current[undoStack.current.length - 1];
+				if (typeof last === 'number' && last >= chunkCount) undoStack.current.pop();
+				else break;
+			}
+			if (Array.isArray(undoStack.current)) undoStack.current.push(chunkCount);
+		}
 
 		let ac: AbortController;
 		let cancelThis: (() => void) | null = null;
