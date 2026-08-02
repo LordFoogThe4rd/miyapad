@@ -1,8 +1,8 @@
 import { describe, it, expect } from 'vitest';
-import { EditorState } from 'prosemirror-state';
+import { AllSelection, EditorState } from 'prosemirror-state';
 import { EditorView } from 'prosemirror-view';
 import { schema } from './schema';
-import { textToDoc } from './syncReactToPM';
+import { applyChunksToPM, textToDoc } from './syncReactToPM';
 import {
 	getRatioColor,
 	chunkDecorationKey,
@@ -263,6 +263,18 @@ describe('integration: PM editor with chunk decorations', () => {
 		const spans = container.querySelectorAll('[data-promptchunk]');
 		expect(spans.length).toBeGreaterThanOrEqual(2);
 
+		disposeView(view, container);
+	});
+});
+
+describe('applyChunksToPM selection preservation', () => {
+	it('keeps a select-all selection as an AllSelection across a full rebuild', () => {
+		const { view, container } = createView('abc');
+		view.dispatch(view.state.tr.setSelection(new AllSelection(view.state.doc)));
+
+		applyChunksToPM(view, [u('x'), m('yz')], makeDecoState());
+
+		expect(view.state.selection).toBeInstanceOf(AllSelection);
 		disposeView(view, container);
 	});
 });
