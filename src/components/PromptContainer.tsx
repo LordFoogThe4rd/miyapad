@@ -1,6 +1,6 @@
 import { html } from 'htm/react';
 import { useEffect, useLayoutEffect, useRef } from 'react';
-import { EditorState, Plugin } from 'prosemirror-state';
+import { EditorState, Plugin, TextSelection } from 'prosemirror-state';
 import { EditorView } from 'prosemirror-view';
 import { keymap } from 'prosemirror-keymap';
 import { baseKeymap } from 'prosemirror-commands';
@@ -130,7 +130,11 @@ export function PromptContainer({ sidebarHeight }: PromptContainerProps) {
 			chunks: promptChunks, tokenColorMode, tokenHighlightMode,
 			currentPromptChunk: null, undoHovered: null,
 		};
-		view.dispatch(view.state.tr.setMeta(chunkDecorationKey, decoState));
+		const endPos = view.state.doc.content.size - 1;
+		const tr = view.state.tr
+			.setMeta(chunkDecorationKey, decoState)
+			.setSelection(TextSelection.create(view.state.doc, endPos));
+		view.dispatch(tr);
 		return () => {
 			view.destroy();
 			promptEditorView.current = null;
