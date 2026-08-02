@@ -75,7 +75,7 @@ export function GenerationProvider({ children, useSessionState }: { children: Re
 	}, []);
 
 	const state = {
-		promptEditorView, setPromptEditorVersion, replaceEditorText, undoStack, redoStack, probsDelayTimer, keyState, sessionReconnectTimer,
+		promptEditorView, promptEditorVersion, setPromptEditorVersion, replaceEditorText, undoStack, redoStack, probsDelayTimer, keyState, sessionReconnectTimer,
 		useScrollSmoothing, hordeTaskId, markdownPreviewRef, isSyncingScroll, lastEditMsRef,
 		promptChunks, setPromptChunks, currentPromptChunk, setCurrentPromptChunk, undoHovered, setUndoHovered,
 		showProbs, setShowProbs, cancel, setCancel, sessionEndpointConnecting, setSessionEndpointConnecting,
