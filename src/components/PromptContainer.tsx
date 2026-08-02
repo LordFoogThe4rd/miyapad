@@ -208,13 +208,20 @@ export function PromptContainer({ sidebarHeight }: PromptContainerProps) {
 		function onKeyUp(e: KeyboardEvent) {
 			setShowProbs(e.ctrlKey || e.metaKey);
 		}
+		function onBlur() {
+			setShowProbs(false);
+		}
 		if (showProbsMode === 1) {
 			window.addEventListener('keydown', onKeyDown);
 			window.addEventListener('keyup', onKeyUp);
+			window.addEventListener('blur', onBlur);
+		} else {
+			setShowProbs(false);
 		}
 		return () => {
 			window.removeEventListener('keydown', onKeyDown);
 			window.removeEventListener('keyup', onKeyUp);
+			window.removeEventListener('blur', onBlur);
 		};
 	}, [showProbsMode, setShowProbs]);
 
