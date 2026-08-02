@@ -70,15 +70,22 @@ export function useKeyboardShortcuts() {
 		const { key, defaultPrevented } = e;
 		if (defaultPrevented)
 			return;
-		keyState.current[key] = false;
+		delete keyState.current[key];
+	});
+
+	const onBlur = useEffectEvent(() => {
+		for (const k in keyState.current)
+			delete keyState.current[k];
 	});
 
 	useEffect(() => {
 		window.addEventListener('keydown', onKeyDown);
 		window.addEventListener('keyup', onKeyUp);
+		window.addEventListener('blur', onBlur);
 		return () => {
 			window.removeEventListener('keydown', onKeyDown);
-			window.removeEventListener('keyup', onKeyUp)
+			window.removeEventListener('keyup', onKeyUp);
+			window.removeEventListener('blur', onBlur);
 		};
 	}, []);
 }
