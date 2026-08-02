@@ -1,6 +1,8 @@
 import type { Node, Schema } from 'prosemirror-model';
+import { TextSelection } from 'prosemirror-state';
 import type { EditorView } from 'prosemirror-view';
 import { chunkDecorationKey, type ChunkDecorationState } from './chunkDecorations';
+import { pmPosToTextOffset, textOffsetToPMPos } from './chunkDecorations';
 
 /**
  * Appends newContent to trailing user chunks, collapsing adjacent user chunks into one.
@@ -97,8 +99,22 @@ export function applyChunksToPM(
 		tr = tr.setMeta(chunkDecorationKey, decoState);
 		view.dispatch(tr);
 	} else {
+		const sel = view.state.selection;
+		const anchorOffset = Math.min(pmPosToTextOffset(view.state.doc, sel.anchor), newText.length);
+		const headOffset = Math.min(pmPosToTextOffset(view.state.doc, sel.head), newText.length);
 		const newDoc = textToDoc(view.state.schema, newText);
 		let tr = view.state.tr.replaceWith(0, docSize, newDoc.content);
+		// Preserve the selection through the full rebuild by mapping the flat
+		// endpoints onto the new doc; applyChunksToPM is the sole PM mutation on
+		// non-append updates, so anchoring the selection here keeps the cursor
+		// (and a selected range) stable across undo/redo regenerates.
+		tr = tr.setSelection(
+			TextSelection.create(
+				tr.doc,
+				textOffsetToPMPos(tr.doc, anchorOffset),
+				textOffsetToPMPos(tr.doc, headOffset),
+			),
+		);
 		tr = tr.setMeta(chunkDecorationKey, decoState);
 		view.dispatch(tr);
 	}
