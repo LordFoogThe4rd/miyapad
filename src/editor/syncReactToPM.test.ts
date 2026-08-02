@@ -99,6 +99,12 @@ describe('diffPromptChunks', () => {
 		diffPromptChunks(prev, 'abX');
 		expect(prev).toEqual(snapshot);
 	});
+
+	it('empty trailing chunk — suffix scan skips it without consuming scratch', () => {
+		const prev = [u('a'), m('b'), m('')];
+		const result = diffPromptChunks(prev, 'aXY');
+		expect(result).toEqual([u('aXY')]);
+	});
 });
 
 describe('diffPromptChunksWithMeta', () => {

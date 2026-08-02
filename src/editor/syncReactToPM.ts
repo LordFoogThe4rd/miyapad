@@ -46,9 +46,11 @@ export function diffPromptChunksWithMeta(prev: PromptChunk[], nv: string): { chu
 	}
 
 	for (let j = prev.length; j > i; j--) {
-		if (!scratch.endsWith(prev[j - 1].content)) break;
+		const content = prev[j - 1].content;
+		if (!content) continue;
+		if (!scratch.endsWith(content)) break;
 		end.push(prev[j - 1]);
-		scratch = scratch.slice(0, -prev[j - 1].content.length);
+		scratch = scratch.slice(0, -content.length);
 	}
 	end.reverse();
 
