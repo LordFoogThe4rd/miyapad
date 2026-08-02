@@ -93,7 +93,9 @@ export function SearchAndReplaceWidget({ isOpen, closeWidget, id, children, edit
 			findAndStorePositions(mode, search, flags);
 		}
 		if (positions.current.length > 0) {
-			let index = (currentIndex - 1 + positions.current.length) % positions.current.length;
+			let index = currentIndex < 0
+				? positions.current.length - 1
+				: (currentIndex - 1 + positions.current.length) % positions.current.length;
 			setCurrentIndex(index);
 			highlightIndex(index);
 		}
@@ -147,6 +149,8 @@ export function SearchAndReplaceWidget({ isOpen, closeWidget, id, children, edit
 	function countMatches(mode: any, search: any, flags: any) {
 		setSearchAndReplaceError(undefined)
 		if (!searchTerm) {
+			positions.current = [];
+			setCurrentIndex(-1);
 			setNumMatches(0)
 			return
 		}
