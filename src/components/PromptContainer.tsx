@@ -184,6 +184,13 @@ export function PromptContainer({ sidebarHeight }: PromptContainerProps) {
 
 	useEffect(() => {
 		viewRef.current?.setProps({ editable: () => !cancelRef.current });
+		// Re-focus the editor when generation finishes (cancel cleared → editable again).
+		// The browser blurs contenteditable elements when they become non-editable, so we
+		// need to explicitly restore focus once the attribute flips back.
+		if (!cancel && viewRef.current) {
+			// Microtask so the DOM has updated contenteditable before we focus.
+			queueMicrotask(() => viewRef.current?.focus());
+		}
 	}, [cancel]);
 
 	useEffect(() => {
