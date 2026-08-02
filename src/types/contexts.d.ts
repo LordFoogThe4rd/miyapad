@@ -238,6 +238,8 @@ export interface ProbsDelayTimerValue {
 
 export interface GenerationState {
   promptEditorView: RefObject<EditorAdapter | null>;
+  promptEditorVersion: number;
+  setPromptEditorVersion: Dispatch<SetStateAction<number>>;
   replaceEditorText: (newText: string) => void;
   undoStack: RefObject<(number | PromptChunk[])[]>;
   redoStack: RefObject<PromptChunk[][]>;

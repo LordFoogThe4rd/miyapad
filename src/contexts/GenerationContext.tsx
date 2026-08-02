@@ -8,6 +8,7 @@ export const GenerationContext = createContext<GenerationState | null>(null);
 
 export function GenerationProvider({ children, useSessionState }: { children: ReactNode; useSessionState: <T>(name: string, initialState: T) => [T, Dispatch<SetStateAction<T>>] }) {
 	const promptEditorView = useRef<EditorAdapter>(null);
+	const [promptEditorVersion, setPromptEditorVersion] = useState(0);
 	const undoStack = useRef<(number | PromptChunk[])[]>([]);
 	const redoStack = useRef<PromptChunk[][]>([]);
 	const probsDelayTimer = useRef<ProbsDelayTimerValue | undefined>(undefined);
@@ -74,7 +75,7 @@ export function GenerationProvider({ children, useSessionState }: { children: Re
 	}, []);
 
 	const state = {
-		promptEditorView, replaceEditorText, undoStack, redoStack, probsDelayTimer, keyState, sessionReconnectTimer,
+		promptEditorView, setPromptEditorVersion, replaceEditorText, undoStack, redoStack, probsDelayTimer, keyState, sessionReconnectTimer,
 		useScrollSmoothing, hordeTaskId, markdownPreviewRef, isSyncingScroll, lastEditMsRef,
 		promptChunks, setPromptChunks, currentPromptChunk, setCurrentPromptChunk, undoHovered, setUndoHovered,
 		showProbs, setShowProbs, cancel, setCancel, sessionEndpointConnecting, setSessionEndpointConnecting,

@@ -51,7 +51,7 @@ function scrollSyncPlugin(
 
 export function PromptContainer({ sidebarHeight }: PromptContainerProps) {
 	const { showMarkdownPreview, setShowMarkdownPreview, isMobile, tokenHighlightMode, tokenColorMode, promptAreaWidth, setPromptAreaWidth, showProbsMode, setShowProbsMode, spellCheck } = useSettings();
-	const { promptEditorView, promptChunks, setPromptChunks, currentPromptChunk, setCurrentPromptChunk, undoHovered, setUndoHovered, undoStack, redoStack, lastEditMsRef, showProbs, setShowProbs, cancel, markdownPreviewRef, isSyncingScroll, keyState, probsDelayTimer, modalState, closeModal, toggleModal, setTriggerPredict } = useGeneration();
+	const { promptEditorView, setPromptEditorVersion, promptChunks, setPromptChunks, currentPromptChunk, setCurrentPromptChunk, undoHovered, setUndoHovered, undoStack, redoStack, lastEditMsRef, showProbs, setShowProbs, cancel, markdownPreviewRef, isSyncingScroll, keyState, probsDelayTimer, modalState, closeModal, toggleModal, setTriggerPredict } = useGeneration();
 	const { promptText } = usePromptBuilder();
 	const { undo, redo, undoAndPredict } = useGenerationLogic();
 	const t = useT();
@@ -125,6 +125,7 @@ export function PromptContainer({ sidebarHeight }: PromptContainerProps) {
 		});
 		viewRef.current = view;
 		promptEditorView.current = new ProseMirrorAdapter(view, promptContainerRef.current);
+		setPromptEditorVersion(v => v + 1);
 		lastPromptChunksRef.current = promptChunks;
 		const decoState: ChunkDecorationState = {
 			chunks: promptChunks, tokenColorMode, tokenHighlightMode,
