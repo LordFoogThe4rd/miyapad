@@ -80,26 +80,30 @@ export function applyChunksToPM(
 
 	const docSize = view.state.doc.content.size;
 
-	if (newText.length > oldText.length && newText.startsWith(oldText)) {
-		const suffix = newText.slice(oldText.length);
+	// Pin the scroller to the bottom while streaming only if the user is already
+	// at the bottom. PM's selection-based scrollIntoView is unreliable: the
+	// selection sits mid-doc or at the start after a regenerate/undo, so it never
+	// scrolls. atBottom is measured before dispatch, while the old height stands.
+	const scrollerEl = scrollToEnd && scroller ? scroller : null;
+	const atBottom = scrollerEl ? scrollerEl.scrollTop + scrollerEl.clientHeight + 1 >= scrollerEl.scrollHeight : false;
+
+	const suffix = newText.length > oldText.length && newText.startsWith(oldText) ? newText.slice(oldText.length) : null;
+	// insertText would embed a literal \n inside a paragraph's text node, but
+	// textToDoc models newlines as paragraph boundaries — only single-line
+	// suffixes can use the incremental path.
+	if (suffix !== null && !suffix.includes('\n')) {
 		const insertPos = docSize - 1;
 		let tr = view.state.tr.insertText(suffix, insertPos);
 		tr = tr.setMeta(chunkDecorationKey, decoState);
-		// Pin the scroller to the bottom while streaming only if the user is already
-		// at the bottom. PM's selection-based scrollIntoView is unreliable: the
-		// selection sits mid-doc or at the start after a regenerate/undo, so it never
-		// scrolls. atBottom is measured before dispatch, while the old height stands.
-		const scrollerEl = scrollToEnd && scroller ? scroller : null;
-		const atBottom = scrollerEl ? scrollerEl.scrollTop + scrollerEl.clientHeight + 1 >= scrollerEl.scrollHeight : false;
 		view.dispatch(tr);
-		if (atBottom && scrollerEl) {
-			scrollerEl.scrollTop = scrollerEl.scrollHeight;
-		}
 	} else {
 		const newDoc = textToDoc(view.state.schema, newText);
 		let tr = view.state.tr.replaceWith(0, docSize, newDoc.content);
 		tr = tr.setMeta(chunkDecorationKey, decoState);
 		view.dispatch(tr);
+	}
+	if (atBottom && scrollerEl) {
+		scrollerEl.scrollTop = scrollerEl.scrollHeight;
 	}
 }
 

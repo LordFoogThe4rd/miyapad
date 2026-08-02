@@ -1,5 +1,5 @@
 import type { EditorView as PMEditorView } from 'prosemirror-view';
-import { TextSelection } from 'prosemirror-state';
+import { TextSelection, type Transaction } from 'prosemirror-state';
 import { textOffsetToPMPos, pmPosToTextOffset } from './chunkDecorations';
 import { textToDoc } from './syncReactToPM';
 
@@ -45,19 +45,29 @@ export class ProseMirrorAdapter implements EditorAdapter {
   replaceRange(from: number, to: number, insert: string): void {
     const pmFrom = textOffsetToPMPos(this.view.state.doc, from);
     const pmTo = textOffsetToPMPos(this.view.state.doc, to);
-    this.view.dispatch(this.view.state.tr.insertText(insert, pmFrom, pmTo));
+    this.view.dispatch(this.insertInto(this.view.state.tr, pmFrom, pmTo, insert));
   }
 
   replaceRanges(changes: { from: number; to: number; insert: string }[]): void {
-    // Sort descending by `from` so later changes don't invalidate earlier offsets
+    // Sort descending by `from` so later changes don't invalidate earlier offsets;
+    // positions map against the ORIGINAL doc, not tr.doc, for non-overlapping edits.
     const sorted = [...changes].sort((a, b) => b.from - a.from);
     let tr = this.view.state.tr;
     for (const change of sorted) {
       const pmFrom = textOffsetToPMPos(this.view.state.doc, change.from);
       const pmTo = textOffsetToPMPos(this.view.state.doc, change.to);
-      tr = tr.insertText(change.insert, pmFrom, pmTo);
+      tr = this.insertInto(tr, pmFrom, pmTo, change.insert);
     }
     this.view.dispatch(tr);
+  }
+
+  private insertInto(tr: Transaction, pmFrom: number, pmTo: number, insert: string): Transaction {
+    // insertText embeds a literal \n inside a paragraph's text node; newlines
+    // must go through textToDoc so they become real paragraph boundaries.
+    if (insert.includes('\n')) {
+      return tr.replaceWith(pmFrom, pmTo, textToDoc(this.view.state.schema, insert).content);
+    }
+    return tr.insertText(insert, pmFrom, pmTo);
   }
 
   focus(): void {
