@@ -1,5 +1,5 @@
 import type { EditorView as PMEditorView } from 'prosemirror-view';
-import { TextSelection, type Transaction } from 'prosemirror-state';
+import { TextSelection } from 'prosemirror-state';
 import { textOffsetToPMPos, pmPosToTextOffset } from './chunkDecorations';
 import { textToDoc } from './syncReactToPM';
 
@@ -43,31 +43,40 @@ export class ProseMirrorAdapter implements EditorAdapter {
   }
 
   replaceRange(from: number, to: number, insert: string): void {
-    const pmFrom = textOffsetToPMPos(this.view.state.doc, from);
-    const pmTo = textOffsetToPMPos(this.view.state.doc, to);
-    this.view.dispatch(this.insertInto(this.view.state.tr, pmFrom, pmTo, insert));
+    if (insert.includes('\n')) {
+      // Rebuild the flat text through textToDoc; a newline must become a real
+      // paragraph boundary, and splicing one inside a paragraph via a closed
+      // PM slice would split the paragraph into spurious empty lines.
+      const text = this.getText();
+      this.replaceText(text.slice(0, from) + insert + text.slice(to));
+      return;
+    }
+    const { doc } = this.view.state;
+    const pmFrom = textOffsetToPMPos(doc, from);
+    const pmTo = textOffsetToPMPos(doc, to);
+    this.view.dispatch(this.view.state.tr.insertText(insert, pmFrom, pmTo));
   }
 
   replaceRanges(changes: { from: number; to: number; insert: string }[]): void {
-    // Sort descending by `from` so later changes don't invalidate earlier offsets;
-    // positions map against the ORIGINAL doc, not tr.doc, for non-overlapping edits.
     const sorted = [...changes].sort((a, b) => b.from - a.from);
+    if (sorted.some((c) => c.insert.includes('\n'))) {
+      // Same rebuild as replaceRange: apply every change in flat-text space
+      // against the ORIGINAL text, then reconstruct the whole doc. Positions
+      // map against the ORIGINAL doc, not tr.doc, for non-overlapping edits.
+      let text = this.getText();
+      for (const change of sorted) {
+        text = text.slice(0, change.from) + change.insert + text.slice(change.to);
+      }
+      this.replaceText(text);
+      return;
+    }
     let tr = this.view.state.tr;
     for (const change of sorted) {
       const pmFrom = textOffsetToPMPos(this.view.state.doc, change.from);
       const pmTo = textOffsetToPMPos(this.view.state.doc, change.to);
-      tr = this.insertInto(tr, pmFrom, pmTo, change.insert);
+      tr = tr.insertText(change.insert, pmFrom, pmTo);
     }
     this.view.dispatch(tr);
-  }
-
-  private insertInto(tr: Transaction, pmFrom: number, pmTo: number, insert: string): Transaction {
-    // insertText embeds a literal \n inside a paragraph's text node; newlines
-    // must go through textToDoc so they become real paragraph boundaries.
-    if (insert.includes('\n')) {
-      return tr.replaceWith(pmFrom, pmTo, textToDoc(this.view.state.schema, insert).content);
-    }
-    return tr.insertText(insert, pmFrom, pmTo);
   }
 
   focus(): void {
