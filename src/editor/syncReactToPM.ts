@@ -2,6 +2,11 @@ import type { Node, Schema } from 'prosemirror-model';
 import type { EditorView } from 'prosemirror-view';
 import { chunkDecorationKey, type ChunkDecorationState } from './chunkDecorations';
 
+/**
+ * Appends newContent to trailing user chunks, collapsing adjacent user chunks into one.
+ * MUTATES the supplied chunks array in place when its last chunk is user-typed and
+ * returns that same array; otherwise appends a new user chunk to a copy.
+ */
 function mergeUserChunks(chunks: PromptChunk[], newContent: string): PromptChunk[] {
 	let lastChunk = chunks[chunks.length - 1];
 	while (lastChunk && lastChunk.type === 'user') {
@@ -22,7 +27,12 @@ export function diffPromptChunks(prev: PromptChunk[], nv: string): PromptChunk[]
 	return diffPromptChunksWithMeta(prev, nv).chunks;
 }
 
-/** Returns the new chunk array plus how many leading/trailing chunks were preserved unchanged. */
+/**
+ * Returns the new chunk array plus the number of leading/trailing chunks of prev that
+ * survived the diff unchanged. startLen/endLen are measured on the ORIGINAL array,
+ * before mergeUserChunks collapses adjacent user chunks — the result may contain fewer
+ * leading/trailing chunks than startLen/endLen report.
+ */
 export function diffPromptChunksWithMeta(prev: PromptChunk[], nv: string): { chunks: PromptChunk[]; startLen: number; endLen: number } {
 	const start: PromptChunk[] = [];
 	const end: PromptChunk[] = [];
