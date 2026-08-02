@@ -341,7 +341,7 @@ export function PromptContainer({ sidebarHeight }: PromptContainerProps) {
 		let targetIndex = -1;
 		for (let i = 0; i < promptChunks.length; i++) {
 			const end = offset + promptChunks[i].content.length;
-			if (targetIndex === -1 && pos >= offset && pos <= end) { targetIndex = i; }
+			if (targetIndex === -1 && pos >= offset && pos < end) { targetIndex = i; }
 			offset = end;
 		}
 		if (targetIndex === -1) return;
