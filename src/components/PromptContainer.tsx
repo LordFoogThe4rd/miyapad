@@ -344,7 +344,11 @@ export function PromptContainer({ sidebarHeight }: PromptContainerProps) {
 			if (targetIndex === -1 && pos >= offset && pos < end) { targetIndex = i; }
 			offset = end;
 		}
-		if (targetIndex === -1) return;
+		if (targetIndex === -1) {
+			// Cursor at/past the document end (pos equals total length) maps to the last chunk.
+			if (promptChunks.length === 0) return;
+			targetIndex = promptChunks.length - 1;
+		}
 
 		const coords = adapter.coordsAtPos(Math.min(pos, offset));
 		if (!coords) return;
