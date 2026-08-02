@@ -122,7 +122,7 @@ export function SearchAndReplaceWidget({ isOpen, closeWidget, id, children, edit
 		if (!adapter) return;
 		const text = adapter.getText();
 		if (mode === 0) {
-			const parts = positions.current.map(p => ({ from: p.start, to: p.end, insert: replace }));
+			const parts = positions.current.map(p => ({ from: p.start, to: p.end, insert: replace.replace(/\\n/g, '\n') }));
 			if (parts.length > 0) {
 				adapter.replaceRanges(parts.reverse());
 				adapter.focus();
