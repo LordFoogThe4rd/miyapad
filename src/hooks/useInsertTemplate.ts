@@ -21,17 +21,15 @@ export function useInsertTemplate() {
 
 		const { from: startPos, to: endPos } = adapter.getSelection();
 		const currentText = adapter.getText();
-		const textBefore = currentText.substring(0, startPos) || "";
-		const textAfter = (sysInst !== "sys" && endPos !== currentText.length ? "{predict}" : "") + currentText.substring(endPos);
 		const selectedText = currentText.substring(startPos, endPos);
 
-		const finalText = textBefore 
-						+ prefix
-						+ selectedText 
-						+ suffix
-						+ textAfter;
-
-		adapter.replaceText(finalText);
+		const changes: { from: number; to: number; insert: string }[] = [
+			{ from: startPos, to: endPos, insert: prefix + selectedText + suffix },
+		];
+		if (sysInst !== "sys" && endPos !== currentText.length)
+			changes.push({ from: endPos, to: endPos, insert: "{predict}" });
+		changes.sort((a, b) => b.from - a.from);
+		adapter.replaceRanges(changes);
 
 		let newCursorPos;
 		if (selectedText.length === 0) {
