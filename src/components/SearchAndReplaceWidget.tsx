@@ -112,6 +112,7 @@ export function SearchAndReplaceWidget({ isOpen, closeWidget, id, children, edit
 		if (!search) return
 		const { matches, error } = findAllMatches(mode, search, flags);
 		positions.current = matches;
+		if (error) return;
 		if (!error && matches.length === 0) {
 			setSearchAndReplaceError(`${t('search.warningNoMatches')} ${modeLabels[mode] ?? modeLabels[0]} '${search}'`)
 			return
