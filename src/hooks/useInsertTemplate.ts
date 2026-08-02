@@ -26,8 +26,12 @@ export function useInsertTemplate() {
 		const changes: { from: number; to: number; insert: string }[] = [
 			{ from: startPos, to: endPos, insert: prefix + selectedText + suffix },
 		];
-		if (sysInst !== "sys" && endPos !== currentText.length)
-			changes.push({ from: endPos, to: endPos, insert: "{predict}" });
+		if (sysInst !== "sys" && endPos !== currentText.length) {
+			if (startPos === endPos)
+				changes[0].insert += "{predict}";
+			else
+				changes.push({ from: endPos, to: endPos, insert: "{predict}" });
+		}
 		changes.sort((a, b) => b.from - a.from);
 		adapter.replaceRanges(changes);
 
