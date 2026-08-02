@@ -1,4 +1,4 @@
-import { describe, it, expect } from 'vitest';
+import { describe, it, expect, vi } from 'vitest';
 import { EditorState } from 'prosemirror-state';
 import { EditorView } from 'prosemirror-view';
 import { schema } from './schema';
@@ -136,6 +136,57 @@ describe('replaceRanges', () => {
 			{ from: 8, to: 8, insert: '\n' },
 		]);
 		expect(adapter.getText()).toBe('aaa\n\nbbb\n\nccc');
+		dispose({ view, container });
+	});
+});
+
+describe('posAtCoords / coordsAtPos (hit-testing)', () => {
+	// jsdom cannot lay out text, so stub the ProseMirror view's coordinate
+	// lookups and assert the adapter's PM<->flat-offset conversions on top.
+	function stubPosAtCoords(view: EditorView, pmPos: number) {
+		return vi.spyOn(view, 'posAtCoords').mockReturnValue({ pos: pmPos, inside: -1 });
+	}
+
+	it('resolves PM positions to flat offsets across multiline prompts', () => {
+		const { adapter, view, container } = makeView('abc\ndef');
+		// 'a' (first char, para 1)
+		stubPosAtCoords(view, 1);
+		expect(adapter.posAtCoords({ x: 0, y: 0 })).toBe(0);
+		// 'c' (last char, para 1)
+		stubPosAtCoords(view, 3);
+		expect(adapter.posAtCoords({ x: 0, y: 0 })).toBe(2);
+		// 'f' (last char, para 2 / final character)
+		stubPosAtCoords(view, 8);
+		expect(adapter.posAtCoords({ x: 10, y: 12 })).toBe(6);
+		dispose({ view, container });
+	});
+
+	it('maps paragraph-boundary and end-of-document positions through', () => {
+		const { adapter, view, container } = makeView('abc\ndef');
+		// boundary between paragraphs (closing token of para 1)
+		stubPosAtCoords(view, 4);
+		expect(adapter.posAtCoords({ x: 0, y: 0 })).toBe(3);
+		// position one past the last character (doc end)
+		stubPosAtCoords(view, 9);
+		expect(adapter.posAtCoords({ x: 0, y: 0 })).toBe(7);
+		dispose({ view, container });
+	});
+
+	it('forwards the requested pm position to coordsAtPos for flat offsets', () => {
+		const { adapter, view, container } = makeView('abc\ndef');
+		const spy = vi.spyOn(view, 'coordsAtPos').mockReturnValue({ top: 1, left: 2, right: 14, bottom: 20 });
+		expect(adapter.coordsAtPos(6)).toEqual({ top: 1, left: 2, right: 14, bottom: 20 });
+		expect(spy).toHaveBeenCalledWith(8);
+		dispose({ view, container });
+	});
+
+	it('keeps the final character of a single-line prompt in the document', () => {
+		const { adapter, view, container } = makeView('abc');
+		// 'c' at offset 2, one past it at offset 3
+		stubPosAtCoords(view, 3);
+		expect(adapter.posAtCoords({ x: 0, y: 0 })).toBe(2);
+		stubPosAtCoords(view, 4);
+		expect(adapter.posAtCoords({ x: 0, y: 0 })).toBe(3);
 		dispose({ view, container });
 	});
 });
