@@ -54,12 +54,11 @@ const replaceAll = () => fireEvent.click(screen.getByRole('button', { name: 'Rep
 
 beforeEach(() => {
 	localStorage.clear();
-	if (typeof (globalThis as any).reportError !== 'function') {
-		vi.stubGlobal('reportError', vi.fn());
-	}
+	vi.stubGlobal('reportError', vi.fn());
 });
 
 afterEach(() => {
+	vi.unstubAllGlobals();
 	cleanup();
 });
 
@@ -116,6 +115,9 @@ describe('SearchAndReplaceWidget', () => {
 		expect(counter()).toContain('1 /');
 		findPrev();
 		expect(counter()).toContain('3 /');
+		expect(adapter.current.setSelection).toHaveBeenCalledWith(16, 19);
+		expect(adapter.current.scrollIntoView).toHaveBeenCalledWith(16, { y: 'center' });
+		expect(adapter.current.focus).toHaveBeenCalledTimes(4);
 	});
 
 	it('starts previous navigation at the last match', () => {
