@@ -115,6 +115,7 @@ beforeEach(() => {
 });
 
 afterEach(() => {
+	vi.restoreAllMocks();
 	cleanup();
 });
 
@@ -149,15 +150,21 @@ describe('PromptContainer transaction synchronization', () => {
 		expect(genState.redoStack.current).toEqual([]);
 	});
 
-	it('reuses the checkpoint for edits within 500ms and starts a new one after a pause', () => {
+	it('reuses the checkpoint for edits within 500ms and starts a new one at the 500ms boundary', () => {
 		const { view } = renderEditor();
+		let now = 1000;
+		vi.spyOn(Date, 'now').mockImplementation(() => now);
 
 		act(() => view.dispatch(view.state.tr.insertText('X', 2)));
+		expect(genState.undoStack.current).toHaveLength(1);
+		expect(genState.undoStack.current[0]).toEqual([u('a'), m('bc')]);
+
+		now += 499;
 		act(() => view.dispatch(view.state.tr.insertText('Y', 3)));
 		expect(genState.undoStack.current).toHaveLength(1);
 		expect(genState.undoStack.current[0]).toEqual([u('a'), m('bc')]);
 
-		genState.lastEditMsRef.current = Date.now() - 600;
+		now += 500;
 		act(() => view.dispatch(view.state.tr.insertText('Z', 4)));
 		expect(genState.undoStack.current).toHaveLength(2);
 		expect(genState.undoStack.current[1]).toEqual([u('aXY'), m('bc')]);
