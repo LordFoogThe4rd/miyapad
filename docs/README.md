@@ -14,7 +14,7 @@ The application features full local browser persistence via IndexedDB or central
 - [API Endpoints](api-endpoints.md) — Full REST API route reference
 - [Tokenization](tokenization.md) — Optional server-side tokenization with HuggingFace tokenizers
 - [Building & Running](building-and-running.md) — Dev server, production build, server CLI
-- [CSS Architecture](css.md) — 21 partial files, import order, theming, conventions
+- [CSS Architecture](css.md) — 20 partial files, import order, theming, conventions
 - [Development Conventions](development-conventions.md) — JSX-less components, TypeScript conventions, CSS conventions, storage patterns
 - [Screenshot Capture](screenshot-capture.md) — Native screenshot feature for styled quote PNGs
 - [Session Tags](session-tags.md) — Freeform tags on sessions with inline editing and filtering

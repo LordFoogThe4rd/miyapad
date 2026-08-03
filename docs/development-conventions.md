@@ -140,6 +140,6 @@ export function useSessionState<T>(
 
 See [CSS Architecture](css.md) for full documentation. Key points:
 
-- Styles are organized into 21 partial files under `src/css/`, imported by `src/styles.css` via `@import`.
+- Styles are organized into 20 partial files under `src/css/`, imported by `src/styles.css` via `@import`.
 - Component-specific media queries live inside that component's partial; global layout media queries go in `_responsive.css`.
 - When adding new styles, put them in the matching partial or create a new one if none fits.
