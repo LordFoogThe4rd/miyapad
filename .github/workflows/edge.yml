@@ -8,6 +8,15 @@ on:
     branches:
       - '**'
       - '!dependabot/**'
+    paths-ignore:
+      - 'docs/**'
+      - '*.md'
+      - '.github/**'
+      - '.gitignore'
+      - '.gitattributes'
+      - '.gitmodules'
+      - '.dockerignore'
+      - 'LICENSE'
   delete:
   workflow_dispatch:
 
