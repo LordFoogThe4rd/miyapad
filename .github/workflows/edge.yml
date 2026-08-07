@@ -185,8 +185,15 @@ jobs:
       contents: write
     steps:
       - name: Delete edge release for deleted branch
+        env:
+          DELETED_REF: ${{ github.event.ref }}
         run: |
-          SAFE=$(printf '%s' "$GITHUB_REF_NAME" | tr '/' '-' | tr -c 'A-Za-z0-9_.-' '-')
-          gh release delete "edge-$SAFE" --repo "$GITHUB_REPOSITORY" --yes --cleanup-tag || true
+          # GITHUB_REF_NAME points at the default branch on delete events;
+          # github.event.ref is the only reliable source of the deleted branch.
+          BRANCH="${DELETED_REF#refs/heads/}"
+          SAFE=$(printf '%s' "$BRANCH" | tr '/' '-' | tr -c 'A-Za-z0-9_.-' '-')
+          echo "Cleanup tag: edge-$SAFE"
+          gh release delete "edge-$SAFE" --repo "$GITHUB_REPOSITORY" --yes --cleanup-tag \
+            || echo "No edge release to clean up for $BRANCH"
         env:
           GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
