@@ -187,6 +187,6 @@ jobs:
       - name: Delete edge release for deleted branch
         run: |
           SAFE=$(printf '%s' "$GITHUB_REF_NAME" | tr '/' '-' | tr -c 'A-Za-z0-9_.-' '-')
-          gh release delete "edge-$SAFE" --yes --cleanup-tag || true
+          gh release delete "edge-$SAFE" --repo "$GITHUB_REPOSITORY" --yes --cleanup-tag || true
         env:
           GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
