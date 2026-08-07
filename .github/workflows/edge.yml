@@ -164,7 +164,21 @@ jobs:
             git log --oneline -10 $GITHUB_SHA
           } > release_notes.md
 
+      - name: Check branch still exists
+        id: branch
+        env:
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        run: |
+          # Branch may have been deleted while this run was building; the
+          # cleanup job deletes the release, then this job would recreate it.
+          if gh api "repos/$GITHUB_REPOSITORY/branches/$GITHUB_REF_NAME" >/dev/null 2>&1; then
+            echo "alive=true" >> "$GITHUB_OUTPUT"
+          else
+            echo "alive=false" >> "$GITHUB_OUTPUT"
+          fi
+
       - name: Create pre-release
+        if: steps.branch.outputs.alive == 'true'
         uses: softprops/action-gh-release@718ea10b132b3b2eba29c1007bb80653f286566b # v3.0.1
         with:
           tag_name: ${{ env.EDGE_TAG }}
