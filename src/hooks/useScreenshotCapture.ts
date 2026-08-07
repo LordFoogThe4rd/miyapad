@@ -196,11 +196,17 @@ export function useScreenshotCapture() {
 				pixelRatio: 2,
 				skipFonts: true,
 			});
+			const blob = await (await fetch(dataUrl)).blob();
 
+			const url = URL.createObjectURL(blob);
 			const win = window.open();
 			if (win) {
-				win.document.write('<img src="' + dataUrl + '"/>');
+				win.document.title = dateString; // TODO: make name customizable; TODO: show screenshot in a modal instead of a new tab
+				win.document.write('<img src="' + url + '"/>');
 				win.document.close();
+				win.addEventListener('beforeunload', () => URL.revokeObjectURL(url));
+			} else {
+				URL.revokeObjectURL(url);
 			}
 		} catch (e: unknown) {
 			console.error("Screenshot failed:", e);
