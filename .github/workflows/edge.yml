@@ -48,6 +48,7 @@ jobs:
 
       - name: Compute edge version
         id: version
+        shell: bash
         run: |
           BASE=$(node -p "require('./package.json').version")
           SHA=${GITHUB_SHA::7}
