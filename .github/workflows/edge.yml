@@ -20,6 +20,7 @@ concurrency:
 
 jobs:
   build:
+    if: github.event_name != 'delete'
     strategy:
       matrix:
         include:
@@ -187,6 +188,7 @@ jobs:
       - name: Delete edge release for deleted branch
         env:
           DELETED_REF: ${{ github.event.ref }}
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
         run: |
           # GITHUB_REF_NAME points at the default branch on delete events;
           # github.event.ref is the only reliable source of the deleted branch.
@@ -195,5 +197,3 @@ jobs:
           echo "Cleanup tag: edge-$SAFE"
           gh release delete "edge-$SAFE" --repo "$GITHUB_REPOSITORY" --yes --cleanup-tag \
             || echo "No edge release to clean up for $BRANCH"
-        env:
-          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
