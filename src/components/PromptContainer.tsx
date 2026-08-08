@@ -90,7 +90,7 @@ export function PromptContainer({ sidebarHeight }: PromptContainerProps) {
 				}),
 				keymap({ 'Mod-Enter': () => { setTriggerPredict(true); return true; } }),
 				keymap(baseKeymap),
-				scrollSyncPlugin(isSyncingScroll, markdownPreviewRef, promptContainerRef),
+				scrollSyncPlugin(isSyncingScroll, markdownPreviewRef, editorRef),
 			],
 		});
 		const view = new EditorView(editorRef.current, {
@@ -124,7 +124,7 @@ export function PromptContainer({ sidebarHeight }: PromptContainerProps) {
 			},
 		});
 		viewRef.current = view;
-		promptEditorView.current = new ProseMirrorAdapter(view, promptContainerRef.current);
+		promptEditorView.current = new ProseMirrorAdapter(view, editorRef.current);
 		setPromptEditorVersion(v => v + 1);
 		lastPromptChunksRef.current = promptChunks;
 		const decoState: ChunkDecorationState = {
@@ -156,7 +156,7 @@ export function PromptContainer({ sidebarHeight }: PromptContainerProps) {
 		};
 		suppressSyncRef.current = true;
 		if (textChanged) {
-			applyChunksToPM(view, promptChunks, decoState, !!cancel, promptContainerRef.current);
+			applyChunksToPM(view, promptChunks, decoState, !!cancel, editorRef.current);
 		} else {
 			view.dispatch(view.state.tr.setMeta(chunkDecorationKey, decoState));
 		}
