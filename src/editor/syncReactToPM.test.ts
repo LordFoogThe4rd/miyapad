@@ -1,5 +1,10 @@
 import { describe, it, expect } from 'vitest';
-import { diffPromptChunks, diffPromptChunksWithMeta } from './syncReactToPM';
+import { EditorState } from 'prosemirror-state';
+import { EditorView } from 'prosemirror-view';
+import { TextSelection } from 'prosemirror-state';
+import { schema } from './schema';
+import { pmPosToTextOffset } from './chunkDecorations';
+import { applyChunksToPM, diffPromptChunks, diffPromptChunksWithMeta, textToDoc } from './syncReactToPM';
 
 function u(content: string): PromptChunk {
 	return { type: 'user', content };
@@ -104,6 +109,71 @@ describe('diffPromptChunks', () => {
 		const prev = [u('a'), m('b'), m('')];
 		const result = diffPromptChunks(prev, 'aXY');
 		expect(result).toEqual([u('aXY')]);
+	});
+});
+
+describe('applyChunksToPM caret tracking', () => {
+	const decoState = { chunks: [], tokenColorMode: -1, tokenHighlightMode: -1, currentPromptChunk: null, undoHovered: null };
+
+	function makeView(text: string) {
+		const container = document.createElement('div');
+		document.body.appendChild(container);
+		const state = EditorState.create({ doc: textToDoc(schema, text) });
+		const view = new EditorView(container, { state });
+		return { view, container };
+	}
+
+	function caretAtEnd(view: EditorView) {
+		view.dispatch(view.state.tr.setSelection(TextSelection.create(view.state.doc, view.state.doc.content.size - 1)));
+	}
+
+	function caretOffset(view: EditorView) {
+		return pmPosToTextOffset(view.state.doc, view.state.selection.from);
+	}
+
+	function stream(view: EditorView, text: string) {
+		applyChunksToPM(view, [{ content: text }], decoState);
+	}
+
+	it('streaming a newline-containing token keeps the caret at the end of the document', () => {
+		const { view, container } = makeView('Hello\nWorld');
+		caretAtEnd(view);
+
+		// single-line token → incremental insert path
+		stream(view, 'Hello\nWorldGood');
+		expect(caretOffset(view)).toBe('Hello\nWorldGood'.length);
+
+		// newline-containing token → full rebuild path must not strand the caret
+		// at the boundary before the token
+		stream(view, 'Hello\nWorldGood!\nNice');
+		expect(caretOffset(view)).toBe('Hello\nWorldGood!\nNice'.length);
+
+		view.destroy();
+		container.remove();
+	});
+
+	it('streaming a newline as the very first token still pins the caret to the end', () => {
+		const { view, container } = makeView('Hello');
+		caretAtEnd(view);
+
+		stream(view, 'Hello\n\nWorld');
+		expect(caretOffset(view)).toBe('Hello\n\nWorld'.length);
+
+		view.destroy();
+		container.remove();
+	});
+
+	it('preserves a mid-document caret across a non-append rebuild', () => {
+		const { view, container } = makeView('abc\ndef');
+		// caret after 'b' (flat offset 2) = PM pos 3 (first paragraph "abc")
+		view.dispatch(view.state.tr.setSelection(TextSelection.create(view.state.doc, 3)));
+
+		// non-append rebuild (new text does not start with the old text)
+		stream(view, 'aX\ndef');
+		expect(caretOffset(view)).toBe(2);
+
+		view.destroy();
+		container.remove();
 	});
 });
 

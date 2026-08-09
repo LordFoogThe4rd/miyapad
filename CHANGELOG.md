@@ -5,6 +5,10 @@
 ### Changed
 
 - Editor engine migrated from simple HTML textarea to ProseMirror
+
+### Fixed
+
+- The caret no longer gets stuck before a generated line break — it returns to the end of the document when generation finishes
 - Re-tokenize button in the logit bias modal now shows a regenerate icon instead of a plain `+` text
 
 ### Removed

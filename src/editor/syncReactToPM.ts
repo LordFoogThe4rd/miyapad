@@ -111,13 +111,23 @@ export function applyChunksToPM(
 		} else {
 			const anchorOffset = Math.min(pmPosToTextOffset(view.state.doc, sel.anchor), newText.length);
 			const headOffset = Math.min(pmPosToTextOffset(view.state.doc, sel.head), newText.length);
-			tr = tr.setSelection(
-				TextSelection.create(
-					tr.doc,
-					textOffsetToPMPos(tr.doc, anchorOffset),
-					textOffsetToPMPos(tr.doc, headOffset),
-				),
-			);
+			if (suffix !== null && anchorOffset >= oldText.length && headOffset >= oldText.length) {
+				// Streaming append whose token contains a newline: mapping the
+				// old end-of-text offset onto the new doc lands on the boundary
+				// right before the appended token, and later single-line inserts
+				// sit after it — so the caret never advances again. A caret that
+				// was at the end of the pre-append doc should follow the stream
+				// to the new end of the document instead.
+				tr = tr.setSelection(TextSelection.create(tr.doc, tr.doc.content.size - 1));
+			} else {
+				tr = tr.setSelection(
+					TextSelection.create(
+						tr.doc,
+						textOffsetToPMPos(tr.doc, anchorOffset),
+						textOffsetToPMPos(tr.doc, headOffset),
+					),
+				);
+			}
 		}
 		tr = tr.setMeta(chunkDecorationKey, decoState);
 		view.dispatch(tr);
