@@ -51,7 +51,7 @@ jobs:
 
       - name: Build sqlite-zstd
         working-directory: server/sqlite-zstd
-        run: cargo build --release --features build_extension
+        run: cargo build --release --features build_extension # TODO: remove "bundled" from rusqlite features, might have been the one blocking the better-sqlite3 migration
 
       - name: Copy sqlite-zstd extension
         working-directory: server
