@@ -61,18 +61,20 @@ CHANGELOG.md is manually curated. After each non-`docs` or `ci` commit, add an e
 
 1. Verify all user-facing changes have entries under `## [???] - unreleased` in `CHANGELOG.md`.
 2. Determine the new version using semver.
-3. Replace `[???] - unreleased` with `[<version>] - <YYYY-MM-DD>` at the top of `CHANGELOG.md`.
-4. Stage, commit, tag, and push in one shot:
+3. Bump `version` in `package.json` — `scripts/write-version.mjs` embeds it into `src/version.ts` at build time (shown in the About dialog and used by the update checker).
+4. Replace `[???] - unreleased` with `[<version>] - <YYYY-MM-DD>` at the top of `CHANGELOG.md`.
+5. Stage, commit, tag, and push in one shot:
 
 ```bash
-git add CHANGELOG.md <other changed files> &&
+git add CHANGELOG.md package.json <other changed files> &&
 git commit -m "chore: release v<version>" &&
 git tag -a v<version> -m "v<version>" &&
 git push &&
 git push origin v<version>
 ```
 
-5. After the release, add a fresh `## [???] - unreleased` heading to `CHANGELOG.md` for the next cycle.
+6. Pushing the tag triggers `.github/workflows/release.yml`, which builds the standalone `dist/miyapad.html` and the platform archives and creates the GitHub Release automatically, using the new changelog section as release notes. Verify the release was created with all assets.
+7. After the release, add a fresh `## [???] - unreleased` heading to `CHANGELOG.md` for the next cycle.
 
 ## Safe Property Checks
 
