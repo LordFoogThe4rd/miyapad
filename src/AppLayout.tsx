@@ -6,7 +6,6 @@ import { useTTS } from './hooks/useTTS';
 import { useGenerationLogic } from './hooks/useGenerationLogic';
 import { useTouchGestures } from './hooks/useTouchGestures';
 import { useKeyboardShortcuts } from './hooks/useKeyboardShortcuts';
-import { MarkdownPreview } from './components/MarkdownPreview';
 import { ProbsDisplay } from './components/ProbsDisplay';
 import { Sidebar } from './components/Sidebar';
 import { Modals } from './components/Modals';
@@ -26,7 +25,7 @@ import {
   SVG_ArrowUp, SVG_ArrowDown, SVG_Settings, SVG_MobileSidebar,
   SVG_ShowKey, SVG_HideKey, SVG_SysPrompt, SVG_instTemplate,
   SVG_ChatMode, SVG_CompletionMode, SVG_Regen, SVG_Undo, SVG_Redo,
-  SVG_SearchAndReplace, SVG_Moveable, SVG_Stop, SVG_SplitView
+  SVG_SearchAndReplace, SVG_Moveable, SVG_Stop
 } from './components/icons/index';
 
 import { useSettings } from './contexts/SettingsContext';
@@ -58,7 +57,7 @@ export function AppLayout() {
 		authorNoteDepth, setAuthorNoteDepth, worldInfo, setWorldInfo, sillyTarvernWorldInfoJSON, setSillyTarvernWorldInfoJSON,
 		enabledSamplers, setEnabledSamplers, grammar, setGrammar, useChatAPI, setUseChatAPI, useTokenStreaming, setUseTokenStreaming,
 		disableLogprobs, setDisableLogprobs, postSamplingProbs, setPostSamplingProbs, currentThemeName, setCurrentThemeName, allThemes, setAllThemes,
-		showMarkdownPreview, setShowMarkdownPreview, ttsEnabled, setTTSEnabled, ttsVoiceId, setTTSVoiceId, ttsPitch, setTTSPitch,
+		ttsEnabled, setTTSEnabled, ttsVoiceId, setTTSVoiceId, ttsPitch, setTTSPitch,
 		ttsRate, setTTSRate, ttsVolume, setTTSVolume, ttsSpeakInputs, setTTSSpeakInputs, ttsMaxUserInput, setTTSMaxUserInput,
 		useServerTokenization,
 		tokenizerModel,
@@ -67,7 +66,7 @@ export function AppLayout() {
 
 	const {
 		promptEditorView, replaceEditorText, undoStack, redoStack, probsDelayTimer, keyState, sessionReconnectTimer,
-		useScrollSmoothing, hordeTaskId, markdownPreviewRef, isSyncingScroll,
+		useScrollSmoothing, hordeTaskId,
 		promptChunks, setPromptChunks, currentPromptChunk, setCurrentPromptChunk, undoHovered, setUndoHovered,
 		showProbs, setShowProbs, cancel, setCancel, sessionEndpointConnecting, setSessionEndpointConnecting,
 		sessionEndpointError, setSessionEndpointError, rejectedAPIKey, setRejectedAPIKey, openaiModels, setOpenaiModels,
@@ -437,7 +436,6 @@ export function AppLayout() {
 
 	return html`
 		<${PromptContainer} sidebarHeight=${sidebarHeight}/>
-		<${MarkdownPreview} sidebarHeight=${sidebarHeight}/>
 		<${ProbsDisplay}/>
 		<${Sidebar}
 			sidebarRef=${sidebar}

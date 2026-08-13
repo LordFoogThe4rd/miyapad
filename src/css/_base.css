@@ -155,35 +155,3 @@ body {
 	box-sizing: border-box;
 	height:24em;
 }
-
-#markdown-preview {
-    display: none;
-    flex: 1;
-	border: none;
-	outline: none;
-	resize: none;
-	background: var(--color-bg-prompt);
-	color: var(--color-text-prompt);
-    padding: 2em 3em;
-	margin: 0;
-	scrollbar-gutter: stable;
-	font: inherit;
-	box-sizing: border-box;
-    font-size: calc(1.125rem * var(--font-size-multiplier));
-	text-size-adjust: 100%;
-	-webkit-text-size-adjust: 100%;
-	-moz-text-size-adjust: 100%;
-    font-family: serif;
-    word-wrap: break-word;
-    overflow-y: scroll;
-	height: calc(100vh);
-}
-
-body.markdown-preview-on #prompt-container {
-    max-width: none;
-    margin-left: 0;
-    margin-right: 0;
-}
-body.markdown-preview-on #markdown-preview {
-    display: block;
-}

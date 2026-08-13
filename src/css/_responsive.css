@@ -39,7 +39,4 @@
 	#button-settings, #mobileSidebarButton {
 		display: block;
 	}
-	#markdown-preview {
-		max-height: 50vh;
-	}
 }

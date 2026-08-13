@@ -140,7 +140,7 @@ export function SettingsProvider({ children, sessionStorage, templateStorage, th
 		}
 	})());
     const [allThemes, setAllThemes] = useDBThemes(defaultThemes);
-	const [showMarkdownPreview, setShowMarkdownPreview] = usePersistentState('showMarkdownPreview', false);
+	const [editorMode, setEditorMode] = usePersistentState('editorMode', 'source');
 	const [ttsEnabled, setTTSEnabled] = usePersistentState('ttsEnabled', false);
 	const [ttsVoiceId, setTTSVoiceId] = usePersistentState('ttsVoiceId', 0);
 	const [ttsPitch, setTTSPitch] = usePersistentState('ttsPitch', 1);
@@ -203,7 +203,7 @@ export function SettingsProvider({ children, sessionStorage, templateStorage, th
 		authorNoteDepth, setAuthorNoteDepth, worldInfo, setWorldInfo, sillyTarvernWorldInfoJSON, setSillyTarvernWorldInfoJSON,
 		enabledSamplers, setEnabledSamplers, grammar, setGrammar, useChatAPI, setUseChatAPI, useTokenStreaming, setUseTokenStreaming,
 		disableLogprobs, setDisableLogprobs, postSamplingProbs, setPostSamplingProbs, isMobile, setIsMobile, currentThemeName, setCurrentThemeName, allThemes, setAllThemes,
-		showMarkdownPreview, setShowMarkdownPreview, ttsEnabled, setTTSEnabled, ttsVoiceId, setTTSVoiceId, ttsPitch, setTTSPitch,
+		editorMode, setEditorMode, ttsEnabled, setTTSEnabled, ttsVoiceId, setTTSVoiceId, ttsPitch, setTTSPitch,
 		ttsRate, setTTSRate, ttsVolume, setTTSVolume, ttsSpeakInputs, setTTSSpeakInputs, ttsMaxUserInput, setTTSMaxUserInput,
 		useServerTokenization, setUseServerTokenization, tokenizerModel, setTokenizerModel,
 		screenshotIncludeSessionName, setScreenshotIncludeSessionName, screenshotIncludeDate, setScreenshotIncludeDate,

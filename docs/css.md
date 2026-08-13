@@ -1,6 +1,6 @@
 # CSS Architecture
 
-Styles are organized into 20 partial files under `src/css/`, imported via `src/styles.css`. Each partial targets a specific component or logical group.
+Styles are organized into 21 partial files under `src/css/`, imported via `src/styles.css`. Each partial targets a specific component or logical group.
 
 ## Import Order
 
@@ -26,6 +26,7 @@ The ordering in `src/styles.css` is intentional — variables and base reset loa
 @import './css/_quick-switcher.css';    # Quick Switcher overlay
 @import './css/_connections.css';       # Connection Manager presets UI
 @import './css/_sampler-presets.css';    # Sampler Preset Manager UI
+@import './css/_markdown-decorations.css'; # Markdown decorations in the prompt editor
 @import './css/_responsive.css';        # Global media queries
 ```
 
@@ -44,6 +45,7 @@ The ordering in `src/styles.css` is intentional — variables and base reset loa
 | `_horde.css` | AI Horde integration panel: queue status, worker info, settings. |
 | `_connections.css` | Connection Manager modal: sidebar/detail layout, model list, error messages, mobile-responsive toggle. |
 | `_sampler-presets.css` | Sampler Preset Manager modal: sidebar/detail layout, import/export actions, mobile-responsive toggle. |
+| `_markdown-decorations.css` | Markdown decoration classes (`.pm-md-*`) rendered inside the ProseMirror prompt editor in wysiwyg mode. |
 | `_sidebar.css` | Main sidebar layout: width, collapse states, drag resize, scroll. |
 | `_sessions.css` | Sessions browser modal: session cards, search bar, sort controls, action buttons. |
 | `_form-controls.css` | Shared form element styling: text inputs, selects, checkboxes, radio buttons, range sliders, number inputs. |

@@ -1,6 +1,6 @@
 import { html } from 'htm/react';
 import { useEffect, useLayoutEffect, useRef } from 'react';
-import { EditorState, Plugin, TextSelection } from 'prosemirror-state';
+import { EditorState, TextSelection } from 'prosemirror-state';
 import { EditorView } from 'prosemirror-view';
 import { keymap } from 'prosemirror-keymap';
 import { baseKeymap } from 'prosemirror-commands';
@@ -13,6 +13,7 @@ import { SVG_Settings, SVG_SearchAndReplace, SVG_SplitView, SVG_Camera } from '.
 import { SearchAndReplaceWidget } from './SearchAndReplaceWidget';
 import { useScreenshotCapture } from '../hooks/useScreenshotCapture';
 import { chunkDecorationPlugin, chunkDecorationKey, type ChunkDecorationState } from '../editor/chunkDecorations';
+import { markdownDecorationPlugin, markdownDecorationKey } from '../editor/markdownDecorations';
 import { diffPromptChunksWithMeta, applyChunksToPM, textToDoc } from '../editor/syncReactToPM';
 import { ProseMirrorAdapter } from '../editor/EditorAdapter';
 import { schema } from '../editor/schema';
@@ -20,38 +21,9 @@ import type { PromptContainerProps } from '../types/components';
 
 const UNDO_COALESCE_MS = 500;
 
-function scrollSyncPlugin(
-	isSyncingScroll: { current: boolean },
-	markdownPreviewRef: { current: HTMLDivElement | null },
-	promptContainerRef: { current: HTMLDivElement | null }
-) {
-	return new Plugin({
-		view() {
-			const container = promptContainerRef.current;
-			if (!container) return { destroy() {} };
-			const scrollEl: HTMLElement = container;
-			function onScroll() {
-				if (isSyncingScroll.current) return;
-				const preview = markdownPreviewRef.current;
-				if (!preview) return;
-				const ratio = scrollEl.scrollTop / Math.max(1, scrollEl.scrollHeight - scrollEl.clientHeight);
-				isSyncingScroll.current = true;
-				preview.scrollTop = ratio * (preview.scrollHeight - preview.clientHeight);
-				requestAnimationFrame(() => { isSyncingScroll.current = false; });
-			}
-			container.addEventListener('scroll', onScroll, { passive: true });
-			return {
-				destroy() {
-					container.removeEventListener('scroll', onScroll);
-				},
-			};
-		},
-	});
-}
-
 export function PromptContainer({ sidebarHeight }: PromptContainerProps) {
-	const { showMarkdownPreview, setShowMarkdownPreview, isMobile, tokenHighlightMode, tokenColorMode, promptAreaWidth, setPromptAreaWidth, showProbsMode, setShowProbsMode, spellCheck } = useSettings();
-	const { promptEditorView, setPromptEditorVersion, promptChunks, setPromptChunks, currentPromptChunk, setCurrentPromptChunk, undoHovered, setUndoHovered, undoStack, redoStack, lastEditMsRef, showProbs, setShowProbs, cancel, markdownPreviewRef, isSyncingScroll, keyState, probsDelayTimer, modalState, closeModal, toggleModal, setTriggerPredict } = useGeneration();
+	const { editorMode, setEditorMode, isMobile, tokenHighlightMode, tokenColorMode, promptAreaWidth, setPromptAreaWidth, showProbsMode, setShowProbsMode, spellCheck } = useSettings();
+	const { promptEditorView, setPromptEditorVersion, promptChunks, setPromptChunks, currentPromptChunk, setCurrentPromptChunk, undoHovered, setUndoHovered, undoStack, redoStack, lastEditMsRef, showProbs, setShowProbs, cancel, keyState, probsDelayTimer, modalState, closeModal, toggleModal, setTriggerPredict } = useGeneration();
 	const { promptText } = usePromptBuilder();
 	const { undo, redo, undoAndPredict } = useGenerationLogic();
 	const t = useT();
@@ -60,6 +32,7 @@ export function PromptContainer({ sidebarHeight }: PromptContainerProps) {
 	const promptContainerRef = useRef<HTMLDivElement>(null);
 	const editorRef = useRef<HTMLDivElement>(null);
 	const viewRef = useRef<EditorView>(null);
+	const mdModeRef = useRef(editorMode === 'wysiwyg');
 	const lastPromptChunksRef = useRef<PromptChunk[]>([]);
 	const suppressSyncRef = useRef(false);
 	const lastMouseToken = useRef<string | null>(null);
@@ -80,6 +53,7 @@ export function PromptContainer({ sidebarHeight }: PromptContainerProps) {
 			doc: textToDoc(schema, initialText),
 			plugins: [
 				chunkDecorationPlugin,
+				markdownDecorationPlugin(mdModeRef),
 				keymap({
 					'Mod-z': () => { if (cancelRef.current) (cancelRef.current as () => void)(); undoRef.current(); return true; },
 					'Mod-y': () => { if (cancelRef.current) (cancelRef.current as () => void)(); redoRef.current(); return true; },
@@ -90,7 +64,6 @@ export function PromptContainer({ sidebarHeight }: PromptContainerProps) {
 				}),
 				keymap({ 'Mod-Enter': () => { setTriggerPredict(true); return true; } }),
 				keymap(baseKeymap),
-				scrollSyncPlugin(isSyncingScroll, markdownPreviewRef, editorRef),
 			],
 		});
 		const view = new EditorView(editorRef.current, {
@@ -201,6 +174,13 @@ export function PromptContainer({ sidebarHeight }: PromptContainerProps) {
 	useEffect(() => {
 		viewRef.current?.setProps({ attributes: { spellcheck: String(spellCheck) } });
 	}, [spellCheck]);
+
+	useEffect(() => {
+		mdModeRef.current = editorMode === 'wysiwyg';
+		// meta-only transaction: forces the plugin to rebuild (or clear)
+		// decorations without touching the document
+		viewRef.current?.dispatch(viewRef.current.state.tr.setMeta(markdownDecorationKey, true));
+	}, [editorMode]);
 
 	useEffect(() => {
 		function onKeyDown(e: KeyboardEvent) {
@@ -390,7 +370,7 @@ export function PromptContainer({ sidebarHeight }: PromptContainerProps) {
 	}
 
 	return html`
-		<div ref=${promptContainerRef} id="prompt-container" onMouseMove=${onEditorMouseMove} style=${{ 'margin-bottom': isMobile && !showMarkdownPreview ? sidebarHeight + 'px' : 0 }}>
+		<div ref=${promptContainerRef} id="prompt-container" onMouseMove=${onEditorMouseMove} style=${{ 'margin-bottom': isMobile ? sidebarHeight + 'px' : 0 }}>
 			<div style=${{ position: 'sticky', top: 0, zIndex: 1 }}>
 				<button
 					title=${t('prompt.preferences')}
@@ -406,10 +386,10 @@ export function PromptContainer({ sidebarHeight }: PromptContainerProps) {
 					<${SVG_SearchAndReplace} style=${{ "height": "1.3em" }} />
 				</button>
 				<button
-					title=${t('prompt.toggleMarkdownPreview')}
+					title=${t('prompt.toggleMarkdownMode')}
 					style=${{ "margin-top": "3em" }}
-					className="textAreaSettings"
-					onClick=${() => setShowMarkdownPreview((p: boolean) => !p)}>
+					className=${editorMode === 'wysiwyg' ? 'textAreaSettings textAreaSettings-markdown-active' : 'textAreaSettings'}
+					onClick=${() => setEditorMode((m: 'source' | 'wysiwyg') => m === 'source' ? 'wysiwyg' : 'source')}>
 					<${SVG_SplitView}/>
 				</button>
 				<button

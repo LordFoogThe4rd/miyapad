@@ -2,6 +2,10 @@
 
 ## [???] - unreleased
 
+### Added
+
+- Markdown formatting mode for the prompt editor: a toolbar toggle switches between plain source text and in-place styled rendering (headings, bold, italics, strikethrough, blockquotes, lists, tables, horizontal rules)
+
 ### Changed
 
 - Server now always listens on `127.0.0.1` by default; additional addresses are opt-in via `--host` or `MIYAPAD_HOST`

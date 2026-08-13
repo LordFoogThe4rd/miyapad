@@ -1,0 +1,42 @@
+/* Markdown decorations rendered inside the ProseMirror prompt editor (wysiwyg
+   mode). Node decorations style whole paragraphs; inline decorations style the
+   content between markers. Markers stay visible. */
+
+#pm-editor .pm-md-heading-h1 { font-size: 2em; font-weight: 700; margin: 0.4em 0; }
+#pm-editor .pm-md-heading-h2 { font-size: 1.7em; font-weight: 700; margin: 0.35em 0; }
+#pm-editor .pm-md-heading-h3 { font-size: 1.4em; font-weight: 700; margin: 0.3em 0; }
+#pm-editor .pm-md-heading-h4 { font-size: 1.2em; font-weight: 700; margin: 0.25em 0; }
+#pm-editor .pm-md-heading-h5 { font-size: 1.1em; font-weight: 700; margin: 0.2em 0; }
+#pm-editor .pm-md-heading-h6 { font-size: 1em; font-weight: 700; text-transform: uppercase; }
+
+#pm-editor .pm-md-strong { font-weight: 700; }
+#pm-editor .pm-md-em { font-style: italic; }
+#pm-editor .pm-md-del { text-decoration: line-through; }
+
+#pm-editor .pm-md-blockquote {
+	border-left: 3px solid var(--color-bg-rule);
+	padding-left: 1em;
+	color: var(--color-text-hint);
+}
+
+#pm-editor .pm-md-list {
+	padding-left: 1.5em;
+}
+
+#pm-editor .pm-md-table,
+#pm-editor .pm-md-table-header,
+#pm-editor .pm-md-table-row {
+	border-bottom: 1px solid var(--color-bg-rule);
+	font-family: var(--editor-font-family, monospace);
+}
+#pm-editor .pm-md-table-header { font-weight: 700; }
+
+#pm-editor .pm-md-hr {
+	position: relative;
+	color: transparent;
+	border-bottom: 2px solid var(--color-bg-rule);
+}
+
+button.textAreaSettings.textAreaSettings-markdown-active {
+	color: var(--color-svg-1);
+}

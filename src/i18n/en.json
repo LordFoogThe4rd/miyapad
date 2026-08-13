@@ -273,7 +273,7 @@
   "prompt.searchAndReplace": "Search & Replace",
   "prompt.tab": "Tab",
   "prompt.takeScreenshot": "Take Screenshot",
-  "prompt.toggleMarkdownPreview": "Toggle Markdown Preview",
+  "prompt.toggleMarkdownMode": "Toggle Markdown Mode",
   "quickSwitcher.noSessions": "No sessions found",
   "quickSwitcher.searchPlaceholder": "Search sessions…",
   "samplerPreset.addNew": "Add New",

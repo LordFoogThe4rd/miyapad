@@ -16,8 +16,6 @@ export function GenerationProvider({ children, useSessionState }: { children: Re
 	const sessionReconnectTimer = useRef<number | undefined>(undefined);
 	const useScrollSmoothing = useRef(true);
 	const hordeTaskId = useRef<string | undefined>(undefined);
-	const markdownPreviewRef = useRef<HTMLDivElement>(null);
-	const isSyncingScroll = useRef(false);
 	const lastEditMsRef = useRef(0);
 
 	const [promptChunks, setPromptChunks] = useSessionState('prompt', defaultPresets.prompt);
@@ -76,7 +74,7 @@ export function GenerationProvider({ children, useSessionState }: { children: Re
 
 	const state = {
 		promptEditorView, promptEditorVersion, setPromptEditorVersion, replaceEditorText, undoStack, redoStack, probsDelayTimer, keyState, sessionReconnectTimer,
-		useScrollSmoothing, hordeTaskId, markdownPreviewRef, isSyncingScroll, lastEditMsRef,
+		useScrollSmoothing, hordeTaskId, lastEditMsRef,
 		promptChunks, setPromptChunks, currentPromptChunk, setCurrentPromptChunk, undoHovered, setUndoHovered,
 		showProbs, setShowProbs, cancel, setCancel, sessionEndpointConnecting, setSessionEndpointConnecting,
 		sessionEndpointError, setSessionEndpointError, rejectedAPIKey, setRejectedAPIKey, openaiModels, setOpenaiModels,
