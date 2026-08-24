@@ -305,6 +305,48 @@ describe('integration: PM editor with chunk decorations', () => {
 
 		disposeView(view, container);
 	});
+
+	it('keeps the erase range growing across a streaming append', () => {
+		const { view, container } = createView('ab');
+		view.dispatch(view.state.tr.setMeta(chunkDecorationKey, makeDecoState({ chunks: [u('a'), m('b')] })));
+		view.dispatch(view.state.tr.setMeta(chunkHoverKey, makeHoverState({ chunks: [u('a'), m('b')], undoHovered: 1 })));
+
+		// applyChunksToPM's incremental path inserts at docSize - 1, exactly on
+		// the erase decoration's end edge; the rebuild-on-base-meta path must
+		// re-derive it instead of mapping (mapping leaves the new char outside).
+		view.dispatch(
+			view.state.tr.insertText('c', view.state.doc.content.size - 1)
+				.setMeta(chunkDecorationKey, makeDecoState({ chunks: [u('a'), m('bc')] })),
+		);
+
+		const spans = container.querySelectorAll('[data-promptchunk]');
+		expect(spans.length).toBe(2);
+		expect(spans[1].textContent).toBe('bc');
+		expect(spans[1].className).toContain('erase');
+
+		disposeView(view, container);
+	});
+
+	it('restores the hovered outline across a full document replacement', () => {
+		const { view, container } = createView('ab');
+		view.dispatch(view.state.tr.setMeta(chunkDecorationKey, makeDecoState({ chunks: [u('a'), m('b')] })));
+		view.dispatch(view.state.tr.setMeta(chunkHoverKey, makeHoverState({ chunks: [u('a'), m('b')], currentPromptChunk: 1 })));
+
+		// A multi-line streamed suffix takes the replaceWith path in
+		// applyChunksToPM, which maps the hover decorations away entirely.
+		const newDoc = textToDoc(schema, 'a\ncd');
+		view.dispatch(
+			view.state.tr.replaceWith(0, view.state.doc.content.size, newDoc.content)
+				.setMeta(chunkDecorationKey, makeDecoState({ chunks: [u('a'), m('\ncd')] })),
+		);
+
+		const spans = container.querySelectorAll('[data-promptchunk]');
+		expect(spans.length).toBe(2);
+		expect(spans[1].textContent).toBe('cd');
+		expect(spans[1].className).toContain('current');
+
+		disposeView(view, container);
+	});
 });
 
 describe('applyChunksToPM selection preservation', () => {

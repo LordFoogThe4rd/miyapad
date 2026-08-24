@@ -143,7 +143,13 @@ export const chunkDecorationPlugin = new Plugin({
 	},
 });
 
-export const chunkHoverKey = new PluginKey<DecorationSet>('chunkHoverDecorations');
+interface ChunkHoverPluginState {
+	decos: DecorationSet;
+	/** Last dispatched hover state, kept so a base-chunk rebuild can re-derive these decorations. */
+	hover: ChunkHoverState | null;
+}
+
+export const chunkHoverKey = new PluginKey<ChunkHoverPluginState>('chunkHoverDecorations');
 
 /**
  * Hover-only decorations (the `current` outline and the `erase` range), kept in
@@ -202,18 +208,35 @@ function buildHoverDecorations(state: ChunkHoverState, doc: Node, flatTextLen: n
 export const chunkHoverPlugin = new Plugin({
 	key: chunkHoverKey,
 	state: {
-		init() { return DecorationSet.empty; },
-		apply(tr, decorations) {
-			const meta = tr.getMeta(chunkHoverKey);
-			if (meta) {
-				return DecorationSet.create(tr.doc, buildHoverDecorations(meta, tr.doc, flatTextLength(tr.doc)));
+		init(): ChunkHoverPluginState { return { decos: DecorationSet.empty, hover: null }; },
+		apply(tr, { decos, hover }) {
+			const hoverMeta = tr.getMeta(chunkHoverKey);
+			if (hoverMeta) {
+				return {
+					decos: DecorationSet.create(tr.doc, buildHoverDecorations(hoverMeta, tr.doc, flatTextLength(tr.doc))),
+					hover: hoverMeta,
+				};
 			}
-			return decorations.map(tr.mapping, tr.doc);
+			// Mapping alone is not enough when the base set rebuilds: a streaming
+			// append lands exactly on a deco's end edge (insert at docSize - 1) and
+			// with inclusiveEnd=false does not extend it, and a full replaceWith
+			// maps the decorations away entirely. Re-derive from the stored indices
+			// against the fresh chunks carried by the base meta — cheap, since the
+			// walk is arithmetic and `create` gets at most two decorations.
+			const baseMeta = tr.getMeta(chunkDecorationKey);
+			if (baseMeta && hover && (hover.currentPromptChunk !== null || hover.undoHovered !== null)) {
+				const next = { ...hover, chunks: baseMeta.chunks };
+				return {
+					decos: DecorationSet.create(tr.doc, buildHoverDecorations(next, tr.doc, flatTextLength(tr.doc))),
+					hover: next,
+				};
+			}
+			return { decos: decos.map(tr.mapping, tr.doc), hover };
 		},
 	},
 	props: {
 		decorations(state) {
-			return chunkHoverKey.getState(state);
+			return chunkHoverKey.getState(state)?.decos;
 		},
 	},
 });

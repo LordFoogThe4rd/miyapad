@@ -31,4 +31,12 @@ describe('docText / flatTextLength', () => {
 		expect(docText(a)).toBe('one');
 		expect(docText(b)).toBe('two');
 	});
+
+	it('schema stays paragraph/text-only, keeping flatTextLength exact', () => {
+		const doc = textToDoc(schema, 'a\n\nb');
+		doc.forEach((para) => {
+			expect(para.type.name).toBe('paragraph');
+			para.forEach((inline) => expect(inline.isText).toBe(true));
+		});
+	});
 });
