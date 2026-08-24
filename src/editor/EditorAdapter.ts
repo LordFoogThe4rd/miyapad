@@ -2,6 +2,7 @@ import type { EditorView as PMEditorView } from 'prosemirror-view';
 import { TextSelection } from 'prosemirror-state';
 import { textOffsetToPMPos, pmPosToTextOffset } from './chunkDecorations';
 import { textToDoc } from './syncReactToPM';
+import { docText } from './docText';
 
 export interface EditorAdapter {
   getText(): string;
@@ -24,7 +25,7 @@ export class ProseMirrorAdapter implements EditorAdapter {
   constructor(private view: PMEditorView, private scroller?: HTMLElement | null) {}
 
   getText(): string {
-    return this.view.state.doc.textBetween(0, this.view.state.doc.content.size, '\n');
+    return docText(this.view.state.doc);
   }
 
   getSelection(): { from: number; to: number } {
@@ -35,7 +36,7 @@ export class ProseMirrorAdapter implements EditorAdapter {
   replaceText(newText: string): void {
     const { doc } = this.view.state;
     // Compare using the same \n-separated representation as getText()
-    if (newText === doc.textBetween(0, doc.content.size, '\n')) return;
+    if (newText === docText(doc)) return;
     const newDoc = textToDoc(this.view.state.schema, newText);
     this.view.dispatch(
       this.view.state.tr.replaceWith(0, doc.content.size, newDoc.content)

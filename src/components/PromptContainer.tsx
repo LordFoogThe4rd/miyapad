@@ -15,6 +15,7 @@ import { useScreenshotCapture } from '../hooks/useScreenshotCapture';
 import { chunkDecorationPlugin, chunkDecorationKey, chunkHoverPlugin, chunkHoverKey, type ChunkDecorationState, type ChunkHoverState } from '../editor/chunkDecorations';
 import { markdownDecorationPlugin, markdownDecorationKey } from '../editor/markdownDecorations';
 import { diffPromptChunksWithMeta, applyChunksToPM, textToDoc } from '../editor/syncReactToPM';
+import { docText, flatTextLength } from '../editor/docText';
 import { ProseMirrorAdapter } from '../editor/EditorAdapter';
 import { schema } from '../editor/schema';
 import type { PromptContainerProps } from '../types/components';
@@ -79,7 +80,7 @@ export function PromptContainer({ sidebarHeight }: PromptContainerProps) {
 				const newState = view.state.apply(tr);
 				view.updateState(newState);
 				if (tr.docChanged && !suppressSyncRef.current) {
-					const newDoc = newState.doc.textBetween(0, newState.doc.content.size, '\n');
+					const newDoc = docText(newState.doc);
 					const prevChunks = lastPromptChunksRef.current;
 					const { chunks: newChunks } = diffPromptChunksWithMeta(prevChunks, newDoc);
 					// Snapshot the pre-edit chunks as an undo checkpoint so the user's edit is
@@ -121,7 +122,8 @@ export function PromptContainer({ sidebarHeight }: PromptContainerProps) {
 		const view = viewRef.current;
 		if (!view) return;
 		const newText = promptChunks.map((c: PromptChunk) => c.content).join('');
-		const textChanged = newText !== view.state.doc.textBetween(0, view.state.doc.content.size, '\n');
+		// cheap length check first; the memoised string comparison only runs on a match
+		const textChanged = newText.length !== flatTextLength(view.state.doc) || newText !== docText(view.state.doc);
 		const decoState: ChunkDecorationState = {
 			chunks: promptChunks, tokenColorMode, tokenHighlightMode,
 		};

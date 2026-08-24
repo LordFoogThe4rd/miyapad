@@ -1,6 +1,7 @@
 import { Plugin, PluginKey } from 'prosemirror-state';
 import { Decoration, DecorationSet } from 'prosemirror-view';
 import type { Node } from 'prosemirror-model';
+import { flatTextLength } from './docText';
 
 export interface ChunkDecorationState {
 	chunks: PromptChunk[];
@@ -130,8 +131,7 @@ export const chunkDecorationPlugin = new Plugin({
 		apply(tr, decorations) {
 			const meta = tr.getMeta(chunkDecorationKey);
 			if (meta) {
-				const flatTextLen = tr.doc.textBetween(0, tr.doc.content.size, '\n').length;
-				return DecorationSet.create(tr.doc, buildDecorations(meta, tr.doc, flatTextLen));
+				return DecorationSet.create(tr.doc, buildDecorations(meta, tr.doc, flatTextLength(tr.doc)));
 			}
 			return decorations.map(tr.mapping, tr.doc);
 		},
@@ -206,8 +206,7 @@ export const chunkHoverPlugin = new Plugin({
 		apply(tr, decorations) {
 			const meta = tr.getMeta(chunkHoverKey);
 			if (meta) {
-				const flatTextLen = tr.doc.textBetween(0, tr.doc.content.size, '\n').length;
-				return DecorationSet.create(tr.doc, buildHoverDecorations(meta, tr.doc, flatTextLen));
+				return DecorationSet.create(tr.doc, buildHoverDecorations(meta, tr.doc, flatTextLength(tr.doc)));
 			}
 			return decorations.map(tr.mapping, tr.doc);
 		},

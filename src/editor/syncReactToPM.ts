@@ -3,6 +3,7 @@ import { AllSelection, TextSelection } from 'prosemirror-state';
 import type { EditorView } from 'prosemirror-view';
 import { chunkDecorationKey, type ChunkDecorationState } from './chunkDecorations';
 import { pmPosToTextOffset, textOffsetToPMPos } from './chunkDecorations';
+import { docText } from './docText';
 
 /**
  * Appends newContent to trailing user chunks, collapsing adjacent user chunks into one.
@@ -76,7 +77,7 @@ export function applyChunksToPM(
 	scroller?: HTMLElement | null,
 ): void {
 	const newText = newChunks.map((c) => c.content).join('');
-	const oldText = view.state.doc.textBetween(0, view.state.doc.content.size, '\n');
+	const oldText = docText(view.state.doc);
 
 	if (newText === oldText) return;
 

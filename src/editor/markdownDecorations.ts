@@ -3,6 +3,7 @@ import { Decoration, DecorationSet } from 'prosemirror-view';
 import type { Node } from 'prosemirror-model';
 import { marked } from 'marked';
 import type { Token, Tokens } from 'marked';
+import { docText } from './docText';
 
 /** Mirrors the persisted editorMode setting; read whenever decorations are built. */
 export interface MarkdownModeRef {
@@ -27,7 +28,7 @@ interface LineSeg {
 const INLINE_STYLE_KINDS = new Set(['strong', 'em', 'del']);
 
 export function buildMarkdownDecorations(doc: Node): DecorationSet {
-	const source = doc.textBetween(0, doc.content.size, '\n');
+	const source = docText(doc);
 	const paras: ParaEntry[] = [];
 	let flatOffset = 0;
 	doc.forEach((para, offset) => {
