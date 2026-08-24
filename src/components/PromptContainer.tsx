@@ -35,6 +35,8 @@ export function PromptContainer({ sidebarHeight }: PromptContainerProps) {
 	const viewRef = useRef<EditorView>(null);
 	const mdModeRef = useRef(editorMode === 'wysiwyg');
 	const lastPromptChunksRef = useRef<PromptChunk[]>([]);
+	// Initialised to a null hover so the first render does not dispatch an empty set
+	const lastHoverRef = useRef<{ current: number | null; erase: number | null; mode: number }>({ current: null, erase: null, mode: tokenHighlightMode });
 	const suppressSyncRef = useRef(false);
 	const lastMouseToken = useRef<string | null>(null);
 	const lastMousePos = useRef({ x: 0, y: 0 });
@@ -142,10 +144,19 @@ export function PromptContainer({ sidebarHeight }: PromptContainerProps) {
 		if (!view) return;
 		const lastUndo = undoStack.current.length > 0 ? undoStack.current[undoStack.current.length - 1] : null;
 		const undoHoveredPos = undoHovered && typeof lastUndo === 'number' ? lastUndo : null;
+		const currentIdx = currentPromptChunk?.index ?? null;
+		// currentPromptChunk's object identity changes on every mouse move within a
+		// chunk; skip the dispatch when the index/mode tuple is unchanged.
+		if (lastHoverRef.current.current === currentIdx
+			&& lastHoverRef.current.erase === undoHoveredPos
+			&& lastHoverRef.current.mode === tokenHighlightMode) {
+			return;
+		}
+		lastHoverRef.current = { current: currentIdx, erase: undoHoveredPos, mode: tokenHighlightMode };
 		const hoverState: ChunkHoverState = {
 			chunks: lastPromptChunksRef.current,
 			tokenHighlightMode,
-			currentPromptChunk: currentPromptChunk?.index ?? null,
+			currentPromptChunk: currentIdx,
 			undoHovered: undoHoveredPos,
 		};
 		// meta-only transaction: docChanged stays false, no sync guard needed
