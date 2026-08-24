@@ -9,6 +9,7 @@
 ### Changed
 
 - Server now always listens on `127.0.0.1` by default; additional addresses are opt-in via `--host` or `MIYAPAD_HOST`
+- Hovering tokens in a long prompt no longer stutters
 
 ## [2.7.0] - 2026-08-11
 

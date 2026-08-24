@@ -12,7 +12,7 @@ import { useT } from '../i18n';
 import { SVG_Settings, SVG_SearchAndReplace, SVG_SplitView, SVG_Camera } from './icons/index';
 import { SearchAndReplaceWidget } from './SearchAndReplaceWidget';
 import { useScreenshotCapture } from '../hooks/useScreenshotCapture';
-import { chunkDecorationPlugin, chunkDecorationKey, type ChunkDecorationState } from '../editor/chunkDecorations';
+import { chunkDecorationPlugin, chunkDecorationKey, chunkHoverPlugin, chunkHoverKey, type ChunkDecorationState, type ChunkHoverState } from '../editor/chunkDecorations';
 import { markdownDecorationPlugin, markdownDecorationKey } from '../editor/markdownDecorations';
 import { diffPromptChunksWithMeta, applyChunksToPM, textToDoc } from '../editor/syncReactToPM';
 import { ProseMirrorAdapter } from '../editor/EditorAdapter';
@@ -53,6 +53,7 @@ export function PromptContainer({ sidebarHeight }: PromptContainerProps) {
 			doc: textToDoc(schema, initialText),
 			plugins: [
 				chunkDecorationPlugin,
+				chunkHoverPlugin,
 				markdownDecorationPlugin(mdModeRef),
 				keymap({
 					'Mod-z': () => { if (cancelRef.current) (cancelRef.current as () => void)(); undoRef.current(); return true; },
@@ -102,7 +103,6 @@ export function PromptContainer({ sidebarHeight }: PromptContainerProps) {
 		lastPromptChunksRef.current = promptChunks;
 		const decoState: ChunkDecorationState = {
 			chunks: promptChunks, tokenColorMode, tokenHighlightMode,
-			currentPromptChunk: null, undoHovered: null,
 		};
 		const endPos = view.state.doc.content.size - 1;
 		const tr = view.state.tr
@@ -115,17 +115,15 @@ export function PromptContainer({ sidebarHeight }: PromptContainerProps) {
 		};
 	}, []);
 
+	// Declared before the hover effect: React runs effects in declaration order
+	// within a commit, which keeps lastPromptChunksRef fresh for the hover one.
 	useEffect(() => {
 		const view = viewRef.current;
 		if (!view) return;
 		const newText = promptChunks.map((c: PromptChunk) => c.content).join('');
 		const textChanged = newText !== view.state.doc.textBetween(0, view.state.doc.content.size, '\n');
-		const lastUndo = undoStack.current.length > 0 ? undoStack.current[undoStack.current.length - 1] : null;
-		const undoHoveredPos = undoHovered && typeof lastUndo === 'number' ? lastUndo : null;
 		const decoState: ChunkDecorationState = {
 			chunks: promptChunks, tokenColorMode, tokenHighlightMode,
-			currentPromptChunk: currentPromptChunk?.index ?? null,
-			undoHovered: undoHoveredPos,
 		};
 		suppressSyncRef.current = true;
 		if (textChanged) {
@@ -135,7 +133,22 @@ export function PromptContainer({ sidebarHeight }: PromptContainerProps) {
 		}
 		lastPromptChunksRef.current = promptChunks;
 		suppressSyncRef.current = false;
-	}, [promptChunks, currentPromptChunk, tokenColorMode, tokenHighlightMode, undoHovered]);
+	}, [promptChunks, tokenColorMode, tokenHighlightMode]);
+
+	useEffect(() => {
+		const view = viewRef.current;
+		if (!view) return;
+		const lastUndo = undoStack.current.length > 0 ? undoStack.current[undoStack.current.length - 1] : null;
+		const undoHoveredPos = undoHovered && typeof lastUndo === 'number' ? lastUndo : null;
+		const hoverState: ChunkHoverState = {
+			chunks: lastPromptChunksRef.current,
+			tokenHighlightMode,
+			currentPromptChunk: currentPromptChunk?.index ?? null,
+			undoHovered: undoHoveredPos,
+		};
+		// meta-only transaction: docChanged stays false, no sync guard needed
+		view.dispatch(view.state.tr.setMeta(chunkHoverKey, hoverState));
+	}, [currentPromptChunk, undoHovered, tokenHighlightMode]);
 
 	useEffect(() => {
 		const el = editorRef.current;

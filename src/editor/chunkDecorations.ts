@@ -6,6 +6,11 @@ export interface ChunkDecorationState {
 	chunks: PromptChunk[];
 	tokenColorMode: number;
 	tokenHighlightMode: number;
+}
+
+export interface ChunkHoverState {
+	chunks: PromptChunk[];
+	tokenHighlightMode: number;
 	currentPromptChunk: number | null;
 	undoHovered: number | null;
 }
@@ -54,6 +59,10 @@ export function pmPosToTextOffset(doc: Node, pmPos: number): number {
 	return offset;
 }
 
+function chunkBaseClass(chunk: PromptChunk, tokenHighlightMode: number, isCurrent: boolean): string {
+	return (tokenHighlightMode === 1 && !isCurrent) || chunk.type === 'user' ? 'user' : 'machine';
+}
+
 function buildDecorations(state: ChunkDecorationState, doc: Node, flatTextLen: number): Decoration[] {
 	const decorations: Decoration[] = [];
 	let pos = 0;
@@ -100,19 +109,13 @@ function buildDecorations(state: ChunkDecorationState, doc: Node, flatTextLen: n
 			}
 		}
 
-		const isCurrent = state.currentPromptChunk === i;
-		const isErase = state.undoHovered !== null && state.undoHovered < state.chunks.length && i >= state.undoHovered;
-		const baseClass = (state.tokenHighlightMode === 1 && !isCurrent) || chunk.type === 'user' ? 'user' : 'machine';
-		const classes = [baseClass];
-		if (isCurrent) classes.push('current');
-		if (isErase) classes.push('erase');
-
+		const baseClass = chunkBaseClass(chunk, state.tokenHighlightMode, false);
 		const attrs: Record<string, string> = { 'data-promptchunk': String(i) };
 		if (bgColor) attrs.style = `--bg-color: ${bgColor}`;
 
 		const pmFrom = toPMPos(pos);
 		const pmTo = toPMPos(end);
-		decorations.push(Decoration.inline(pmFrom, pmTo, { class: classes.join(' '), ...attrs }));
+		decorations.push(Decoration.inline(pmFrom, pmTo, { class: baseClass, ...attrs }));
 
 		pos = end;
 	}
@@ -136,6 +139,82 @@ export const chunkDecorationPlugin = new Plugin({
 	props: {
 		decorations(state) {
 			return chunkDecorationKey.getState(state);
+		},
+	},
+});
+
+export const chunkHoverKey = new PluginKey<DecorationSet>('chunkHoverDecorations');
+
+/**
+ * Hover-only decorations (the `current` outline and the `erase` range), kept in
+ * their own plugin so moving the mouse never rebuilds the O(N) chunk set.
+ * ProseMirror merges these inline decorations with the base plugin's spans into
+ * a single DOM element, so the rendered markup is unchanged.
+ */
+function buildHoverDecorations(state: ChunkHoverState, doc: Node, flatTextLen: number): Decoration[] {
+	let pos = 0;
+	let curChunk: PromptChunk | undefined;
+	let curFrom = -1;
+	let curTo = -1;
+	let eraseFrom = -1;
+	let eraseTo = -1;
+
+	// Same skip-empty and break rules as buildDecorations so ranges stay identical
+	for (let i = 0; i < state.chunks.length; i++) {
+		const chunkLen = state.chunks[i].content.length;
+		if (chunkLen === 0) continue;
+		if (pos + chunkLen > flatTextLen) break;
+		const end = pos + chunkLen;
+
+		if (state.currentPromptChunk === i) {
+			curChunk = state.chunks[i];
+			curFrom = pos;
+			curTo = end;
+		}
+		if (state.undoHovered !== null && state.undoHovered < state.chunks.length && i >= state.undoHovered) {
+			if (eraseFrom === -1) eraseFrom = pos;
+			eraseTo = end;
+		}
+		pos = end;
+	}
+
+	const decorations: Decoration[] = [];
+	if (curChunk && curFrom !== -1) {
+		// Re-emitting the base class is intentional: in highlight mode 1 the
+		// static plugin emits `user` for every chunk and this decoration is what
+		// re-adds `machine` for the hovered one.
+		decorations.push(Decoration.inline(
+			textOffsetToPMPos(doc, curFrom),
+			textOffsetToPMPos(doc, curTo),
+			{ class: `${chunkBaseClass(curChunk, state.tokenHighlightMode, true)} current` },
+		));
+	}
+	if (eraseFrom !== -1) {
+		decorations.push(Decoration.inline(
+			textOffsetToPMPos(doc, eraseFrom),
+			textOffsetToPMPos(doc, eraseTo),
+			{ class: 'erase' },
+		));
+	}
+	return decorations;
+}
+
+export const chunkHoverPlugin = new Plugin({
+	key: chunkHoverKey,
+	state: {
+		init() { return DecorationSet.empty; },
+		apply(tr, decorations) {
+			const meta = tr.getMeta(chunkHoverKey);
+			if (meta) {
+				const flatTextLen = tr.doc.textBetween(0, tr.doc.content.size, '\n').length;
+				return DecorationSet.create(tr.doc, buildHoverDecorations(meta, tr.doc, flatTextLen));
+			}
+			return decorations.map(tr.mapping, tr.doc);
+		},
+	},
+	props: {
+		decorations(state) {
+			return chunkHoverKey.getState(state);
 		},
 	},
 });

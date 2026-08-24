@@ -6,10 +6,13 @@ import { applyChunksToPM, textToDoc } from './syncReactToPM';
 import {
 	getRatioColor,
 	chunkDecorationKey,
+	chunkDecorationPlugin,
+	chunkHoverKey,
+	chunkHoverPlugin,
 	textOffsetToPMPos,
 	pmPosToTextOffset,
-	chunkDecorationPlugin,
 	type ChunkDecorationState,
+	type ChunkHoverState,
 } from './chunkDecorations';
 
 function u(content: string): PromptChunk {
@@ -29,6 +32,14 @@ function makeDecoState(overrides: Partial<ChunkDecorationState> = {}): ChunkDeco
 		chunks: [],
 		tokenColorMode: 0,
 		tokenHighlightMode: 0,
+		...overrides,
+	};
+}
+
+function makeHoverState(overrides: Partial<ChunkHoverState> = {}): ChunkHoverState {
+	return {
+		chunks: [],
+		tokenHighlightMode: 0,
 		currentPromptChunk: null,
 		undoHovered: null,
 		...overrides,
@@ -42,7 +53,7 @@ function createDoc(text: string) {
 function createState(text: string) {
 	return EditorState.create({
 		doc: createDoc(text),
-		plugins: [chunkDecorationPlugin],
+		plugins: [chunkDecorationPlugin, chunkHoverPlugin],
 	});
 }
 
@@ -55,7 +66,7 @@ function createView(text: string): { view: EditorView; container: HTMLDivElement
 	document.body.appendChild(container);
 	const state = EditorState.create({
 		doc: createDoc(text),
-		plugins: [chunkDecorationPlugin],
+		plugins: [chunkDecorationPlugin, chunkHoverPlugin],
 	});
 	const view = new EditorView(container, { state });
 	return { view, container };
@@ -170,6 +181,16 @@ describe('chunkDecorationPlugin', () => {
 		// spec is empty when no bg color computed
 		expect(found[0].spec).toEqual({});
 	});
+
+	it('does not rebuild base decorations on a hover-only meta', () => {
+		const state = createState('abcd');
+		const s1 = dispatchDeco(state, makeDecoState({ chunks: [u('a'), m('bcd')] }));
+		const before = chunkDecorationKey.getState(s1);
+
+		const s2 = s1.apply(s1.tr.setMeta(chunkHoverKey, makeHoverState({ chunks: [u('a'), m('bcd')], currentPromptChunk: 1 })));
+
+		expect(chunkDecorationKey.getState(s2)).toBe(before);
+	});
 });
 
 describe('integration: PM editor with chunk decorations', () => {
@@ -189,7 +210,8 @@ describe('integration: PM editor with chunk decorations', () => {
 
 	it('marks current chunk with .current class', () => {
 		const { view, container } = createView('ab');
-		view.dispatch(view.state.tr.setMeta(chunkDecorationKey, makeDecoState({ chunks: [u('a'), m('b')], currentPromptChunk: 0 })));
+		view.dispatch(view.state.tr.setMeta(chunkDecorationKey, makeDecoState({ chunks: [u('a'), m('b')] })));
+		view.dispatch(view.state.tr.setMeta(chunkHoverKey, makeHoverState({ chunks: [u('a'), m('b')], currentPromptChunk: 0 })));
 
 		const spans = container.querySelectorAll('[data-promptchunk]');
 		expect(spans[0].className).toContain('current');
@@ -201,6 +223,9 @@ describe('integration: PM editor with chunk decorations', () => {
 	it('marks erase range from undoHovered', () => {
 		const { view, container } = createView('abcd');
 		view.dispatch(view.state.tr.setMeta(chunkDecorationKey, makeDecoState({
+			chunks: [u('a'), m('b'), m('c'), m('d')],
+		})));
+		view.dispatch(view.state.tr.setMeta(chunkHoverKey, makeHoverState({
 			chunks: [u('a'), m('b'), m('c'), m('d')],
 			undoHovered: 2,
 		})));
@@ -262,6 +287,21 @@ describe('integration: PM editor with chunk decorations', () => {
 
 		const spans = container.querySelectorAll('[data-promptchunk]');
 		expect(spans.length).toBeGreaterThanOrEqual(2);
+
+		disposeView(view, container);
+	});
+
+	it('re-adds machine for the hovered chunk in highlight mode 1', () => {
+		const { view, container } = createView('ab');
+		view.dispatch(view.state.tr.setMeta(chunkDecorationKey, makeDecoState({ chunks: [u('a'), m('b')], tokenHighlightMode: 1 })));
+		view.dispatch(view.state.tr.setMeta(chunkHoverKey, makeHoverState({ chunks: [u('a'), m('b')], tokenHighlightMode: 1, currentPromptChunk: 1 })));
+
+		const spans = container.querySelectorAll('[data-promptchunk]');
+		expect(spans[0].className).toContain('user');
+		expect(spans[0].className).not.toContain('machine');
+		expect(spans[0].className).not.toContain('current');
+		expect(spans[1].className).toContain('machine');
+		expect(spans[1].className).toContain('current');
 
 		disposeView(view, container);
 	});
