@@ -147,6 +147,13 @@ export function PromptContainer({ sidebarHeight }: PromptContainerProps) {
 		const currentIdx = currentPromptChunk?.index ?? null;
 		// currentPromptChunk's object identity changes on every mouse move within a
 		// chunk; skip the dispatch when the index/mode tuple is unchanged.
+		//
+		// Known soft edge, left deliberately: if chunk indices shift under a
+		// stationary pointer, the tuple below can hold a stale index until the
+		// pointer moves. It self-heals on the next base meta (which re-derives
+		// hover decorations from stored state) and never leaves decorations
+		// wiped — cosmetic lag, not the wiped-deco bug class that the
+		// rebuild-on-base-meta path in chunkHoverPlugin fixes.
 		if (lastHoverRef.current.current === currentIdx
 			&& lastHoverRef.current.erase === undoHoveredPos
 			&& lastHoverRef.current.mode === tokenHighlightMode) {
