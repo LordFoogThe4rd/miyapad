@@ -10,6 +10,7 @@
 
 - Server now always listens on `127.0.0.1` by default; additional addresses are opt-in via `--host` or `MIYAPAD_HOST`
 - Hovering tokens in a long prompt no longer stutters
+- Typing and streaming stay responsive in long prompts — the editor now updates only the part of the highlighting that changed instead of rebuilding all of it on every keystroke and every generated token
 
 ## [2.7.0] - 2026-08-11
 

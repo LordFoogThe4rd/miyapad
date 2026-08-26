@@ -1,6 +1,6 @@
-import { describe, it, expect } from 'vitest';
+import { describe, it, expect, vi } from 'vitest';
 import { EditorState } from 'prosemirror-state';
-import { EditorView } from 'prosemirror-view';
+import { DecorationSet, EditorView } from 'prosemirror-view';
 import type { Decoration } from 'prosemirror-view';
 import { schema } from './schema';
 import { textToDoc } from './syncReactToPM';
@@ -162,16 +162,16 @@ describe('markdownDecorationPlugin', () => {
 	}
 
 	it('builds decorations when active at init and stays empty when inactive', () => {
-		expect(markdownDecorationKey.getState(createState('# T', true))!.find().length).toBe(1);
-		expect(markdownDecorationKey.getState(createState('# T', false))!.find().length).toBe(0);
+		expect(markdownDecorationKey.getState(createState('# T', true))!.decos.find().length).toBe(1);
+		expect(markdownDecorationKey.getState(createState('# T', false))!.decos.find().length).toBe(0);
 	});
 
 	it('rebuilds decorations on doc changes while active', () => {
 		const state = createState('a **b**', true);
-		expect(markdownDecorationKey.getState(state)!.find().length).toBe(1);
+		expect(markdownDecorationKey.getState(state)!.decos.find().length).toBe(1);
 		const next = state.apply(state.tr.insertText('x', 1));
-		expect(markdownDecorationKey.getState(next)!.find().length).toBe(1);
-		expect(markdownDecorationKey.getState(next)!.find()[0].from).toBe(6);
+		expect(markdownDecorationKey.getState(next)!.decos.find().length).toBe(1);
+		expect(markdownDecorationKey.getState(next)!.decos.find()[0].from).toBe(6);
 	});
 
 	it('activates and deactivates via a meta transaction', () => {
@@ -180,15 +180,15 @@ describe('markdownDecorationPlugin', () => {
 			doc: textToDoc(schema, '# T'),
 			plugins: [markdownDecorationPlugin(mode)],
 		});
-		expect(markdownDecorationKey.getState(state)!.find().length).toBe(0);
+		expect(markdownDecorationKey.getState(state)!.decos.find().length).toBe(0);
 
 		mode.current = true;
 		const on = state.apply(state.tr.setMeta(markdownDecorationKey, true));
-		expect(markdownDecorationKey.getState(on)!.find().length).toBe(1);
+		expect(markdownDecorationKey.getState(on)!.decos.find().length).toBe(1);
 
 		mode.current = false;
 		const off = on.apply(on.tr.setMeta(markdownDecorationKey, true));
-		expect(markdownDecorationKey.getState(off)!.find().length).toBe(0);
+		expect(markdownDecorationKey.getState(off)!.decos.find().length).toBe(0);
 	});
 
 	it('renders decoration classes in the view DOM', () => {
@@ -199,5 +199,101 @@ describe('markdownDecorationPlugin', () => {
 		expect(container.querySelectorAll('.pm-md-strong')).toHaveLength(1);
 		view.destroy();
 		container.remove();
+	});
+});
+
+describe('markdownDecorationPlugin incremental rebuilds', () => {
+	function activeState(text: string) {
+		return EditorState.create({
+			doc: textToDoc(schema, text),
+			plugins: [markdownDecorationPlugin({ current: true })],
+		});
+	}
+
+	/** Sorted (from, to, class) triples, so two sets can be compared regardless of build order. */
+	function normalise(decos: Decoration[]): string[] {
+		return decos.map(d => `${d.from}-${d.to}:${classOf(d)}`).sort();
+	}
+
+	function pluginDecos(state: EditorState): string[] {
+		return normalise(markdownDecorationKey.getState(state)!.decos.find());
+	}
+
+	function fullDecos(state: EditorState): string[] {
+		return normalise(buildMarkdownDecorations(state.doc).find());
+	}
+
+	const SAMPLE = [
+		'# Title',
+		'',
+		'A paragraph with **bold** and *italic* and ~~struck~~ words.',
+		'',
+		'- first **item**',
+		'- second item',
+		'',
+		'> quoted **text** here',
+		'',
+		'| a | b |',
+		'| - | - |',
+		'| 1 | 2 |',
+		'',
+		'## Second heading',
+		'',
+		'Trailing paragraph with *emphasis*.',
+	].join('\n');
+
+	it('matches a full rebuild after an edit in each block', () => {
+		let state = activeState(SAMPLE);
+		// walk a caret through every paragraph, typing into each in turn
+		for (let para = 0; para < state.doc.childCount; para++) {
+			let pos = 1;
+			for (let i = 0; i < para; i++) pos += state.doc.child(i).nodeSize;
+			state = state.apply(state.tr.insertText('z', pos));
+			expect(pluginDecos(state)).toEqual(fullDecos(state));
+		}
+	});
+
+	it('matches a full rebuild across inserts, deletes, splits and joins', () => {
+		let state = activeState(SAMPLE);
+		let seed = 12345;
+		const rnd = (n: number) => {
+			seed = (seed * 1103515245 + 12345) & 0x7fffffff;
+			return seed % n;
+		};
+		for (let step = 0; step < 200; step++) {
+			const para = rnd(state.doc.childCount);
+			let start = 0;
+			for (let i = 0; i < para; i++) start += state.doc.child(i).nodeSize;
+			const len = state.doc.child(para).content.size;
+			const at = start + 1 + rnd(len + 1);
+			const kind = rnd(4);
+			let tr = state.tr;
+			if (kind === 0) tr = tr.insertText('*_# >-|`abc '[rnd(12)], at);
+			else if (kind === 1 && len > 0) tr = tr.delete(at, Math.min(at + 1, start + 1 + len));
+			else if (kind === 2) tr = tr.split(at);
+			else if (kind === 3 && para > 0) tr = tr.join(start);
+			if (!tr.docChanged) continue;
+			state = state.apply(tr);
+			expect(pluginDecos(state)).toEqual(fullDecos(state));
+		}
+	});
+
+	it('matches a full rebuild when a fence opened early reparses the rest', () => {
+		let state = activeState('text\n\n```\n\nsome **bold**\n\nmore *text*\n');
+		expect(pluginDecos(state)).toEqual(fullDecos(state));
+
+		// closing the fence turns the trailing lines back into real markdown
+		const end = state.doc.content.size - 1;
+		state = state.apply(state.tr.insertText('```', end));
+		expect(pluginDecos(state)).toEqual(fullDecos(state));
+	});
+
+	it('splices a streamed append instead of rebuilding the whole set', () => {
+		const state = activeState(SAMPLE);
+		const create = vi.spyOn(DecorationSet, 'create');
+		const next = state.apply(state.tr.insertText(' and **more**', state.doc.content.size - 1));
+		expect(create).not.toHaveBeenCalled();
+		create.mockRestore();
+		expect(pluginDecos(next)).toEqual(fullDecos(next));
 	});
 });

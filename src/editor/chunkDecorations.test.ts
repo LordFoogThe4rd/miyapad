@@ -1,6 +1,7 @@
-import { describe, it, expect } from 'vitest';
+import { describe, it, expect, vi } from 'vitest';
 import { AllSelection, EditorState } from 'prosemirror-state';
-import { EditorView } from 'prosemirror-view';
+import { DecorationSet, EditorView } from 'prosemirror-view';
+import type { Decoration } from 'prosemirror-view';
 import { schema } from './schema';
 import { applyChunksToPM, textToDoc } from './syncReactToPM';
 import {
@@ -44,6 +45,11 @@ function makeHoverState(overrides: Partial<ChunkHoverState> = {}): ChunkHoverSta
 		undoHovered: null,
 		...overrides,
 	};
+}
+
+/** The class/style/data-promptchunk pairs a decoration renders, which live on its type, not its spec. */
+function decoAttrs(deco: Decoration): Record<string, string> {
+	return (deco as unknown as { type: { attrs: Record<string, string> } }).type.attrs;
 }
 
 function createDoc(text: string) {
@@ -124,14 +130,14 @@ describe('textOffsetToPMPos / pmPosToTextOffset', () => {
 describe('chunkDecorationPlugin', () => {
 	it('has no decorations initially', () => {
 		const state = createState('hello');
-		const decos = chunkDecorationKey.getState(state)!;
+		const decos = chunkDecorationKey.getState(state)!.decos;
 		expect(decos.find().length).toBe(0);
 	});
 
 	it('builds correct number of decorations for given chunks', () => {
 		const state = createState('hi there');
 		const s = dispatchDeco(state, makeDecoState({ chunks: [u('hi'), m(' there', 0.3)], tokenColorMode: 1 }));
-		const found = chunkDecorationKey.getState(s)!.find();
+		const found = chunkDecorationKey.getState(s)!.decos.find();
 		expect(found.length).toBe(2);
 		// Positions: paragraph open token at 0, text starts at 1
 		expect(found[0].from).toBe(1);
@@ -143,10 +149,10 @@ describe('chunkDecorationPlugin', () => {
 	it('setMeta replaces all decorations', () => {
 		const state = createState('one two');
 		const s1 = dispatchDeco(state, makeDecoState({ chunks: [u('one'), m(' two')] }));
-		expect(chunkDecorationKey.getState(s1)!.find().length).toBe(2);
+		expect(chunkDecorationKey.getState(s1)!.decos.find().length).toBe(2);
 
 		const s2 = dispatchDeco(s1, makeDecoState({ chunks: [u('foo'), m('bar')] }));
-		const found = chunkDecorationKey.getState(s2)!.find();
+		const found = chunkDecorationKey.getState(s2)!.decos.find();
 		expect(found.length).toBe(2);
 		expect(found[0].to - found[0].from).toBe(3);
 	});
@@ -157,7 +163,7 @@ describe('chunkDecorationPlugin', () => {
 
 		// Insert 'X' after 'a' (PM pos 2)
 		const s2 = s1.apply(s1.tr.insertText('X', 2));
-		const found = chunkDecorationKey.getState(s2)!.find();
+		const found = chunkDecorationKey.getState(s2)!.decos.find();
 		expect(found.length).toBe(1);
 		expect(found[0].from).toBe(1);
 		expect(found[0].to).toBe(5);
@@ -166,7 +172,7 @@ describe('chunkDecorationPlugin', () => {
 	it('breaks on chunks extending beyond the flat text length', () => {
 		const state = createState('ab\ncd');
 		const s = dispatchDeco(state, makeDecoState({ chunks: [u('ab'), m('\ncd'), m('x')] }));
-		const found = chunkDecorationKey.getState(s)!.find();
+		const found = chunkDecorationKey.getState(s)!.decos.find();
 		expect(found.length).toBe(2);
 	});
 
@@ -176,10 +182,80 @@ describe('chunkDecorationPlugin', () => {
 			chunks: [m('x', 0.5, [{ tok_str: 'A', prob: 0.5 }, { tok_str: 'B', prob: 0.5 }])],
 			tokenColorMode: 2,
 		}));
-		const found = chunkDecorationKey.getState(s)!.find();
+		const found = chunkDecorationKey.getState(s)!.decos.find();
 		expect(found.length).toBe(1);
 		// spec is empty when no bg color computed
 		expect(found[0].spec).toEqual({});
+	});
+
+	it('reuses the prefix decorations when a chunk is appended', () => {
+		const kept = [u('ab'), m('cd')];
+		const state = createState('abcd');
+		const s1 = dispatchDeco(state, makeDecoState({ chunks: kept }));
+
+		// Streaming append: same chunk objects plus one, text grows at the end.
+		const s2 = s1.apply(
+			s1.tr.insertText('ef', s1.doc.content.size - 1)
+				.setMeta(chunkDecorationKey, makeDecoState({ chunks: [...kept, m('ef')] })),
+		);
+
+		const found = chunkDecorationKey.getState(s2)!.decos.find();
+		expect(found.map(d => [d.from, d.to])).toEqual([[1, 3], [3, 5], [5, 7]]);
+		expect(found.map(d => decoAttrs(d)['data-promptchunk'])).toEqual(['0', '1', '2']);
+	});
+
+	it('splices an appended chunk in without a full DecorationSet.create', () => {
+		const kept = [u('ab'), m('cd')];
+		const state = createState('abcd');
+		const s1 = dispatchDeco(state, makeDecoState({ chunks: kept }));
+
+		const create = vi.spyOn(DecorationSet, 'create');
+		s1.apply(
+			s1.tr.insertText('ef', s1.doc.content.size - 1)
+				.setMeta(chunkDecorationKey, makeDecoState({ chunks: [...kept, m('ef')] })),
+		);
+		expect(create).not.toHaveBeenCalled();
+		create.mockRestore();
+	});
+
+	it('rebuilds from the first changed chunk when the doc changed in an earlier transaction', () => {
+		const head = u('ab');
+		const state = createState('abcd');
+		const s1 = dispatchDeco(state, makeDecoState({ chunks: [head, m('cd')] }));
+
+		// A user edit reaches the plugin as a bare doc change; the chunk meta only
+		// arrives on the following transaction, so dirtyFrom has to survive it.
+		const s2 = s1.apply(s1.tr.insertText('X', 4));
+		const s3 = dispatchDeco(s2, makeDecoState({ chunks: [head, u('cXd')] }));
+
+		const found = chunkDecorationKey.getState(s3)!.decos.find();
+		expect(found.map(d => [d.from, d.to])).toEqual([[1, 3], [3, 6]]);
+		expect(decoAttrs(found[1]).class).toBe('user');
+	});
+
+	it('drops decorations left past the end when the chunks shrink', () => {
+		const kept = [u('ab'), m('cd')];
+		const state = createState('abcd');
+		const s1 = dispatchDeco(state, makeDecoState({ chunks: kept }));
+
+		// Doc loses a character with no meta, then the same chunk array is
+		// re-reported: chunk 1 no longer fits, and its decoration must not linger.
+		const s2 = s1.apply(s1.tr.delete(4, 5));
+		const s3 = dispatchDeco(s2, makeDecoState({ chunks: kept }));
+
+		const found = chunkDecorationKey.getState(s3)!.decos.find();
+		expect(found.map(d => [d.from, d.to])).toEqual([[1, 3]]);
+	});
+
+	it('rebuilds every chunk when a colour mode changes', () => {
+		const kept = [u('ab'), m('cd', 0.3)];
+		const state = createState('abcd');
+		const s1 = dispatchDeco(state, makeDecoState({ chunks: kept }));
+		const s2 = dispatchDeco(s1, makeDecoState({ chunks: kept, tokenColorMode: 1 }));
+
+		const found = chunkDecorationKey.getState(s2)!.decos.find();
+		expect(found.length).toBe(2);
+		expect(found.every(d => String(decoAttrs(d).style ?? '').includes('--bg-color'))).toBe(true);
 	});
 
 	it('does not rebuild base decorations on a hover-only meta', () => {
@@ -323,6 +399,26 @@ describe('integration: PM editor with chunk decorations', () => {
 		expect(spans.length).toBe(2);
 		expect(spans[1].textContent).toBe('bc');
 		expect(spans[1].className).toContain('erase');
+
+		disposeView(view, container);
+	});
+
+	it('keeps the earlier chunk decorations across a multi-line streamed token', () => {
+		const { view, container } = createView('ab');
+		const kept = [u('a'), m('b')];
+		view.dispatch(view.state.tr.setMeta(chunkDecorationKey, makeDecoState({ chunks: kept })));
+
+		// applyChunksToPM appends the extra paragraph instead of replacing the
+		// document, so the two existing decorations map through untouched.
+		const create = vi.spyOn(DecorationSet, 'create');
+		const next = [...kept, m('\ncd')];
+		applyChunksToPM(view, next, makeDecoState({ chunks: next }));
+		expect(create).not.toHaveBeenCalled();
+		create.mockRestore();
+
+		const spans = container.querySelectorAll('[data-promptchunk]');
+		expect([...spans].map(el => el.textContent)).toEqual(['a', 'b', 'cd']);
+		expect([...spans].map(el => el.getAttribute('data-promptchunk'))).toEqual(['0', '1', '2']);
 
 		disposeView(view, container);
 	});

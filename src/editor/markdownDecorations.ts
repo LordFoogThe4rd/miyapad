@@ -3,6 +3,7 @@ import { Decoration, DecorationSet } from 'prosemirror-view';
 import type { Node } from 'prosemirror-model';
 import { marked } from 'marked';
 import type { Token, Tokens } from 'marked';
+import { changedRange } from './changedRange';
 import { docText } from './docText';
 
 /** Mirrors the persisted editorMode setting; read whenever decorations are built. */
@@ -10,7 +11,13 @@ export interface MarkdownModeRef {
 	current: boolean;
 }
 
-export const markdownDecorationKey = new PluginKey<DecorationSet>('markdownDecorations');
+export interface MarkdownPluginState {
+	decos: DecorationSet;
+	/** Top-level tokens `decos` was built from; null while markdown mode is off. */
+	tokens: Token[] | null;
+}
+
+export const markdownDecorationKey = new PluginKey<MarkdownPluginState>('markdownDecorations');
 
 interface ParaEntry {
 	offStart: number;
@@ -27,7 +34,29 @@ interface LineSeg {
 
 const INLINE_STYLE_KINDS = new Set(['strong', 'em', 'del']);
 
-export function buildMarkdownDecorations(doc: Node): DecorationSet {
+interface MarkdownBuild {
+	decorations: Decoration[];
+	/** Every top-level token of the document, to diff the next build against. */
+	tokens: Token[];
+	/** PM range `decorations` covers, and that the caller must clear first. */
+	fromPM: number;
+	toPM: number;
+}
+
+/**
+ * Lexes the whole document and builds decorations for the top-level tokens that
+ * changed. Lexing stays whole-document on purpose: it is the cheap half (18 ms
+ * of a 97 ms rebuild at 50k chars) and re-lexing a slice is not sound, because
+ * a code fence or `> ` changes how the following lines parse. The expensive
+ * half is `DecorationSet.create`, which is O(paragraphs x decorations) — that
+ * is what narrowing the token range lets the caller skip.
+ *
+ * `prevTokens` is the token list the existing set was built from; `dirtyFrom`/
+ * `dirtyTo` bound what the transaction's steps touched, since only decorations
+ * outside that span survived `map()` intact. Pass `prevTokens` null to rebuild
+ * everything.
+ */
+function buildDecorations(doc: Node, prevTokens: Token[] | null, dirtyFrom: number, dirtyTo: number): MarkdownBuild {
 	const source = docText(doc);
 	const paras: ParaEntry[] = [];
 	let flatOffset = 0;
@@ -223,11 +252,49 @@ export function buildMarkdownDecorations(doc: Node): DecorationSet {
 	};
 
 	const tokens = marked.lexer(source, { gfm: true, breaks: true });
+	// Top-level token raws tile the source exactly, so their starts double as
+	// the block boundaries the decorations can be split on.
+	const starts: number[] = new Array(tokens.length + 1);
 	let cursor = 0;
-	for (const token of tokens) {
-		const start = cursor;
-		cursor += token.raw.length;
-		walkToken(token, start, cursor);
+	for (let i = 0; i < tokens.length; i++) {
+		starts[i] = cursor;
+		cursor += tokens[i].raw.length;
+	}
+	starts[tokens.length] = source.length;
+
+	// Block decorations cover whole paragraphs, so a token boundary sits on the
+	// node start of the paragraph it opens.
+	const boundaryPM = (offset: number): number =>
+		offset >= source.length ? doc.content.size : paras[paraIndexAt(offset)].nodeStart;
+	const atLineStart = (offset: number): boolean =>
+		offset === 0 || offset >= source.length || source.charCodeAt(offset - 1) === 10;
+
+	let from = 0;
+	let to = tokens.length;
+	if (prevTokens) {
+		const maxCommon = Math.min(prevTokens.length, tokens.length);
+		while (from < maxCommon && prevTokens[from].raw === tokens[from].raw) from++;
+		let suffix = 0;
+		while (suffix < maxCommon - from
+			&& prevTokens[prevTokens.length - 1 - suffix].raw === tokens[tokens.length - 1 - suffix].raw) suffix++;
+		to = tokens.length - suffix;
+		// Identical raw is not enough on its own: a decoration only survives if
+		// the steps left its positions alone.
+		while (from > 0 && boundaryPM(starts[from]) > dirtyFrom) from--;
+		while (to < tokens.length && boundaryPM(starts[to]) < dirtyTo) to++;
+		// Should never fire — every block token starts on its own line. Rebuild
+		// wholesale rather than split the set on a position mid-paragraph.
+		if (!atLineStart(starts[from]) || !atLineStart(starts[to])) {
+			from = 0;
+			to = tokens.length;
+		}
+	}
+
+	let walkCursor = starts[from];
+	for (let i = from; i < to; i++) {
+		const start = walkCursor;
+		walkCursor += tokens[i].raw.length;
+		walkToken(tokens[i], start, walkCursor);
 	}
 
 	for (const [idx, classes] of nodeClasses) {
@@ -235,28 +302,51 @@ export function buildMarkdownDecorations(doc: Node): DecorationSet {
 		decorations.push(Decoration.node(p.nodeStart, p.nodeStart + p.nodeSize, { class: classes.join(' ') }));
 	}
 
-	return DecorationSet.create(doc, decorations);
+	return { decorations, tokens, fromPM: boundaryPM(starts[from]), toPM: boundaryPM(starts[to]) };
 }
 
-export function markdownDecorationPlugin(mode: MarkdownModeRef): Plugin<DecorationSet> {
-	return new Plugin<DecorationSet>({
+/** Full-document build, for the initial set and whenever reuse is not possible. */
+export function buildMarkdownDecorations(doc: Node): DecorationSet {
+	return DecorationSet.create(doc, buildDecorations(doc, null, 0, doc.content.size).decorations);
+}
+
+const INACTIVE: MarkdownPluginState = { decos: DecorationSet.empty, tokens: null };
+
+function fullBuild(doc: Node): MarkdownPluginState {
+	const built = buildDecorations(doc, null, 0, doc.content.size);
+	return { decos: DecorationSet.create(doc, built.decorations), tokens: built.tokens };
+}
+
+export function markdownDecorationPlugin(mode: MarkdownModeRef): Plugin<MarkdownPluginState> {
+	return new Plugin<MarkdownPluginState>({
 		key: markdownDecorationKey,
 		state: {
-			init(_config, state) {
-				return mode.current ? buildMarkdownDecorations(state.doc) : DecorationSet.empty;
+			init(_config, state): MarkdownPluginState {
+				return mode.current ? fullBuild(state.doc) : INACTIVE;
 			},
-			apply(tr, decorations) {
+			apply(tr, prev): MarkdownPluginState {
 				if (tr.getMeta(markdownDecorationKey)) {
-					return mode.current ? buildMarkdownDecorations(tr.doc) : DecorationSet.empty;
+					return mode.current ? fullBuild(tr.doc) : INACTIVE;
 				}
-				if (!mode.current) return DecorationSet.empty;
-				if (tr.docChanged) return buildMarkdownDecorations(tr.doc);
-				return decorations.map(tr.mapping, tr.doc);
+				if (!mode.current) return INACTIVE;
+				if (!tr.docChanged) return prev;
+				if (!prev.tokens) return fullBuild(tr.doc);
+				const dirty = changedRange(tr);
+				const built = buildDecorations(tr.doc, prev.tokens, dirty.from, dirty.to);
+				if (built.fromPM === 0 && built.toPM >= tr.doc.content.size) {
+					return { decos: DecorationSet.create(tr.doc, built.decorations), tokens: built.tokens };
+				}
+				const mapped = prev.decos.map(tr.mapping, tr.doc);
+				// find() is inclusive at both ends and the rebuilt range is bounded
+				// by paragraph node starts, so drop only what falls fully inside it.
+				const stale = mapped.find(built.fromPM, built.toPM)
+					.filter(deco => deco.from >= built.fromPM && deco.to <= built.toPM);
+				return { decos: mapped.remove(stale).add(tr.doc, built.decorations), tokens: built.tokens };
 			},
 		},
 		props: {
 			decorations(state) {
-				return markdownDecorationKey.getState(state) || DecorationSet.empty;
+				return markdownDecorationKey.getState(state)?.decos || DecorationSet.empty;
 			},
 		},
 	});

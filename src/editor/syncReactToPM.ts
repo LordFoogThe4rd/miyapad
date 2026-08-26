@@ -99,6 +99,29 @@ export function applyChunksToPM(
 		let tr = view.state.tr.insertText(suffix, insertPos);
 		tr = tr.setMeta(chunkDecorationKey, decoState);
 		view.dispatch(tr);
+	} else if (suffix !== null) {
+		// Multi-line streamed token. Appending in place — the first line into the
+		// trailing paragraph, the rest as new paragraphs after it — leaves every
+		// position before the old document end untouched, so the chunk
+		// decorations already built for the preceding chunks survive `map()` and
+		// the plugin only has to splice on the tail. Replacing the whole document
+		// (the branch below) maps them all away and forces an O(N) rebuild.
+		const lines = suffix.split('\n');
+		const sel = view.state.selection;
+		const caretAtEnd = !(sel instanceof AllSelection)
+			&& pmPosToTextOffset(view.state.doc, sel.anchor) >= oldText.length
+			&& pmPosToTextOffset(view.state.doc, sel.head) >= oldText.length;
+		let tr = view.state.tr;
+		if (lines[0]) tr = tr.insertText(lines[0], docSize - 1);
+		tr = tr.insert(tr.doc.content.size, textToDoc(view.state.schema, lines.slice(1).join('\n')).content);
+		if (caretAtEnd) {
+			// Same trap as the full-rebuild branch: the appended paragraphs go in
+			// after the caret's position, so a caret that was following the stream
+			// would stay stranded on the old last line.
+			tr = tr.setSelection(TextSelection.create(tr.doc, tr.doc.content.size - 1));
+		}
+		tr = tr.setMeta(chunkDecorationKey, decoState);
+		view.dispatch(tr);
 	} else {
 		const sel = view.state.selection;
 		const newDoc = textToDoc(view.state.schema, newText);
@@ -112,23 +135,13 @@ export function applyChunksToPM(
 		} else {
 			const anchorOffset = Math.min(pmPosToTextOffset(view.state.doc, sel.anchor), newText.length);
 			const headOffset = Math.min(pmPosToTextOffset(view.state.doc, sel.head), newText.length);
-			if (suffix !== null && anchorOffset >= oldText.length && headOffset >= oldText.length) {
-				// Streaming append whose token contains a newline: mapping the
-				// old end-of-text offset onto the new doc lands on the boundary
-				// right before the appended token, and later single-line inserts
-				// sit after it — so the caret never advances again. A caret that
-				// was at the end of the pre-append doc should follow the stream
-				// to the new end of the document instead.
-				tr = tr.setSelection(TextSelection.create(tr.doc, tr.doc.content.size - 1));
-			} else {
-				tr = tr.setSelection(
-					TextSelection.create(
-						tr.doc,
-						textOffsetToPMPos(tr.doc, anchorOffset),
-						textOffsetToPMPos(tr.doc, headOffset),
-					),
-				);
-			}
+			tr = tr.setSelection(
+				TextSelection.create(
+					tr.doc,
+					textOffsetToPMPos(tr.doc, anchorOffset),
+					textOffsetToPMPos(tr.doc, headOffset),
+				),
+			);
 		}
 		tr = tr.setMeta(chunkDecorationKey, decoState);
 		view.dispatch(tr);
