@@ -15,7 +15,6 @@
     "typecheck": "tsc --noEmit"
   },
   "dependencies": {
-    "dompurify": "^3.4.11",
     "htm": "^3.1.1",
     "html-to-image": "^1.11.13",
     "marked": "^16.4.1",
@@ -32,7 +31,6 @@
   "devDependencies": {
     "@parcel/transformer-inline-string": "^2.9.3",
     "@testing-library/react": "^16.1.0",
-    "@types/dompurify": "^3.0.5",
     "@types/react": "^19.2.17",
     "@types/react-dom": "^19.2.3",
     "@vitest/ui": "^3.0.0",
