@@ -18,7 +18,15 @@ export function Widget({ title }: WidgetProps) {
 
 ## ProseMirror Prompt Editor
 
-The main prompt editor is a ProseMirror view (see `src/components/PromptContainer.tsx` and `src/editor/`). It is not an uncontrolled textarea: streaming chunks are applied to the doc via `EditorAdapter` / `applyChunksToPM`, and user edits flow back to React state through the view's `dispatchTransaction`. Chunk highlighting is rendered by `chunkDecorationPlugin` as inline decorations — keep text sync and decoration state in lockstep (pass the same `chunkDecorationKey` meta), rebuild decorations on every state change that alters chunks, and never mutate chunk objects when re-deriving chunks (`diffPromptChunks`). All text offsets exchanged with the editor are flat offsets including `\n` paragraph separators (`getText`, `getSelection`, `replaceRange`).
+The main prompt editor is a ProseMirror view (`src/components/PromptContainer.tsx` and `src/editor/`), not an uncontrolled textarea: streaming chunks are applied to the doc via `EditorAdapter` / `applyChunksToPM`, and user edits flow back to React state through the view's `dispatchTransaction`. When touching it, keep these rules:
+
+- All text offsets exchanged with the editor are flat offsets including `\n` paragraph separators (`getText`, `getSelection`, `replaceRange`). Read the doc's text with `docText(doc)` — it is memoised per doc node — and use `flatTextLength(doc)` when only the length is needed.
+- Keep text sync and decoration state in lockstep: pass the chunk state as `chunkDecorationKey` meta on the same transaction that changes the text.
+- Never mutate chunk objects when re-deriving chunks (`diffPromptChunks`) — the decoration plugins reuse work by reference identity, so a mutated chunk silently keeps stale highlighting.
+- Decorations are rebuilt incrementally, not wholesale. New decoration work must stay bounded by `changedRange(tr)` and the plugin's own previous build; a full `DecorationSet.create` on every keystroke is what this design exists to avoid.
+- Hover-only state (`chunkHoverPlugin`) and markdown styling (`markdownDecorationPlugin`) are separate plugins. Put anything that changes on mouse move or on a mode toggle in those, never in the base chunk plugin.
+
+See [Prompt Editor](prompt-editor.md) for the full subsystem reference.
 
 ## UI Strings (Localization)
 
@@ -142,6 +150,6 @@ export function useSessionState<T>(
 
 See [CSS Architecture](css.md) for full documentation. Key points:
 
-- Styles are organized into 20 partial files under `src/css/`, imported by `src/styles.css` via `@import`.
+- Styles are organized into 21 partial files under `src/css/`, imported by `src/styles.css` via `@import`.
 - Component-specific media queries live inside that component's partial; global layout media queries go in `_responsive.css`.
 - When adding new styles, put them in the matching partial or create a new one if none fits.
