@@ -1,5 +1,7 @@
 import { Plugin, PluginKey } from 'prosemirror-state';
+import type { Transaction } from 'prosemirror-state';
 import { Decoration, DecorationSet } from 'prosemirror-view';
+import type { EditorView } from 'prosemirror-view';
 import type { Node } from 'prosemirror-model';
 import { marked } from 'marked';
 import type { Token, Tokens } from 'marked';
@@ -11,11 +13,26 @@ export interface MarkdownModeRef {
 	current: boolean;
 }
 
+/** The PM range that is decorated. Both ends sit on paragraph boundaries. */
+export interface MarkdownWindow {
+	from: number;
+	to: number;
+}
+
 export interface MarkdownPluginState {
 	decos: DecorationSet;
 	/** Top-level tokens `decos` was built from; null while markdown mode is off. */
 	tokens: Token[] | null;
+	/** Range `decos` covers; null when the whole document is decorated. */
+	window: MarkdownWindow | null;
 }
+
+/**
+ * Meta carried on `markdownDecorationKey`: `true` re-reads the mode ref and
+ * rebuilds (or clears) everything, a window object re-aims the decorated range
+ * after a scroll or a resize.
+ */
+export type MarkdownDecorationMeta = true | { window: MarkdownWindow };
 
 export const markdownDecorationKey = new PluginKey<MarkdownPluginState>('markdownDecorations');
 
@@ -45,18 +62,29 @@ interface MarkdownBuild {
 
 /**
  * Lexes the whole document and builds decorations for the top-level tokens that
- * changed. Lexing stays whole-document on purpose: it is the cheap half (18 ms
- * of a 97 ms rebuild at 50k chars) and re-lexing a slice is not sound, because
- * a code fence or `> ` changes how the following lines parse. The expensive
- * half is `DecorationSet.create`, which is O(paragraphs x decorations) — that
- * is what narrowing the token range lets the caller skip.
+ * changed and are inside the viewport window. Lexing stays whole-document on
+ * purpose: it is the cheap half (18 ms of a 97 ms rebuild at 50k chars) and
+ * re-lexing a slice is not sound, because a code fence or `> ` changes how the
+ * following lines parse. The expensive half is `DecorationSet.create`, which is
+ * O(paragraphs x decorations) — that is what narrowing the token range lets the
+ * caller skip.
  *
  * `prevTokens` is the token list the existing set was built from; `dirtyFrom`/
  * `dirtyTo` bound what the transaction's steps touched, since only decorations
  * outside that span survived `map()` intact. Pass `prevTokens` null to rebuild
- * everything.
+ * everything. `win` bounds the result to what is on screen; pass null to
+ * decorate the whole document. `lexed` skips the lex when the caller already
+ * holds this document's token list — a scroll re-aims the window without
+ * touching the text.
  */
-function buildDecorations(doc: Node, prevTokens: Token[] | null, dirtyFrom: number, dirtyTo: number): MarkdownBuild {
+function buildDecorations(
+	doc: Node,
+	prevTokens: Token[] | null,
+	dirtyFrom: number,
+	dirtyTo: number,
+	win: MarkdownWindow | null,
+	lexed: Token[] | null = null,
+): MarkdownBuild {
 	const source = docText(doc);
 	const paras: ParaEntry[] = [];
 	let flatOffset = 0;
@@ -72,6 +100,15 @@ function buildDecorations(doc: Node, prevTokens: Token[] | null, dirtyFrom: numb
 
 	const nodeClasses = new Map<number, string[]>();
 	const decorations: Decoration[] = [];
+
+	// Source range of the top-level token being walked. Every span is clamped to
+	// it: the plugin splices the set on token boundaries, so a span that escaped
+	// its own block would be re-emitted on the next build without the stale copy
+	// being cleared, and the block it landed in would be styled by a construct
+	// that is not there. Only reachable when the text-to-source mapping below
+	// loses track, which mangled half-typed markdown is good at provoking.
+	let blockFrom = 0;
+	let blockTo = 0;
 
 	// greatest paragraph index with offStart <= offset
 	const paraIndexAt = (offset: number): number => {
@@ -90,7 +127,10 @@ function buildDecorations(doc: Node, prevTokens: Token[] | null, dirtyFrom: numb
 		return ans;
 	};
 
-	const addNodeClass = (className: string, from: number, to: number): void => {
+	const addNodeClass = (className: string, rawFrom: number, rawTo: number): void => {
+		const from = Math.max(rawFrom, blockFrom);
+		const to = Math.min(rawTo, blockTo);
+		if (from >= to) return;
 		for (let i = paraIndexAt(from); i < paras.length; i++) {
 			const p = paras[i];
 			if (p.offStart >= to) break;
@@ -109,7 +149,9 @@ function buildDecorations(doc: Node, prevTokens: Token[] | null, dirtyFrom: numb
 	// Every span is clipped to paragraph bounds: br-split paragraphs and
 	// blockquote/list hard breaks split one token across several PM paragraphs,
 	// and separator newlines belong to no paragraph.
-	const addInlineSpan = (from: number, to: number, className: string): void => {
+	const addInlineSpan = (rawFrom: number, rawTo: number, className: string): void => {
+		const from = Math.max(rawFrom, blockFrom);
+		const to = Math.min(rawTo, blockTo);
 		if (from >= to) return;
 		for (let i = paraIndexAt(from); i < paras.length; i++) {
 			const p = paras[i];
@@ -138,8 +180,13 @@ function buildDecorations(doc: Node, prevTokens: Token[] | null, dirtyFrom: numb
 			const nl = text.indexOf('\n', textCursor);
 			const lineEnd = nl === -1 ? text.length : nl;
 			const line = text.slice(textCursor, lineEnd);
+			// Bounded to the source line the cursor sits on. Past it the text has
+			// stopped corresponding, and a stray match in a repeated line further
+			// down would drag the token's spans into an unrelated block.
+			const lineNl = source.indexOf('\n', srcCursor);
+			const srcLineEnd = lineNl === -1 ? source.length : lineNl;
 			const at = line.length === 0 ? srcCursor : source.indexOf(line, srcCursor);
-			if (at !== -1) srcCursor = at;
+			if (at !== -1 && at + line.length <= srcLineEnd) srcCursor = at;
 			segs.push({ textStart: textCursor, textEnd: lineEnd, srcStart: srcCursor });
 			srcCursor += line.length;
 			if (lineEnd < text.length) {
@@ -251,7 +298,7 @@ function buildDecorations(doc: Node, prevTokens: Token[] | null, dirtyFrom: numb
 		}
 	};
 
-	const tokens = marked.lexer(source, { gfm: true, breaks: true });
+	const tokens = lexed ?? marked.lexer(source, { gfm: true, breaks: true });
 	// Top-level token raws tile the source exactly, so their starts double as
 	// the block boundaries the decorations can be split on.
 	const starts: number[] = new Array(tokens.length + 1);
@@ -290,10 +337,58 @@ function buildDecorations(doc: Node, prevTokens: Token[] | null, dirtyFrom: numb
 		}
 	}
 
+	if (win && tokens.length > 0) {
+		// greatest paragraph index with nodeStart <= pmPos
+		const paraIndexAtPM = (pmPos: number): number => {
+			let lo = 0;
+			let hi = paras.length - 1;
+			let ans = 0;
+			while (lo <= hi) {
+				const mid = (lo + hi) >> 1;
+				if (paras[mid].nodeStart <= pmPos) {
+					ans = mid;
+					lo = mid + 1;
+				} else {
+					hi = mid - 1;
+				}
+			}
+			return ans;
+		};
+		const srcOffsetAtPM = (pmPos: number): number =>
+			pmPos >= doc.content.size ? source.length : paras[paraIndexAtPM(pmPos)].offStart;
+		// greatest token index with starts[i] <= offset
+		const tokenIndexAt = (offset: number): number => {
+			let lo = 0;
+			let hi = tokens.length - 1;
+			let ans = 0;
+			while (lo <= hi) {
+				const mid = (lo + hi) >> 1;
+				if (starts[mid] <= offset) {
+					ans = mid;
+					lo = mid + 1;
+				} else {
+					hi = mid - 1;
+				}
+			}
+			return ans;
+		};
+		// The token straddling the window start is kept whole — it is one block,
+		// and splitting the set inside it would leave half a construct styled.
+		const winFrom = tokenIndexAt(srcOffsetAtPM(win.from));
+		const winEndSrc = srcOffsetAtPM(win.to);
+		const lastInside = tokenIndexAt(winEndSrc);
+		const winTo = Math.min(starts[lastInside] === winEndSrc ? lastInside : lastInside + 1, tokens.length);
+		if (from < winFrom) from = winFrom;
+		if (to > winTo) to = winTo;
+		if (to < from) to = from;
+	}
+
 	let walkCursor = starts[from];
 	for (let i = from; i < to; i++) {
 		const start = walkCursor;
 		walkCursor += tokens[i].raw.length;
+		blockFrom = start;
+		blockTo = walkCursor;
 		walkToken(tokens[i], start, walkCursor);
 	}
 
@@ -307,41 +402,199 @@ function buildDecorations(doc: Node, prevTokens: Token[] | null, dirtyFrom: numb
 
 /** Full-document build, for the initial set and whenever reuse is not possible. */
 export function buildMarkdownDecorations(doc: Node): DecorationSet {
-	return DecorationSet.create(doc, buildDecorations(doc, null, 0, doc.content.size).decorations);
+	return DecorationSet.create(doc, buildDecorations(doc, null, 0, doc.content.size, null).decorations);
 }
 
-const INACTIVE: MarkdownPluginState = { decos: DecorationSet.empty, tokens: null };
+const INACTIVE: MarkdownPluginState = { decos: DecorationSet.empty, tokens: null, window: null };
 
-function fullBuild(doc: Node): MarkdownPluginState {
-	const built = buildDecorations(doc, null, 0, doc.content.size);
-	return { decos: DecorationSet.create(doc, built.decorations), tokens: built.tokens };
+function fullBuild(doc: Node, win: MarkdownWindow | null, lexed: Token[] | null = null): MarkdownPluginState {
+	const built = buildDecorations(doc, null, 0, doc.content.size, win, lexed);
+	return { decos: DecorationSet.create(doc, built.decorations), tokens: built.tokens, window: win };
+}
+
+/** Paragraphs decorated on each side of the viewport, so small scrolls need no rebuild. */
+const PAD_PARAGRAPHS = 60;
+/** Re-aim once the viewport comes within this many paragraphs of the window edge. */
+const KEEP_PARAGRAPHS = 20;
+/** Re-aim once edits have stretched the window to this multiple of a fresh one. */
+const MAX_SLACK = 2;
+
+interface ParaPos {
+	index: number;
+	start: number;
+}
+
+/** The paragraph holding `pos`, and the position it starts at. */
+function paraAt(doc: Node, pos: number): ParaPos {
+	let start = 0;
+	for (let i = 0; i < doc.childCount - 1; i++) {
+		const end = start + doc.child(i).nodeSize;
+		if (pos < end) return { index: i, start };
+		start = end;
+	}
+	return { index: doc.childCount - 1, start };
+}
+
+/** The range spanning `lo`..`hi`, widened by `pad` paragraphs on each side. */
+function expand(doc: Node, lo: ParaPos, hi: ParaPos, pad: number): MarkdownWindow {
+	let from = lo.start;
+	for (let i = lo.index - 1; i >= 0 && lo.index - i <= pad; i--) from -= doc.child(i).nodeSize;
+	let to = hi.start;
+	for (let i = hi.index; i < doc.childCount && i - hi.index <= pad; i++) to += doc.child(i).nodeSize;
+	return { from, to };
+}
+
+/** The window covering the paragraphs of [from, to] plus `pad` paragraphs either side. */
+export function paddedWindow(doc: Node, from: number, to: number, pad: number): MarkdownWindow {
+	return expand(doc, paraAt(doc, from), paraAt(doc, to), pad);
+}
+
+function mapWindow(win: MarkdownWindow | null, tr: Transaction): MarkdownWindow | null {
+	// Biased outwards, so text typed against either edge lands inside the window
+	// — including the streamed tail, which is appended at the document end.
+	return win ? { from: tr.mapping.map(win.from, -1), to: tr.mapping.map(win.to, 1) } : null;
+}
+
+/** Nearest scrollable ancestor, the one whose scrollTop absorbs a height change. */
+function scrollParent(el: HTMLElement): HTMLElement | null {
+	const win = el.ownerDocument.defaultView;
+	if (!win) return null;
+	for (let p = el.parentElement; p; p = p.parentElement) {
+		const overflowY = win.getComputedStyle(p).overflowY;
+		if (overflowY === 'auto' || overflowY === 'scroll') return p;
+	}
+	return null;
+}
+
+/** PM range on screen, or null when the editor cannot be measured (no layout, offscreen). */
+function visibleRange(view: EditorView, scroller: HTMLElement | null): { from: number; to: number } | null {
+	const win = view.dom.ownerDocument.defaultView;
+	if (!win) return null;
+	const content = view.dom.getBoundingClientRect();
+	const box = scroller ? scroller.getBoundingClientRect() : content;
+	const top = Math.max(content.top, box.top, 0);
+	const bottom = Math.min(content.bottom, box.bottom, win.innerHeight);
+	// Clipped on both axes: posAtCoords hit-tests the rendered page, so a point
+	// outside the browser viewport resolves to nothing. The editor overflows it
+	// vertically by design, and horizontally whenever the prompt pane has been
+	// dragged wider than the window.
+	const leftEdge = Math.max(content.left, box.left, 0);
+	const rightEdge = Math.min(content.right, box.right, win.innerWidth);
+	if (bottom <= top || rightEdge <= leftEdge) return null;
+	// Sampled down the middle of what is left: the toolbar buttons are sticky
+	// over the left gutter, and posAtCoords resolves whatever is under the point.
+	const left = (leftEdge + rightEdge) / 2;
+	const from = view.posAtCoords({ left, top: top + 1 });
+	const to = view.posAtCoords({ left, top: bottom - 1 });
+	return { from: from ? from.pos : 0, to: to ? to.pos : view.state.doc.content.size };
+}
+
+/**
+ * Keeps the decorated window over the viewport. `props.decorations` is a pure
+ * function of state, so scrolling has to dispatch to change what is decorated;
+ * every burst of scroll/resize/update events is coalesced into one frame.
+ */
+function viewportTracker(view: EditorView, mode: MarkdownModeRef) {
+	const win = view.dom.ownerDocument.defaultView;
+	const scroller = scrollParent(view.dom);
+	let frame = 0;
+
+	const sync = (): void => {
+		frame = 0;
+		if (!mode.current) return;
+		const state = markdownDecorationKey.getState(view.state);
+		if (!state) return;
+		const vis = visibleRange(view, scroller);
+		if (!vis) return;
+		const doc = view.state.doc;
+		const lo = paraAt(doc, vis.from);
+		const hi = paraAt(doc, vis.to);
+		const cur = state.window ?? { from: 0, to: doc.content.size };
+		const keep = expand(doc, lo, hi, KEEP_PARAGRAPHS);
+		const want = expand(doc, lo, hi, PAD_PARAGRAPHS);
+		// Edits inside the window stretch it (mapping biases outwards), so a
+		// window that still covers the viewport is also checked for having grown
+		// — otherwise a long stream would widen it back to the whole document.
+		const covers = cur.from <= keep.from && cur.to >= keep.to;
+		if (covers && cur.to - cur.from <= MAX_SLACK * (want.to - want.from)) return;
+		// Nothing would change: bail rather than dispatch every frame. Reachable
+		// when posAtCoords cannot resolve the edges and the fallback range is
+		// already what is decorated.
+		if (want.from === cur.from && want.to === cur.to) return;
+		// Undecorating what is above the viewport shrinks it — headings are
+		// larger, blockquotes and lists are indented — which would slide the text
+		// the user is reading. Pin the topmost visible position across the swap.
+		const before = view.coordsAtPos(vis.from).top;
+		view.dispatch(view.state.tr.setMeta(markdownDecorationKey, { window: want }));
+		if (!scroller) return;
+		const delta = view.coordsAtPos(vis.from).top - before;
+		if (delta) scroller.scrollTop += delta;
+	};
+
+	const schedule = (): void => {
+		if (!frame && win) frame = win.requestAnimationFrame(sync);
+	};
+
+	// Scroll events do not bubble; a capturing listener on the window catches the
+	// scroller's without having to identify it first.
+	win?.addEventListener('scroll', schedule, true);
+	win?.addEventListener('resize', schedule);
+	const observer = typeof ResizeObserver === 'undefined' ? null : new ResizeObserver(schedule);
+	observer?.observe(view.dom);
+	schedule();
+
+	return {
+		update: schedule,
+		destroy(): void {
+			if (frame) win?.cancelAnimationFrame(frame);
+			win?.removeEventListener('scroll', schedule, true);
+			win?.removeEventListener('resize', schedule);
+			observer?.disconnect();
+		},
+	};
 }
 
 export function markdownDecorationPlugin(mode: MarkdownModeRef): Plugin<MarkdownPluginState> {
 	return new Plugin<MarkdownPluginState>({
 		key: markdownDecorationKey,
+		view: view => viewportTracker(view, mode),
 		state: {
 			init(_config, state): MarkdownPluginState {
-				return mode.current ? fullBuild(state.doc) : INACTIVE;
+				// There is no view yet, so no viewport to aim at; the tracker
+				// narrows this to the visible window on the first frame.
+				return mode.current ? fullBuild(state.doc, null) : INACTIVE;
 			},
 			apply(tr, prev): MarkdownPluginState {
-				if (tr.getMeta(markdownDecorationKey)) {
-					return mode.current ? fullBuild(tr.doc) : INACTIVE;
-				}
+				const meta = tr.getMeta(markdownDecorationKey) as MarkdownDecorationMeta | undefined;
+				// Both meta paths ride a transaction that leaves the text alone, so the
+				// token list the last build produced still describes the document and
+				// the whole-document lex can be skipped.
+				const lexed = tr.docChanged ? null : prev.tokens;
+				if (meta === true) return mode.current ? fullBuild(tr.doc, null, lexed) : INACTIVE;
 				if (!mode.current) return INACTIVE;
+				if (meta) return fullBuild(tr.doc, meta.window, lexed);
 				if (!tr.docChanged) return prev;
-				if (!prev.tokens) return fullBuild(tr.doc);
+				const win = mapWindow(prev.window, tr);
+				if (!prev.tokens) return fullBuild(tr.doc, win);
 				const dirty = changedRange(tr);
-				const built = buildDecorations(tr.doc, prev.tokens, dirty.from, dirty.to);
-				if (built.fromPM === 0 && built.toPM >= tr.doc.content.size) {
-					return { decos: DecorationSet.create(tr.doc, built.decorations), tokens: built.tokens };
+				const built = buildDecorations(tr.doc, prev.tokens, dirty.from, dirty.to, win);
+				// Empty rebuild range: the edit landed on tokens that are outside
+				// the window, so nothing in the set is stale.
+				if (built.toPM <= built.fromPM) {
+					return { decos: prev.decos.map(tr.mapping, tr.doc), tokens: built.tokens, window: win };
+				}
+				const whole = win
+					? built.fromPM <= win.from && built.toPM >= win.to
+					: built.fromPM === 0 && built.toPM >= tr.doc.content.size;
+				if (whole) {
+					return { decos: DecorationSet.create(tr.doc, built.decorations), tokens: built.tokens, window: win };
 				}
 				const mapped = prev.decos.map(tr.mapping, tr.doc);
 				// find() is inclusive at both ends and the rebuilt range is bounded
 				// by paragraph node starts, so drop only what falls fully inside it.
 				const stale = mapped.find(built.fromPM, built.toPM)
 					.filter(deco => deco.from >= built.fromPM && deco.to <= built.toPM);
-				return { decos: mapped.remove(stale).add(tr.doc, built.decorations), tokens: built.tokens };
+				return { decos: mapped.remove(stale).add(tr.doc, built.decorations), tokens: built.tokens, window: win };
 			},
 		},
 		props: {

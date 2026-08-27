@@ -2,12 +2,14 @@ import { describe, it, expect, vi } from 'vitest';
 import { EditorState } from 'prosemirror-state';
 import { DecorationSet, EditorView } from 'prosemirror-view';
 import type { Decoration } from 'prosemirror-view';
+import type { Node } from 'prosemirror-model';
 import { schema } from './schema';
 import { textToDoc } from './syncReactToPM';
 import {
 	buildMarkdownDecorations,
 	markdownDecorationKey,
 	markdownDecorationPlugin,
+	paddedWindow,
 } from './markdownDecorations';
 
 function decosFor(text: string): Decoration[] {
@@ -295,5 +297,141 @@ describe('markdownDecorationPlugin incremental rebuilds', () => {
 		expect(create).not.toHaveBeenCalled();
 		create.mockRestore();
 		expect(pluginDecos(next)).toEqual(fullDecos(next));
+	});
+});
+
+describe('markdownDecorationPlugin viewport window', () => {
+	// 40 blocks x 6 lines: heading, blank, inline-marked body, blank, quote, blank
+	const LONG = Array.from({ length: 40 }, (_, i) => [
+		`# Heading ${i}`,
+		'',
+		`Body **bold ${i}** and *em ${i}* text.`,
+		'',
+		`> quote ${i}`,
+		'',
+	]).flat().join('\n');
+
+	function activeState(text: string) {
+		return EditorState.create({
+			doc: textToDoc(schema, text),
+			plugins: [markdownDecorationPlugin({ current: true })],
+		});
+	}
+
+	function normalise(decos: Decoration[]): string[] {
+		return decos.map(d => `${d.from}-${d.to}:${classOf(d)}`).sort();
+	}
+
+	function pluginDecos(state: EditorState): string[] {
+		return normalise(markdownDecorationKey.getState(state)!.decos.find());
+	}
+
+	function paraStart(doc: Node, index: number): number {
+		let pos = 0;
+		for (let i = 0; i < index; i++) pos += doc.child(i).nodeSize;
+		return pos;
+	}
+
+	/** Paragraphs lying wholly inside `win`, as { start, size }. */
+	function parasInside(doc: Node, win: { from: number; to: number }) {
+		const inside: { start: number; size: number }[] = [];
+		let pos = 0;
+		for (let i = 0; i < doc.childCount; i++) {
+			const size = doc.child(i).nodeSize;
+			if (pos >= win.from && pos + size <= win.to) inside.push({ start: pos, size });
+			pos += size;
+		}
+		return inside;
+	}
+
+	function aimAt(state: EditorState, win: { from: number; to: number }): EditorState {
+		return state.apply(state.tr.setMeta(markdownDecorationKey, { window: win }));
+	}
+
+	it('pads the window by whole paragraphs on each side', () => {
+		const doc = textToDoc(schema, LONG);
+		const win = paddedWindow(doc, paraStart(doc, 100), paraStart(doc, 100), 3);
+		expect(win.from).toBe(paraStart(doc, 97));
+		expect(win.to).toBe(paraStart(doc, 104));
+	});
+
+	it('clamps the padded window to the document edges', () => {
+		const doc = textToDoc(schema, LONG);
+		expect(paddedWindow(doc, 0, doc.content.size, 5)).toEqual({ from: 0, to: doc.content.size });
+	});
+
+	it('decorates the window and nothing else', () => {
+		const doc = textToDoc(schema, LONG);
+		const win = paddedWindow(doc, paraStart(doc, 120), paraStart(doc, 126), 2);
+		const decos = markdownDecorationKey.getState(aimAt(activeState(LONG), win))!.decos.find();
+		const full = buildMarkdownDecorations(doc).find();
+		expect(decos.length).toBeGreaterThan(0);
+		expect(decos.length).toBeLessThan(full.length / 5);
+		// nothing invented...
+		expect(normalise(full)).toEqual(expect.arrayContaining(normalise(decos)));
+		// ...and nothing the full build has inside the window is missing
+		const inside = (d: Decoration) => d.from >= win.from && d.to <= win.to;
+		expect(normalise(decos.filter(inside))).toEqual(normalise(full.filter(inside)));
+	});
+
+	it('matches a fresh windowed build across edits inside the window', () => {
+		let state = activeState(LONG);
+		let win = paddedWindow(state.doc, paraStart(state.doc, 100), paraStart(state.doc, 110), 4);
+		state = aimAt(state, win);
+		let seed = 987;
+		const rnd = (n: number) => {
+			seed = (seed * 1103515245 + 12345) & 0x7fffffff;
+			return seed % n;
+		};
+		for (let step = 0; step < 100; step++) {
+			const inside = parasInside(state.doc, win);
+			const para = inside[rnd(inside.length)];
+			const len = para.size - 2;
+			const at = para.start + 1 + rnd(len + 1);
+			const kind = rnd(4);
+			let tr = state.tr;
+			if (kind === 0) tr = tr.insertText('*_# >-|`abc '[rnd(12)], at);
+			else if (kind === 1 && len > 0) tr = tr.delete(at, Math.min(at + 1, para.start + 1 + len));
+			else if (kind === 2) tr = tr.split(at);
+			else if (kind === 3 && para.start > win.from) tr = tr.join(para.start);
+			if (!tr.docChanged) continue;
+			state = state.apply(tr);
+			win = { from: tr.mapping.map(win.from, -1), to: tr.mapping.map(win.to, 1) };
+			expect(markdownDecorationKey.getState(state)!.window).toEqual(win);
+			expect(pluginDecos(state)).toEqual(pluginDecos(aimAt(state, win)));
+		}
+	});
+
+	it('leaves the set alone for edits outside the window', () => {
+		const win = paddedWindow(activeState(LONG).doc, 0, paraStart(activeState(LONG).doc, 14), 2);
+		const state = aimAt(activeState(LONG), win);
+		const before = pluginDecos(state);
+		const create = vi.spyOn(DecorationSet, 'create');
+		const next = state.apply(state.tr.insertText('x', paraStart(state.doc, 200) + 1));
+		expect(create).not.toHaveBeenCalled();
+		create.mockRestore();
+		expect(pluginDecos(next)).toEqual(before);
+	});
+
+	it('extends the window over the streamed tail', () => {
+		let state = activeState(LONG);
+		const win = paddedWindow(state.doc, paraStart(state.doc, 230), state.doc.content.size, 2);
+		state = aimAt(state, win);
+		const tr = state.tr.insertText(' **tail**', state.doc.content.size - 1);
+		const next = state.apply(tr);
+		const grown = markdownDecorationKey.getState(next)!.window!;
+		expect(grown.from).toBe(win.from);
+		expect(grown.to).toBe(next.doc.content.size);
+		expect(pluginDecos(next)).toEqual(pluginDecos(aimAt(next, grown)));
+	});
+
+	it('rebuilds the whole document when the mode is toggled', () => {
+		const state = activeState(LONG);
+		const win = paddedWindow(state.doc, paraStart(state.doc, 10), paraStart(state.doc, 14), 2);
+		const aimed = aimAt(state, win);
+		expect(markdownDecorationKey.getState(aimed)!.window).toEqual(win);
+		const toggled = aimed.apply(aimed.tr.setMeta(markdownDecorationKey, true));
+		expect(markdownDecorationKey.getState(toggled)!.window).toBeNull();
+		expect(pluginDecos(toggled)).toEqual(normalise(buildMarkdownDecorations(toggled.doc).find()));
 	});
 });

@@ -24,6 +24,7 @@ The main prompt editor is a ProseMirror view (`src/components/PromptContainer.ts
 - Keep text sync and decoration state in lockstep: pass the chunk state as `chunkDecorationKey` meta on the same transaction that changes the text.
 - Never mutate chunk objects when re-deriving chunks (`diffPromptChunks`) — the decoration plugins reuse work by reference identity, so a mutated chunk silently keeps stale highlighting.
 - Decorations are rebuilt incrementally, not wholesale. New decoration work must stay bounded by `changedRange(tr)` and the plugin's own previous build; a full `DecorationSet.create` on every keystroke is what this design exists to avoid.
+- Markdown decorations only cover the viewport window, and the plugin's `view()` re-aims it from a `requestAnimationFrame` on scroll. Anything that changes the height of styled text has to keep the topmost visible position pinned, or scrolling a long prompt jumps.
 - Hover-only state (`chunkHoverPlugin`) and markdown styling (`markdownDecorationPlugin`) are separate plugins. Put anything that changes on mouse move or on a mode toggle in those, never in the base chunk plugin.
 
 See [Prompt Editor](prompt-editor.md) for the full subsystem reference.
