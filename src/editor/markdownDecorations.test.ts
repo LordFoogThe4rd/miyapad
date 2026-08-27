@@ -171,9 +171,31 @@ describe('markdownDecorationPlugin', () => {
 	it('rebuilds decorations on doc changes while active', () => {
 		const state = createState('a **b**', true);
 		expect(markdownDecorationKey.getState(state)!.decos.find().length).toBe(1);
-		const next = state.apply(state.tr.insertText('x', 1));
+		const typed = state.apply(state.tr.insertText('x', 1));
+		const next = typed.apply(typed.tr.setMeta(markdownDecorationKey, 'flush'));
 		expect(markdownDecorationKey.getState(next)!.decos.find().length).toBe(1);
 		expect(markdownDecorationKey.getState(next)!.decos.find()[0].from).toBe(6);
+	});
+
+	it('defers the rebuild off the edit and flushes it from the view', async () => {
+		const container = document.createElement('div');
+		document.body.appendChild(container);
+		const view = new EditorView(container, { state: createState('a **b** c', true) });
+		expect(container.querySelectorAll('.pm-md-strong')).toHaveLength(1);
+
+		// The new strong is not styled yet — the edit only mapped the old set...
+		view.dispatch(view.state.tr.insertText('**d** ', 1));
+		expect(markdownDecorationKey.getState(view.state)!.pending).not.toBeNull();
+		expect(container.querySelectorAll('.pm-md-strong')).toHaveLength(1);
+
+		// ...until the scheduled flush lands (jsdom has no requestIdleCallback,
+		// so this is the setTimeout fallback).
+		await new Promise(resolve => setTimeout(resolve, 250));
+		expect(markdownDecorationKey.getState(view.state)!.pending).toBeNull();
+		expect(container.querySelectorAll('.pm-md-strong')).toHaveLength(2);
+
+		view.destroy();
+		container.remove();
 	});
 
 	it('activates and deactivates via a meta transaction', () => {
@@ -225,6 +247,11 @@ describe('markdownDecorationPlugin incremental rebuilds', () => {
 		return normalise(buildMarkdownDecorations(state.doc).find());
 	}
 
+	/** Runs the rebuild the edits deferred, as the plugin's view() would on idle. */
+	function flush(state: EditorState): EditorState {
+		return state.apply(state.tr.setMeta(markdownDecorationKey, 'flush'));
+	}
+
 	const SAMPLE = [
 		'# Title',
 		'',
@@ -250,7 +277,7 @@ describe('markdownDecorationPlugin incremental rebuilds', () => {
 		for (let para = 0; para < state.doc.childCount; para++) {
 			let pos = 1;
 			for (let i = 0; i < para; i++) pos += state.doc.child(i).nodeSize;
-			state = state.apply(state.tr.insertText('z', pos));
+			state = flush(state.apply(state.tr.insertText('z', pos)));
 			expect(pluginDecos(state)).toEqual(fullDecos(state));
 		}
 	});
@@ -275,7 +302,52 @@ describe('markdownDecorationPlugin incremental rebuilds', () => {
 			else if (kind === 2) tr = tr.split(at);
 			else if (kind === 3 && para > 0) tr = tr.join(start);
 			if (!tr.docChanged) continue;
-			state = state.apply(tr);
+			state = flush(state.apply(tr));
+			expect(pluginDecos(state)).toEqual(fullDecos(state));
+		}
+	});
+
+	it('accumulates the changed range across deferred edits', () => {
+		const state = activeState(SAMPLE);
+		const first = state.apply(state.tr.insertText('Z', state.doc.content.size - 1));
+		const tail = markdownDecorationKey.getState(first)!.pending!;
+		const second = first.apply(first.tr.insertText('Y', 1));
+		const dirty = markdownDecorationKey.getState(second)!.pending!;
+		// The second edit shifted the first one's range forward by a character
+		// and the union still has to reach it: the flush is bounded by every
+		// edit it stands in for, not by the last transaction alone.
+		expect(dirty.from).toBeLessThanOrEqual(1);
+		expect(dirty.to).toBeGreaterThanOrEqual(tail.to + 1);
+		expect(markdownDecorationKey.getState(flush(second))!.pending).toBeNull();
+	});
+
+	it('matches a full rebuild when several edits share one flush', () => {
+		let state = activeState(SAMPLE);
+		let seed = 4242;
+		const rnd = (n: number) => {
+			seed = (seed * 1103515245 + 12345) & 0x7fffffff;
+			return seed % n;
+		};
+		for (let round = 0; round < 60; round++) {
+			// A burst of edits in unrelated blocks, then a single rebuild — what a
+			// debounced flush sees, and what makes the accumulated changed range
+			// rather than one transaction's the thing the splice is bounded by.
+			for (let step = 0; step < 1 + rnd(5); step++) {
+				const para = rnd(state.doc.childCount);
+				let start = 0;
+				for (let i = 0; i < para; i++) start += state.doc.child(i).nodeSize;
+				const len = state.doc.child(para).content.size;
+				const at = start + 1 + rnd(len + 1);
+				const kind = rnd(4);
+				let tr = state.tr;
+				if (kind === 0) tr = tr.insertText('*_# >-|`abc '[rnd(12)], at);
+				else if (kind === 1 && len > 0) tr = tr.delete(at, Math.min(at + 1, start + 1 + len));
+				else if (kind === 2) tr = tr.split(at);
+				else if (kind === 3 && para > 0) tr = tr.join(start);
+				if (!tr.docChanged) continue;
+				state = state.apply(tr);
+			}
+			state = flush(state);
 			expect(pluginDecos(state)).toEqual(fullDecos(state));
 		}
 	});
@@ -286,14 +358,27 @@ describe('markdownDecorationPlugin incremental rebuilds', () => {
 
 		// closing the fence turns the trailing lines back into real markdown
 		const end = state.doc.content.size - 1;
-		state = state.apply(state.tr.insertText('```', end));
+		state = flush(state.apply(state.tr.insertText('```', end)));
 		expect(pluginDecos(state)).toEqual(fullDecos(state));
+	});
+
+	it('leaves the lex and the splice to the flush', () => {
+		const state = activeState(SAMPLE);
+		const before = markdownDecorationKey.getState(state)!.decos.find();
+		const typed = state.apply(state.tr.insertText(' **new**', 7));
+		const deferred = markdownDecorationKey.getState(typed)!.decos.find();
+		// Mapped, not rebuilt: same decorations carried forward, the new strong
+		// still unstyled — which is exactly what makes the set differ from a
+		// fresh build until the flush runs.
+		expect(deferred).toHaveLength(before.length);
+		expect(pluginDecos(typed)).not.toEqual(fullDecos(typed));
+		expect(pluginDecos(flush(typed))).toEqual(fullDecos(typed));
 	});
 
 	it('splices a streamed append instead of rebuilding the whole set', () => {
 		const state = activeState(SAMPLE);
 		const create = vi.spyOn(DecorationSet, 'create');
-		const next = state.apply(state.tr.insertText(' and **more**', state.doc.content.size - 1));
+		const next = flush(state.apply(state.tr.insertText(' and **more**', state.doc.content.size - 1)));
 		expect(create).not.toHaveBeenCalled();
 		create.mockRestore();
 		expect(pluginDecos(next)).toEqual(fullDecos(next));
@@ -348,6 +433,10 @@ describe('markdownDecorationPlugin viewport window', () => {
 		return state.apply(state.tr.setMeta(markdownDecorationKey, { window: win }));
 	}
 
+	function flush(state: EditorState): EditorState {
+		return state.apply(state.tr.setMeta(markdownDecorationKey, 'flush'));
+	}
+
 	it('pads the window by whole paragraphs on each side', () => {
 		const doc = textToDoc(schema, LONG);
 		const win = paddedWindow(doc, paraStart(doc, 100), paraStart(doc, 100), 3);
@@ -395,7 +484,7 @@ describe('markdownDecorationPlugin viewport window', () => {
 			else if (kind === 2) tr = tr.split(at);
 			else if (kind === 3 && para.start > win.from) tr = tr.join(para.start);
 			if (!tr.docChanged) continue;
-			state = state.apply(tr);
+			state = flush(state.apply(tr));
 			win = { from: tr.mapping.map(win.from, -1), to: tr.mapping.map(win.to, 1) };
 			expect(markdownDecorationKey.getState(state)!.window).toEqual(win);
 			expect(pluginDecos(state)).toEqual(pluginDecos(aimAt(state, win)));
@@ -407,7 +496,7 @@ describe('markdownDecorationPlugin viewport window', () => {
 		const state = aimAt(activeState(LONG), win);
 		const before = pluginDecos(state);
 		const create = vi.spyOn(DecorationSet, 'create');
-		const next = state.apply(state.tr.insertText('x', paraStart(state.doc, 200) + 1));
+		const next = flush(state.apply(state.tr.insertText('x', paraStart(state.doc, 200) + 1)));
 		expect(create).not.toHaveBeenCalled();
 		create.mockRestore();
 		expect(pluginDecos(next)).toEqual(before);
@@ -418,11 +507,25 @@ describe('markdownDecorationPlugin viewport window', () => {
 		const win = paddedWindow(state.doc, paraStart(state.doc, 230), state.doc.content.size, 2);
 		state = aimAt(state, win);
 		const tr = state.tr.insertText(' **tail**', state.doc.content.size - 1);
-		const next = state.apply(tr);
+		const next = flush(state.apply(tr));
 		const grown = markdownDecorationKey.getState(next)!.window!;
 		expect(grown.from).toBe(win.from);
 		expect(grown.to).toBe(next.doc.content.size);
 		expect(pluginDecos(next)).toEqual(pluginDecos(aimAt(next, grown)));
+	});
+
+	it('re-lexes when a re-aim overtakes a deferred rebuild', () => {
+		const state = activeState(LONG);
+		const win = paddedWindow(state.doc, paraStart(state.doc, 100), paraStart(state.doc, 110), 4);
+		const aimed = aimAt(state, win);
+		// Edit first, re-aim before the flush: the stored token list now describes
+		// the pre-edit document, so the window build has to lex again rather than
+		// reuse it the way an unedited re-aim does.
+		const typed = aimed.apply(aimed.tr.insertText(' **late**', paraStart(aimed.doc, 102) + 1));
+		const moved = paddedWindow(typed.doc, paraStart(typed.doc, 104), paraStart(typed.doc, 114), 4);
+		const reaimed = aimAt(typed, moved);
+		expect(markdownDecorationKey.getState(reaimed)!.pending).toBeNull();
+		expect(pluginDecos(reaimed)).toEqual(pluginDecos(aimAt(flush(typed), moved)));
 	});
 
 	it('rebuilds the whole document when the mode is toggled', () => {

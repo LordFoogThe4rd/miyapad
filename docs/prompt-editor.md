@@ -28,7 +28,7 @@ Three plugins render into the same view; ProseMirror merges overlapping inline d
 | :--- | :--- | :--- |
 | `chunkDecorationPlugin` | `chunkDecorationKey` | Chunks, `tokenColorMode` or `tokenHighlightMode` change. |
 | `chunkHoverPlugin` | `chunkHoverKey` | The hovered chunk index or the undo-erase range changes; also re-derived when a base-chunk rebuild would map its decorations away. |
-| `markdownDecorationPlugin` | `markdownDecorationKey` | The doc changes in wysiwyg mode, the mode itself is toggled, or the viewport window moves. |
+| `markdownDecorationPlugin` | `markdownDecorationKey` | The mode is toggled, the viewport window moves, or an idle callback flushes the edits since the last rebuild. |
 
 Hover state lives in its own plugin so moving the mouse never rebuilds the O(N) chunk set. `PromptContainer` also drops hover dispatches whose `(chunk index, erase index, highlight mode)` tuple is unchanged, since `currentPromptChunk` gets a new object identity on every mouse move.
 
@@ -87,13 +87,37 @@ A plugin `view()` keeps the window aimed:
   slides by hundreds of pixels per re-aim.
 
 Both window changes and the mode toggle ride a transaction that leaves the text
-alone, so they reuse the token list from the last build instead of re-lexing.
-Lexing is still whole-document on every keystroke; deferring that is the
-remaining item in `plans/further-decoration-perf.md`.
+alone, so they reuse the token list from the last build instead of re-lexing —
+unless a rebuild is pending (see below), in which case that list describes an
+older document and they lex again.
 
 Measured in jsdom on 100k chars / 6000 paragraphs of heavy markdown, per
 keystroke: 95 ms whole-document (57 ms of it `map`) against 38 ms windowed
 (1 ms of it `map`, 32 ms the lex). Re-aiming the window on scroll costs 5 ms.
+
+## Deferred Rebuilds
+
+The lex is whole-document — it has to be, since a code fence or a `> ` changes
+how every later line parses — so after the window landed it was the only thing
+left on the keystroke path, and it is O(document). An edit therefore does not
+rebuild at all: `apply` maps the set forward (positions stay correct, styling
+lags) and records the changed range in `MarkdownPluginState.pending`. The plugin's
+`view()` books a `requestIdleCallback` (`{ timeout: 100 }`; `setTimeout` where
+there is none) that dispatches `'flush'` meta, and *that* transaction lexes and
+splices.
+
+- **One callback stays in flight at a time.** That is the debounce. Restarting a
+  timer on every edit — the usual shape — would never expire during a
+  generation, and markdown would stay unstyled for the whole run.
+- **`pending` is a union, not the last transaction's range**: it is mapped
+  forward on each deferred edit and merged with the new one, because a flush
+  stands in for every edit since the last rebuild.
+- Chrome does not run idle callbacks for a hidden document, timeout or not, so a
+  backgrounded tab catches up when it is looked at again.
+
+Measured in jsdom on 107k chars / 6300 paragraphs, per keystroke: 42 ms before,
+1.2 ms after, with the 38 ms flush off the critical path — and 3.3 ms per
+keystroke amortised when a burst of 20 shares one flush.
 
 ## Invariants
 

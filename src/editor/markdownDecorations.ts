@@ -19,20 +19,34 @@ export interface MarkdownWindow {
 	to: number;
 }
 
+/** A span of the current document whose decorations may be stale. */
+interface DirtyRange {
+	from: number;
+	to: number;
+}
+
 export interface MarkdownPluginState {
 	decos: DecorationSet;
 	/** Top-level tokens `decos` was built from; null while markdown mode is off. */
 	tokens: Token[] | null;
 	/** Range `decos` covers; null when the whole document is decorated. */
 	window: MarkdownWindow | null;
+	/**
+	 * Union of the changed ranges of the edits whose rebuild is still deferred,
+	 * in current-document coordinates; null when `decos` is up to date. While it
+	 * is set `tokens` describes an older document, so nothing may reuse it as a
+	 * lex of this one.
+	 */
+	pending: DirtyRange | null;
 }
 
 /**
  * Meta carried on `markdownDecorationKey`: `true` re-reads the mode ref and
  * rebuilds (or clears) everything, a window object re-aims the decorated range
- * after a scroll or a resize.
+ * after a scroll or a resize, and `'flush'` performs the rebuild the edits since
+ * the last one deferred.
  */
-export type MarkdownDecorationMeta = true | { window: MarkdownWindow };
+export type MarkdownDecorationMeta = true | 'flush' | { window: MarkdownWindow };
 
 export const markdownDecorationKey = new PluginKey<MarkdownPluginState>('markdownDecorations');
 
@@ -70,12 +84,12 @@ interface MarkdownBuild {
  * caller skip.
  *
  * `prevTokens` is the token list the existing set was built from; `dirtyFrom`/
- * `dirtyTo` bound what the transaction's steps touched, since only decorations
- * outside that span survived `map()` intact. Pass `prevTokens` null to rebuild
- * everything. `win` bounds the result to what is on screen; pass null to
- * decorate the whole document. `lexed` skips the lex when the caller already
- * holds this document's token list — a scroll re-aims the window without
- * touching the text.
+ * `dirtyTo` bound what the steps of every transaction since then touched, since
+ * only decorations outside that span survived `map()` intact. Pass `prevTokens`
+ * null to rebuild everything. `win` bounds the result to what is on screen;
+ * pass null to decorate the whole document. `lexed` skips the lex when the
+ * caller already holds this document's token list — a scroll re-aims the window
+ * without touching the text.
  */
 function buildDecorations(
 	doc: Node,
@@ -405,11 +419,63 @@ export function buildMarkdownDecorations(doc: Node): DecorationSet {
 	return DecorationSet.create(doc, buildDecorations(doc, null, 0, doc.content.size, null).decorations);
 }
 
-const INACTIVE: MarkdownPluginState = { decos: DecorationSet.empty, tokens: null, window: null };
+const INACTIVE: MarkdownPluginState = { decos: DecorationSet.empty, tokens: null, window: null, pending: null };
 
 function fullBuild(doc: Node, win: MarkdownWindow | null, lexed: Token[] | null = null): MarkdownPluginState {
 	const built = buildDecorations(doc, null, 0, doc.content.size, win, lexed);
-	return { decos: DecorationSet.create(doc, built.decorations), tokens: built.tokens, window: win };
+	return { decos: DecorationSet.create(doc, built.decorations), tokens: built.tokens, window: win, pending: null };
+}
+
+/**
+ * The edited span carried forward: `prev` mapped into `tr.doc`, unioned with
+ * what this transaction touched. Deferring the rebuild means several
+ * transactions' worth of edits have to be described by one range — the token
+ * diff says which blocks changed, but only this says which decorations `map()`
+ * left where they were.
+ */
+function mergeDirty(prev: DirtyRange | null, tr: Transaction): DirtyRange | null {
+	const mapped = prev ? { from: tr.mapping.map(prev.from, -1), to: tr.mapping.map(prev.to, 1) } : null;
+	const cur = changedRange(tr);
+	// changedRange's empty sentinel: steps that mapped nothing, so `prev` is still
+	// the whole of what is dirty.
+	if (cur.from > cur.to) return mapped;
+	if (!mapped) return cur;
+	return { from: Math.min(mapped.from, cur.from), to: Math.max(mapped.to, cur.to) };
+}
+
+/**
+ * Re-lexes and splices in decorations for everything `dirty` covers. Runs off
+ * the keystroke path, from the idle callback `rebuildScheduler` books.
+ *
+ * `prev.decos` is already in `doc`'s coordinates — every deferred transaction
+ * mapped it forward and the flush itself changes no text — so there is nothing
+ * left to map here.
+ */
+function rebuild(prev: MarkdownPluginState, doc: Node, dirty: DirtyRange): MarkdownPluginState {
+	const win = prev.window;
+	if (!prev.tokens) return fullBuild(doc, win);
+	const built = buildDecorations(doc, prev.tokens, dirty.from, dirty.to, win);
+	// Empty rebuild range: the edits landed on tokens outside the window, so
+	// nothing in the set is stale.
+	if (built.toPM <= built.fromPM) {
+		return { decos: prev.decos, tokens: built.tokens, window: win, pending: null };
+	}
+	const whole = win
+		? built.fromPM <= win.from && built.toPM >= win.to
+		: built.fromPM === 0 && built.toPM >= doc.content.size;
+	if (whole) {
+		return { decos: DecorationSet.create(doc, built.decorations), tokens: built.tokens, window: win, pending: null };
+	}
+	// find() is inclusive at both ends and the rebuilt range is bounded by
+	// paragraph node starts, so drop only what falls fully inside it.
+	const stale = prev.decos.find(built.fromPM, built.toPM)
+		.filter(deco => deco.from >= built.fromPM && deco.to <= built.toPM);
+	return {
+		decos: prev.decos.remove(stale).add(doc, built.decorations),
+		tokens: built.tokens,
+		window: win,
+		pending: null,
+	};
 }
 
 /** Paragraphs decorated on each side of the viewport, so small scrolls need no rebuild. */
@@ -554,10 +620,77 @@ function viewportTracker(view: EditorView, mode: MarkdownModeRef) {
 	};
 }
 
+/**
+ * Longest the styling may lag an edit. `requestIdleCallback` normally runs in
+ * the gap after the frame that painted it; the timeout is what bounds the lag
+ * while a generation keeps the main thread busy.
+ */
+const FLUSH_MS = 100;
+
+/**
+ * Runs the rebuild `apply` deferred. A keystroke or a streamed token only maps
+ * the set forward, because the one thing left on that path is the
+ * whole-document lex and it is O(document); the real work happens in the next
+ * idle slot instead. One callback stays in flight at a time, so a burst of
+ * edits coalesces into a single rebuild over the union of their changed ranges.
+ */
+function rebuildScheduler(view: EditorView) {
+	const win = view.dom.ownerDocument.defaultView;
+	let idle = 0;
+	let timer = 0;
+
+	const flush = (): void => {
+		idle = 0;
+		timer = 0;
+		// A window re-aim or a mode toggle in the meantime rebuilt everything
+		// already; there is nothing left to splice.
+		if (!markdownDecorationKey.getState(view.state)?.pending) return;
+		view.dispatch(view.state.tr.setMeta(markdownDecorationKey, 'flush'));
+	};
+
+	const cancel = (): void => {
+		if (idle) win?.cancelIdleCallback(idle);
+		if (timer) win?.clearTimeout(timer);
+		idle = 0;
+		timer = 0;
+	};
+
+	return {
+		update(): void {
+			if (!markdownDecorationKey.getState(view.state)?.pending) {
+				cancel();
+				return;
+			}
+			if (idle || timer || !win) return;
+			// Not universal — jsdom has none and Safari only got it in 16.4. A plain
+			// timeout gives the same debounce without the idle-slot scheduling.
+			if (typeof win.requestIdleCallback === 'function') {
+				idle = win.requestIdleCallback(flush, { timeout: FLUSH_MS });
+			} else {
+				timer = win.setTimeout(flush, FLUSH_MS);
+			}
+		},
+		destroy: cancel,
+	};
+}
+
 export function markdownDecorationPlugin(mode: MarkdownModeRef): Plugin<MarkdownPluginState> {
 	return new Plugin<MarkdownPluginState>({
 		key: markdownDecorationKey,
-		view: view => viewportTracker(view, mode),
+		view(view) {
+			const tracker = viewportTracker(view, mode);
+			const scheduler = rebuildScheduler(view);
+			return {
+				update(): void {
+					tracker.update();
+					scheduler.update();
+				},
+				destroy(): void {
+					tracker.destroy();
+					scheduler.destroy();
+				},
+			};
+		},
 		state: {
 			init(_config, state): MarkdownPluginState {
 				// There is no view yet, so no viewport to aim at; the tracker
@@ -566,35 +699,27 @@ export function markdownDecorationPlugin(mode: MarkdownModeRef): Plugin<Markdown
 			},
 			apply(tr, prev): MarkdownPluginState {
 				const meta = tr.getMeta(markdownDecorationKey) as MarkdownDecorationMeta | undefined;
-				// Both meta paths ride a transaction that leaves the text alone, so the
-				// token list the last build produced still describes the document and
-				// the whole-document lex can be skipped.
-				const lexed = tr.docChanged ? null : prev.tokens;
+				// The token list still describes the document only while nothing has
+				// changed since it was lexed — neither this transaction nor an edit
+				// whose rebuild is still deferred.
+				const lexed = tr.docChanged || prev.pending ? null : prev.tokens;
 				if (meta === true) return mode.current ? fullBuild(tr.doc, null, lexed) : INACTIVE;
 				if (!mode.current) return INACTIVE;
+				if (meta === 'flush') return prev.pending ? rebuild(prev, tr.doc, prev.pending) : prev;
 				if (meta) return fullBuild(tr.doc, meta.window, lexed);
 				if (!tr.docChanged) return prev;
 				const win = mapWindow(prev.window, tr);
+				// No set to carry forward (mode was off until now), so there is nothing
+				// deferring would save.
 				if (!prev.tokens) return fullBuild(tr.doc, win);
-				const dirty = changedRange(tr);
-				const built = buildDecorations(tr.doc, prev.tokens, dirty.from, dirty.to, win);
-				// Empty rebuild range: the edit landed on tokens that are outside
-				// the window, so nothing in the set is stale.
-				if (built.toPM <= built.fromPM) {
-					return { decos: prev.decos.map(tr.mapping, tr.doc), tokens: built.tokens, window: win };
-				}
-				const whole = win
-					? built.fromPM <= win.from && built.toPM >= win.to
-					: built.fromPM === 0 && built.toPM >= tr.doc.content.size;
-				if (whole) {
-					return { decos: DecorationSet.create(tr.doc, built.decorations), tokens: built.tokens, window: win };
-				}
-				const mapped = prev.decos.map(tr.mapping, tr.doc);
-				// find() is inclusive at both ends and the rebuilt range is bounded
-				// by paragraph node starts, so drop only what falls fully inside it.
-				const stale = mapped.find(built.fromPM, built.toPM)
-					.filter(deco => deco.from >= built.fromPM && deco.to <= built.toPM);
-				return { decos: mapped.remove(stale).add(tr.doc, built.decorations), tokens: built.tokens, window: win };
+				// Map only: positions stay correct, styling lags by an idle slot. The
+				// lex and the splice are left to the flush the view() schedules.
+				return {
+					decos: prev.decos.map(tr.mapping, tr.doc),
+					tokens: prev.tokens,
+					window: win,
+					pending: mergeDirty(prev.pending, tr),
+				};
 			},
 		},
 		props: {

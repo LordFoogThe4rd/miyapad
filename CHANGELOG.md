@@ -12,6 +12,7 @@
 - Hovering tokens in a long prompt no longer stutters
 - Typing and streaming stay responsive in long prompts — the editor now updates only the part of the highlighting that changed instead of rebuilding all of it on every keystroke and every generated token
 - Markdown formatting mode no longer slows down as the prompt grows — styling is applied to the part of the document on screen instead of all of it, and scrolling keeps its place while it catches up
+- Typing in markdown formatting mode is no longer held up by the formatting itself — characters appear immediately and the styling catches up a moment later
 
 ### Fixed
 
