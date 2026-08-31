@@ -14,6 +14,7 @@ Web-based AI text generation interface. React 19/TypeScript frontend with option
 - [API Endpoints](docs/api-endpoints.md)
 - [Server-Side Tokenization](docs/tokenization.md)
 - [Building & Running](docs/building-and-running.md)
+- [Docker](docs/docker.md)
 - [CSS Architecture](docs/css.md)
 - [Development Conventions](docs/development-conventions.md) (IMPORTANT! READ BEFORE WORKING)
 - [Screenshot Capture](docs/screenshot-capture.md)
