@@ -29,7 +29,7 @@ Miyapad is a user-friendly, browser-based interface for interacting with languag
 
 ### Architecture
 
-This refactored fork moves from a single monolithic HTML file to a **modular Parcel 2 project** (~60+ files across `src/`). The monolithic `styles.css` is split into 21 component-specific partials under `src/css/`, and global state is managed via **React Context API** (`SettingsContext`, `GenerationContext`) instead of inline global state.
+This refactored fork moves from a single monolithic HTML file to a **modular Parcel 2 project**. The monolithic `styles.css` is split into component-specific partials under `src/css/`, and global state is managed via **React Context API** instead of inline global state.
 
 ## Getting Started
 
