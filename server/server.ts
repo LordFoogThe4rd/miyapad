@@ -72,24 +72,36 @@ initDatabase(storagePath).then((db) => {
         });
     }
 
-    app.listen(port, '127.0.0.1', () => {
-        console.log(`Server listening at http://127.0.0.1:${port}`);
+    const openBrowser = () => {
         if (!noOpen) {
             open(`http://127.0.0.1:${port}/`);
         }
-    });
+    };
 
-    if (host) {
-        app.listen(port, host, () => {
-            console.log(`Server listening at http://${host}:${port}`);
-        });
+    const servers: ReturnType<typeof app.listen>[] = [];
+
+    if (host && !['0.0.0.0', 'localhost', '127.0.0.1'].includes(host)) {
+        servers.push(app.listen(port, '127.0.0.1', () => {
+            console.log(`Server listening at http://127.0.0.1:${port}`);
+            openBrowser();
+        }));
     }
+
+    servers.push(app.listen(port, host || '127.0.0.1', () => {
+        console.log(`Server listening at http://${host || '127.0.0.1'}:${port}`);
+        if (!host || ['0.0.0.0', 'localhost', '127.0.0.1'].includes(host)) {
+            openBrowser();
+        }
+    }));
 
     let shuttingDown = false;
 
     async function gracefulShutdown() {
         if (shuttingDown) return;
         shuttingDown = true;
+        for (const server of servers) {
+            server.close();
+        }
         stopAutoBackup();
         clearMaintenanceScheduler();
         const maintConfig = await getMaintenanceConfig(db);
