@@ -19,7 +19,7 @@ import tokenizerRoutes from './routes/tokenizer.js';
 
 const args = minimist(process.argv.slice(2)) as Record<string, any>;
 const port = args.port || process.env.MIYAPAD_PORT || 3000;
-const host = args.host || process.env.MIYAPAD_HOST || '127.0.0.1';
+const host = args.host || process.env.MIYAPAD_HOST;
 const noOpen = (args.open !== undefined && !args.open) || process.env.MIYAPAD_NO_OPEN;
 const login = args.login || process.env.MIYAPAD_LOGIN || 'anon';
 const password = args.password || process.env.MIYAPAD_PASSWORD || undefined;
@@ -72,12 +72,18 @@ initDatabase(storagePath).then((db) => {
         });
     }
 
-    app.listen(port, host, () => {
-        console.log(`Server listening at http://${host}:${port}`);
+    app.listen(port, '127.0.0.1', () => {
+        console.log(`Server listening at http://127.0.0.1:${port}`);
         if (!noOpen) {
             open(`http://127.0.0.1:${port}/`);
         }
     });
+
+    if (host) {
+        app.listen(port, host, () => {
+            console.log(`Server listening at http://${host}:${port}`);
+        });
+    }
 
     let shuttingDown = false;
 
