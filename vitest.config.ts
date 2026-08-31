@@ -5,5 +5,8 @@ export default defineConfig({
 		environment: 'jsdom',
 		include: ['src/**/*.{test,spec}.{ts,tsx}'],
 		setupFiles: ['vitest.setup.ts'],
+		benchmark: {
+			include: ['src/**/*.bench.{ts,tsx}'],
+		},
 	},
 });

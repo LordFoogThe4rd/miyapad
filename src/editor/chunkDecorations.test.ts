@@ -194,14 +194,79 @@ describe('chunkDecorationPlugin', () => {
 		const s1 = dispatchDeco(state, makeDecoState({ chunks: kept }));
 
 		// Streaming append: same chunk objects plus one, text grows at the end.
+		// The appended chunk renders differently from the one before it, so it
+		// gets its own decoration rather than extending the trailing one.
 		const s2 = s1.apply(
 			s1.tr.insertText('ef', s1.doc.content.size - 1)
-				.setMeta(chunkDecorationKey, makeDecoState({ chunks: [...kept, m('ef')] })),
+				.setMeta(chunkDecorationKey, makeDecoState({ chunks: [...kept, u('ef')] })),
 		);
 
 		const found = chunkDecorationKey.getState(s2)!.decos.find();
 		expect(found.map(d => [d.from, d.to])).toEqual([[1, 3], [3, 5], [5, 7]]);
 		expect(found.map(d => decoAttrs(d)['data-promptchunk'])).toEqual(['0', '1', '2']);
+	});
+
+	it('extends the trailing decoration when an appended chunk renders the same', () => {
+		const kept = [u('ab'), m('cd')];
+		const state = createState('abcd');
+		const s1 = dispatchDeco(state, makeDecoState({ chunks: kept }));
+
+		const create = vi.spyOn(DecorationSet, 'create');
+		const s2 = s1.apply(
+			s1.tr.insertText('ef', s1.doc.content.size - 1)
+				.setMeta(chunkDecorationKey, makeDecoState({ chunks: [...kept, m('ef')] })),
+		);
+		// Growing the trailing span still goes through the splice, not a rebuild.
+		expect(create).not.toHaveBeenCalled();
+		create.mockRestore();
+
+		const found = chunkDecorationKey.getState(s2)!.decos.find();
+		expect(found.map(d => [d.from, d.to])).toEqual([[1, 3], [3, 7]]);
+		// A merged span is labelled with the first chunk it covers.
+		expect(found.map(d => decoAttrs(d)['data-promptchunk'])).toEqual(['0', '1']);
+	});
+
+	it('keeps a state usable after a later one grew the shared run list', () => {
+		const kept = [u('a'), m('b'), u('c')];
+		const state = createState('abc');
+		const s1 = dispatchDeco(state, makeDecoState({ chunks: kept }));
+
+		// The run list is appended to in place, so it is shared with s1. A state
+		// that gets applied again after a later one grew it must still see only
+		// the runs its own decorations have.
+		const grown = s1.apply(
+			s1.tr.insertText('d', s1.doc.content.size - 1)
+				.setMeta(chunkDecorationKey, makeDecoState({ chunks: [...kept, m('d')] })),
+		);
+		expect(chunkDecorationKey.getState(grown)!.decos.find().length).toBe(4);
+
+		const other = s1.apply(
+			s1.tr.insertText('ef', s1.doc.content.size - 1)
+				.setMeta(chunkDecorationKey, makeDecoState({ chunks: [...kept, u('ef')] })),
+		);
+		const found = chunkDecorationKey.getState(other)!.decos.find();
+		expect(found.map(d => [d.from, d.to])).toEqual([[1, 2], [2, 3], [3, 6]]);
+	});
+
+	it('merges a run of identically rendered chunks into one decoration', () => {
+		const state = createState('abcdef');
+		const s = dispatchDeco(state, makeDecoState({ chunks: [u('ab'), m('cd'), m('e'), m('f')] }));
+
+		const found = chunkDecorationKey.getState(s)!.decos.find();
+		expect(found.map(d => [d.from, d.to])).toEqual([[1, 3], [3, 7]]);
+		expect(found.map(d => decoAttrs(d).class)).toEqual(['user', 'machine']);
+	});
+
+	it('keeps chunks apart when only their colour differs', () => {
+		const state = createState('abcd');
+		const s = dispatchDeco(state, makeDecoState({
+			chunks: [m('ab', 0.2), m('cd', 0.8)],
+			tokenColorMode: 1,
+		}));
+
+		const found = chunkDecorationKey.getState(s)!.decos.find();
+		expect(found.map(d => [d.from, d.to])).toEqual([[1, 3], [3, 5]]);
+		expect(decoAttrs(found[0]).style).not.toBe(decoAttrs(found[1]).style);
 	});
 
 	it('splices an appended chunk in without a full DecorationSet.create', () => {
@@ -219,18 +284,21 @@ describe('chunkDecorationPlugin', () => {
 	});
 
 	it('rebuilds from the first changed chunk when the doc changed in an earlier transaction', () => {
-		const head = u('ab');
-		const state = createState('abcd');
-		const s1 = dispatchDeco(state, makeDecoState({ chunks: [head, m('cd')] }));
+		const head = [u('ab'), m('cd')];
+		const state = createState('abcdef');
+		const s1 = dispatchDeco(state, makeDecoState({ chunks: [...head, u('ef')] }));
 
 		// A user edit reaches the plugin as a bare doc change; the chunk meta only
 		// arrives on the following transaction, so dirtyFrom has to survive it.
-		const s2 = s1.apply(s1.tr.insertText('X', 4));
-		const s3 = dispatchDeco(s2, makeDecoState({ chunks: [head, u('cXd')] }));
+		const s2 = s1.apply(s1.tr.insertText('X', 6));
+		const s3 = dispatchDeco(s2, makeDecoState({ chunks: [...head, m('eXf')] }));
 
 		const found = chunkDecorationKey.getState(s3)!.decos.find();
-		expect(found.map(d => [d.from, d.to])).toEqual([[1, 3], [3, 6]]);
-		expect(decoAttrs(found[1]).class).toBe('user');
+		// The tail turned machine, so it merges into the machine chunk in front of
+		// it — which means the rebuild has to reach one decoration further back
+		// than reuse alone would allow. The leading user span is still reused.
+		expect(found.map(d => [d.from, d.to])).toEqual([[1, 3], [3, 8]]);
+		expect(found.map(d => decoAttrs(d).class)).toEqual(['user', 'machine']);
 	});
 
 	it('drops decorations left past the end when the chunks shrink', () => {
@@ -306,11 +374,11 @@ describe('integration: PM editor with chunk decorations', () => {
 			undoHovered: 2,
 		})));
 
-		const spans = container.querySelectorAll('[data-promptchunk]');
-		expect(spans[0].className).not.toContain('erase');
-		expect(spans[1].className).not.toContain('erase');
-		expect(spans[2].className).toContain('erase');
-		expect(spans[3].className).toContain('erase');
+		// The three machine chunks render identically and share one decoration;
+		// the erase decoration is what splits it back apart at chunk 2.
+		const spans = [...container.querySelectorAll('[data-promptchunk]')];
+		expect(spans.map(el => el.textContent)).toEqual(['a', 'b', 'cd']);
+		expect(spans.map(el => el.className.includes('erase'))).toEqual([false, false, true]);
 
 		disposeView(view, container);
 	});
@@ -416,9 +484,11 @@ describe('integration: PM editor with chunk decorations', () => {
 		expect(create).not.toHaveBeenCalled();
 		create.mockRestore();
 
+		// The streamed chunk renders like the one before it, so it extends that
+		// decoration; the two DOM spans are the paragraph break, not two spans.
 		const spans = container.querySelectorAll('[data-promptchunk]');
 		expect([...spans].map(el => el.textContent)).toEqual(['a', 'b', 'cd']);
-		expect([...spans].map(el => el.getAttribute('data-promptchunk'))).toEqual(['0', '1', '2']);
+		expect([...spans].map(el => el.getAttribute('data-promptchunk'))).toEqual(['0', '1', '1']);
 
 		disposeView(view, container);
 	});
@@ -440,6 +510,86 @@ describe('integration: PM editor with chunk decorations', () => {
 		expect(spans.length).toBe(2);
 		expect(spans[1].textContent).toBe('cd');
 		expect(spans[1].className).toContain('current');
+
+		disposeView(view, container);
+	});
+});
+
+describe('incremental chunk decorations match a fresh build', () => {
+	/** The decorations a plugin with no history would build for this doc. */
+	function freshDecos(doc: ReturnType<typeof createDoc>, deco: ChunkDecorationState): DecorationSet {
+		const state = EditorState.create({ doc, plugins: [chunkDecorationPlugin, chunkHoverPlugin] });
+		return chunkDecorationKey.getState(state.apply(state.tr.setMeta(chunkDecorationKey, deco)))!.decos;
+	}
+
+	function describeDecos(set: DecorationSet): string[] {
+		return set.find().map(d => `${d.from}-${d.to} ${JSON.stringify(decoAttrs(d))}`);
+	}
+
+	function mulberry32(seed: number): () => number {
+		let a = seed;
+		return () => {
+			a = (a + 0x6d2b79f5) | 0;
+			let t = Math.imul(a ^ (a >>> 15), 1 | a);
+			t = (t + Math.imul(t ^ (t >>> 7), 61 | t)) ^ t;
+			return ((t ^ (t >>> 14)) >>> 0) / 4294967296;
+		};
+	}
+
+	// Small alphabets on purpose: identical probs and types are what make runs
+	// merge, and merging is what the incremental splice has to reproduce.
+	const PROBS = [undefined, 0.2, 0.2, 0.9];
+	const WORDS = ['a', 'bc', 'def', ' ', '\n', 'gh\ni'];
+
+	function makeChunk(rnd: () => number): PromptChunk {
+		const content = WORDS[Math.floor(rnd() * WORDS.length)];
+		return rnd() < 0.4 ? u(content) : m(content, PROBS[Math.floor(rnd() * PROBS.length)]);
+	}
+
+	it.each([1, 2, 3, 4])('stays identical to a rebuild across a random walk (seed %i)', (seed) => {
+		const rnd = mulberry32(seed);
+		const { view, container } = createView('a');
+		let chunks: PromptChunk[] = [u('a')];
+		let tokenColorMode = 0;
+		let tokenHighlightMode = 0;
+		const forks: EditorState[] = [];
+
+		for (let step = 0; step < 150; step++) {
+			// Re-applying an older state is what the shared run list has to
+			// survive: it appends in place, and the branch below must not pick up
+			// runs some other state added.
+			if (step % 17 === 0) forks.push(view.state);
+			if (step % 23 === 0 && forks.length > 0) {
+				const old = forks[Math.floor(rnd() * forks.length)];
+				old.apply(old.tr.setMeta(chunkDecorationKey, makeDecoState({ chunks, tokenColorMode })));
+			}
+
+			const roll = rnd();
+			if (roll < 0.5 || chunks.length < 2) {
+				chunks = [...chunks, makeChunk(rnd)]; // streaming append
+			} else if (roll < 0.7) {
+				const i = Math.floor(rnd() * chunks.length);
+				chunks = [...chunks.slice(0, i), makeChunk(rnd), ...chunks.slice(i + 1)]; // mid-doc edit
+			} else if (roll < 0.85) {
+				const i = Math.floor(rnd() * chunks.length);
+				chunks = [...chunks.slice(0, i), ...chunks.slice(i + 1)]; // delete
+			} else if (roll < 0.95) {
+				tokenColorMode = Math.floor(rnd() * 3);
+			} else {
+				tokenHighlightMode = rnd() < 0.5 ? 0 : 1;
+			}
+			if (!chunks.some(c => c.content.length > 0)) chunks = [...chunks, u('z')];
+
+			const deco = makeDecoState({ chunks, tokenColorMode, tokenHighlightMode });
+			const before = view.state.doc;
+			applyChunksToPM(view, chunks, deco);
+			// A restructure that leaves the text alone never reaches the plugin
+			// through applyChunksToPM, but it still restyles.
+			if (view.state.doc === before) view.dispatch(view.state.tr.setMeta(chunkDecorationKey, deco));
+
+			expect(describeDecos(chunkDecorationKey.getState(view.state)!.decos))
+				.toEqual(describeDecos(freshDecos(view.state.doc, deco)));
+		}
 
 		disposeView(view, container);
 	});

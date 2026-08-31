@@ -24,6 +24,14 @@ export interface ChunkDecorationPluginState {
 	/** Where the last build stopped, so an appending build can resume there. */
 	cursor: BuildCursor | null;
 	/**
+	 * First chunk index of each decoration in `decos`, ascending — adjacent
+	 * chunks that render identically share one span, so this is what maps a
+	 * decoration boundary back to a chunk boundary. Needed because reuse can
+	 * only ever start at a decoration boundary: pulling up short inside a
+	 * merged run would strand the chunks before the cut with no span.
+	 */
+	runStarts: RunStarts;
+	/**
 	 * Lowest position in the current doc that a step has touched since `built`
 	 * was applied, `Infinity` while clean. A decoration ending at or before it
 	 * came through `map()` untouched and can be reused; anything past it is
@@ -82,6 +90,27 @@ function chunkBaseClass(chunk: PromptChunk, tokenHighlightMode: number, isCurren
 	return (tokenHighlightMode === 1 && !isCurrent) || chunk.type === 'user' ? 'user' : 'machine';
 }
 
+/** The `--bg-color` a chunk paints, or '' when the mode leaves it unpainted. */
+function chunkBgColor(chunk: PromptChunk, tokenColorMode: number): string {
+	const chunkProb = chunk.prob ?? 1;
+	if (tokenColorMode === 1) return getRatioColor(chunkProb);
+	if (tokenColorMode !== 2) return '';
+	const probs = chunk.completion_probabilities?.[0]?.probs ?? [];
+	if (probs.length === 0) return '';
+	const minProb = probs.length < 10
+		? Math.min(...probs.map((p: ProbItem) => p.prob ?? 0))
+		: 0;
+	const maxProb = Math.max(...probs.map((p: ProbItem) => p.prob ?? 0));
+	if (maxProb === minProb) return '';
+	return getRatioColor((chunkProb - minProb) / (maxProb - minProb));
+}
+
+function runDecoration(from: number, to: number, chunkIdx: number, cls: string, bg: string): Decoration {
+	const attrs: Record<string, string> = { class: cls, 'data-promptchunk': String(chunkIdx) };
+	if (bg) attrs.style = `--bg-color: ${bg}`;
+	return Decoration.inline(from, to, attrs);
+}
+
 /**
  * A resumption point for the chunk walk: everything before `chunkIdx` has a
  * decoration in the set already, and the flat-offset → PM-pos state needed to
@@ -99,6 +128,51 @@ interface BuildCursor {
 	paraIdx: number;
 	pmStart: number;
 	offStart: number;
+	/**
+	 * The trailing decoration, left open across builds so an appended chunk that
+	 * renders identically extends it instead of adding a span beside it. -1 when
+	 * the set is empty.
+	 */
+	runFrom: number;
+	/** Chunk index that decoration is labelled with — its first chunk. */
+	runIndex: number;
+	/** What it renders; a chunk joins it only if both of these match. */
+	runClass: string;
+	runBg: string;
+}
+
+/**
+ * The first chunk index of every decoration in the set, as an append-only list.
+ * `arr` is shared between plugin states and only ever grown, so a streamed chunk
+ * costs a push instead of copying a list as long as the chunk array; `len` is
+ * this state's own view of it. Elements below a state's `len` are never
+ * rewritten, which is what keeps the sharing safe when an older state is applied
+ * again — a build that keeps fewer runs than the array holds takes a copy.
+ */
+interface RunStarts {
+	arr: number[];
+	len: number;
+}
+
+function appendRuns(prev: RunStarts, keep: number, added: number[]): RunStarts {
+	if (keep === 0) return { arr: added, len: added.length };
+	if (keep === prev.len && prev.arr.length === prev.len) {
+		for (const start of added) prev.arr.push(start);
+		return { arr: prev.arr, len: prev.arr.length };
+	}
+	return { arr: [...prev.arr.slice(0, keep), ...added], len: keep + added.length };
+}
+
+/** Walk state at a decoration boundary, so the emit pass can restart there. */
+interface RunPoint {
+	chunkIdx: number;
+	/** Index of that decoration in the previous build's `runStarts`. */
+	runIdx: number;
+	offset: number;
+	pmPos: number;
+	paraIdx: number;
+	pmStart: number;
+	offStart: number;
 }
 
 interface BuiltChunkDecorations {
@@ -109,8 +183,10 @@ interface BuiltChunkDecorations {
 	 * even when `decorations` is empty (chunks can shrink without any rebuild).
 	 */
 	fromPM: number;
-	/** How many leading chunks kept their existing decoration. */
-	skipped: number;
+	/** How many leading decorations were kept as they are. */
+	reusedRuns: number;
+	/** First chunk index of every decoration in the resulting set. */
+	runStarts: RunStarts;
 	/** Where this build stopped, to hand to the next one as `resume`. */
 	cursor: BuildCursor;
 }
@@ -123,6 +199,13 @@ interface BuiltChunkDecorations {
  * jumps straight past the skippable run instead of rescanning it — which is
  * what makes an appended chunk O(1) rather than O(chunks). Pass `reuseUpTo` 0
  * for a full rebuild.
+ *
+ * Adjacent chunks that render identically share one decoration, so the rebuilt
+ * tail has to start on a decoration boundary rather than any chunk boundary:
+ * `prevRunStarts` is what maps one to the other. The emit pass deliberately
+ * starts one decoration *earlier* than reuse would allow, so a tail that now
+ * renders the same as the decoration in front of it merges into it — that is
+ * what keeps an incremental set identical to a fresh one.
  */
 function buildDecorations(
 	state: ChunkDecorationState,
@@ -131,25 +214,18 @@ function buildDecorations(
 	reuseUpTo = 0,
 	dirtyFrom = Infinity,
 	resume: BuildCursor | null = null,
+	prevRunStarts: RunStarts = { arr: [], len: 0 },
 ): BuiltChunkDecorations {
 	const decorations: Decoration[] = [];
+	const runStarts: number[] = [];
 	let pos = 0;
-	let skipped = 0;
-	let fromPM = -1;
 	let startChunk = 0;
+	let reusedRuns = 0;
 
 	// Incremental flat-offset → PM-pos cursor, only advances forward
 	let paraIdx = 0;
 	let pmStart = 1; // PM pos of first char in current paragraph
 	let offStart = 0; // flat offset of first char in current paragraph
-	if (resume && resume.chunkIdx <= reuseUpTo && resume.pmPos <= dirtyFrom) {
-		startChunk = resume.chunkIdx;
-		skipped = resume.chunkIdx;
-		pos = resume.offset;
-		paraIdx = resume.paraIdx;
-		pmStart = resume.pmStart;
-		offStart = resume.offStart;
-	}
 	const toPMPos = (offset: number): number => {
 		while (paraIdx < doc.childCount) {
 			const para = doc.child(paraIdx);
@@ -164,6 +240,74 @@ function buildDecorations(
 		return doc.content.size - 1;
 	};
 
+	// The decoration currently being extended. Carried in from `resume` so a
+	// streamed chunk grows the trailing span rather than starting a new one.
+	let runFrom = -1;
+	let runTo = -1;
+	let runIndex = 0;
+	let runClass = '';
+	let runBg = '';
+	// Whether the open run is still exactly the decoration already in the set,
+	// so a streamed chunk that starts a new run leaves it alone instead of
+	// removing and re-adding an identical span.
+	let runInSet = false;
+	// PM position the set is being rebuilt from; -1 until something is emitted.
+	let emitFrom = -1;
+
+	if (resume && resume.chunkIdx <= reuseUpTo && resume.pmPos <= dirtyFrom) {
+		startChunk = resume.chunkIdx;
+		pos = resume.offset;
+		paraIdx = resume.paraIdx;
+		pmStart = resume.pmStart;
+		offStart = resume.offStart;
+		if (resume.runFrom !== -1) {
+			runFrom = resume.runFrom;
+			runTo = toPMPos(pos);
+			runIndex = resume.runIndex;
+			runClass = resume.runClass;
+			runBg = resume.runBg;
+			runInSet = true;
+			// Every previous run survives — the open one keeps its start chunk
+			// whether or not it grows, so the run list only ever gets appended to.
+			reusedRuns = prevRunStarts.len;
+		}
+	} else if (reuseUpTo > 0 && prevRunStarts.len > 0) {
+		// Locate pass: arithmetic only, no colours computed, so a mid-document
+		// edit still costs one cheap walk of the leading chunks. Both bounds are
+		// monotonic, so the first failure ends it.
+		let ptr = 0;
+		let safe: RunPoint | null = null;
+		let prevSafe: RunPoint | null = null;
+		for (let i = 0; i < state.chunks.length; i++) {
+			const chunkLen = state.chunks[i].content.length;
+			if (chunkLen === 0) continue;
+			if (pos + chunkLen > flatTextLen || i > reuseUpTo) break;
+			const pmFrom = toPMPos(pos);
+			if (pmFrom > dirtyFrom) break;
+			if (ptr < prevRunStarts.len && prevRunStarts.arr[ptr] === i) {
+				// Every decoration before this one ends at or before pmFrom, which
+				// is inside the identical, untouched prefix: they all survive.
+				prevSafe = safe;
+				safe = { chunkIdx: i, runIdx: ptr, offset: pos, pmPos: pmFrom, paraIdx, pmStart, offStart };
+				ptr++;
+			}
+			pos += chunkLen;
+		}
+		if (prevSafe) {
+			startChunk = prevSafe.chunkIdx;
+			reusedRuns = prevSafe.runIdx;
+			pos = prevSafe.offset;
+			paraIdx = prevSafe.paraIdx;
+			pmStart = prevSafe.pmStart;
+			offStart = prevSafe.offStart;
+		} else {
+			pos = 0;
+			paraIdx = 0;
+			pmStart = 1;
+			offStart = 0;
+		}
+	}
+
 	let i = startChunk;
 	for (; i < state.chunks.length; i++) {
 		const chunk = state.chunks[i];
@@ -173,50 +317,55 @@ function buildDecorations(
 		const end = pos + chunkLen;
 		const pmFrom = toPMPos(pos);
 		const pmTo = toPMPos(end);
-
-		// Contiguous spans, so the previous chunk's decoration ends exactly at
-		// pmFrom — once one chunk has to be rebuilt every later one does too.
-		if (fromPM === -1 && i < reuseUpTo && pmTo <= dirtyFrom) {
-			skipped++;
-			pos = end;
-			continue;
-		}
-		if (fromPM === -1) fromPM = pmFrom;
-
-		const chunkProb = chunk.prob ?? 1;
-		let bgColor = '';
-		if (state.tokenColorMode === 1) {
-			bgColor = getRatioColor(chunkProb);
-		} else if (state.tokenColorMode === 2) {
-			const probs = chunk.completion_probabilities?.[0]?.probs ?? [];
-			if (probs.length > 0) {
-				const minProb = probs.length < 10
-					? Math.min(...probs.map((p: ProbItem) => p.prob ?? 0))
-					: 0;
-				const maxProb = Math.max(...probs.map((p: ProbItem) => p.prob ?? 0));
-				if (maxProb !== minProb) {
-					bgColor = getRatioColor((chunkProb - minProb) / (maxProb - minProb));
-				}
-			}
-		}
-
 		const baseClass = chunkBaseClass(chunk, state.tokenHighlightMode, false);
-		const attrs: Record<string, string> = { 'data-promptchunk': String(i) };
-		if (bgColor) attrs.style = `--bg-color: ${bgColor}`;
+		const bgColor = chunkBgColor(chunk, state.tokenColorMode);
 
-		decorations.push(Decoration.inline(pmFrom, pmTo, { class: baseClass, ...attrs }));
+		// Chunks tile the text, so runTo === pmFrom holds for every chunk after
+		// the first; the check is what stops a resumed run from swallowing a gap
+		// if the doc ever moved under the cursor.
+		if (runFrom !== -1 && runTo === pmFrom && baseClass === runClass && bgColor === runBg) {
+			if (runInSet) {
+				// It grows, so the span in the set has to be replaced.
+				runInSet = false;
+				emitFrom = runFrom;
+			}
+			runTo = pmTo;
+		} else {
+			if (runFrom !== -1 && !runInSet) decorations.push(runDecoration(runFrom, runTo, runIndex, runClass, runBg));
+			runInSet = false;
+			if (emitFrom === -1) emitFrom = pmFrom;
+			runFrom = pmFrom;
+			runTo = pmTo;
+			runIndex = i;
+			runClass = baseClass;
+			runBg = bgColor;
+			runStarts.push(i);
+		}
 
 		pos = end;
 	}
-
-	// Everything was reused: the tail starts (and ends) at the last chunk's end.
+	if (runFrom !== -1 && !runInSet) decorations.push(runDecoration(runFrom, runTo, runIndex, runClass, runBg));
 	const endPM = toPMPos(pos);
-	if (fromPM === -1) fromPM = endPM;
+
 	return {
 		decorations,
-		fromPM,
-		skipped,
-		cursor: { chunkIdx: i, offset: pos, pmPos: endPM, paraIdx, pmStart, offStart },
+		// Nothing was rebuilt: the set is still good all the way to the end, and
+		// only decorations left past it (the chunks shrank) are stale.
+		fromPM: emitFrom === -1 ? endPM : emitFrom,
+		reusedRuns,
+		runStarts: appendRuns(prevRunStarts, reusedRuns, runStarts),
+		cursor: {
+			chunkIdx: i,
+			offset: pos,
+			pmPos: endPM,
+			paraIdx,
+			pmStart,
+			offStart,
+			runFrom,
+			runIndex,
+			runClass,
+			runBg,
+		},
 	};
 }
 
@@ -238,7 +387,7 @@ export const chunkDecorationPlugin = new Plugin<ChunkDecorationPluginState>({
 	key: chunkDecorationKey,
 	state: {
 		init(): ChunkDecorationPluginState {
-			return { decos: DecorationSet.empty, built: null, cursor: null, dirtyFrom: Infinity };
+			return { decos: DecorationSet.empty, built: null, cursor: null, runStarts: { arr: [], len: 0 }, dirtyFrom: Infinity };
 		},
 		apply(tr, prev): ChunkDecorationPluginState {
 			const meta: ChunkDecorationState | undefined = tr.getMeta(chunkDecorationKey);
@@ -250,7 +399,7 @@ export const chunkDecorationPlugin = new Plugin<ChunkDecorationPluginState>({
 				: prev.dirtyFrom;
 			if (!meta) {
 				if (!tr.docChanged) return prev;
-				return { decos: prev.decos.map(tr.mapping, tr.doc), built: prev.built, cursor: prev.cursor, dirtyFrom };
+				return { ...prev, decos: prev.decos.map(tr.mapping, tr.doc), dirtyFrom };
 			}
 			// DecorationSet.create is O(paragraphs x decorations) — every line is
 			// its own paragraph, so a full rebuild costs tens of ms on a long
@@ -264,9 +413,16 @@ export const chunkDecorationPlugin = new Plugin<ChunkDecorationPluginState>({
 				prev.built ? reusablePrefix(prev.built, meta) : 0,
 				dirtyFrom,
 				prev.cursor,
+				prev.runStarts,
 			);
-			if (built.skipped === 0) {
-				return { decos: DecorationSet.create(tr.doc, built.decorations), built: meta, cursor: built.cursor, dirtyFrom: Infinity };
+			if (built.reusedRuns === 0) {
+				return {
+					decos: DecorationSet.create(tr.doc, built.decorations),
+					built: meta,
+					cursor: built.cursor,
+					runStarts: built.runStarts,
+					dirtyFrom: Infinity,
+				};
 			}
 			const mapped = prev.decos.map(tr.mapping, tr.doc);
 			// find() is inclusive at both ends; the reused prefix's last decoration
@@ -276,6 +432,7 @@ export const chunkDecorationPlugin = new Plugin<ChunkDecorationPluginState>({
 				decos: mapped.remove(stale).add(tr.doc, built.decorations),
 				built: meta,
 				cursor: built.cursor,
+				runStarts: built.runStarts,
 				dirtyFrom: Infinity,
 			};
 		},

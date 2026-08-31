@@ -11,8 +11,9 @@ The main prompt area is a **ProseMirror** view, not a textarea. `src/components/
 | `src/editor/EditorAdapter.ts` | `ProseMirrorAdapter` — the flat-offset API (`getText`, `getSelection`, `replaceRange`, `posAtCoords`, …) every consumer outside `src/editor/` uses. |
 | `src/editor/docText.ts` | `docText(doc)` (memoised flat text) and `flatTextLength(doc)` (its length without building the string). |
 | `src/editor/changedRange.ts` | `changedRange(tr)` — the span of `tr.doc` a transaction's steps actually touched. |
-| `src/editor/chunkDecorations.ts` | `chunkDecorationPlugin` (per-chunk highlighting) and `chunkHoverPlugin` (hover/erase overlays). |
+| `src/editor/chunkDecorations.ts` | `chunkDecorationPlugin` (chunk highlighting) and `chunkHoverPlugin` (hover/erase overlays). |
 | `src/editor/markdownDecorations.ts` | `markdownDecorationPlugin` — in-place markdown styling for wysiwyg mode, restricted to a viewport window. |
+| `src/editor/chunkDecorations.bench.ts`, `src/editor/markdownDecorations.bench.ts` | `npm run bench` (Vitest benchmarks). Each ratio compares an optimisation against its absence — the reuse prefix, the viewport window, the deferred flush. Runs in jsdom, so only the ratios are meaningful, not the absolute milliseconds; there is no stored baseline, so read output by hand. |
 
 ## Text Contract
 
@@ -56,6 +57,21 @@ that produced it. Nothing correct ever lands outside it, but half-typed markdown
 can throw the text-to-source mapping off, and a span that escaped its own block
 would be re-emitted on the next build without the stale copy being cleared —
 the splice removes exactly the token range it rebuilt.
+
+## Merged Chunk Spans
+
+Adjacent chunks that render identically — same base class, same `--bg-color` —
+share one inline decoration, so a prompt with no per-token colouring is a
+handful of spans rather than one per chunk. `data-promptchunk` names the *first*
+chunk of a span, not every chunk; nothing but the tests reads it.
+
+The consequence for the splice is that reuse can only start on a decoration
+boundary. `runStarts` (the first chunk index of each decoration) maps a chunk
+boundary back to one, and the rebuild starts one decoration earlier than reuse
+would allow so a tail that now renders like the span in front of it merges into
+it — without that an incremental set stays correct but drifts from what a fresh
+build would produce. The trailing decoration is left open in the build cursor so
+a streamed chunk extends it in O(1), and is re-emitted only if it actually grew.
 
 ## Viewport Window
 

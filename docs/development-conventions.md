@@ -51,7 +51,7 @@ When modifying session storage columns or tables, preserve the adapter architect
 
 ## Build After Editing
 
-Always run `npm run build` after editing any source file and before declaring work complete. The build catches broken imports, missing exports, and syntax errors in the frontend. Server changes (`server/`) have no automated validation — there are no tests or linters in this repo.
+Always run `npm run build` after editing any source file and before declaring work complete. The build catches broken imports, missing exports, and syntax errors in the frontend. Frontend changes also have `npm test` (Vitest unit tests) and `npm run typecheck`; run whichever apply before declaring work complete. There is no linter. Server changes (`server/`) have no automated validation — its own `npm test` is a stub.
 
 ## Changelog Maintenance
 

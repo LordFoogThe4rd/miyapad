@@ -12,6 +12,7 @@
     "build:dist": "npm run build && cd server && npm run build:dist",
     "test": "vitest run",
     "test:watch": "vitest",
+    "bench": "vitest bench --run",
     "typecheck": "tsc --noEmit"
   },
   "dependencies": {
