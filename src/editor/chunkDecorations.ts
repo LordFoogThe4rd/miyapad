@@ -511,7 +511,7 @@ export const chunkHoverPlugin = new Plugin({
 	state: {
 		init(): ChunkHoverPluginState { return { decos: DecorationSet.empty, hover: null }; },
 		apply(tr, { decos, hover }) {
-			const hoverMeta = tr.getMeta(chunkHoverKey);
+			const hoverMeta: ChunkHoverState | undefined = tr.getMeta(chunkHoverKey);
 			if (hoverMeta) {
 				return {
 					decos: DecorationSet.create(tr.doc, buildHoverDecorations(hoverMeta, tr.doc, flatTextLength(tr.doc))),
@@ -524,7 +524,7 @@ export const chunkHoverPlugin = new Plugin({
 			// maps the decorations away entirely. Re-derive from the stored indices
 			// against the fresh chunks carried by the base meta — cheap, since the
 			// walk is arithmetic and `create` gets at most two decorations.
-			const baseMeta = tr.getMeta(chunkDecorationKey);
+			const baseMeta: ChunkDecorationState | undefined = tr.getMeta(chunkDecorationKey);
 			if (baseMeta && hover && (hover.currentPromptChunk !== null || hover.undoHovered !== null)) {
 				const next = { ...hover, chunks: baseMeta.chunks };
 				return {
