@@ -141,9 +141,12 @@ describe('buildMarkdownDecorations', () => {
 		expect(byClass(d, 'pm-md-table-row')).toHaveLength(2);
 	});
 
-	it('styles horizontal rules', () => {
-		const d = byClass(decosFor('before\n\n---'), 'pm-md-hr');
-		expect(d).toHaveLength(1);
+	it('styles horizontal rules with a paragraph class and a marker span', () => {
+		const d = decosFor('before\n\n---');
+		expect(byClass(d, 'pm-md-hr')).toHaveLength(1);
+		const marker = byClass(d, 'pm-md-hr-marker');
+		expect(marker).toHaveLength(1);
+		expect([marker[0].from, marker[0].to]).toEqual([11, 14]);
 	});
 
 	it('emits no decorations for plain text', () => {

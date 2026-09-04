@@ -32,9 +32,16 @@
 #pm-editor .pm-md-table-header { font-weight: 700; }
 
 #pm-editor .pm-md-hr {
-	position: relative;
-	color: transparent;
-	border-bottom: 2px solid var(--color-bg-rule);
+	color: var(--color-text-hint);
+	text-align: center;
+	background-image: linear-gradient(var(--color-bg-rule), var(--color-bg-rule));
+	background-repeat: no-repeat;
+	background-position: center;
+	background-size: 100% 2px;
+}
+#pm-editor .pm-md-hr-marker {
+	background: var(--color-bg-prompt);
+	padding: 0 0.5em;
 }
 
 button.textAreaSettings.textAreaSettings-markdown-active {

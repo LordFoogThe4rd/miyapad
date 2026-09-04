@@ -306,6 +306,7 @@ function buildDecorations(
 			}
 			case 'hr':
 				addNodeClass('pm-md-hr', srcStart, srcEnd);
+				addInlineSpan(srcStart, srcEnd, 'pm-md-hr-marker');
 				break;
 			default:
 				break;
