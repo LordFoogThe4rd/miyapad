@@ -60,7 +60,7 @@ export default function(app: Express): void {
     });
 
     const proxyPost = async (req: Request, res: Response) => {
-        const path = req.params['0'] || '';
+        const path = (req.params.splat as string[] | undefined)?.join('/') || '';
         const targetBaseUrl = req.headers['x-real-url'] as string | undefined;
         delete req.headers['x-real-url'];
 
@@ -155,7 +155,7 @@ export default function(app: Express): void {
     };
 
     const proxyGet = async (req: Request, res: Response) => {
-        const path = req.params['0'] || '';
+        const path = (req.params.splat as string[] | undefined)?.join('/') || '';
         const targetBaseUrl = req.headers['x-real-url'] as string | undefined;
         delete req.headers['x-real-url'];
 
@@ -201,7 +201,7 @@ export default function(app: Express): void {
     };
 
     const proxyDelete = async (req: Request, res: Response) => {
-        const path = req.params['0'] || '';
+        const path = (req.params.splat as string[] | undefined)?.join('/') || '';
         const targetBaseUrl = req.headers['x-real-url'] as string | undefined;
         delete req.headers['x-real-url'];
 
@@ -246,9 +246,9 @@ export default function(app: Express): void {
     };
 
     app.post('/proxy', proxyPost);
-    app.post('/proxy/*', proxyPost);
+    app.post('/proxy/*splat', proxyPost);
     app.get('/proxy', proxyGet);
-    app.get('/proxy/*', proxyGet);
+    app.get('/proxy/*splat', proxyGet);
     app.delete('/proxy', proxyDelete);
-    app.delete('/proxy/*', proxyDelete);
+    app.delete('/proxy/*splat', proxyDelete);
 };
