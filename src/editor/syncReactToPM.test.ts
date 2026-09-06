@@ -3,6 +3,7 @@ import { EditorState } from 'prosemirror-state';
 import { EditorView } from 'prosemirror-view';
 import { TextSelection } from 'prosemirror-state';
 import { schema } from './schema';
+import { docText } from './docText';
 import { pmPosToTextOffset } from './chunkDecorations';
 import { applyChunksToPM, diffPromptChunks, diffPromptChunksWithMeta, textToDoc } from './syncReactToPM';
 
@@ -158,6 +159,41 @@ describe('applyChunksToPM caret tracking', () => {
 
 		stream(view, 'Hello\n\nWorld');
 		expect(caretOffset(view)).toBe('Hello\n\nWorld'.length);
+
+		view.destroy();
+		container.remove();
+	});
+
+	it('appends a multi-line token as new paragraphs', () => {
+		const { view, container } = makeView('ab');
+		caretAtEnd(view);
+
+		stream(view, 'ab\ncd');
+		expect(docText(view.state.doc)).toBe('ab\ncd');
+		expect(view.state.doc.childCount).toBe(2);
+
+		// leading newline, then a trailing one
+		stream(view, 'ab\ncd\n\nef');
+		expect(docText(view.state.doc)).toBe('ab\ncd\n\nef');
+		expect(view.state.doc.childCount).toBe(4);
+
+		stream(view, 'ab\ncd\n\nef\n');
+		expect(docText(view.state.doc)).toBe('ab\ncd\n\nef\n');
+
+		view.destroy();
+		container.remove();
+	});
+
+	it('leaves positions before the old document end untouched on an append', () => {
+		const { view, container } = makeView('ab\ncd');
+		const before = view.state.doc.content.size;
+
+		const tr: number[] = [];
+		const unpatched = view.dispatch.bind(view);
+		view.dispatch = (t) => { tr.push(...t.steps.map(step => (step as unknown as { from: number }).from)); unpatched(t); };
+		stream(view, 'ab\ncdX\nef');
+
+		expect(Math.min(...tr)).toBeGreaterThanOrEqual(before - 1);
 
 		view.destroy();
 		container.remove();

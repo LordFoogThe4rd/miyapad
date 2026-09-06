@@ -29,8 +29,6 @@ const { genState, bridge, views, settings, logic, t, screenshot } = vi.hoisted((
 		showProbs: false,
 		setShowProbs: vi.fn(),
 		cancel: null,
-		markdownPreviewRef: { current: null },
-		isSyncingScroll: { current: false },
 		keyState: { current: {} },
 		probsDelayTimer: { current: undefined },
 		modalState: {},
@@ -48,8 +46,8 @@ const { genState, bridge, views, settings, logic, t, screenshot } = vi.hoisted((
 		bridge,
 		views: [] as EditorView[],
 		settings: {
-			showMarkdownPreview: false,
-			setShowMarkdownPreview: vi.fn(),
+			editorMode: 'source',
+			setEditorMode: vi.fn(),
 			isMobile: false,
 			tokenHighlightMode: -1,
 			tokenColorMode: 0,
@@ -58,7 +56,7 @@ const { genState, bridge, views, settings, logic, t, screenshot } = vi.hoisted((
 			showProbsMode: -1,
 			setShowProbsMode: vi.fn(),
 			spellCheck: true,
-		},
+		} as Record<string, any>,
 		logic: { undo: vi.fn(), redo: vi.fn(), undoAndPredict: vi.fn() },
 		t: (key: string) => key,
 		screenshot: { takeScreenshot: vi.fn() },
@@ -89,10 +87,13 @@ const setPromptChunksCalls: PromptChunk[][] = [];
 function Harness() {
 	const [promptChunks, setPromptChunksState] = useState<PromptChunk[]>(bridge.initialChunks);
 	const [cancel, setCancel] = useState<unknown>(null);
+	const [editorMode, setEditorMode] = useState<'source' | 'wysiwyg'>('source');
 	bridge.setPromptChunks = setPromptChunksState;
 	bridge.setCancel = setCancel;
 	genState.promptChunks = promptChunks;
 	genState.cancel = cancel;
+	settings.editorMode = editorMode;
+	settings.setEditorMode = setEditorMode;
 	genState.setPromptChunks = (v: PromptChunk[]) => {
 		setPromptChunksCalls.push(v);
 		setPromptChunksState(v);
@@ -199,5 +200,20 @@ describe('PromptContainer transaction synchronization', () => {
 		await act(async () => bridge.setCancel!(null));
 		expect(view.props.editable!(view.state)).toBe(true);
 		expect(focusSpy).toHaveBeenCalled();
+	});
+
+	it('toggles markdown decorations with the wysiwyg mode', async () => {
+		const { container } = renderEditor([u('# Title\n\n**bold** text')]);
+
+		expect(container.querySelectorAll('.pm-md-heading-h1')).toHaveLength(0);
+		expect(container.querySelectorAll('.pm-md-strong')).toHaveLength(0);
+
+		await act(async () => settings.setEditorMode('wysiwyg'));
+		expect(container.querySelectorAll('.pm-md-heading-h1')).toHaveLength(1);
+		expect(container.querySelectorAll('.pm-md-strong')).toHaveLength(1);
+
+		await act(async () => settings.setEditorMode('source'));
+		expect(container.querySelectorAll('.pm-md-heading-h1')).toHaveLength(0);
+		expect(container.querySelectorAll('.pm-md-strong')).toHaveLength(0);
 	});
 });

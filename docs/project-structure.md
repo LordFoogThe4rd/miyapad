@@ -51,8 +51,9 @@ miyapad/
     ├── api/                       # API modules for backends (.ts)
     ├── components/                # React components (Modals, Sidebar, controls, icons — .tsx)
     ├── contexts/                  # SettingsContext.tsx and GenerationContext.tsx
-    ├── css/                       # CSS partials (20 files, imported by styles.css)
+    ├── css/                       # CSS partials (21 files, imported by styles.css)
     ├── defaults/                  # Hardcoded defaults (.ts) — presets.ts, prompt.ts, templates.ts, themes.ts
+    ├── editor/                    # ProseMirror prompt editor (.ts) — schema, React<->PM sync, adapter, decoration plugins
     ├── hooks/                     # Custom hooks (.ts)
     ├── i18n/                      # UI localization — context.tsx (provider + useT), locales.ts (registry), {code}.json string tables
     ├── importer/                  # Preset importers (.ts) — SillyTavern, NovelAI

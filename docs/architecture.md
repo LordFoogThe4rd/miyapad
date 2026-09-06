@@ -26,7 +26,7 @@ graph TD
 
 ## 2. Context APIs & State Management
 
-- **`SettingsContext` (`src/contexts/SettingsContext.tsx`)**: Holds global settings and generation hyperparameters (e.g., Temperature, Top-K, Min-P, Mirostat, Dry Sampler options, selected model endpoints, OpenAI keys, instruction templates, active themes, TTS voice settings). Also manages connection presets (`connections` via `useDBConnections`), per-session connection binding (`selectedConnectionId` via `useSessionState`), and the persisted UI `locale` (see [Localization](#6-localization-i18n)).
+- **`SettingsContext` (`src/contexts/SettingsContext.tsx`)**: Holds global settings and generation hyperparameters (e.g., Temperature, Top-K, Min-P, Mirostat, Dry Sampler options, selected model endpoints, OpenAI keys, instruction templates, active themes, TTS voice settings). Also manages connection presets (`connections` via `useDBConnections`), per-session connection binding (`selectedConnectionId` via `useSessionState`), the persisted UI `locale` (see [Localization](#6-localization-i18n)), and the prompt `editorMode` (`source` vs `wysiwyg`, see [Prompt Editor](prompt-editor.md)).
 - **`GenerationContext` (`src/contexts/GenerationContext.tsx`)**: Manages runtime generation and prompt state (e.g., prompt text chunks, total token count, generation speed, active abort controllers, undo/redo stacks, open modal states, and UI view toggles).
 
 ## 3. Type System

@@ -10,6 +10,8 @@ declare global {
   }
 }
 
+export type EditorMode = 'source' | 'wysiwyg';
+
 export interface SettingsState {
   sessionStorage: SessionStorage;
   templateStorage: TemplateStorage;
@@ -174,8 +176,8 @@ export interface SettingsState {
   setCurrentThemeName: Dispatch<SetStateAction<string>>;
   allThemes: Record<string, ThemeData>;
   setAllThemes: Dispatch<SetStateAction<Record<string, ThemeData>>>;
-  showMarkdownPreview: boolean;
-  setShowMarkdownPreview: Dispatch<SetStateAction<boolean>>;
+  editorMode: EditorMode;
+  setEditorMode: Dispatch<SetStateAction<EditorMode>>;
   ttsEnabled: boolean;
   setTTSEnabled: Dispatch<SetStateAction<boolean>>;
   ttsVoiceId: number;
@@ -248,8 +250,6 @@ export interface GenerationState {
   sessionReconnectTimer: RefObject<number | undefined>;
   useScrollSmoothing: RefObject<boolean>;
   hordeTaskId: RefObject<string | undefined>;
-  markdownPreviewRef: RefObject<HTMLDivElement | null>;
-  isSyncingScroll: RefObject<boolean>;
   lastEditMsRef: RefObject<number>;
   ttsNewText: RefObject<string>;
   ttsLastChunk: RefObject<string>;

@@ -22,6 +22,7 @@ Miyapad is a user-friendly, browser-based interface for interacting with languag
 * **Completion/Chat Modes**:
   * **Completion**: Have the model directly continue your prompt.
   * **Chat**: Automatically adds the right delimiters based on your selected template, structuring prompts into messages compatible with the Chat Completions API.
+* **Markdown Mode**: Toggle the prompt editor between plain source text and in-place markdown formatting — headings, bold, italics, strikethrough, blockquotes, lists, tables and rules are styled where they sit, with the markers left visible so editing never shifts.
 * **Screenshot Capture**: Select text in the editor, click the camera icon, and render a styled quote PNG with AI vs User color coding. Customize via the gear icon — fonts, colors, background image, avatar, and metadata toggles.
 * **Themes**: Customize your environment with a variety of themes.
 * **... and more!**

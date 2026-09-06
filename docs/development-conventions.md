@@ -18,7 +18,17 @@ export function Widget({ title }: WidgetProps) {
 
 ## ProseMirror Prompt Editor
 
-The main prompt editor is a ProseMirror view (see `src/components/PromptContainer.tsx` and `src/editor/`). It is not an uncontrolled textarea: streaming chunks are applied to the doc via `EditorAdapter` / `applyChunksToPM`, and user edits flow back to React state through the view's `dispatchTransaction`. Chunk highlighting is rendered by `chunkDecorationPlugin` as inline decorations — keep text sync and decoration state in lockstep (pass the same `chunkDecorationKey` meta), rebuild decorations on every state change that alters chunks, and never mutate chunk objects when re-deriving chunks (`diffPromptChunks`). All text offsets exchanged with the editor are flat offsets including `\n` paragraph separators (`getText`, `getSelection`, `replaceRange`).
+The main prompt editor is a ProseMirror view (`src/components/PromptContainer.tsx` and `src/editor/`), not an uncontrolled textarea: streaming chunks are applied to the doc via `EditorAdapter` / `applyChunksToPM`, and user edits flow back to React state through the view's `dispatchTransaction`. When touching it, keep these rules:
+
+- All text offsets exchanged with the editor are flat offsets including `\n` paragraph separators (`getText`, `getSelection`, `replaceRange`). Read the doc's text with `docText(doc)` — it is memoised per doc node — and use `flatTextLength(doc)` when only the length is needed.
+- Keep text sync and decoration state in lockstep: pass the chunk state as `chunkDecorationKey` meta on the same transaction that changes the text.
+- Never mutate chunk objects when re-deriving chunks (`diffPromptChunks`) — the decoration plugins reuse work by reference identity, so a mutated chunk silently keeps stale highlighting.
+- Decorations are rebuilt incrementally, not wholesale. New decoration work must stay bounded by `changedRange(tr)` and the plugin's own previous build; a full `DecorationSet.create` on every keystroke is what this design exists to avoid.
+- Markdown decorations only cover the viewport window, and the plugin's `view()` re-aims it from a `requestAnimationFrame` on scroll. Anything that changes the height of styled text has to keep the topmost visible position pinned, or scrolling a long prompt jumps.
+- Markdown rebuilds are deferred: an edit only maps the set forward, and the plugin's `view()` flushes the real work on a `requestIdleCallback`. Nothing on the keystroke path may lex or call `DecorationSet.create`, and anything that reuses the stored token list has to check `pending` first — while it is set, that list describes an older document.
+- Hover-only state (`chunkHoverPlugin`) and markdown styling (`markdownDecorationPlugin`) are separate plugins. Put anything that changes on mouse move or on a mode toggle in those, never in the base chunk plugin.
+
+See [Prompt Editor](prompt-editor.md) for the full subsystem reference.
 
 ## UI Strings (Localization)
 
@@ -41,7 +51,7 @@ When modifying session storage columns or tables, preserve the adapter architect
 
 ## Build After Editing
 
-Always run `npm run build` after editing any source file and before declaring work complete. The build catches broken imports, missing exports, and syntax errors in the frontend. Server changes (`server/`) have no automated validation — there are no tests or linters in this repo.
+Always run `npm run build` after editing any source file and before declaring work complete. The build catches broken imports, missing exports, and syntax errors in the frontend. Frontend changes also have `npm test` (Vitest unit tests) and `npm run typecheck`; run whichever apply before declaring work complete. There is no linter. Server changes (`server/`) have no automated validation — its own `npm test` is a stub.
 
 ## Changelog Maintenance
 
@@ -142,6 +152,6 @@ export function useSessionState<T>(
 
 See [CSS Architecture](css.md) for full documentation. Key points:
 
-- Styles are organized into 20 partial files under `src/css/`, imported by `src/styles.css` via `@import`.
+- Styles are organized into 21 partial files under `src/css/`, imported by `src/styles.css` via `@import`.
 - Component-specific media queries live inside that component's partial; global layout media queries go in `_responsive.css`.
 - When adding new styles, put them in the matching partial or create a new one if none fits.

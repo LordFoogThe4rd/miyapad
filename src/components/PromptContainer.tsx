@@ -1,6 +1,6 @@
 import { html } from 'htm/react';
 import { useEffect, useLayoutEffect, useRef } from 'react';
-import { EditorState, Plugin, TextSelection } from 'prosemirror-state';
+import { EditorState, TextSelection } from 'prosemirror-state';
 import { EditorView } from 'prosemirror-view';
 import { keymap } from 'prosemirror-keymap';
 import { baseKeymap } from 'prosemirror-commands';
@@ -12,46 +12,19 @@ import { useT } from '../i18n';
 import { SVG_Settings, SVG_SearchAndReplace, SVG_SplitView, SVG_Camera } from './icons/index';
 import { SearchAndReplaceWidget } from './SearchAndReplaceWidget';
 import { useScreenshotCapture } from '../hooks/useScreenshotCapture';
-import { chunkDecorationPlugin, chunkDecorationKey, type ChunkDecorationState } from '../editor/chunkDecorations';
+import { chunkDecorationPlugin, chunkDecorationKey, chunkHoverPlugin, chunkHoverKey, type ChunkDecorationState, type ChunkHoverState } from '../editor/chunkDecorations';
+import { markdownDecorationPlugin, markdownDecorationKey } from '../editor/markdownDecorations';
 import { diffPromptChunksWithMeta, applyChunksToPM, textToDoc } from '../editor/syncReactToPM';
+import { docText, flatTextLength } from '../editor/docText';
 import { ProseMirrorAdapter } from '../editor/EditorAdapter';
 import { schema } from '../editor/schema';
 import type { PromptContainerProps } from '../types/components';
 
 const UNDO_COALESCE_MS = 500;
 
-function scrollSyncPlugin(
-	isSyncingScroll: { current: boolean },
-	markdownPreviewRef: { current: HTMLDivElement | null },
-	promptContainerRef: { current: HTMLDivElement | null }
-) {
-	return new Plugin({
-		view() {
-			const container = promptContainerRef.current;
-			if (!container) return { destroy() {} };
-			const scrollEl: HTMLElement = container;
-			function onScroll() {
-				if (isSyncingScroll.current) return;
-				const preview = markdownPreviewRef.current;
-				if (!preview) return;
-				const ratio = scrollEl.scrollTop / Math.max(1, scrollEl.scrollHeight - scrollEl.clientHeight);
-				isSyncingScroll.current = true;
-				preview.scrollTop = ratio * (preview.scrollHeight - preview.clientHeight);
-				requestAnimationFrame(() => { isSyncingScroll.current = false; });
-			}
-			container.addEventListener('scroll', onScroll, { passive: true });
-			return {
-				destroy() {
-					container.removeEventListener('scroll', onScroll);
-				},
-			};
-		},
-	});
-}
-
 export function PromptContainer({ sidebarHeight }: PromptContainerProps) {
-	const { showMarkdownPreview, setShowMarkdownPreview, isMobile, tokenHighlightMode, tokenColorMode, promptAreaWidth, setPromptAreaWidth, showProbsMode, setShowProbsMode, spellCheck } = useSettings();
-	const { promptEditorView, setPromptEditorVersion, promptChunks, setPromptChunks, currentPromptChunk, setCurrentPromptChunk, undoHovered, setUndoHovered, undoStack, redoStack, lastEditMsRef, showProbs, setShowProbs, cancel, markdownPreviewRef, isSyncingScroll, keyState, probsDelayTimer, modalState, closeModal, toggleModal, setTriggerPredict } = useGeneration();
+	const { editorMode, setEditorMode, isMobile, tokenHighlightMode, tokenColorMode, promptAreaWidth, setPromptAreaWidth, showProbsMode, setShowProbsMode, spellCheck } = useSettings();
+	const { promptEditorView, setPromptEditorVersion, promptChunks, setPromptChunks, currentPromptChunk, setCurrentPromptChunk, undoHovered, setUndoHovered, undoStack, redoStack, lastEditMsRef, showProbs, setShowProbs, cancel, keyState, probsDelayTimer, modalState, closeModal, toggleModal, setTriggerPredict } = useGeneration();
 	const { promptText } = usePromptBuilder();
 	const { undo, redo, undoAndPredict } = useGenerationLogic();
 	const t = useT();
@@ -60,7 +33,10 @@ export function PromptContainer({ sidebarHeight }: PromptContainerProps) {
 	const promptContainerRef = useRef<HTMLDivElement>(null);
 	const editorRef = useRef<HTMLDivElement>(null);
 	const viewRef = useRef<EditorView>(null);
+	const mdModeRef = useRef(editorMode === 'wysiwyg');
 	const lastPromptChunksRef = useRef<PromptChunk[]>([]);
+	// Initialised to a null hover so the first render does not dispatch an empty set
+	const lastHoverRef = useRef<{ current: number | null; erase: number | null; mode: number }>({ current: null, erase: null, mode: tokenHighlightMode });
 	const suppressSyncRef = useRef(false);
 	const lastMouseToken = useRef<string | null>(null);
 	const lastMousePos = useRef({ x: 0, y: 0 });
@@ -80,6 +56,8 @@ export function PromptContainer({ sidebarHeight }: PromptContainerProps) {
 			doc: textToDoc(schema, initialText),
 			plugins: [
 				chunkDecorationPlugin,
+				chunkHoverPlugin,
+				markdownDecorationPlugin(mdModeRef),
 				keymap({
 					'Mod-z': () => { if (cancelRef.current) (cancelRef.current as () => void)(); undoRef.current(); return true; },
 					'Mod-y': () => { if (cancelRef.current) (cancelRef.current as () => void)(); redoRef.current(); return true; },
@@ -90,7 +68,6 @@ export function PromptContainer({ sidebarHeight }: PromptContainerProps) {
 				}),
 				keymap({ 'Mod-Enter': () => { setTriggerPredict(true); return true; } }),
 				keymap(baseKeymap),
-				scrollSyncPlugin(isSyncingScroll, markdownPreviewRef, editorRef),
 			],
 		});
 		const view = new EditorView(editorRef.current, {
@@ -105,7 +82,7 @@ export function PromptContainer({ sidebarHeight }: PromptContainerProps) {
 				const newState = view.state.apply(tr);
 				view.updateState(newState);
 				if (tr.docChanged && !suppressSyncRef.current) {
-					const newDoc = newState.doc.textBetween(0, newState.doc.content.size, '\n');
+					const newDoc = docText(newState.doc);
 					const prevChunks = lastPromptChunksRef.current;
 					const { chunks: newChunks } = diffPromptChunksWithMeta(prevChunks, newDoc);
 					// Snapshot the pre-edit chunks as an undo checkpoint so the user's edit is
@@ -129,7 +106,6 @@ export function PromptContainer({ sidebarHeight }: PromptContainerProps) {
 		lastPromptChunksRef.current = promptChunks;
 		const decoState: ChunkDecorationState = {
 			chunks: promptChunks, tokenColorMode, tokenHighlightMode,
-			currentPromptChunk: null, undoHovered: null,
 		};
 		const endPos = view.state.doc.content.size - 1;
 		const tr = view.state.tr
@@ -142,17 +118,16 @@ export function PromptContainer({ sidebarHeight }: PromptContainerProps) {
 		};
 	}, []);
 
+	// Declared before the hover effect: React runs effects in declaration order
+	// within a commit, which keeps lastPromptChunksRef fresh for the hover one.
 	useEffect(() => {
 		const view = viewRef.current;
 		if (!view) return;
 		const newText = promptChunks.map((c: PromptChunk) => c.content).join('');
-		const textChanged = newText !== view.state.doc.textBetween(0, view.state.doc.content.size, '\n');
-		const lastUndo = undoStack.current.length > 0 ? undoStack.current[undoStack.current.length - 1] : null;
-		const undoHoveredPos = undoHovered && typeof lastUndo === 'number' ? lastUndo : null;
+		// cheap length check first; the memoised string comparison only runs on a match
+		const textChanged = newText.length !== flatTextLength(view.state.doc) || newText !== docText(view.state.doc);
 		const decoState: ChunkDecorationState = {
 			chunks: promptChunks, tokenColorMode, tokenHighlightMode,
-			currentPromptChunk: currentPromptChunk?.index ?? null,
-			undoHovered: undoHoveredPos,
 		};
 		suppressSyncRef.current = true;
 		if (textChanged) {
@@ -162,7 +137,38 @@ export function PromptContainer({ sidebarHeight }: PromptContainerProps) {
 		}
 		lastPromptChunksRef.current = promptChunks;
 		suppressSyncRef.current = false;
-	}, [promptChunks, currentPromptChunk, tokenColorMode, tokenHighlightMode, undoHovered]);
+	}, [promptChunks, tokenColorMode, tokenHighlightMode]);
+
+	useEffect(() => {
+		const view = viewRef.current;
+		if (!view) return;
+		const lastUndo = undoStack.current.length > 0 ? undoStack.current[undoStack.current.length - 1] : null;
+		const undoHoveredPos = undoHovered && typeof lastUndo === 'number' ? lastUndo : null;
+		const currentIdx = currentPromptChunk?.index ?? null;
+		// currentPromptChunk's object identity changes on every mouse move within a
+		// chunk; skip the dispatch when the index/mode tuple is unchanged.
+		//
+		// Known soft edge, left deliberately: if chunk indices shift under a
+		// stationary pointer, the tuple below can hold a stale index until the
+		// pointer moves. It self-heals on the next base meta (which re-derives
+		// hover decorations from stored state) and never leaves decorations
+		// wiped — cosmetic lag, not the wiped-deco bug class that the
+		// rebuild-on-base-meta path in chunkHoverPlugin fixes.
+		if (lastHoverRef.current.current === currentIdx
+			&& lastHoverRef.current.erase === undoHoveredPos
+			&& lastHoverRef.current.mode === tokenHighlightMode) {
+			return;
+		}
+		lastHoverRef.current = { current: currentIdx, erase: undoHoveredPos, mode: tokenHighlightMode };
+		const hoverState: ChunkHoverState = {
+			chunks: lastPromptChunksRef.current,
+			tokenHighlightMode,
+			currentPromptChunk: currentIdx,
+			undoHovered: undoHoveredPos,
+		};
+		// meta-only transaction: docChanged stays false, no sync guard needed
+		view.dispatch(view.state.tr.setMeta(chunkHoverKey, hoverState));
+	}, [currentPromptChunk, undoHovered, tokenHighlightMode]);
 
 	useEffect(() => {
 		const el = editorRef.current;
@@ -201,6 +207,13 @@ export function PromptContainer({ sidebarHeight }: PromptContainerProps) {
 	useEffect(() => {
 		viewRef.current?.setProps({ attributes: { spellcheck: String(spellCheck) } });
 	}, [spellCheck]);
+
+	useEffect(() => {
+		mdModeRef.current = editorMode === 'wysiwyg';
+		// meta-only transaction: forces the plugin to rebuild (or clear)
+		// decorations without touching the document
+		viewRef.current?.dispatch(viewRef.current.state.tr.setMeta(markdownDecorationKey, true));
+	}, [editorMode]);
 
 	useEffect(() => {
 		function onKeyDown(e: KeyboardEvent) {
@@ -390,7 +403,7 @@ export function PromptContainer({ sidebarHeight }: PromptContainerProps) {
 	}
 
 	return html`
-		<div ref=${promptContainerRef} id="prompt-container" onMouseMove=${onEditorMouseMove} style=${{ 'margin-bottom': isMobile && !showMarkdownPreview ? sidebarHeight + 'px' : 0 }}>
+		<div ref=${promptContainerRef} id="prompt-container" onMouseMove=${onEditorMouseMove} style=${{ 'margin-bottom': isMobile ? sidebarHeight + 'px' : 0 }}>
 			<div style=${{ position: 'sticky', top: 0, zIndex: 1 }}>
 				<button
 					title=${t('prompt.preferences')}
@@ -406,10 +419,10 @@ export function PromptContainer({ sidebarHeight }: PromptContainerProps) {
 					<${SVG_SearchAndReplace} style=${{ "height": "1.3em" }} />
 				</button>
 				<button
-					title=${t('prompt.toggleMarkdownPreview')}
+					title=${t('prompt.toggleMarkdownMode')}
 					style=${{ "margin-top": "3em" }}
-					className="textAreaSettings"
-					onClick=${() => setShowMarkdownPreview((p: boolean) => !p)}>
+					className=${editorMode === 'wysiwyg' ? 'textAreaSettings textAreaSettings-markdown-active' : 'textAreaSettings'}
+					onClick=${() => setEditorMode((m: 'source' | 'wysiwyg') => m === 'source' ? 'wysiwyg' : 'source')}>
 					<${SVG_SplitView}/>
 				</button>
 				<button

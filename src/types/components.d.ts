@@ -21,10 +21,6 @@ export interface PromptContainerProps {
   sidebarHeight: number;
 }
 
-export interface MarkdownPreviewProps {
-  sidebarHeight: number;
-}
-
 export interface ProbsDisplayProps {}
 
 export interface SidebarProps {
