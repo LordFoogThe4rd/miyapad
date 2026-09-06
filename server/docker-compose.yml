@@ -5,6 +5,8 @@ services:
       dockerfile: server/Dockerfile
     ports:
       - 3000:3000
+    # .env must set MIYAPAD_HOST=0.0.0.0 (see .env.example) — the server's
+    # loopback-only default is unreachable through this port mapping otherwise.
     env_file:
       - .env
     restart: unless-stopped

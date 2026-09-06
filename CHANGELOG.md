@@ -17,6 +17,7 @@
 ### Fixed
 
 - Markdown formatting no longer leaks onto an unrelated part of the prompt while a construct is half-typed
+- Docker quick-start (`server/.env.example` + `docker-compose.yml`) now sets `MIYAPAD_HOST=0.0.0.0`, so the server is actually reachable through the container's port mapping instead of only binding to the container's own loopback interface
 
 ## [2.7.0] - 2026-08-11
 
