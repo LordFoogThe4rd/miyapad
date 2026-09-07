@@ -103,6 +103,30 @@ describe('openaiTabbyTokenCount', () => {
 
 		await expect(openaiTabbyTokenCount({ endpoint: 'http://localhost:5000', content: 'x' })).resolves.toBe(12);
 	});
+
+	it('accepts a zero-length result', async () => {
+		fetchMock.mockResolvedValue(ok([]));
+
+		await expect(openaiTabbyTokenCount({ endpoint: 'http://localhost:5000', content: '' })).resolves.toBe(0);
+	});
+
+	it('returns -1 for a count that is not a non-negative whole number', async () => {
+		// None of these are usable counts, and getTokenCount screens only for
+		// exactly -1, so each has to become the sentinel here.
+		for (const length of [-5, -1, 2.5, NaN, Infinity, -Infinity, Number.MAX_SAFE_INTEGER + 1]) {
+			fetchMock.mockResolvedValue(ok({ length }));
+
+			await expect(openaiTabbyTokenCount({ endpoint: 'http://localhost:5000', content: 'x' })).resolves.toBe(-1);
+		}
+	});
+
+	it('returns -1 for a non-numeric length', async () => {
+		for (const length of ['12', true, null, {}]) {
+			fetchMock.mockResolvedValue(ok({ length }));
+
+			await expect(openaiTabbyTokenCount({ endpoint: 'http://localhost:5000', content: 'x' })).resolves.toBe(-1);
+		}
+	});
 });
 
 describe('openaiModels', () => {

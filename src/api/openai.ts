@@ -1,5 +1,15 @@
 import { parseEventStream, applyTemperatureToProbs } from './common';
 
+/**
+ * A token count is only usable if it is a non-negative whole number. A
+ * fractional or negative value, NaN or Infinity becomes the -1 "not this
+ * backend" sentinel, so getTokenCount falls through to the next counter rather
+ * than passing the value on as a real count — it only screens for exactly -1.
+ */
+function usableTokenCount(value: unknown): number {
+	return typeof value === 'number' && Number.isSafeInteger(value) && value >= 0 ? value : -1;
+}
+
 interface OpenaiStreamChunk {
 	choices?: Array<{
 		text?: string;
@@ -38,9 +48,7 @@ export async function openaiAphroditeTokenCount({ endpoint, endpointAPIKey, prox
 		if (!res.ok)
 			throw new Error(`HTTP ${res.status}`);
 		const tokens = await res.json();
-		// A server that answers 200 with some other shape has no usable count;
-		// report the -1 sentinel so the caller falls through to the next backend.
-		return typeof tokens?.length === 'number' ? tokens.length : -1;
+		return usableTokenCount(tokens?.length);
 	} catch (e) {
 		return -1;
 	}
@@ -62,7 +70,7 @@ export async function openaiOobaTokenCount({ endpoint, proxyEndpoint, signal, ..
 		if (!res.ok)
 			throw new Error(`HTTP ${res.status}`);
 		const { length } = await res.json();
-		return typeof length === 'number' ? length : -1;
+		return usableTokenCount(length);
 	} catch (e) {
 		return -1;
 	}
@@ -85,7 +93,7 @@ export async function openaiTabbyTokenCount({ endpoint, endpointAPIKey, proxyEnd
 		if (!res.ok)
 			throw new Error(`HTTP ${res.status}`);
 		const tokens = await res.json();
-		return typeof tokens?.length === 'number' ? tokens.length : -1;
+		return usableTokenCount(tokens?.length);
 	} catch (e) {
 		return -1;
 	}
