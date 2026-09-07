@@ -1,5 +1,5 @@
 import { describe, it, expect } from 'vitest';
-import { isSamplerPresetData } from './validators';
+import { isSamplerPresetData, coerceThemeData } from './validators';
 
 function makeValid(): SamplerPresetData {
   return {
@@ -115,4 +115,47 @@ describe('isSamplerPresetData', () => {
   });
 
 
+});
+
+describe('coerceThemeData', () => {
+  it('passes a complete theme through unchanged', () => {
+    expect(coerceThemeData({ order: 3, isDefault: true, className: 'dark', css: 'body{}' }))
+      .toEqual({ order: 3, isDefault: true, className: 'dark', css: 'body{}' });
+  });
+
+  it('defaults a missing order to 999 and a missing isDefault to false', () => {
+    expect(coerceThemeData({ className: 'dark', css: 'body{}' }))
+      .toEqual({ order: 999, isDefault: false, className: 'dark', css: 'body{}' });
+  });
+
+  it('replaces a wrongly-typed order or isDefault with the defaults', () => {
+    expect(coerceThemeData({ className: 'dark', css: '', order: '2', isDefault: 'yes' }))
+      .toEqual({ order: 999, isDefault: false, className: 'dark', css: '' });
+  });
+
+  it('drops unknown extra properties', () => {
+    const result = coerceThemeData({ className: 'dark', css: '', order: 1, isDefault: false, extra: 'nope' });
+    expect(result).not.toBeNull();
+    expect(Object.keys(result!).sort()).toEqual(['className', 'css', 'isDefault', 'order']);
+  });
+
+  it('accepts an empty css string and an empty className', () => {
+    expect(coerceThemeData({ className: '', css: '' }))
+      .toEqual({ order: 999, isDefault: false, className: '', css: '' });
+  });
+
+  it('returns null when className or css is missing or not a string', () => {
+    expect(coerceThemeData({ css: 'body{}' })).toBeNull();
+    expect(coerceThemeData({ className: 'dark' })).toBeNull();
+    expect(coerceThemeData({ className: 1, css: 'body{}' })).toBeNull();
+    expect(coerceThemeData({ className: 'dark', css: null })).toBeNull();
+  });
+
+  it('returns null for non-objects', () => {
+    expect(coerceThemeData(null)).toBeNull();
+    expect(coerceThemeData(undefined)).toBeNull();
+    expect(coerceThemeData('dark')).toBeNull();
+    expect(coerceThemeData(42)).toBeNull();
+    expect(coerceThemeData([{ className: 'dark', css: '' }])).toBeNull();
+  });
 });
