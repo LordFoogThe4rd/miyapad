@@ -1,5 +1,5 @@
 import { describe, it, expect, vi, beforeEach, afterEach } from 'vitest';
-import { openaiTabbyTokenCount, openaiModels } from './openai';
+import { openaiAphroditeTokenCount, openaiOobaTokenCount, openaiTabbyTokenCount, openaiModels } from './openai';
 
 const fetchMock = vi.fn();
 
@@ -25,7 +25,7 @@ afterEach(() => {
 	vi.unstubAllGlobals();
 });
 
-describe('openaiTabbyTokenCount', () => {
+describe('openaiTabbyTokenCount request', () => {
 	it('posts the content as `text` to /v1/token/encode and returns the token count', async () => {
 		fetchMock.mockResolvedValue(ok([1, 2, 3, 4]));
 
@@ -73,50 +73,68 @@ describe('openaiTabbyTokenCount', () => {
 
 		expect(lastCall().init.signal).toBe(ac.signal);
 	});
+});
 
-	it('returns -1 on a non-OK response instead of throwing', async () => {
-		fetchMock.mockResolvedValue(notOk(404));
+// All three counters hand their parsed body to the same tokenCountFrom helper,
+// so every case below has to hold for each of them.
+const tokenCounters: [string, (params: TokenCounterParams) => Promise<number>][] = [
+	['openaiAphroditeTokenCount', openaiAphroditeTokenCount],
+	['openaiOobaTokenCount', openaiOobaTokenCount],
+	['openaiTabbyTokenCount', openaiTabbyTokenCount],
+];
 
-		await expect(openaiTabbyTokenCount({ endpoint: 'http://localhost:5000', content: 'x' })).resolves.toBe(-1);
+describe.each(tokenCounters)('%s response handling', (_name, tokenCount) => {
+	const params: TokenCounterParams = { endpoint: 'http://localhost:5000', content: 'x' };
+
+	it('returns the length of an array of token ids', async () => {
+		fetchMock.mockResolvedValue(ok([1, 2, 3, 4]));
+
+		await expect(tokenCount(params)).resolves.toBe(4);
 	});
 
-	it('returns -1 when the request itself rejects', async () => {
-		fetchMock.mockRejectedValue(new TypeError('network down'));
-
-		await expect(openaiTabbyTokenCount({ endpoint: 'http://localhost:5000', content: 'x' })).resolves.toBe(-1);
-	});
-
-	it('returns -1 when an OK response has no usable length (not a Tabby server)', async () => {
-		fetchMock.mockResolvedValue(ok({ detail: 'not found' }));
-
-		await expect(openaiTabbyTokenCount({ endpoint: 'http://localhost:5000', content: 'x' })).resolves.toBe(-1);
-	});
-
-	it('returns -1 when an OK response is a bare value with no length', async () => {
-		fetchMock.mockResolvedValue(ok(null));
-
-		await expect(openaiTabbyTokenCount({ endpoint: 'http://localhost:5000', content: 'x' })).resolves.toBe(-1);
-	});
-
-	it('still accepts an object carrying a numeric length', async () => {
+	it('accepts an object carrying a numeric length', async () => {
 		fetchMock.mockResolvedValue(ok({ length: 12, tokens: [1, 2] }));
 
-		await expect(openaiTabbyTokenCount({ endpoint: 'http://localhost:5000', content: 'x' })).resolves.toBe(12);
+		await expect(tokenCount(params)).resolves.toBe(12);
 	});
 
 	it('accepts a zero-length result', async () => {
 		fetchMock.mockResolvedValue(ok([]));
 
-		await expect(openaiTabbyTokenCount({ endpoint: 'http://localhost:5000', content: '' })).resolves.toBe(0);
+		await expect(tokenCount({ ...params, content: '' })).resolves.toBe(0);
+	});
+
+	it('returns -1 on a non-OK response instead of throwing', async () => {
+		fetchMock.mockResolvedValue(notOk(404));
+
+		await expect(tokenCount(params)).resolves.toBe(-1);
+	});
+
+	it('returns -1 when the request itself rejects', async () => {
+		fetchMock.mockRejectedValue(new TypeError('network down'));
+
+		await expect(tokenCount(params)).resolves.toBe(-1);
+	});
+
+	it('returns -1 when an OK response carries no length', async () => {
+		fetchMock.mockResolvedValue(ok({ detail: 'not found' }));
+
+		await expect(tokenCount(params)).resolves.toBe(-1);
+	});
+
+	it('returns -1 for a null body', async () => {
+		fetchMock.mockResolvedValue(ok(null));
+
+		await expect(tokenCount(params)).resolves.toBe(-1);
 	});
 
 	it('returns -1 for a count that is not a non-negative whole number', async () => {
-		// None of these are usable counts, and getTokenCount screens only for
-		// exactly -1, so each has to become the sentinel here.
+		// getTokenCount screens only for exactly -1, so anything unusable has to
+		// become the sentinel here.
 		for (const length of [-5, -1, 2.5, NaN, Infinity, -Infinity, Number.MAX_SAFE_INTEGER + 1]) {
 			fetchMock.mockResolvedValue(ok({ length }));
 
-			await expect(openaiTabbyTokenCount({ endpoint: 'http://localhost:5000', content: 'x' })).resolves.toBe(-1);
+			await expect(tokenCount(params)).resolves.toBe(-1);
 		}
 	});
 
@@ -124,7 +142,7 @@ describe('openaiTabbyTokenCount', () => {
 		for (const length of ['12', true, null, {}]) {
 			fetchMock.mockResolvedValue(ok({ length }));
 
-			await expect(openaiTabbyTokenCount({ endpoint: 'http://localhost:5000', content: 'x' })).resolves.toBe(-1);
+			await expect(tokenCount(params)).resolves.toBe(-1);
 		}
 	});
 
@@ -134,7 +152,7 @@ describe('openaiTabbyTokenCount', () => {
 		for (const body of ['some error text', '', 42, true]) {
 			fetchMock.mockResolvedValue(ok(body));
 
-			await expect(openaiTabbyTokenCount({ endpoint: 'http://localhost:5000', content: 'x' })).resolves.toBe(-1);
+			await expect(tokenCount(params)).resolves.toBe(-1);
 		}
 	});
 });
