@@ -127,6 +127,16 @@ describe('openaiTabbyTokenCount', () => {
 			await expect(openaiTabbyTokenCount({ endpoint: 'http://localhost:5000', content: 'x' })).resolves.toBe(-1);
 		}
 	});
+
+	it('returns -1 for a primitive body rather than reading its character count', async () => {
+		// A bare JSON string has a `.length`, and it is a perfectly plausible
+		// non-negative integer — it is just not a token count.
+		for (const body of ['some error text', '', 42, true]) {
+			fetchMock.mockResolvedValue(ok(body));
+
+			await expect(openaiTabbyTokenCount({ endpoint: 'http://localhost:5000', content: 'x' })).resolves.toBe(-1);
+		}
+	});
 });
 
 describe('openaiModels', () => {
