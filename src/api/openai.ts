@@ -38,7 +38,9 @@ export async function openaiAphroditeTokenCount({ endpoint, endpointAPIKey, prox
 		if (!res.ok)
 			throw new Error(`HTTP ${res.status}`);
 		const tokens = await res.json();
-		return tokens.length;
+		// A server that answers 200 with some other shape has no usable count;
+		// report the -1 sentinel so the caller falls through to the next backend.
+		return typeof tokens?.length === 'number' ? tokens.length : -1;
 	} catch (e) {
 		return -1;
 	}
@@ -60,7 +62,7 @@ export async function openaiOobaTokenCount({ endpoint, proxyEndpoint, signal, ..
 		if (!res.ok)
 			throw new Error(`HTTP ${res.status}`);
 		const { length } = await res.json();
-		return length;
+		return typeof length === 'number' ? length : -1;
 	} catch (e) {
 		return -1;
 	}
@@ -83,7 +85,7 @@ export async function openaiTabbyTokenCount({ endpoint, endpointAPIKey, proxyEnd
 		if (!res.ok)
 			throw new Error(`HTTP ${res.status}`);
 		const tokens = await res.json();
-		return tokens.length;
+		return typeof tokens?.length === 'number' ? tokens.length : -1;
 	} catch (e) {
 		return -1;
 	}
