@@ -9,7 +9,7 @@ Miyapad is a user-friendly, browser-based interface for interacting with languag
 * **Multiple Backends**: Supports **llama.cpp**, **koboldcpp**, **AI Horde**, **DeepSeek** and any **OpenAI Compatible** API.
 * **Connection Manager**: Save named connection presets (endpoint, API type, API key, model) and switch between them per-session. Each session remembers its selected connection. Presets include per-API-type settings, a model browser, and CRUD operations (create, clone, delete, enable/disable).
 * **Session Persistence**: Your prompt is automatically saved and restored across multiple sessions. Import and export sessions for sharing or backups. The dedicated Sessions modal provides search, sort by name/created/modified, and a table layout for managing sessions.
-* **Optional Server**: Can be hosted on a local Node.js server for remote or LAN access. Features **sqlite-zstd** transparent Zstandard compression with auto-vacuum and background dictionary training, and optional **server-side tokenization** — drop a `tokenizer.json` into `server/tokenizers/<name>/` and enable via Preferences → Server.
+* **Optional Server**: Can be hosted on a local Node.js server for remote or LAN access. Features **sqlite-zstd** transparent Zstandard compression and optional **server-side tokenization** — drop a `tokenizer.json` into `server/tokenizers/<name>/` and enable via Preferences → Server.
 * **Persistent Context**:
   * **Memory**: Seamlessly inject text at the beginning of the context.
   * **Author's Note**: Seamlessly inject text at the end of the context, with adjustable depth.
@@ -18,11 +18,12 @@ Miyapad is a user-friendly, browser-based interface for interacting with languag
 * **Token Probability**: Hover over any token to reveal the top 10 most probable tokens at that point. Click on a probability to regenerate text from that specific token. Token probability gradient endpoints and erase highlight are fully customizable via CSS variables instead of hardcoded. Optional server-side tokenization replaces client-side counting with accurate server-side counts.
   * If you're using oobabooga, make sure to use an \_HF sampler for this feature to function properly.
   * If you're using koboldcpp, token probabilities are only available with Token Streaming disabled.
+  * If you're using OpenRouter, logprobs are broken with the Completions API. Disable it.
 * **Logit Bias**: Fine-tune generation by adjusting the likelihood bias of specific tokens on-the-fly.
 * **Completion/Chat Modes**:
   * **Completion**: Have the model directly continue your prompt.
   * **Chat**: Automatically adds the right delimiters based on your selected template, structuring prompts into messages compatible with the Chat Completions API.
-* **Markdown Mode**: Toggle the prompt editor between plain source text and in-place markdown formatting — headings, bold, italics, strikethrough, blockquotes, lists, tables and rules are styled where they sit, with the markers left visible so editing never shifts.
+* **Markdown Mode**: Toggle the prompt editor between plain source text and in-place markdown formatting — headings, bold, italics, strikethrough, blockquotes, lists, tables and rules are styled in place, with the markers left visible.
 * **Screenshot Capture**: Select text in the editor, click the camera icon, and render a styled quote PNG with AI vs User color coding. Customize via the gear icon — fonts, colors, background image, avatar, and metadata toggles.
 * **Themes**: Customize your environment with a variety of themes.
 * **... and more!**
@@ -44,8 +45,6 @@ For the full server + frontend, download the standalone distribution archive fro
 1. Download `miyapad-<platform>-x64.{tar.gz,zip}` from [Releases](https://github.com/LordFoogThe4rd/miyapad/releases/latest)
 2. Extract the archive
 3. Run `./miyapad.sh` (Linux/macOS) or `miyapad.bat` (Windows)
-
-No install needed — Node.js and native addons are pre-packaged.
 
 #### From Source
 
