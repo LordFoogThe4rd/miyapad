@@ -12,7 +12,7 @@
  * merge into one run; at 1 each chunk gets its own probability colour, which
  * defeats merging and leaves every chunk its own span.
  */
-import { bench, describe } from 'vitest';
+import { test } from 'vitest';
 import { EditorState } from 'prosemirror-state';
 import { EditorView } from 'prosemirror-view';
 import { schema } from './schema';
@@ -87,14 +87,14 @@ function editAtFraction(mode: number, chunkCount: number, fraction: number, edit
 	}
 }
 
-describe('chunkDecorationPlugin: streaming', () => {
-	bench('300 tokens, no colour (adjacent chunks merge)', () => streamTokens(0, 300));
-	bench('300 tokens, per-token colour (chunks stay distinct)', () => streamTokens(1, 300));
+test('chunkDecorationPlugin: streaming', async ({ bench }) => {
+	await bench('300 tokens, no colour (adjacent chunks merge)', () => streamTokens(0, 300)).run();
+	await bench('300 tokens, per-token colour (chunks stay distinct)', () => streamTokens(1, 300)).run();
 });
 
 // Per-token colour throughout: every chunk is its own span, so nothing merges
 // and the reuse prefix is the only thing separating these two.
-describe('chunkDecorationPlugin: reuse prefix, 300-chunk doc, per-token colour', () => {
-	bench('15 edits 5% in (almost nothing reusable)', () => editAtFraction(1, 300, 0.05, 15));
-	bench('15 edits 95% in (almost everything reusable)', () => editAtFraction(1, 300, 0.95, 15));
+test('chunkDecorationPlugin: reuse prefix, 300-chunk doc, per-token colour', async ({ bench }) => {
+	await bench('15 edits 5% in (almost nothing reusable)', () => editAtFraction(1, 300, 0.05, 15)).run();
+	await bench('15 edits 95% in (almost everything reusable)', () => editAtFraction(1, 300, 0.95, 15)).run();
 });
