@@ -7,7 +7,7 @@
  * absolute milliseconds do not transfer. Only the ratios between benches on one
  * machine mean anything; there is no stored baseline, so read them by hand.
  */
-import { bench, describe } from 'vitest';
+import { test } from 'vitest';
 import { EditorState } from 'prosemirror-state';
 import type { Node } from 'prosemirror-model';
 import { schema } from './schema';
@@ -56,14 +56,14 @@ const windowedBase = wholeBase.apply(wholeBase.tr.setMeta(markdownDecorationKey,
  * against ~120 for a ±60-paragraph window — which is what the window buys on
  * the typing path. Neither of these times a rebuild; the flush benches do.
  */
-describe('markdownDecorationPlugin: keystroke maps the set forward', () => {
-	bench('whole-document set', () => {
+test('markdownDecorationPlugin: keystroke maps the set forward', async ({ bench }) => {
+	await bench('whole-document set', () => {
 		wholeBase.apply(wholeBase.tr.insertText('x', AT));
-	});
+	}).run();
 
-	bench('viewport-window set (±60 paragraphs)', () => {
+	await bench('viewport-window set (±60 paragraphs)', () => {
 		windowedBase.apply(windowedBase.tr.insertText('x', AT));
-	});
+	}).run();
 });
 
 /**
@@ -71,16 +71,16 @@ describe('markdownDecorationPlugin: keystroke maps the set forward', () => {
  * splice. One flush serves however many edits arrived since the last, so a
  * burst costs about the same as a single keystroke's flush.
  */
-describe('markdownDecorationPlugin: deferred flush', () => {
+test('markdownDecorationPlugin: deferred flush', async ({ bench }) => {
 	const flush = (s: EditorState): EditorState => s.apply(s.tr.setMeta(markdownDecorationKey, 'flush'));
 
-	bench('one keystroke + its own flush', () => {
+	await bench('one keystroke + its own flush', () => {
 		flush(windowedBase.apply(windowedBase.tr.insertText('x', AT)));
-	});
+	}).run();
 
-	bench('20 keystrokes coalesced into one flush', () => {
+	await bench('20 keystrokes coalesced into one flush', () => {
 		let state = windowedBase;
 		for (let k = 0; k < 20; k++) state = state.apply(state.tr.insertText('z', AT));
 		flush(state);
-	});
+	}).run();
 });
