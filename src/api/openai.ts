@@ -1,13 +1,22 @@
 import { parseEventStream, applyTemperatureToProbs } from './common';
 
 /**
- * A token count is only usable if it is a non-negative whole number. A
- * fractional or negative value, NaN or Infinity becomes the -1 "not this
- * backend" sentinel, so getTokenCount falls through to the next counter rather
- * than passing the value on as a real count — it only screens for exactly -1.
+ * The token count carried by a parsed token-count response, or the -1 "not this
+ * backend" sentinel when the body cannot supply one.
+ *
+ * Every shape in use here exposes the count as `length`: an array of token ids
+ * (Aphrodite) or an object with an explicit `length` (Tabby, Ooba). A primitive
+ * body is rejected outright, because a bare JSON string would otherwise hand
+ * back its character count — a plausible-looking number that is not a count at
+ * all. The count itself must be a non-negative whole number, since
+ * getTokenCount screens only for exactly -1 and passes anything else on as
+ * real.
  */
-function usableTokenCount(value: unknown): number {
-	return typeof value === 'number' && Number.isSafeInteger(value) && value >= 0 ? value : -1;
+function tokenCountFrom(body: unknown): number {
+	if (typeof body !== 'object' || body === null)
+		return -1;
+	const { length } = body as { length?: unknown };
+	return typeof length === 'number' && Number.isSafeInteger(length) && length >= 0 ? length : -1;
 }
 
 interface OpenaiStreamChunk {
@@ -47,8 +56,7 @@ export async function openaiAphroditeTokenCount({ endpoint, endpointAPIKey, prox
 		});
 		if (!res.ok)
 			throw new Error(`HTTP ${res.status}`);
-		const tokens = await res.json();
-		return usableTokenCount(tokens?.length);
+		return tokenCountFrom(await res.json());
 	} catch (e) {
 		return -1;
 	}
@@ -69,8 +77,7 @@ export async function openaiOobaTokenCount({ endpoint, proxyEndpoint, signal, ..
 		});
 		if (!res.ok)
 			throw new Error(`HTTP ${res.status}`);
-		const { length } = await res.json();
-		return usableTokenCount(length);
+		return tokenCountFrom(await res.json());
 	} catch (e) {
 		return -1;
 	}
@@ -92,8 +99,7 @@ export async function openaiTabbyTokenCount({ endpoint, endpointAPIKey, proxyEnd
 		});
 		if (!res.ok)
 			throw new Error(`HTTP ${res.status}`);
-		const tokens = await res.json();
-		return usableTokenCount(tokens?.length);
+		return tokenCountFrom(await res.json());
 	} catch (e) {
 		return -1;
 	}
