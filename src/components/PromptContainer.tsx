@@ -1,6 +1,6 @@
 import { html } from 'htm/react';
 import { useEffect, useLayoutEffect, useRef } from 'react';
-import { EditorState, TextSelection } from 'prosemirror-state';
+import { EditorState, TextSelection, type Transaction } from 'prosemirror-state';
 import { EditorView } from 'prosemirror-view';
 import { keymap } from 'prosemirror-keymap';
 import { baseKeymap } from 'prosemirror-commands';
@@ -18,12 +18,37 @@ import { diffPromptChunksWithMeta, applyChunksToPM, textToDoc } from '../editor/
 import { docText, flatTextLength } from '../editor/docText';
 import { ProseMirrorAdapter } from '../editor/EditorAdapter';
 import { schema } from '../editor/schema';
+import { DEFAULT_HISTORY_DELETION_THRESHOLD, positiveCount } from '../storage/SessionHistory';
 import type { PromptContainerProps } from '../types/components';
 
 const UNDO_COALESCE_MS = 500;
 
+/** Characters a transaction's steps remove, counting paragraph breaks as `\n` like docText. Cheap: no full-text scan. */
+function stepDeletedLength(tr: Transaction): number {
+	let deleted = 0;
+	tr.steps.forEach((step, i) => {
+		step.getMap().forEach((oldStart, oldEnd) => {
+			deleted += tr.docs[i]!.textBetween(oldStart, oldEnd, '\n').length;
+		});
+	});
+	return deleted;
+}
+
+/**
+ * Length of the old text between the common prefix and suffix, i.e. what really changed.
+ * EditorAdapter.replaceText swaps the whole document, which step-wise looks like deleting all of it.
+ */
+function replacedSpanLength(before: string, after: string): number {
+	const max = Math.min(before.length, after.length);
+	let start = 0;
+	while (start < max && before.charCodeAt(start) === after.charCodeAt(start)) start++;
+	let end = 0;
+	while (end < max - start && before.charCodeAt(before.length - 1 - end) === after.charCodeAt(after.length - 1 - end)) end++;
+	return before.length - start - end;
+}
+
 export function PromptContainer({ sidebarHeight }: PromptContainerProps) {
-	const { editorMode, setEditorMode, isMobile, tokenHighlightMode, tokenColorMode, promptAreaWidth, setPromptAreaWidth, showProbsMode, setShowProbsMode, spellCheck } = useSettings();
+	const { editorMode, setEditorMode, isMobile, tokenHighlightMode, tokenColorMode, promptAreaWidth, setPromptAreaWidth, showProbsMode, setShowProbsMode, spellCheck, sessionStorage, historyDeletionThreshold } = useSettings();
 	const { promptEditorView, setPromptEditorVersion, promptChunks, setPromptChunks, currentPromptChunk, setCurrentPromptChunk, undoHovered, setUndoHovered, undoStack, redoStack, lastEditMsRef, showProbs, setShowProbs, cancel, keyState, probsDelayTimer, modalState, closeModal, toggleModal, setTriggerPredict } = useGeneration();
 	const { promptText } = usePromptBuilder();
 	const { undo, redo, undoAndPredict } = useGenerationLogic();
@@ -43,10 +68,12 @@ export function PromptContainer({ sidebarHeight }: PromptContainerProps) {
 	const undoRef = useRef(undo);
 	const redoRef = useRef(redo);
 	const cancelRef = useRef(cancel);
+	const deletionThresholdRef = useRef(DEFAULT_HISTORY_DELETION_THRESHOLD);
 	useEffect(() => {
 		undoRef.current = undo;
 		redoRef.current = redo;
 		cancelRef.current = cancel;
+		deletionThresholdRef.current = positiveCount(historyDeletionThreshold, DEFAULT_HISTORY_DELETION_THRESHOLD);
 	});
 
 	useEffect(() => {
@@ -84,6 +111,12 @@ export function PromptContainer({ sidebarHeight }: PromptContainerProps) {
 				if (tr.docChanged && !suppressSyncRef.current) {
 					const newDoc = docText(newState.doc);
 					const prevChunks = lastPromptChunksRef.current;
+					// A large deletion can land within the idle window after the last version, so
+					// version the text it removes right away.
+					const threshold = deletionThresholdRef.current;
+					if (stepDeletedLength(tr) >= threshold && replacedSpanLength(docText(tr.before), newDoc) >= threshold) {
+						sessionStorage.snapshot('deletion', { prompt: prevChunks });
+					}
 					const { chunks: newChunks } = diffPromptChunksWithMeta(prevChunks, newDoc);
 					// Snapshot the pre-edit chunks as an undo checkpoint so the user's edit is
 					// itself undoable, and invalidate any redo history. Consecutive edits within

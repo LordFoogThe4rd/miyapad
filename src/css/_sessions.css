@@ -156,11 +156,29 @@
 	margin-top: 1px;
 }
 
+.session-history-row {
+	cursor: default;
+}
+.session-history-row td {
+	white-space: normal;
+}
+.session-history-table .sessions-col-actions {
+	width: auto;
+	white-space: nowrap;
+}
+.session-history-table .sessions-col-actions-inner {
+	gap: 4px;
+}
+.session-history-tail {
+	overflow-wrap: anywhere;
+	font-size: 0.85rem;
+}
+
 @media (max-width: 600px) {
 	.sessions-col-created {
 		display: none;
 	}
-	.sessions-modal-table thead th:nth-child(3) {
+	.sessions-modal-table:not(.session-history-table) thead th:nth-child(3) {
 		display: none;
 	}
 	.sessions-col-modified {

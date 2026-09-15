@@ -4,6 +4,7 @@
 
 ### Added
 
+- Version history for sessions: miyapad saves a version when you open a session, after a minute without edits, and before you delete or replace a large part of the prompt. Open it from Sessions → History and restore any version as a new session or over the current one (the current content is saved as a version first). In the Version History tab of Preferences you can change the number of versions kept (30 by default) and the deletion size that triggers a version (100 characters by default), and turn on a version before each generation
 - Markdown formatting mode for the prompt editor: a toolbar toggle switches between plain source text and in-place styled rendering (headings, bold, italics, strikethrough, blockquotes, lists, tables, horizontal rules)
 
 ### Changed
@@ -20,6 +21,7 @@
 - Token counts no longer come out blank against an OpenAI-compatible server that answers the token-counting request in an unexpected format — miyapad now moves on to the next counting method instead
 - Markdown formatting no longer leaks onto an unrelated part of the prompt while a construct is half-typed
 - Opening a session no longer marks it as modified, so sorting sessions by modification date reflects actual edits
+- Deleting the open session right after editing it no longer brings it back after a reload
 - Pinning or tagging a session that isn't open no longer erases its content, and the pin or tags are now kept after a reload
 - The world info token count in the Context panel now updates as soon as the active world info entries change
 - Docker quick-start (`server/.env.example` + `docker-compose.yml`) now sets `MIYAPAD_HOST=0.0.0.0`, so the server is actually reachable through the container's port mapping instead of only binding to the container's own loopback interface

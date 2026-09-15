@@ -1,4 +1,5 @@
 import { AbstractStorage } from './AbstractStorage';
+import { HISTORY_CONTENT_KEYS, HISTORY_IDLE_MS, SessionHistory } from './SessionHistory';
 
 function extractMeta(s: Record<string, unknown>) {
 	return {
@@ -51,9 +52,16 @@ export class SessionStorage extends AbstractStorage {
 	sessions: Record<string, SessionData> = {};
 	selectedSession: number | undefined;
 	nameStorage: AbstractStorage | undefined;
+	history: SessionHistory;
 	sessionEndpoint: string | undefined;
 	proxyEndpoint: string | undefined;
 	private onchange?: () => void;
+	#idleSnapshotTimer: ReturnType<typeof setTimeout> | undefined;
+	/** Settles once every session save started so far has finished. */
+	#saving: Promise<void> = Promise.resolve();
+	/** Ids (as strings, since the sessions modal passes string keys) of sessions being deleted. */
+	#deletingSessions = new Set<string>();
+	#deleteQueue: Promise<void> = Promise.resolve();
 
 	constructor(dbAdapter: DatabaseAdapter) {
 		super('Sessions', dbAdapter);
@@ -61,6 +69,7 @@ export class SessionStorage extends AbstractStorage {
 		this.sessions = {};
 		this.selectedSession = undefined;
 		this.nameStorage = new AbstractStorage('Names', dbAdapter);
+		this.history = new SessionHistory(dbAdapter);
 
 		if (dbAdapter.sessionEndpoint) {
 			this.sessionEndpoint = dbAdapter.sessionEndpoint;
@@ -113,11 +122,87 @@ export class SessionStorage extends AbstractStorage {
 	}
 
 	async deleteFromDatabase(db: DbConnection, key: string | number) {
+		// Versions first: if they can't be deleted, the session stays so its content isn't left behind unreachable.
+		await this.history.deleteAll(key);
 		await super.deleteFromDatabase(db, key);
 		await this.nameStorage!.deleteFromDatabase(db, key);
 	}
 
-	async saveSessionToDB(sessionId: string | number) {
+	/**
+	 * Saves the selected session's content as a version. `overrides` replaces properties
+	 * first, e.g. the prompt as it was before an edit. Errors are logged by the history
+	 * store and never reach the caller.
+	 */
+	snapshot(reason: HistoryReason, overrides?: Partial<SessionData>): Promise<void> {
+		const sessionId = this.selectedSession;
+		const session = sessionId !== undefined ? this.sessions[sessionId] : undefined;
+		// A session being deleted may already have had its versions removed; this would bring one back.
+		if (sessionId === undefined || !session || session.inactive || this.#deletingSessions.has(String(sessionId))) return Promise.resolve();
+		return this.history.snapshot(sessionId, { ...session, ...overrides }, reason).then(() => {}, () => {});
+	}
+
+	/** Takes the idle snapshot now if one is waiting, instead of when its timer runs out. */
+	flushSnapshot(): Promise<void> {
+		if (this.#idleSnapshotTimer === undefined) return Promise.resolve();
+		clearTimeout(this.#idleSnapshotTimer);
+		this.#idleSnapshotTimer = undefined;
+		return this.snapshot('idle');
+	}
+
+	/** Creates a new session from the current one with a saved version's content, and returns its id. */
+	async restoreSnapshot(time: number, name: string): Promise<number | undefined> {
+		const sessionId = this.selectedSession;
+		if (sessionId === undefined || !this.sessions[sessionId]) return undefined;
+		const content = await this.history.load(sessionId, time);
+		if (!content) return undefined;
+		const restored: Record<string, unknown> = { ...this.sessions[sessionId], name };
+		for (const key of HISTORY_CONTENT_KEYS) {
+			const value = content[key as keyof SessionSnapshot];
+			if (value === undefined) delete restored[key];
+			else restored[key] = value;
+		}
+		const serialized = Object.fromEntries(Object.entries(restored).map(([k, v]) => [k, JSON.stringify(v)]));
+		return await this.createSessionFromObject(serialized, false);
+	}
+
+	/**
+	 * Replaces the selected session's content with a saved version. The current content is
+	 * versioned first and, if that fails, nothing is replaced (the error is thrown), so the
+	 * overwrite can always be undone from history. Returns false if there's nothing to restore.
+	 */
+	async overwriteWithSnapshot(time: number): Promise<boolean> {
+		const sessionId = this.selectedSession;
+		if (sessionId === undefined || !this.sessions[sessionId]) return false;
+		const content = await this.history.load(sessionId, time);
+		// Deleted while the version loaded: its history is already queued for removal, and backing
+		// up the current content would put some back.
+		if (!content || this.#deletingSessions.has(String(sessionId))) return false;
+		clearTimeout(this.#idleSnapshotTimer);
+		this.#idleSnapshotTimer = undefined;
+		await this.history.snapshot(sessionId, { ...this.sessions[sessionId] }, 'restore');
+
+		const session = this.sessions[sessionId];
+		if (this.selectedSession !== sessionId || !session || session.inactive) return false;
+		for (const key of HISTORY_CONTENT_KEYS) {
+			const value = content[key as keyof SessionSnapshot];
+			if (value === undefined) delete session[key];
+			else session[key] = value;
+		}
+		session.modified = Date.now();
+		this.enqueueSave(sessionId);
+		// Same reload path as a session switch: every useSessionState re-reads its value.
+		this.dispatchEvent(new CustomEvent('sessionchange'));
+		return true;
+	}
+
+	saveSessionToDB(sessionId: string | number): Promise<void> {
+		const save = this.#saveSessionToDB(sessionId);
+		this.#saving = Promise.allSettled([this.#saving, save]).then(() => {});
+		return save;
+	}
+
+	async #saveSessionToDB(sessionId: string | number) {
+		if (this.#deletingSessions.has(String(sessionId))) return;
 		const session = this.sessions[sessionId];
 		if (!session) return;
 		// Only the selected session has its content in memory; the others hold just their
@@ -200,8 +285,13 @@ export class SessionStorage extends AbstractStorage {
 		// Re-applying a value the session already has (e.g. its saved connection or
 		// sampler preset on open) is not an edit, so it doesn't bump modified. Still
 		// saved either way, in case a caller mutated the stored value in place.
-		if (!sameValue(session[propertyName], value))
+		if (!sameValue(session[propertyName], value)) {
 			session.modified = Date.now();
+			if (HISTORY_CONTENT_KEYS.includes(propertyName)) {
+				clearTimeout(this.#idleSnapshotTimer);
+				this.#idleSnapshotTimer = setTimeout(() => this.flushSnapshot(), HISTORY_IDLE_MS);
+			}
+		}
 		session[propertyName] = value;
 		this.enqueueSave(this.selectedSession);
 	}
@@ -212,6 +302,9 @@ export class SessionStorage extends AbstractStorage {
 
 		const gen = ++this.switchGeneration;
 		const targetId = +sessionId;
+
+		// Capture the outgoing session's pending version while its content is still in memory.
+		this.flushSnapshot();
 
 		try {
 			await this.saveTimerHandler(async (sessionId: string | number) => await this.saveSessionToDB(sessionId));
@@ -235,6 +328,10 @@ export class SessionStorage extends AbstractStorage {
 		if (this.switchGeneration !== gen) return;
 
 		await this.saveToDatabase(db, targetId, this.sessions[targetId]);
+
+		// Versioning the session as it's opened covers edits the idle timer never got to
+		// (the tab closed first), so they're kept before anything new overwrites them.
+		this.snapshot('open');
 
 		this.dispatchChangeEvent();
 		this.dispatchEvent(new CustomEvent('sessionchange'));
@@ -267,25 +364,55 @@ export class SessionStorage extends AbstractStorage {
 		this.dispatchChangeEvent();
 	}
 
-	async deleteSession(sessionId: string | number) {
+	deleteSession(sessionId: string | number): Promise<void> {
 		if (Object.keys(this.sessions).length === 1)
-			return;
+			return Promise.resolve();
 		if (!window.confirm("Are you sure you want to delete this session? This action can't be undone."))
+			return Promise.resolve();
+		// One delete at a time, so two confirmed back to back can't both pass the last-session check.
+		const run = this.#deleteQueue.then(() => this.#deleteSession(sessionId));
+		this.#deleteQueue = run.catch(() => {});
+		return run;
+	}
+
+	async #deleteSession(sessionId: string | number) {
+		// Checked again: the deletes queued before this one may have changed either.
+		if (Object.keys(this.sessions).length === 1 || !this.sessions[sessionId])
 			return;
-
-		const db = await this.openDatabase();
-		await this.deleteFromDatabase(db, sessionId);
-
-		// Select another session if the current was deleted
-		if (sessionId == this.selectedSession) {
-			const sessionIds = Object.keys(this.sessions).map(x => +x);
-			const sessionIdx = sessionIds.indexOf(sessionId);
-			const newSessionId = sessionIds[sessionIdx - 1] ?? sessionIds[sessionIdx + 1];
-			await this.switchSession(+newSessionId)
+		// `==` because the modal passes string keys.
+		const selected = sessionId == this.selectedSession;
+		// Otherwise switching away below would flush a version for the session being deleted.
+		if (selected) {
+			clearTimeout(this.#idleSnapshotTimer);
+			this.#idleSnapshotTimer = undefined;
 		}
+		// Saves of this session are skipped from here on and a save already running finishes
+		// first, so neither can write the records back after they're deleted.
+		this.#deletingSessions.add(String(sessionId));
+		try {
+			try {
+				await this.#saving;
+				const db = await this.openDatabase();
+				await this.deleteFromDatabase(db, sessionId);
+			} catch (e) {
+				// The session is still open, and its queued save may have been skipped above.
+				if (selected) this.enqueueSave(this.selectedSession!);
+				throw e;
+			}
 
-		delete this.sessions[sessionId];
-		this.dispatchChangeEvent();
+			// Select another session if the current was deleted
+			if (sessionId == this.selectedSession) {
+				const sessionIds = Object.keys(this.sessions).map(x => +x);
+				const sessionIdx = sessionIds.indexOf(+sessionId);
+				const newSessionId = sessionIds[sessionIdx - 1] ?? sessionIds[sessionIdx + 1];
+				await this.switchSession(+newSessionId)
+			}
+
+			delete this.sessions[sessionId];
+			this.dispatchChangeEvent();
+		} finally {
+			this.#deletingSessions.delete(String(sessionId));
+		}
 	}
 
 	async createSession(newSessionName: string) {

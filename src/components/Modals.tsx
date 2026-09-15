@@ -26,6 +26,7 @@ import { CompressionInfoModal } from './modals/CompressionInfoModal';
 import { ConnectionManagerModal } from './modals/ConnectionManagerModal';
 import { SamplerPresetManagerModal } from './modals/SamplerPresetManagerModal';
 import { SessionsModal } from './modals/SessionsModal';
+import { SessionHistoryModal } from './modals/SessionHistoryModal';
 import { AboutModal } from './modals/AboutModal';
 import { QuickSwitcher } from './QuickSwitcher';
 import { EditorContextMenu } from './EditorContextMenu';
@@ -33,7 +34,7 @@ import type { ModalsProps } from '../types/components';
 
 export function Modals({ toggleModal, currentThemeName, setCurrentThemeName, allThemes, setAllThemes, applyChatTemplate }: ModalsProps) {
 	const t = useT();
-	const { endpoint, setEndpointAPIKey, endpointAPIKey, endpointAPI, endpointModel, setEndpointModel, templates, selectedTemplate, setSelectedTemplate, templatesImport, setTemplates, templateStorage, grammar, setGrammar, isMiyapadEndpoint, sessionStorage, locale, setLocale, fontSizeMultiplier, setFontSizeMultiplier, spellCheck, setSpellCheck, attachSidebar, setAttachSidebar, preserveCursorPosition, setPreserveCursorPosition, tokenHighlightMode, setTokenHighlightMode, tokenColorMode, setTokenColorMode, showProbsMode, setShowProbsMode, ttsEnabled, setTTSEnabled, ttsVoiceId, setTTSVoiceId, ttsPitch, setTTSPitch, ttsRate, setTTSRate, ttsVolume, setTTSVolume, ttsSpeakInputs, setTTSSpeakInputs, ttsMaxUserInput, setTTSMaxUserInput, useChatAPI, setUseChatAPI, memoryTokens, authorNoteTokens, authorNoteDepth, setAuthorNoteDepth, worldInfo, setWorldInfo, sillyTarvernWorldInfoJSON, setSillyTarvernWorldInfoJSON, logitBias, setLogitBias, logitBiasParam, setLogitBiasParam, templateList, setTemplateList,
+	const { endpoint, setEndpointAPIKey, endpointAPIKey, endpointAPI, endpointModel, setEndpointModel, templates, selectedTemplate, setSelectedTemplate, templatesImport, setTemplates, templateStorage, grammar, setGrammar, isMiyapadEndpoint, sessionStorage, locale, setLocale, fontSizeMultiplier, setFontSizeMultiplier, spellCheck, setSpellCheck, attachSidebar, setAttachSidebar, preserveCursorPosition, setPreserveCursorPosition, tokenHighlightMode, setTokenHighlightMode, tokenColorMode, setTokenColorMode, showProbsMode, setShowProbsMode, ttsEnabled, setTTSEnabled, ttsVoiceId, setTTSVoiceId, ttsPitch, setTTSPitch, ttsRate, setTTSRate, ttsVolume, setTTSVolume, ttsSpeakInputs, setTTSSpeakInputs, ttsMaxUserInput, setTTSMaxUserInput, historyKeep, setHistoryKeep, historyDeletionThreshold, setHistoryDeletionThreshold, historyBeforeGenerate, setHistoryBeforeGenerate, useChatAPI, setUseChatAPI, memoryTokens, authorNoteTokens, authorNoteDepth, setAuthorNoteDepth, worldInfo, setWorldInfo, sillyTarvernWorldInfoJSON, setSillyTarvernWorldInfoJSON, logitBias, setLogitBias, logitBiasParam, setLogitBiasParam, templateList, setTemplateList,
 		screenshotIncludeSessionName, setScreenshotIncludeSessionName,
 		screenshotIncludeDate, setScreenshotIncludeDate,
 		screenshotBackgroundUrl, setScreenshotBackgroundUrl,
@@ -162,6 +163,7 @@ export function Modals({ toggleModal, currentThemeName, setCurrentThemeName, all
 				ttsVolume, setTTSVolume,
 				ttsSpeakInputs, setTTSSpeakInputs,
 				ttsMaxUserInput, setTTSMaxUserInput,
+				historyKeep, setHistoryKeep, historyDeletionThreshold, setHistoryDeletionThreshold, historyBeforeGenerate, setHistoryBeforeGenerate,
 				isMiyapadEndpoint, sessionStorage, cancel, listTTSVoices, ttsStop, ttsAvailable, handleExportDB, handleImportDB, exportPrompt,
 				useServerTokenization, setUseServerTokenization, tokenizerModel, setTokenizerModel,
 				screenshotIncludeSessionName, setScreenshotIncludeSessionName,
@@ -322,6 +324,13 @@ export function Modals({ toggleModal, currentThemeName, setCurrentThemeName, all
 		<${SessionsModal}
 			isOpen=${modalState.sessions}
 			closeModal=${() => closeModal("sessions")}
+			sessionStorage=${sessionStorage}
+			cancel=${cancel}
+			openHistory=${() => { closeModal("sessions"); toggleModal("sessionHistory"); }}/>
+
+		<${SessionHistoryModal}
+			isOpen=${modalState.sessionHistory}
+			closeModal=${() => closeModal("sessionHistory")}
 			sessionStorage=${sessionStorage}
 			cancel=${cancel}/>
 

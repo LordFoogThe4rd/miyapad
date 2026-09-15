@@ -192,6 +192,13 @@ export interface SettingsState {
   setTTSSpeakInputs: Dispatch<SetStateAction<boolean>>;
   ttsMaxUserInput: number;
   setTTSMaxUserInput: Dispatch<SetStateAction<number>>;
+  /** Raw input values; an emptied field stores null. Read them through positiveCount. */
+  historyKeep: number | null;
+  setHistoryKeep: Dispatch<SetStateAction<number | null>>;
+  historyDeletionThreshold: number | null;
+  setHistoryDeletionThreshold: Dispatch<SetStateAction<number | null>>;
+  historyBeforeGenerate: boolean;
+  setHistoryBeforeGenerate: Dispatch<SetStateAction<boolean>>;
   useServerTokenization: boolean;
   setUseServerTokenization: Dispatch<SetStateAction<boolean>>;
   tokenizerModel: string | null;
