@@ -22,6 +22,7 @@
 - Markdown formatting no longer leaks onto an unrelated part of the prompt while a construct is half-typed
 - Opening a session no longer marks it as modified, so sorting sessions by modification date reflects actual edits
 - Deleting the open session right after editing it no longer brings it back after a reload
+- Pinning or tagging a session that isn't open no longer erases its content, and the pin or tags are now kept after a reload
 - The world info token count in the Context panel now updates as soon as the active world info entries change
 - Docker quick-start (`server/.env.example` + `docker-compose.yml`) now sets `MIYAPAD_HOST=0.0.0.0`, so the server is actually reachable through the container's port mapping instead of only binding to the container's own loopback interface
 

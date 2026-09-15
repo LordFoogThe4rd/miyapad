@@ -201,11 +201,14 @@ export class SessionStorage extends AbstractStorage {
 		if (sessionId == this.#deletingSession) return;
 		const session = this.sessions[sessionId];
 		if (!session) return;
-		const { name, created, modified, pinned, tags, ...sessionData } = session;
-		if (!sessionData || sessionData.inactive)
-			return;
+		// Only the selected session has its content in memory; the others hold just their
+		// metadata, and saving their whole record would overwrite the stored content with nothing.
+		// `!=` because the sessions modal passes string keys.
+		const metaOnly = sessionId != this.selectedSession || session.inactive;
+		const data = metaOnly ? extractMeta(session) : { ...session };
 		const db = await this.openDatabase();
-		await this.saveToDatabase(db, sessionId, { name, created, modified, pinned, tags, ...sessionData });
+		if (metaOnly) await this.nameStorage!.saveToDatabase(db, sessionId, data);
+		else await this.saveToDatabase(db, sessionId, data);
 	}
 
 	async getNewId() {
