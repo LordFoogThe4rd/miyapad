@@ -16,6 +16,11 @@ function safeSessionName(name: unknown, key: string | number, fallback = 'Untitl
 		: fallback;
 }
 
+/** Identical, or arrays with identical elements (preset arrays like enabledSamplers arrive as fresh copies). */
+function sameValue(a: unknown, b: unknown): boolean {
+	return Object.is(a, b) || (Array.isArray(a) && Array.isArray(b) && a.length === b.length && a.every((v, i) => Object.is(v, b[i])));
+}
+
 function sanitizeNumber(value: unknown, fallback: number): number {
 	return typeof value === 'number' && !Number.isNaN(value) ? value : fallback;
 }
@@ -186,10 +191,15 @@ export class SessionStorage extends AbstractStorage {
 
 	setProperty(propertyName: string, value: unknown) {
 		if (this.selectedSession === undefined) return;
-		if (!this.sessions[this.selectedSession])
+		const session = this.sessions[this.selectedSession];
+		if (!session)
 			return;
-		this.sessions[this.selectedSession][propertyName] = value;
-		this.sessions[this.selectedSession].modified = Date.now();
+		// Re-applying a value the session already has (e.g. its saved connection or
+		// sampler preset on open) is not an edit, so it doesn't bump modified. Still
+		// saved either way, in case a caller mutated the stored value in place.
+		if (!sameValue(session[propertyName], value))
+			session.modified = Date.now();
+		session[propertyName] = value;
 		this.enqueueSave(this.selectedSession);
 	}
 
