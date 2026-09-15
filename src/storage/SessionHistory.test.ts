@@ -176,18 +176,21 @@ describe('SessionStorage version history', () => {
 		await storage.history.list(1);
 
 		expect([...store('SessionHistory').keys()].some(k => k === '0' || k.startsWith('0/'))).toBe(false);
+		expect(store('Sessions').has('0')).toBe(false);
 	});
 
 	it('keeps the session when its versions cannot be deleted', async () => {
 		vi.spyOn(window, 'confirm').mockReturnValue(true);
 		const { storage, store } = await setup();
-		const second = await storage.createSession('Two');
+		await storage.createSession('Two');
+		storage.setProperty('prompt', [u('unsaved')]);
 		vi.spyOn(storage.history, 'deleteAll').mockRejectedValueOnce(new Error('disk full'));
 
-		await expect(storage.deleteSession(second)).rejects.toThrow('disk full');
+		await expect(storage.deleteSession(0)).rejects.toThrow('disk full');
 
-		expect(store('Sessions').has(String(second))).toBe(true);
-		expect(storage.sessions[second]).toBeDefined();
+		expect(storage.selectedSession).toBe(0);
+		await storage.saveTimerHandler(id => storage.saveSessionToDB(id));
+		expect(store('Sessions').get('0')).toMatchObject({ prompt: [u('unsaved')] });
 	});
 
 	it('overwrites the current session with a version after versioning what it replaces', async () => {

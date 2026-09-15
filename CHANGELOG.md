@@ -21,6 +21,7 @@
 - Token counts no longer come out blank against an OpenAI-compatible server that answers the token-counting request in an unexpected format — miyapad now moves on to the next counting method instead
 - Markdown formatting no longer leaks onto an unrelated part of the prompt while a construct is half-typed
 - Opening a session no longer marks it as modified, so sorting sessions by modification date reflects actual edits
+- Deleting the open session right after editing it no longer brings it back after a reload
 - The world info token count in the Context panel now updates as soon as the active world info entries change
 - Docker quick-start (`server/.env.example` + `docker-compose.yml`) now sets `MIYAPAD_HOST=0.0.0.0`, so the server is actually reachable through the container's port mapping instead of only binding to the container's own loopback interface
 

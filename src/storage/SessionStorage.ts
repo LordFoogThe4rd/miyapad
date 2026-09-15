@@ -351,14 +351,22 @@ export class SessionStorage extends AbstractStorage {
 			return;
 		if (!window.confirm("Are you sure you want to delete this session? This action can't be undone."))
 			return;
-		// Otherwise switching away below would flush a version for the session being deleted.
-		if (sessionId == this.selectedSession) {
+		const db = await this.openDatabase();
+		// Otherwise switching away below would flush a version and save the records again
+		// for the session being deleted. `==` because the modal passes string keys.
+		const selected = sessionId == this.selectedSession;
+		if (selected) {
 			clearTimeout(this.#idleSnapshotTimer);
 			this.#idleSnapshotTimer = undefined;
+			if (this.pendingSaveKey == sessionId) this.pendingSaveKey = null;
 		}
-
-		const db = await this.openDatabase();
-		await this.deleteFromDatabase(db, sessionId);
+		try {
+			await this.deleteFromDatabase(db, sessionId);
+		} catch (e) {
+			// The session is still open, so put back the save cleared above.
+			if (selected) this.enqueueSave(this.selectedSession!);
+			throw e;
+		}
 
 		// Select another session if the current was deleted
 		if (sessionId == this.selectedSession) {
