@@ -178,6 +178,18 @@ describe('SessionStorage version history', () => {
 		expect([...store('SessionHistory').keys()].some(k => k === '0' || k.startsWith('0/'))).toBe(false);
 	});
 
+	it('keeps the session when its versions cannot be deleted', async () => {
+		vi.spyOn(window, 'confirm').mockReturnValue(true);
+		const { storage, store } = await setup();
+		const second = await storage.createSession('Two');
+		vi.spyOn(storage.history, 'deleteAll').mockRejectedValueOnce(new Error('disk full'));
+
+		await expect(storage.deleteSession(second)).rejects.toThrow('disk full');
+
+		expect(store('Sessions').has(String(second))).toBe(true);
+		expect(storage.sessions[second]).toBeDefined();
+	});
+
 	it('overwrites the current session with a version after versioning what it replaces', async () => {
 		const { storage, store } = await setup();
 		storage.setProperty('prompt', [u('old')]);

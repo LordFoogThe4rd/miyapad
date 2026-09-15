@@ -341,6 +341,7 @@
   "sessionHistory.restoreAsNew": "Restore as new",
   "sessionHistory.restoreAsNewTooltip": "Create a new session from this version and leave this one unchanged.",
   "sessionHistory.restoreFailed": "Couldn't restore this version. Nothing was changed.",
+  "sessionHistory.restoredNotOpened": "The version was restored as a new session, but it couldn't be opened. You can open it from the Sessions list.",
   "sessionHistory.saved": "Saved",
   "sessionHistory.title": "Version History",
   "sessionHistory.words": "words",

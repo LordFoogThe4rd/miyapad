@@ -104,4 +104,8 @@ export class AbstractStorage extends EventTarget {
 	async deleteFromDatabase(db: DbConnection, key: string | number): Promise<void> {
 		return await this.#wrap(this.dbAdapter.deleteFromDatabase(db, this.storeName, key));
 	}
+
+	async batchMutation(db: DbConnection, ops: BatchOp[]): Promise<void> {
+		return await this.#wrap(this.dbAdapter.batchMutation!(db, this.storeName, ops));
+	}
 }

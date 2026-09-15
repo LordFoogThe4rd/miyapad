@@ -111,7 +111,7 @@ export class SessionHistory extends AbstractStorage {
 			const time = Math.max(Date.now(), (latest?.time ?? 0) + 1);
 			const entries = [...index, { time, hash, reason, words: text.match(/\S+/g)?.length ?? 0, tail: text.slice(-100) }];
 			const dropped = entries.splice(0, Math.max(0, entries.length - readCount(HISTORY_KEEP_KEY, DEFAULT_HISTORY_KEEP)));
-			await this.dbAdapter.batchMutation!(db, this.storeName, [
+			await this.batchMutation(db, [
 				{ type: 'save', key: `${sessionId}/${time}`, data: content },
 				{ type: 'save', key: String(sessionId), data: entries },
 				...dropped.map(e => ({ type: 'delete' as const, key: `${sessionId}/${e.time}` })),
@@ -125,7 +125,7 @@ export class SessionHistory extends AbstractStorage {
 			const db = await this.openDatabase();
 			const index = await this.#index(db, sessionId);
 			if (index.length === 0) return;
-			await this.dbAdapter.batchMutation!(db, this.storeName, [
+			await this.batchMutation(db, [
 				...index.map(e => ({ type: 'delete' as const, key: `${sessionId}/${e.time}` })),
 				{ type: 'delete', key: String(sessionId) },
 			]);

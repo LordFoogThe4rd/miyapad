@@ -54,6 +54,8 @@ export function SessionHistoryModal({ isOpen, closeModal, sessionStorage, cancel
 		const newId = await sessionStorage.restoreSnapshot(entry.time, name);
 		if (newId === undefined) return false;
 		await sessionStorage.switchSession(newId);
+		// switchSession logs and swallows its own failures, so check it actually got there.
+		if (sessionStorage.selectedSession !== newId) alert(t('sessionHistory.restoredNotOpened'));
 		return true;
 	});
 

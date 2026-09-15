@@ -117,10 +117,10 @@ export class SessionStorage extends AbstractStorage {
 	}
 
 	async deleteFromDatabase(db: DbConnection, key: string | number) {
+		// Versions first: if they can't be deleted, the session stays so its content isn't left behind unreachable.
+		await this.history.deleteAll(key);
 		await super.deleteFromDatabase(db, key);
 		await this.nameStorage!.deleteFromDatabase(db, key);
-		// Leftover versions only cost space, so a failure here (already logged) doesn't block the delete.
-		await this.history.deleteAll(key).catch(() => {});
 	}
 
 	/**
