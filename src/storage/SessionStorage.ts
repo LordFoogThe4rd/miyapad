@@ -57,6 +57,9 @@ export class SessionStorage extends AbstractStorage {
 	proxyEndpoint: string | undefined;
 	private onchange?: () => void;
 	#idleSnapshotTimer: ReturnType<typeof setTimeout> | undefined;
+	/** Settles once every session save started so far has finished. */
+	#saving: Promise<void> = Promise.resolve();
+	#deletingSession: string | number | undefined;
 
 	constructor(dbAdapter: DatabaseAdapter) {
 		super('Sessions', dbAdapter);
@@ -187,7 +190,14 @@ export class SessionStorage extends AbstractStorage {
 		return true;
 	}
 
-	async saveSessionToDB(sessionId: string | number) {
+	saveSessionToDB(sessionId: string | number): Promise<void> {
+		const save = this.#saveSessionToDB(sessionId);
+		this.#saving = Promise.allSettled([this.#saving, save]).then(() => {});
+		return save;
+	}
+
+	async #saveSessionToDB(sessionId: string | number) {
+		if (sessionId == this.#deletingSession) return;
 		const session = this.sessions[sessionId];
 		if (!session) return;
 		const { name, created, modified, pinned, tags, ...sessionData } = session;
@@ -351,33 +361,40 @@ export class SessionStorage extends AbstractStorage {
 			return;
 		if (!window.confirm("Are you sure you want to delete this session? This action can't be undone."))
 			return;
-		const db = await this.openDatabase();
-		// Otherwise switching away below would flush a version and save the records again
-		// for the session being deleted. `==` because the modal passes string keys.
+		// `==` here and in saveSessionToDB because the modal passes string keys.
 		const selected = sessionId == this.selectedSession;
+		// Otherwise switching away below would flush a version for the session being deleted.
 		if (selected) {
 			clearTimeout(this.#idleSnapshotTimer);
 			this.#idleSnapshotTimer = undefined;
-			if (this.pendingSaveKey == sessionId) this.pendingSaveKey = null;
 		}
+		// Saves of this session are skipped from here on and a save already running finishes
+		// first, so neither can write the records back after they're deleted.
+		this.#deletingSession = sessionId;
 		try {
-			await this.deleteFromDatabase(db, sessionId);
-		} catch (e) {
-			// The session is still open, so put back the save cleared above.
-			if (selected) this.enqueueSave(this.selectedSession!);
-			throw e;
-		}
+			try {
+				await this.#saving;
+				const db = await this.openDatabase();
+				await this.deleteFromDatabase(db, sessionId);
+			} catch (e) {
+				// The session is still open, and its queued save may have been skipped above.
+				if (selected) this.enqueueSave(this.selectedSession!);
+				throw e;
+			}
 
-		// Select another session if the current was deleted
-		if (sessionId == this.selectedSession) {
-			const sessionIds = Object.keys(this.sessions).map(x => +x);
-			const sessionIdx = sessionIds.indexOf(sessionId);
-			const newSessionId = sessionIds[sessionIdx - 1] ?? sessionIds[sessionIdx + 1];
-			await this.switchSession(+newSessionId)
-		}
+			// Select another session if the current was deleted
+			if (sessionId == this.selectedSession) {
+				const sessionIds = Object.keys(this.sessions).map(x => +x);
+				const sessionIdx = sessionIds.indexOf(+sessionId);
+				const newSessionId = sessionIds[sessionIdx - 1] ?? sessionIds[sessionIdx + 1];
+				await this.switchSession(+newSessionId)
+			}
 
-		delete this.sessions[sessionId];
-		this.dispatchChangeEvent();
+			delete this.sessions[sessionId];
+			this.dispatchChangeEvent();
+		} finally {
+			this.#deletingSession = undefined;
+		}
 	}
 
 	async createSession(newSessionName: string) {

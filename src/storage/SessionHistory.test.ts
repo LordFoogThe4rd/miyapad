@@ -179,6 +179,45 @@ describe('SessionStorage version history', () => {
 		expect(store('Sessions').has('0')).toBe(false);
 	});
 
+	describe('a session save racing the delete of the selected session', () => {
+		async function holdSaves() {
+			const ctx = await setup();
+			await ctx.storage.createSession('Two');
+			ctx.storage.setProperty('prompt', [u('draft')]);
+			vi.spyOn(window, 'confirm').mockReturnValue(true);
+			let release!: () => void;
+			const held = new Promise<void>(r => { release = r; });
+			const save = ctx.adapter.saveToDatabase;
+			ctx.adapter.saveToDatabase = async (...args) => { await held; return save(...args); };
+			return { ...ctx, release };
+		}
+
+		it('waits for a save that was already running', async () => {
+			const { storage, store, release } = await holdSaves();
+
+			const saving = storage.saveTimerHandler(id => storage.saveSessionToDB(id));
+			const deleting = storage.deleteSession('0');
+			await new Promise(r => setTimeout(r));
+			release();
+			await Promise.all([saving, deleting]);
+
+			expect(store('Sessions').has('0')).toBe(false);
+			expect(storage.selectedSession).toBe(1);
+		});
+
+		it('skips a save the timer starts while the delete is running', async () => {
+			const { storage, store, release } = await holdSaves();
+
+			const deleting = storage.deleteSession('0');
+			const saving = storage.saveTimerHandler(id => storage.saveSessionToDB(id));
+			await new Promise(r => setTimeout(r));
+			release();
+			await Promise.all([saving, deleting]);
+
+			expect(store('Sessions').has('0')).toBe(false);
+		});
+	});
+
 	it('keeps the session when its versions cannot be deleted', async () => {
 		vi.spyOn(window, 'confirm').mockReturnValue(true);
 		const { storage, store } = await setup();
