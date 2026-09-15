@@ -250,7 +250,8 @@ const initDatabase = async (storagePath: string): Promise<DB> => {
     db.loadExtension(resolveExeRelative(zstdLibName, path.join(basedir, '..', zstdLibName)));
     console.log('sqlite-zstd extension loaded successfully.');
 
-    const isNewDatabase = !db.prepare("SELECT name FROM sqlite_master WHERE type='table' AND name='sessions'").get();
+    // sqlite-zstd turns `sessions` into a view over `_sessions_zstd`, so match either.
+    const isNewDatabase = !db.prepare("SELECT name FROM sqlite_master WHERE type IN ('table', 'view') AND name='sessions'").get();
 
     configureAutoVacuum(db);
 
