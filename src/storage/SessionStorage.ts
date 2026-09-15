@@ -59,7 +59,9 @@ export class SessionStorage extends AbstractStorage {
 	#idleSnapshotTimer: ReturnType<typeof setTimeout> | undefined;
 	/** Settles once every session save started so far has finished. */
 	#saving: Promise<void> = Promise.resolve();
-	#deletingSession: string | number | undefined;
+	/** Ids (as strings, since the sessions modal passes string keys) of sessions being deleted. */
+	#deletingSessions = new Set<string>();
+	#deleteQueue: Promise<void> = Promise.resolve();
 
 	constructor(dbAdapter: DatabaseAdapter) {
 		super('Sessions', dbAdapter);
@@ -135,7 +137,7 @@ export class SessionStorage extends AbstractStorage {
 		const sessionId = this.selectedSession;
 		const session = sessionId !== undefined ? this.sessions[sessionId] : undefined;
 		// A session being deleted may already have had its versions removed; this would bring one back.
-		if (sessionId === undefined || !session || session.inactive || sessionId == this.#deletingSession) return Promise.resolve();
+		if (sessionId === undefined || !session || session.inactive || this.#deletingSessions.has(String(sessionId))) return Promise.resolve();
 		return this.history.snapshot(sessionId, { ...session, ...overrides }, reason).then(() => {}, () => {});
 	}
 
@@ -198,7 +200,7 @@ export class SessionStorage extends AbstractStorage {
 	}
 
 	async #saveSessionToDB(sessionId: string | number) {
-		if (sessionId == this.#deletingSession) return;
+		if (this.#deletingSessions.has(String(sessionId))) return;
 		const session = this.sessions[sessionId];
 		if (!session) return;
 		// Only the selected session has its content in memory; the others hold just their
@@ -360,12 +362,22 @@ export class SessionStorage extends AbstractStorage {
 		this.dispatchChangeEvent();
 	}
 
-	async deleteSession(sessionId: string | number) {
+	deleteSession(sessionId: string | number): Promise<void> {
 		if (Object.keys(this.sessions).length === 1)
-			return;
+			return Promise.resolve();
 		if (!window.confirm("Are you sure you want to delete this session? This action can't be undone."))
+			return Promise.resolve();
+		// One delete at a time, so two confirmed back to back can't both pass the last-session check.
+		const run = this.#deleteQueue.then(() => this.#deleteSession(sessionId));
+		this.#deleteQueue = run.catch(() => {});
+		return run;
+	}
+
+	async #deleteSession(sessionId: string | number) {
+		// Checked again: the deletes queued before this one may have changed either.
+		if (Object.keys(this.sessions).length === 1 || !this.sessions[sessionId])
 			return;
-		// `==` here and in saveSessionToDB because the modal passes string keys.
+		// `==` because the modal passes string keys.
 		const selected = sessionId == this.selectedSession;
 		// Otherwise switching away below would flush a version for the session being deleted.
 		if (selected) {
@@ -374,7 +386,7 @@ export class SessionStorage extends AbstractStorage {
 		}
 		// Saves of this session are skipped from here on and a save already running finishes
 		// first, so neither can write the records back after they're deleted.
-		this.#deletingSession = sessionId;
+		this.#deletingSessions.add(String(sessionId));
 		try {
 			try {
 				await this.#saving;
@@ -397,7 +409,7 @@ export class SessionStorage extends AbstractStorage {
 			delete this.sessions[sessionId];
 			this.dispatchChangeEvent();
 		} finally {
-			this.#deletingSession = undefined;
+			this.#deletingSessions.delete(String(sessionId));
 		}
 	}
 

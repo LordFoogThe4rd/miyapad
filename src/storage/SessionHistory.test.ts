@@ -218,6 +218,40 @@ describe('SessionStorage version history', () => {
 		});
 	});
 
+	it('deletes confirmed back to back run one at a time and never write a deleted session back', async () => {
+		vi.spyOn(window, 'confirm').mockReturnValue(true);
+		const { storage, store, adapter } = await setup();
+		await storage.createSession('Two');
+		await storage.createSession('Three');
+		storage.setProperty('prompt', [u('draft')]);
+		let release!: () => void;
+		const held = new Promise<void>(r => { release = r; });
+		const remove = adapter.deleteFromDatabase;
+		adapter.deleteFromDatabase = async (db, name, key) => { if (String(key) === '0') await held; return remove(db, name, key); };
+
+		const deletes = [storage.deleteSession('0'), storage.deleteSession('1')];
+		await new Promise(r => setTimeout(r));
+		expect(store('Sessions').has('1')).toBe(true);
+		release();
+		await Promise.all(deletes);
+
+		expect(store('Sessions').has('0')).toBe(false);
+		expect(store('Sessions').has('1')).toBe(false);
+		expect(storage.selectedSession).toBe(2);
+	});
+
+	it('deleting the last two sessions at once keeps one', async () => {
+		vi.spyOn(window, 'confirm').mockReturnValue(true);
+		const { storage, store } = await setup();
+		await storage.createSession('Two');
+
+		await Promise.all([storage.deleteSession('0'), storage.deleteSession('1')]);
+
+		expect(Object.keys(storage.sessions)).toEqual(['1']);
+		expect(store('Sessions').has('1')).toBe(true);
+		expect(storage.selectedSession).toBe(1);
+	});
+
 	it('an edit made while the selected session is being deleted does not bring its versions back', async () => {
 		vi.spyOn(window, 'confirm').mockReturnValue(true);
 		const { storage, store } = await setup();
