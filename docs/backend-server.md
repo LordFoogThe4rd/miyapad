@@ -1,6 +1,6 @@
 # Backend Server & Database
 
-The server (`server/server.ts` — entrypoint that loads modules from `lib/` and `routes/`, run via `tsx`) uses **SQLite3** combined with the precompiled **`sqlite-zstd` extension** to perform transparent, row-level Zstandard compression on database records. Environment variables for the server are typed in `server/types/env.d.ts`.
+The server (`server/server.ts` — entrypoint that loads modules from `lib/` and `routes/`, run via `tsx`) uses **better-sqlite3** (synchronous API) combined with the precompiled **`sqlite-zstd` extension** to perform transparent, row-level Zstandard compression on database records. Record keys are always bound as strings (`toKey` in `routes/data.ts`): better-sqlite3 binds JS numbers as REAL, so a numeric session id would otherwise be stored and looked up as `"81.0"` instead of `"81"`. Environment variables for the server are typed in `server/types/env.d.ts`.
 
 ## Database Schema (v4)
 

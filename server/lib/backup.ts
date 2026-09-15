@@ -2,6 +2,7 @@ import fs from 'fs';
 import path from 'path';
 import zlib from 'zlib';
 import { pipeline } from 'stream';
+import type { Database } from 'better-sqlite3';
 
 let backupIntervalId: ReturnType<typeof setInterval> | null = null;
 
@@ -47,24 +48,22 @@ const rotateBackups = (dir: string, keep: number) => {
     }
 };
 
-const runIntegrityCheck = (db: import('sqlite3').Database): Promise<boolean> => {
-    return new Promise((resolve) => {
-        db.all("PRAGMA integrity_check", (err, rows: { integrity_check: string }[]) => {
-            if (err) {
-                console.error("Backup: integrity check failed to run:", err.message);
-                resolve(false);
-                return;
-            }
-            const ok = rows.length === 1 && rows[0].integrity_check === 'ok';
-            if (!ok) {
-                console.error("Backup: integrity check failed, skipping backup to preserve last good copy:", rows);
-            }
-            resolve(ok);
-        });
-    });
+const runIntegrityCheck = (db: Database): boolean => {
+    let rows: { integrity_check: string }[];
+    try {
+        rows = db.pragma("integrity_check") as typeof rows;
+    } catch (err) {
+        console.error("Backup: integrity check failed to run:", (err as Error).message);
+        return false;
+    }
+    const ok = rows.length === 1 && rows[0].integrity_check === 'ok';
+    if (!ok) {
+        console.error("Backup: integrity check failed, skipping backup to preserve last good copy:", rows);
+    }
+    return ok;
 };
 
-const runBackup = (db: import('sqlite3').Database, dbPath: string, dir: string, keep: number, lastMtimeRef: { current: number | null }) => {
+const runBackup = (db: Database, dbPath: string, dir: string, keep: number, lastMtimeRef: { current: number | null }) => {
     const currentMtime = getDbFileMtime(dbPath);
 
     if (currentMtime === null) {
@@ -88,40 +87,38 @@ const runBackup = (db: import('sqlite3').Database, dbPath: string, dir: string, 
     const backupPath = path.join(dir, backupName);
     const tmpPath = backupPath + '.tmp';
 
-    runIntegrityCheck(db).then((ok) => {
-        if (!ok) return;
+    if (!runIntegrityCheck(db)) return;
 
-        db.run("VACUUM INTO ?", [tmpPath], (err) => {
+    try {
+        db.prepare("VACUUM INTO ?").run(tmpPath);
+    } catch (err) {
+        console.error("Backup: VACUUM INTO failed:", (err as Error).message);
+        return;
+    }
+
+    const cleanup = () => {
+        try { fs.unlinkSync(tmpPath); } catch { /* ok */ }
+    };
+
+    pipeline(
+        fs.createReadStream(tmpPath),
+        zlib.createGzip(),
+        fs.createWriteStream(backupPath + '.gz'),
+        (err: Error | null) => {
             if (err) {
-                console.error("Backup: VACUUM INTO failed:", err.message);
+                console.error("Backup: compression failed:", err.message);
+                cleanup();
                 return;
             }
-
-            const cleanup = () => {
-                try { fs.unlinkSync(tmpPath); } catch { /* ok */ }
-            };
-
-            pipeline(
-                fs.createReadStream(tmpPath),
-                zlib.createGzip(),
-                fs.createWriteStream(backupPath + '.gz'),
-                (err: Error | null) => {
-                    if (err) {
-                        console.error("Backup: compression failed:", err.message);
-                        cleanup();
-                        return;
-                    }
-                    cleanup();
-                    lastMtimeRef.current = currentMtime;
-                    console.log(`Backup created: ${backupName}.gz`);
-                    rotateBackups(dir, keep);
-                }
-            );
-        });
-    });
+            cleanup();
+            lastMtimeRef.current = currentMtime;
+            console.log(`Backup created: ${backupName}.gz`);
+            rotateBackups(dir, keep);
+        }
+    );
 };
 
-const startAutoBackup = (db: import('sqlite3').Database, dbPath: string, { interval = 30, dir = './backups', keep = 10 } = {}) => {
+const startAutoBackup = (db: Database, dbPath: string, { interval = 30, dir = './backups', keep = 10 } = {}) => {
     if (backupIntervalId) {
         console.log("Auto-backup is already running.");
         return;

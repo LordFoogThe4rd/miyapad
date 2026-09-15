@@ -1,5 +1,5 @@
 import type { Express, Request, Response } from 'express';
-import type { Database } from 'sqlite3';
+import type { Database } from 'better-sqlite3';
 import * as tokenizer from '../tokenizer.js';
 
 export default function(app: Express, db: Database): void {
@@ -19,12 +19,7 @@ export default function(app: Express, db: Database): void {
         }
         try {
             await tokenizer.loadTokenizer(model);
-            await new Promise<void>((resolve, reject) => {
-                db.run(`INSERT OR REPLACE INTO meta (key, value) VALUES ('tokenizer_model', ?)`, [model], (err) => {
-                    if (err) reject(err);
-                    else resolve();
-                });
-            });
+            db.prepare(`INSERT OR REPLACE INTO meta (key, value) VALUES ('tokenizer_model', ?)`).run(model);
             res.json({ ok: true, model });
         } catch (e) {
             res.status(500).json({ ok: false, message: (e as Error).message });

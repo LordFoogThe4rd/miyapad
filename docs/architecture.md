@@ -45,7 +45,7 @@ All three configs enforce `strict: true`, disabling implicit `any`, enabling str
 **Ambient type declarations** are organized in two `types/` directories:
 
 - `src/types/` — Frontend-only declarations (`api.d.ts`, `components.d.ts`, `contexts.d.ts`, `defaults.d.ts`, `global.d.ts`, `storage.d.ts`)
-- `server/types/` — Server-only declarations (`env.d.ts` for environment variable augmentation, `zstd.d.ts` for the native sqlite-zstd addon)
+- `server/types/` — Server-only declarations (`env.d.ts` for environment variable augmentation)
 
 There is **no runtime validation library** (no zod, io-ts, or similar). TypeScript types are used purely for compile-time checking; no schema-based validation occurs at runtime.
 

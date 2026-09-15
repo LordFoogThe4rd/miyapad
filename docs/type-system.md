@@ -50,7 +50,6 @@ Types that need explicit imports live in:
 ### Server Types
 
 - `server/types/env.d.ts` — Augments `NodeJS.ProcessEnv` with `MIYAPAD_*` environment variables
-- `server/types/zstd.d.ts` — `ZstdConfigRow` interface and `sqlite3.Database` augmentation for zstd extension methods
 
 ## Conventions
 

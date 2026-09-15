@@ -41,7 +41,7 @@ miyapad-dist/
   libsqlite_zstd.*          # sqlite-zstd SQLite extension (bundled)
   dist/                     # Frontend assets (HTML, JS, CSS)
   tokenizers/               # HuggingFace tokenizer model files
-  node_modules/             # Pre-installed native addons (sqlite3, tokenizers)
+  node_modules/             # Pre-installed native addons (better-sqlite3, tokenizers)
 ```
 
 The sqlite-zstd extension is bundled in the distribution.

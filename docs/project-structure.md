@@ -34,8 +34,7 @@ miyapad/
 │   ├── server.ts                  # Entrypoint: arg parsing, app setup, mount routes, start
 │   ├── tokenizer.ts               # Server-side tokenization (HuggingFace tokenizers)
 │   ├── types/                     # Ambient type declarations for the server
-│   │   ├── env.d.ts               # Environment variable type augmentation
-│   │   └── zstd.d.ts              # sqlite-zstd native addon type declarations
+│   │   └── env.d.ts               # Environment variable type augmentation
 │   ├── tsconfig.json              # Server TypeScript config (NodeNext resolution)
 │   ├── package.json               # Backend dependencies, esbuild bundle + pack build scripts
 │   ├── start.sh / start.bat       # Startup scripts
