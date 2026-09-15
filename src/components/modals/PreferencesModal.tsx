@@ -92,6 +92,7 @@ export function PreferencesModal({ isOpen, closeModal, settings }: any) {
 		ttsVolume, setTTSVolume,
 		ttsSpeakInputs, setTTSSpeakInputs,
 		ttsMaxUserInput, setTTSMaxUserInput,
+		historyKeep, setHistoryKeep, historyDeletionThreshold, setHistoryDeletionThreshold, historyBeforeGenerate, setHistoryBeforeGenerate,
 		isMiyapadEndpoint, cancel, listTTSVoices, ttsStop, ttsAvailable, handleExportDB, handleImportDB, exportPrompt,
 		useServerTokenization, setUseServerTokenization, tokenizerModel, setTokenizerModel,
 		sessionStorage,
@@ -165,6 +166,10 @@ export function PreferencesModal({ isOpen, closeModal, settings }: any) {
 						onClick=${() => switchTab('screenshot')}>
 						${t('preferences.tabScreenshot')}
 					</button>
+					<button style=${tabStyle(activeTab === 'history')}
+						onClick=${() => switchTab('history')}>
+						${t('preferences.tabVersionHistory')}
+					</button>
 					${isMiyapadEndpoint && html`
 						<button style=${tabStyle(activeTab === 'server')}
 							onClick=${() => switchTab('server')}>
@@ -181,6 +186,25 @@ export function PreferencesModal({ isOpen, closeModal, settings }: any) {
 								value=${locale}
 								onValueChange=${setLocale}
 								options=${AVAILABLE_LOCALES.map(code => ({ name: localeName(code), value: code }))}/>
+						</div>
+					`}
+
+					${activeTab === 'history' && html`
+						<div style=${{ animation: 'fadeIn 0.2s ease-out', minWidth: 0, width: '100%', overflow: 'hidden' }}>
+							<div className="hbox" style=${{ gap: '1em' }}>
+								<${InputBox} label=${t('preferences.historyKeep')}
+									type="number" min="1" step="1"
+									tooltip=${t('preferences.historyKeepTooltip')}
+									value=${Number.isFinite(historyKeep) ? historyKeep : ''}
+									onValueChange=${setHistoryKeep}/>
+								<${InputBox} label=${t('preferences.historyDeletionThreshold')}
+									type="number" min="1" step="1"
+									tooltip=${t('preferences.historyDeletionThresholdTooltip')}
+									value=${Number.isFinite(historyDeletionThreshold) ? historyDeletionThreshold : ''}
+									onValueChange=${setHistoryDeletionThreshold}/>
+							</div>
+							<${Checkbox} label=${t('preferences.historyBeforeGenerate')}
+								value=${historyBeforeGenerate} onValueChange=${setHistoryBeforeGenerate}/>
 						</div>
 					`}
 

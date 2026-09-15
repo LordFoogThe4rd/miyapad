@@ -4,6 +4,7 @@ import { usePersistentState } from '../hooks/usePersistentState';
 import { AVAILABLE_LOCALES, type LocaleCode } from '../i18n/locales';
 import { defaultPresets } from '../defaults/presets';
 import { defaultThemes } from '../defaults/themes';
+import { DEFAULT_HISTORY_DELETION_THRESHOLD, DEFAULT_HISTORY_KEEP, HISTORY_DELETION_THRESHOLD_KEY, HISTORY_KEEP_KEY } from '../storage/SessionHistory';
 import type { SessionStorage } from '../storage/SessionStorage';
 import type { TemplateStorage } from '../storage/TemplateStorage';
 import type { ThemeStorage } from '../storage/ThemeStorage';
@@ -148,6 +149,10 @@ export function SettingsProvider({ children, sessionStorage, templateStorage, th
 	const [ttsVolume, setTTSVolume] = usePersistentState('ttsVolume', 1);
 	const [ttsSpeakInputs, setTTSSpeakInputs] = usePersistentState('ttsSpeakInputs', true);
 	const [ttsMaxUserInput, setTTSMaxUserInput] = usePersistentState('ttsMaxUserInput', 50);
+	// SessionHistory reads historyKeep straight from localStorage, so the version taken at startup already honours it.
+	const [historyKeep, setHistoryKeep] = usePersistentState(HISTORY_KEEP_KEY, DEFAULT_HISTORY_KEEP);
+	const [historyDeletionThreshold, setHistoryDeletionThreshold] = usePersistentState(HISTORY_DELETION_THRESHOLD_KEY, DEFAULT_HISTORY_DELETION_THRESHOLD);
+	const [historyBeforeGenerate, setHistoryBeforeGenerate] = usePersistentState('historyBeforeGenerate', false);
 
 	const [isMobile, setIsMobile] = useState(window.innerWidth < 767.8);
 
@@ -205,6 +210,7 @@ export function SettingsProvider({ children, sessionStorage, templateStorage, th
 		disableLogprobs, setDisableLogprobs, postSamplingProbs, setPostSamplingProbs, isMobile, setIsMobile, currentThemeName, setCurrentThemeName, allThemes, setAllThemes,
 		editorMode, setEditorMode, ttsEnabled, setTTSEnabled, ttsVoiceId, setTTSVoiceId, ttsPitch, setTTSPitch,
 		ttsRate, setTTSRate, ttsVolume, setTTSVolume, ttsSpeakInputs, setTTSSpeakInputs, ttsMaxUserInput, setTTSMaxUserInput,
+		historyKeep, setHistoryKeep, historyDeletionThreshold, setHistoryDeletionThreshold, historyBeforeGenerate, setHistoryBeforeGenerate,
 		useServerTokenization, setUseServerTokenization, tokenizerModel, setTokenizerModel,
 		screenshotIncludeSessionName, setScreenshotIncludeSessionName, screenshotIncludeDate, setScreenshotIncludeDate,
 		screenshotBackgroundUrl, setScreenshotBackgroundUrl, screenshotBackgroundColor, setScreenshotBackgroundColor,

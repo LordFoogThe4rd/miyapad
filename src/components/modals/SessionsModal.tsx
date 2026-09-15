@@ -13,6 +13,7 @@ interface SessionsModalProps {
   closeModal: () => void;
   sessionStorage: SessionStorage;
   cancel: (() => void) | null;
+  openHistory: () => void;
 }
 
 type TagGroup = Array<{ pattern: string; negate: boolean; regex: RegExp | null }>;
@@ -66,7 +67,7 @@ function sessionMatches(session: SessionData, groups: TagGroup[] | null) {
 	);
 }
 
-export function SessionsModal({ isOpen, closeModal, sessionStorage, cancel }: SessionsModalProps) {
+export function SessionsModal({ isOpen, closeModal, sessionStorage, cancel, openHistory }: SessionsModalProps) {
 	const [version, setVersion] = useState(0);
 	const [newSessionName, setNewSessionName] = useState('');
 	const [renameSessionName, setRenameSessionName] = useState('');
@@ -320,6 +321,7 @@ export function SessionsModal({ isOpen, closeModal, sessionStorage, cancel }: Se
 					<button disabled=${disabled || noSession} onClick=${exportSession}>${t('sessions.export')}</button>
 					<button disabled=${disabled} onClick=${exportAll}>${t('sessions.exportAll')}</button>
 					<button disabled=${disabled || noSession} onClick=${cloneSession}>${t('sessions.clone')}</button>
+					<button disabled=${disabled || noSession} onClick=${openHistory}>${t('sessions.history')}</button>
 				</div>
 			</div>
 			<div className="sessions-modal-list overflow-container">

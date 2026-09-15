@@ -4,6 +4,7 @@
 
 ### Added
 
+- Version history for sessions: miyapad saves a version when you open a session, after a minute without edits, and before you delete or replace a large part of the prompt. Open it from Sessions → History and restore any version as a new session or over the current one (the current content is saved as a version first). In the Version History tab of Preferences you can change the number of versions kept (30 by default) and the deletion size that triggers a version (100 characters by default), and turn on a version before each generation
 - Markdown formatting mode for the prompt editor: a toolbar toggle switches between plain source text and in-place styled rendering (headings, bold, italics, strikethrough, blockquotes, lists, tables, horizontal rules)
 
 ### Changed

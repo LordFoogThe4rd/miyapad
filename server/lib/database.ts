@@ -370,6 +370,8 @@ const initDatabase = (storagePath: string) => {
                             db.run(`CREATE TABLE IF NOT EXISTS themes (key TEXT PRIMARY KEY, ${themeCol} BLOB)`);
                             db.run(`CREATE TABLE IF NOT EXISTS connections (key TEXT PRIMARY KEY, ${connectionCol} BLOB)`);
                             db.run(`CREATE TABLE IF NOT EXISTS samplerpresets (key TEXT PRIMARY KEY, ${samplerPresetCol} BLOB)`);
+                            // Created on every start rather than in a versioned migration, so existing databases pick it up too.
+                            db.run(`CREATE TABLE IF NOT EXISTS sessionhistory (key TEXT PRIMARY KEY, ${getColumnName('sessionhistory')} BLOB)`);
                             db.run(`CREATE TABLE IF NOT EXISTS meta (key TEXT PRIMARY KEY, value TEXT)`, (err) => {
                                 if (err) rej(err);
                                 else res();
@@ -402,7 +404,8 @@ const initDatabase = (storagePath: string) => {
                         enableTransparentCompressionIfMissing(db, 'templates'),
                         enableTransparentCompressionIfMissing(db, 'themes'),
                         enableTransparentCompressionIfMissing(db, 'connections'),
-                        enableTransparentCompressionIfMissing(db, 'samplerpresets')
+                        enableTransparentCompressionIfMissing(db, 'samplerpresets'),
+                        enableTransparentCompressionIfMissing(db, 'sessionhistory')
                     ]);
 
                     await new Promise<void>((res, rej) => {

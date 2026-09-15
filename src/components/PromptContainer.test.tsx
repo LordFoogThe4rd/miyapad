@@ -56,6 +56,8 @@ const { genState, bridge, views, settings, logic, t, screenshot } = vi.hoisted((
 			showProbsMode: -1,
 			setShowProbsMode: vi.fn(),
 			spellCheck: true,
+			sessionStorage: { snapshot: vi.fn() },
+			historyDeletionThreshold: 100,
 		} as Record<string, any>,
 		logic: { undo: vi.fn(), redo: vi.fn(), undoAndPredict: vi.fn() },
 		t: (key: string) => key,
@@ -118,6 +120,44 @@ beforeEach(() => {
 afterEach(() => {
 	vi.restoreAllMocks();
 	cleanup();
+});
+
+describe('PromptContainer version history', () => {
+	beforeEach(() => {
+		settings.sessionStorage.snapshot.mockClear();
+		settings.historyDeletionThreshold = 5;
+	});
+
+	it('versions the prompt as it was before a deletion reaching the threshold', () => {
+		const { view } = renderEditor([u('hello world')]);
+
+		act(() => view.dispatch(view.state.tr.delete(1, 6)));
+
+		expect(settings.sessionStorage.snapshot).toHaveBeenCalledTimes(1);
+		expect(settings.sessionStorage.snapshot).toHaveBeenCalledWith('deletion', { prompt: [u('hello world')] });
+		expect(setPromptChunksCalls[0]).toEqual([u(' world')]);
+	});
+
+	it('ignores smaller deletions, and whole-document replacements that only change a little', () => {
+		const { view } = renderEditor([u('hello world')]);
+
+		act(() => view.dispatch(view.state.tr.delete(1, 5)));
+		act(() => genState.promptEditorView.current.replaceText('oh world'));
+
+		expect(setPromptChunksCalls).toHaveLength(2);
+		expect(settings.sessionStorage.snapshot).not.toHaveBeenCalled();
+	});
+
+	it('falls back to the default threshold when the setting is emptied', () => {
+		settings.historyDeletionThreshold = null;
+		const { view } = renderEditor([u('x'.repeat(300))]);
+
+		act(() => view.dispatch(view.state.tr.delete(1, 100)));
+		expect(settings.sessionStorage.snapshot).not.toHaveBeenCalled();
+
+		act(() => view.dispatch(view.state.tr.delete(1, 101)));
+		expect(settings.sessionStorage.snapshot).toHaveBeenCalledTimes(1);
+	});
 });
 
 describe('PromptContainer transaction synchronization', () => {

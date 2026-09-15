@@ -63,6 +63,8 @@ const { genState, settings, builder, tts, api } = vi.hoisted(() => {
 			useBasicStoppingMode: false,
 			stoppingStrings: '[]',
 			openaiPresets: false,
+			sessionStorage: { snapshot: vi.fn() },
+			historyBeforeGenerate: false,
 		},
 		builder: { fimPromptInfo: undefined, finalPromptText: '', convertChatToJSON: vi.fn() },
 		tts: { ttsProcessQueue: vi.fn(), ttsStop: vi.fn(), ttsPushUserInput: vi.fn(), ttsAddChunk: vi.fn(), listTTSVoices: vi.fn() },
@@ -110,6 +112,33 @@ beforeEach(() => {
 
 afterEach(() => {
 	cleanup();
+});
+
+describe('useGenerationLogic version history', () => {
+	afterEach(() => {
+		settings.historyBeforeGenerate = false;
+		settings.sessionStorage.snapshot.mockClear();
+	});
+
+	it('saves no version before a generation by default', async () => {
+		const { result } = renderLogic([u('a')]);
+		api.completion.mockImplementation(zeroTokenCompletion);
+
+		await act(async () => { await result.current.predict(); });
+
+		expect(settings.sessionStorage.snapshot).not.toHaveBeenCalled();
+	});
+
+	it('saves a version before each generation when the option is on', async () => {
+		settings.historyBeforeGenerate = true;
+		const { result } = renderLogic([u('a')]);
+		api.completion.mockImplementation(zeroTokenCompletion);
+
+		await act(async () => { await result.current.predict(); });
+
+		expect(settings.sessionStorage.snapshot).toHaveBeenCalledTimes(1);
+		expect(settings.sessionStorage.snapshot).toHaveBeenCalledWith('generation');
+	});
 });
 
 describe('useGenerationLogic undo/redo', () => {

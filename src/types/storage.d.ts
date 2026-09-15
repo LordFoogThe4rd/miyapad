@@ -69,6 +69,24 @@ interface AuthorNoteData {
   suffix: string;
 }
 
+type HistoryReason = 'open' | 'idle' | 'deletion' | 'generation' | 'restore';
+
+interface HistoryEntry {
+  time: number;
+  hash: string;
+  reason: HistoryReason;
+  words: number;
+  /** The last 100 characters of the prompt text, to tell versions apart. */
+  tail: string;
+}
+
+interface SessionSnapshot {
+  prompt?: PromptChunk[];
+  memoryTokens?: MemoryTokensData;
+  authorNoteTokens?: AuthorNoteData;
+  worldInfo?: WorldInfoData;
+}
+
 interface LogitBiasEntry {
   ids: number[];
   strings: string[];
