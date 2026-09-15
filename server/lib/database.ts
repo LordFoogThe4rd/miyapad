@@ -113,8 +113,16 @@ const runMigrationToV4 = (db: DB): boolean => {
             return { key: row.key, data: decompressed };
         });
 
-        db.exec(`DROP TABLE ${tableName}`);
-        db.exec(`CREATE TABLE ${tableName} (key TEXT PRIMARY KEY, ${colName} BLOB)`);
+        // Rebuild in one transaction so a failure can't leave the table dropped. zstd_enable_transparent
+        // opens its own transaction, so it runs after the commit and moves the rows over itself.
+        db.transaction(() => {
+            db.exec(`DROP TABLE ${tableName}`);
+            db.exec(`CREATE TABLE ${tableName} (key TEXT PRIMARY KEY, ${colName} BLOB)`);
+            const insert = db.prepare(`INSERT INTO ${tableName} (key, ${colName}) VALUES (?, ?)`);
+            for (const row of decompressedRows) {
+                insert.run(row.key, row.data);
+            }
+        })();
 
         const config = JSON.stringify({
             table: tableName,
@@ -123,13 +131,6 @@ const runMigrationToV4 = (db: DB): boolean => {
             dict_chooser: "'a'"
         });
         db.prepare(`SELECT zstd_enable_transparent(?)`).run(config);
-
-        const insert = db.prepare(`INSERT INTO ${tableName} (key, ${colName}) VALUES (?, ?)`);
-        db.transaction(() => {
-            for (const row of decompressedRows) {
-                insert.run(row.key, row.data);
-            }
-        })();
     };
 
     migrateTableToZstd('sessions');
