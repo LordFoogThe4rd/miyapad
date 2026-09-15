@@ -134,7 +134,8 @@ export class SessionStorage extends AbstractStorage {
 	snapshot(reason: HistoryReason, overrides?: Partial<SessionData>): Promise<void> {
 		const sessionId = this.selectedSession;
 		const session = sessionId !== undefined ? this.sessions[sessionId] : undefined;
-		if (sessionId === undefined || !session || session.inactive) return Promise.resolve();
+		// A session being deleted may already have had its versions removed; this would bring one back.
+		if (sessionId === undefined || !session || session.inactive || sessionId == this.#deletingSession) return Promise.resolve();
 		return this.history.snapshot(sessionId, { ...session, ...overrides }, reason).then(() => {}, () => {});
 	}
 

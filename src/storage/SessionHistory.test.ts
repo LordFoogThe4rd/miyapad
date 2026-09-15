@@ -218,6 +218,19 @@ describe('SessionStorage version history', () => {
 		});
 	});
 
+	it('an edit made while the selected session is being deleted does not bring its versions back', async () => {
+		vi.spyOn(window, 'confirm').mockReturnValue(true);
+		const { storage, store } = await setup();
+		await storage.createSession('Two');
+
+		const deleting = storage.deleteSession('0');
+		storage.setProperty('prompt', [u('late edit')]);
+		await deleting;
+		await storage.history.list(1);
+
+		expect([...store('SessionHistory').keys()].some(k => k === '0' || k.startsWith('0/'))).toBe(false);
+	});
+
 	it('keeps the session when its versions cannot be deleted', async () => {
 		vi.spyOn(window, 'confirm').mockReturnValue(true);
 		const { storage, store } = await setup();
