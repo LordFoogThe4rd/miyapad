@@ -174,7 +174,9 @@ export class SessionStorage extends AbstractStorage {
 		const sessionId = this.selectedSession;
 		if (sessionId === undefined || !this.sessions[sessionId]) return false;
 		const content = await this.history.load(sessionId, time);
-		if (!content) return false;
+		// Deleted while the version loaded: its history is already queued for removal, and backing
+		// up the current content would put some back.
+		if (!content || this.#deletingSessions.has(String(sessionId))) return false;
 		clearTimeout(this.#idleSnapshotTimer);
 		this.#idleSnapshotTimer = undefined;
 		await this.history.snapshot(sessionId, { ...this.sessions[sessionId] }, 'restore');

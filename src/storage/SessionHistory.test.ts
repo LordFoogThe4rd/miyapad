@@ -315,6 +315,29 @@ describe('SessionStorage version history', () => {
 		expect(storage.getProperty('prompt')).toEqual([u('new')]);
 	});
 
+	it('gives up replacing the content when the session is deleted while the version loads', async () => {
+		vi.spyOn(window, 'confirm').mockReturnValue(true);
+		const { storage, store, adapter } = await setup();
+		await storage.createSession('Two');
+		storage.setProperty('prompt', [u('old')]);
+		await storage.snapshot('idle');
+		const version = (await storage.history.list(0)).at(-1)!;
+		let release!: () => void;
+		const held = new Promise<void>(r => { release = r; });
+		const load = adapter.loadFromDatabase;
+		adapter.loadFromDatabase = async (db, name, key) => { if (key === `0/${version.time}`) await held; return load(db, name, key); };
+
+		const overwriting = storage.overwriteWithSnapshot(version.time);
+		const deleting = storage.deleteSession('0');
+		await new Promise(r => setTimeout(r));
+		release();
+
+		expect(await overwriting).toBe(false);
+		await deleting;
+		await storage.history.list(1);
+		expect([...store('SessionHistory').keys()].some(k => k === '0' || k.startsWith('0/'))).toBe(false);
+	});
+
 	it('restores a version as a new session that keeps the current settings', async () => {
 		const { storage, store } = await setup();
 		storage.setProperty('temperature', 0.3);
