@@ -20,7 +20,7 @@ miyapad/
 │   │   ├── backup.ts              # Auto-backup with VACUUM INTO, data_version check, rotation
 │   │   ├── database.ts            # DB connection, migrations, zstd setup, maintenance
 │   │   ├── update.ts              # Cached GitHub latest-release check for the update feature
-│   │   └── utils.ts               # Helpers (column names, compression, header filters)
+│   │   └── utils.ts               # Helpers (column names, store-name normalization, header filters)
 │   ├── routes/                    # Express route handlers by concern
 │   │   ├── data.ts                # /load, /save, /rename, /all, /sessions, /delete
 │   │   ├── proxy.ts               # /proxy, /proxy/* (GET/POST/DELETE), /proxy-image
