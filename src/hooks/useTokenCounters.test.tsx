@@ -1,7 +1,7 @@
 import { describe, it, expect, vi, beforeEach, afterEach } from 'vitest';
 import { renderHook, act, cleanup } from '@testing-library/react';
 import { API_LLAMA_CPP, API_KOBOLD_CPP, API_OPENAI_COMPAT, API_DEEPSEEK } from '../constants';
-import { useTokenCounters } from './useTokenCounters';
+import { useTokenCounters, usePersistentContextHandlers } from './useTokenCounters';
 import { useSessionState } from './useSessionState';
 import { SessionStorage } from '../storage/SessionStorage';
 
@@ -71,31 +71,38 @@ afterEach(() => {
 	vi.useRealTimers();
 });
 
-describe('useTokenCounters change handlers', () => {
+describe('usePersistentContextHandlers', () => {
+	function setupHandlers() {
+		configure();
+		return renderHook(() => usePersistentContextHandlers());
+	}
+
 	it('handleauthorNoteTokensChange merges one key into the author note state', () => {
-		const { result } = setup();
-		const setter = settings.setAuthorNoteTokens;
-		setter.mockClear();
+		const { result } = setupHandlers();
 
 		act(() => result.current.handleauthorNoteTokensChange('text', 'hello'));
 
-		expect(reduce(setter, { ...emptyAuthorNote })).toEqual({ ...emptyAuthorNote, text: 'hello' });
+		expect(reduce(settings.setAuthorNoteTokens, { ...emptyAuthorNote })).toEqual({ ...emptyAuthorNote, text: 'hello' });
 	});
 
 	it('handleMemoryTokensChange merges one key into the memory state', () => {
-		const { result } = setup();
-		const setter = settings.setMemoryTokens;
-		setter.mockClear();
+		const { result } = setupHandlers();
 
 		act(() => result.current.handleMemoryTokensChange('text', 'entry'));
 
-		expect(reduce(setter, { ...emptyMemory })).toEqual({ ...emptyMemory, text: 'entry' });
+		expect(reduce(settings.setMemoryTokens, { ...emptyMemory })).toEqual({ ...emptyMemory, text: 'entry' });
 	});
 
-	it('returns stable-shaped handlers', () => {
-		const { result } = setup();
-		expect(typeof result.current.handleauthorNoteTokensChange).toBe('function');
-		expect(typeof result.current.handleMemoryTokensChange).toBe('function');
+	it('counts nothing, so every component can use it without multiplying tokenizer requests', async () => {
+		api.getTokenCount.mockResolvedValue(4);
+		builder.assembledWorldInfo = 'entry';
+		configure({ memoryTokens: { ...emptyMemory, text: 'mem' }, authorNoteTokens: { prefix: '', text: 'note', suffix: '' } });
+		renderHook(() => usePersistentContextHandlers());
+
+		await advance(1000);
+
+		expect(api.getTokenCount).not.toHaveBeenCalled();
+		Object.values(generation).forEach(setter => expect(setter).not.toHaveBeenCalled());
 	});
 });
 
@@ -227,7 +234,7 @@ describe('useTokenCounters session persistence', () => {
 			const [memoryTokens, setMemoryTokens] = useSessionState(storage, 'memoryTokens', emptyMemory);
 			const [authorNoteTokens, setAuthorNoteTokens] = useSessionState(storage, 'authorNoteTokens', emptyAuthorNote);
 			Object.assign(settings, { memoryTokens, setMemoryTokens, authorNoteTokens, setAuthorNoteTokens });
-			return useTokenCounters();
+			useTokenCounters();
 		});
 		await advance(1000);
 

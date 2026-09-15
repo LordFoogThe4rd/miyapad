@@ -87,7 +87,7 @@ export function AppLayout() {
 		displayPromptChunks, cleanPromptText, origToClean, cleanToOrig
 	} = usePromptBuilder();
 
-	const { handleauthorNoteTokensChange, handleMemoryTokensChange } = useTokenCounters();
+	useTokenCounters();
 
 	const t = useT();
 

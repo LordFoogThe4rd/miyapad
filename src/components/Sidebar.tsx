@@ -13,7 +13,7 @@ import {
   SVG_Settings, SVG_ShowKey, SVG_HideKey, SVG_SysPrompt, SVG_instTemplate,
   SVG_ChatMode, SVG_CompletionMode, SVG_Regen, SVG_Undo, SVG_Redo, SVG_MobileSidebar
 } from './icons/index';
-import { useTokenCounters } from '../hooks/useTokenCounters';
+import { usePersistentContextHandlers } from '../hooks/useTokenCounters';
 import { useInsertTemplate } from '../hooks/useInsertTemplate';
 import { useGenerationLogic } from '../hooks/useGenerationLogic';
 import type { SidebarProps } from '../types/components';
@@ -50,7 +50,7 @@ export function Sidebar({ sidebarRef, toggleModal, currentThemeName, setCurrentT
 	} = useGeneration();
 
 	const { predict, undo, redo, undoAndPredict } = useGenerationLogic();
-	const { handleauthorNoteTokensChange, handleMemoryTokensChange } = useTokenCounters();
+	const { handleauthorNoteTokensChange, handleMemoryTokensChange } = usePersistentContextHandlers();
 	const t = useT();
 
 	const toggleSampler = (name: string) => (v: boolean) =>

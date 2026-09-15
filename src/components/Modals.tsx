@@ -2,7 +2,7 @@ import { html } from 'htm/react';
 import { useEffect, useState } from 'react';
 import { useSettings } from '../contexts/SettingsContext';
 import { useGeneration } from '../contexts/GenerationContext';
-import { useTokenCounters } from '../hooks/useTokenCounters';
+import { usePersistentContextHandlers } from '../hooks/useTokenCounters';
 import { usePromptBuilder } from '../hooks/usePromptBuilder';
 import { useTTS } from '../hooks/useTTS';
 import { useGenerationLogic } from '../hooks/useGenerationLogic';
@@ -53,7 +53,7 @@ export function Modals({ toggleModal, currentThemeName, setCurrentThemeName, all
 	} = useSettings();
 	const { cancel, modalState, closeModal, instructModalState, setInstructModalState, promptEditorView, replaceEditorText, lastError, sessionEndpointConnecting, predictStartTokens, tokens, memoryTokenCount, worldInfoTokenCount, authorNoteTokenCount, contextMenuState, setContextMenuState, setTriggerPredict, sessionEndpointError, setRejectedAPIKey } = useGeneration();
 
-	const { handleauthorNoteTokensChange, handleMemoryTokensChange } = useTokenCounters();
+	const { handleauthorNoteTokensChange, handleMemoryTokensChange } = usePersistentContextHandlers();
 	const { finalPromptText, convertChatToJSON } = usePromptBuilder();
 	const { listTTSVoices, ttsStop } = useTTS();
 	const { ttsAvailable } = useGeneration();

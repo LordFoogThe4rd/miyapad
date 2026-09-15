@@ -76,12 +76,28 @@ function useDebouncedTokenCount(assembled: string, apply: (tokens: number) => vo
 	}, [assembled, endpoint, endpointAPI, endpointAPIKey, isMiyapadEndpoint, sessionStorage, useServerTokenization, templateReplacements]);
 }
 
+/**
+ * Runs the memory, world info and author note token counters. Mount it exactly
+ * once (AppLayout): every instance sends its own tokenizer requests, and the
+ * counts land in shared GenerationContext state anyway.
+ */
 export function useTokenCounters() {
-	const { endpoint, endpointAPI, endpointAPIKey, sessionStorage, isMiyapadEndpoint, useServerTokenization, authorNoteTokens, setAuthorNoteTokens, memoryTokens, setMemoryTokens, worldInfo } = useSettings();
+	const { endpoint, endpointAPI, endpointAPIKey, sessionStorage, isMiyapadEndpoint, useServerTokenization, authorNoteTokens, memoryTokens, worldInfo } = useSettings();
 	const { setMemoryTokenCount, setWorldInfoTokenCount, setAuthorNoteTokenCount } = useGeneration();
 	const { templateReplacements, replacePlaceholders, assembledWorldInfo } = usePromptBuilder();
 
 	const config: TokenCountConfig = { endpoint, endpointAPI, endpointAPIKey, isMiyapadEndpoint, useServerTokenization, sessionStorage, templateReplacements, replacePlaceholders };
+
+	// Counts are derived display state: they live in plain React state, never in the
+	// session, so recounting on load doesn't save the session or bump its modified time.
+	useDebouncedTokenCount(assemble(authorNoteTokens.prefix, authorNoteTokens.text, authorNoteTokens.suffix), setAuthorNoteTokenCount, config);
+	useDebouncedTokenCount(assemble(memoryTokens.prefix, memoryTokens.text, memoryTokens.suffix), setMemoryTokenCount, config);
+	useDebouncedTokenCount(assemble(worldInfo.prefix, assembledWorldInfo, worldInfo.suffix), setWorldInfoTokenCount, config);
+}
+
+/** Field setters for the memory and author note editors. Safe to use anywhere: it counts nothing. */
+export function usePersistentContextHandlers() {
+	const { setAuthorNoteTokens, setMemoryTokens } = useSettings();
 
 	function handleauthorNoteTokensChange<K extends keyof AuthorNoteData>(key: K, value: AuthorNoteData[K]) {
 		setAuthorNoteTokens((prevauthorNoteTokens: AuthorNoteData) => ({ ...prevauthorNoteTokens, [key]: value }));
@@ -90,12 +106,6 @@ export function useTokenCounters() {
 	function handleMemoryTokensChange<K extends keyof MemoryTokensData>(key: K, value: MemoryTokensData[K]) {
 		setMemoryTokens((prevMemoryTokens: MemoryTokensData) => ({ ...prevMemoryTokens, [key]: value }));
 	}
-
-	// Counts are derived display state: they live in plain React state, never in the
-	// session, so recounting on load doesn't save the session or bump its modified time.
-	useDebouncedTokenCount(assemble(authorNoteTokens.prefix, authorNoteTokens.text, authorNoteTokens.suffix), setAuthorNoteTokenCount, config);
-	useDebouncedTokenCount(assemble(memoryTokens.prefix, memoryTokens.text, memoryTokens.suffix), setMemoryTokenCount, config);
-	useDebouncedTokenCount(assemble(worldInfo.prefix, assembledWorldInfo, worldInfo.suffix), setWorldInfoTokenCount, config);
 
 	return { handleauthorNoteTokensChange, handleMemoryTokensChange };
 }
