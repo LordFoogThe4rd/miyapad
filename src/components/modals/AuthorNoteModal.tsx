@@ -3,7 +3,7 @@ import { useT } from '../../i18n';
 import { Modal } from '../Modal';
 import { InputBox } from '../controls/InputBox';
 
-export function AuthorNoteModal({ isOpen, closeModal, authorNoteTokens, handleauthorNoteTokensChange, authorNoteDepth, setAuthorNoteDepth, cancel }: any) {
+export function AuthorNoteModal({ isOpen, closeModal, authorNoteTokens, tokenCount, handleauthorNoteTokensChange, authorNoteDepth, setAuthorNoteDepth, cancel }: any) {
 	const t = useT();
 	const handleAuthorNoteDepthChange = (value: any) => {
 		setAuthorNoteDepth(!isNaN(+value) && value >= 0 ? value : 0);
@@ -30,7 +30,7 @@ export function AuthorNoteModal({ isOpen, closeModal, authorNoteTokens, handleau
 						class="expanded-text-area-settings"
 						id="expanded-an-settings"/>
 					<div class="token-counter">
-						${authorNoteTokens.tokens}
+						${tokenCount}
 					</div>
 				</div>
 			</${Modal}>`;

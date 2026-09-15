@@ -77,9 +77,9 @@ function useDebouncedTokenCount(assembled: string, apply: (tokens: number) => vo
 }
 
 export function useTokenCounters() {
-	const { endpoint, endpointAPI, endpointAPIKey, sessionStorage, isMiyapadEndpoint, useServerTokenization, contextLength, authorNoteTokens, setAuthorNoteTokens, memoryTokens, setMemoryTokens, worldInfo } = useSettings();
-	const { cancel, modalState } = useGeneration();
-	const { templateReplacements, replacePlaceholders } = usePromptBuilder();
+	const { endpoint, endpointAPI, endpointAPIKey, sessionStorage, isMiyapadEndpoint, useServerTokenization, authorNoteTokens, setAuthorNoteTokens, memoryTokens, setMemoryTokens, worldInfo } = useSettings();
+	const { setMemoryTokenCount, setWorldInfoTokenCount, setAuthorNoteTokenCount } = useGeneration();
+	const { templateReplacements, replacePlaceholders, assembledWorldInfo } = usePromptBuilder();
 
 	const config: TokenCountConfig = { endpoint, endpointAPI, endpointAPIKey, isMiyapadEndpoint, useServerTokenization, sessionStorage, templateReplacements, replacePlaceholders };
 
@@ -91,23 +91,11 @@ export function useTokenCounters() {
 		setMemoryTokens((prevMemoryTokens: MemoryTokensData) => ({ ...prevMemoryTokens, [key]: value }));
 	}
 
-	useDebouncedTokenCount(
-		assemble(authorNoteTokens.prefix, authorNoteTokens.text, authorNoteTokens.suffix),
-		tokens => setAuthorNoteTokens((prev: AuthorNoteData) => ({ ...prev, tokens })),
-		config,
-	);
-
-	useDebouncedTokenCount(
-		assemble(memoryTokens.prefix, memoryTokens.text, memoryTokens.suffix),
-		tokens => setMemoryTokens((prev: MemoryTokensData) => ({ ...prev, tokens })),
-		config,
-	);
-
-	useDebouncedTokenCount(
-		assemble(worldInfo.prefix, memoryTokens.worldInfo, worldInfo.suffix),
-		tokensWI => setMemoryTokens((prev: MemoryTokensData) => ({ ...prev, tokensWI })),
-		config,
-	);
+	// Counts are derived display state: they live in plain React state, never in the
+	// session, so recounting on load doesn't save the session or bump its modified time.
+	useDebouncedTokenCount(assemble(authorNoteTokens.prefix, authorNoteTokens.text, authorNoteTokens.suffix), setAuthorNoteTokenCount, config);
+	useDebouncedTokenCount(assemble(memoryTokens.prefix, memoryTokens.text, memoryTokens.suffix), setMemoryTokenCount, config);
+	useDebouncedTokenCount(assemble(worldInfo.prefix, assembledWorldInfo, worldInfo.suffix), setWorldInfoTokenCount, config);
 
 	return { handleauthorNoteTokensChange, handleMemoryTokensChange };
 }

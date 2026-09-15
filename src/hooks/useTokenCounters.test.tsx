@@ -2,13 +2,16 @@ import { describe, it, expect, vi, beforeEach, afterEach } from 'vitest';
 import { renderHook, act, cleanup } from '@testing-library/react';
 import { API_LLAMA_CPP, API_KOBOLD_CPP, API_OPENAI_COMPAT, API_DEEPSEEK } from '../constants';
 import { useTokenCounters } from './useTokenCounters';
+import { useSessionState } from './useSessionState';
+import { SessionStorage } from '../storage/SessionStorage';
 
 const { settings, generation, builder, api } = vi.hoisted(() => ({
 	settings: {} as Record<string, any>,
-	generation: { cancel: null as unknown, modalState: {} },
+	generation: { setMemoryTokenCount: vi.fn(), setWorldInfoTokenCount: vi.fn(), setAuthorNoteTokenCount: vi.fn() },
 	builder: {
 		templateReplacements: {} as Record<string, string>,
 		replacePlaceholders: vi.fn((s: string) => s),
+		assembledWorldInfo: '',
 	},
 	api: { getTokenCount: vi.fn(), serverTokenCount: vi.fn() },
 }));
@@ -18,10 +21,10 @@ vi.mock('../contexts/GenerationContext', () => ({ useGeneration: () => generatio
 vi.mock('./usePromptBuilder', () => ({ usePromptBuilder: () => builder }));
 vi.mock('../api/index', () => api);
 
-const emptyAuthorNote = { prefix: '', text: '', suffix: '', tokens: 0 };
-const emptyMemory = { prefix: '', text: '', suffix: '', worldInfo: '', tokens: 0, tokensWI: 0 };
+const emptyAuthorNote = { prefix: '', text: '', suffix: '' };
+const emptyMemory = { contextOrder: '', prefix: '', text: '', suffix: '' };
 
-function setup(overrides: Record<string, any> = {}) {
+function configure(overrides: Record<string, any> = {}) {
 	Object.keys(settings).forEach(k => delete settings[k]);
 	Object.assign(settings, {
 		endpoint: 'http://localhost:8080',
@@ -30,7 +33,6 @@ function setup(overrides: Record<string, any> = {}) {
 		sessionStorage: { sessionEndpoint: 'http://localhost:3000', proxyEndpoint: 'http://proxy.local' },
 		isMiyapadEndpoint: false,
 		useServerTokenization: false,
-		contextLength: 4096,
 		authorNoteTokens: { ...emptyAuthorNote },
 		setAuthorNoteTokens: vi.fn(),
 		memoryTokens: { ...emptyMemory },
@@ -38,6 +40,10 @@ function setup(overrides: Record<string, any> = {}) {
 		worldInfo: { prefix: '[WI]', suffix: '[/WI]' },
 		...overrides,
 	});
+}
+
+function setup(overrides: Record<string, any> = {}) {
+	configure(overrides);
 	return renderHook(() => useTokenCounters());
 }
 
@@ -56,6 +62,8 @@ beforeEach(() => {
 	api.serverTokenCount.mockReset();
 	builder.replacePlaceholders.mockClear();
 	builder.replacePlaceholders.mockImplementation((s: string) => s);
+	builder.assembledWorldInfo = '';
+	Object.values(generation).forEach(setter => setter.mockClear());
 });
 
 afterEach(() => {
@@ -79,9 +87,9 @@ describe('useTokenCounters change handlers', () => {
 		const setter = settings.setMemoryTokens;
 		setter.mockClear();
 
-		act(() => result.current.handleMemoryTokensChange('worldInfo', 'entry'));
+		act(() => result.current.handleMemoryTokensChange('text', 'entry'));
 
-		expect(reduce(setter, { ...emptyMemory })).toEqual({ ...emptyMemory, worldInfo: 'entry' });
+		expect(reduce(setter, { ...emptyMemory })).toEqual({ ...emptyMemory, text: 'entry' });
 	});
 
 	it('returns stable-shaped handlers', () => {
@@ -93,17 +101,17 @@ describe('useTokenCounters change handlers', () => {
 
 describe('useTokenCounters author note counting', () => {
 	it('zeroes the count without any request when the note text is empty', async () => {
-		setup({ authorNoteTokens: { prefix: 'p', text: '', suffix: 's', tokens: 12 } });
+		setup({ authorNoteTokens: { prefix: 'p', text: '', suffix: 's' } });
 
 		await advance(1000);
 
 		expect(api.getTokenCount).not.toHaveBeenCalled();
-		expect(reduce(settings.setAuthorNoteTokens, { tokens: 12 })).toEqual({ tokens: 0 });
+		expect(generation.setAuthorNoteTokenCount).toHaveBeenLastCalledWith(0);
 	});
 
 	it('counts prefix + text + suffix and stores the count minus the leading BOS token', async () => {
 		api.getTokenCount.mockResolvedValue(11);
-		setup({ authorNoteTokens: { prefix: '[', text: 'note', suffix: ']', tokens: 0 } });
+		setup({ authorNoteTokens: { prefix: '[', text: 'note', suffix: ']' } });
 
 		await advance(500);
 
@@ -112,12 +120,12 @@ describe('useTokenCounters author note counting', () => {
 			endpointAPI: API_LLAMA_CPP,
 			content: '[note]',
 		}));
-		expect(reduce(settings.setAuthorNoteTokens, { tokens: 0 })).toEqual({ tokens: 10 });
+		expect(generation.setAuthorNoteTokenCount).toHaveBeenLastCalledWith(10);
 	});
 
 	it('debounces: nothing is requested before 500ms have passed', async () => {
 		api.getTokenCount.mockResolvedValue(5);
-		setup({ authorNoteTokens: { prefix: '', text: 'note', suffix: '', tokens: 0 } });
+		setup({ authorNoteTokens: { prefix: '', text: 'note', suffix: '' } });
 
 		await advance(499);
 		expect(api.getTokenCount).not.toHaveBeenCalled();
@@ -129,7 +137,7 @@ describe('useTokenCounters author note counting', () => {
 	it('runs the note through the template placeholder replacer', async () => {
 		api.getTokenCount.mockResolvedValue(3);
 		builder.replacePlaceholders.mockImplementation(() => 'EXPANDED');
-		setup({ authorNoteTokens: { prefix: '', text: '{inst}', suffix: '', tokens: 0 } });
+		setup({ authorNoteTokens: { prefix: '', text: '{inst}', suffix: '' } });
 
 		await advance(500);
 
@@ -139,7 +147,7 @@ describe('useTokenCounters author note counting', () => {
 
 	it('cancels the pending debounce when the hook unmounts', async () => {
 		api.getTokenCount.mockResolvedValue(5);
-		const { unmount } = setup({ authorNoteTokens: { prefix: '', text: 'note', suffix: '', tokens: 0 } });
+		const { unmount } = setup({ authorNoteTokens: { prefix: '', text: 'note', suffix: '' } });
 
 		await advance(400);
 		act(() => unmount());
@@ -151,11 +159,11 @@ describe('useTokenCounters author note counting', () => {
 	it('zeroes the count when the request fails for a reason other than an abort', async () => {
 		api.getTokenCount.mockRejectedValue(new Error('boom'));
 		vi.stubGlobal('reportError', vi.fn());
-		setup({ authorNoteTokens: { prefix: '', text: 'note', suffix: '', tokens: 42 } });
+		setup({ authorNoteTokens: { prefix: '', text: 'note', suffix: '' } });
 
 		await advance(500);
 
-		expect(reduce(settings.setAuthorNoteTokens, { tokens: 42 })).toEqual({ tokens: 0 });
+		expect(generation.setAuthorNoteTokenCount).toHaveBeenLastCalledWith(0);
 		vi.unstubAllGlobals();
 	});
 });
@@ -163,62 +171,92 @@ describe('useTokenCounters author note counting', () => {
 describe('useTokenCounters memory and world info counting', () => {
 	it('counts the assembled memory block', async () => {
 		api.getTokenCount.mockResolvedValue(9);
-		setup({ memoryTokens: { prefix: '<', text: 'mem', suffix: '>', worldInfo: '', tokens: 0, tokensWI: 0 } });
+		setup({ memoryTokens: { ...emptyMemory, prefix: '<', text: 'mem', suffix: '>' } });
 
 		await advance(500);
 
 		expect(api.getTokenCount).toHaveBeenCalledWith(expect.objectContaining({ content: '<mem>' }));
-		expect(reduce(settings.setMemoryTokens, { tokens: 0, tokensWI: 0 })).toEqual({ tokens: 8, tokensWI: 0 });
+		expect(generation.setMemoryTokenCount).toHaveBeenLastCalledWith(8);
+		expect(generation.setWorldInfoTokenCount).toHaveBeenLastCalledWith(0);
 	});
 
-	it('wraps world info in the worldInfo prefix and suffix and stores it as tokensWI', async () => {
+	it('wraps the active world info in the worldInfo prefix and suffix', async () => {
 		api.getTokenCount.mockResolvedValue(7);
-		setup({ memoryTokens: { prefix: '', text: '', suffix: '', worldInfo: 'entry', tokens: 0, tokensWI: 0 } });
+		builder.assembledWorldInfo = 'entry';
+		setup();
 
 		await advance(500);
 
 		expect(api.getTokenCount).toHaveBeenCalledTimes(1);
 		expect(api.getTokenCount).toHaveBeenCalledWith(expect.objectContaining({ content: '[WI]entry[/WI]' }));
-		expect(reduce(settings.setMemoryTokens, { tokens: 0, tokensWI: 0 })).toEqual({ tokens: 0, tokensWI: 6 });
+		expect(generation.setWorldInfoTokenCount).toHaveBeenLastCalledWith(6);
+		expect(generation.setMemoryTokenCount).toHaveBeenLastCalledWith(0);
 	});
 
 	it('counts memory and world info as two separate requests', async () => {
 		api.getTokenCount.mockResolvedValue(4);
-		setup({ memoryTokens: { prefix: '', text: 'mem', suffix: '', worldInfo: 'entry', tokens: 0, tokensWI: 0 } });
+		builder.assembledWorldInfo = 'entry';
+		setup({ memoryTokens: { ...emptyMemory, text: 'mem' } });
 
 		await advance(500);
 
 		expect(api.getTokenCount).toHaveBeenCalledTimes(2);
-		expect(reduce(settings.setMemoryTokens, { tokens: 0, tokensWI: 0 })).toEqual({ tokens: 3, tokensWI: 3 });
+		expect(generation.setMemoryTokenCount).toHaveBeenLastCalledWith(3);
+		expect(generation.setWorldInfoTokenCount).toHaveBeenLastCalledWith(3);
 	});
 
-	it('zeroes tokensWI without a request when there is no world info', async () => {
-		setup({ memoryTokens: { ...emptyMemory } });
+	it('zeroes the world info count without a request when there is no world info', async () => {
+		setup();
 
 		await advance(1000);
 
 		expect(api.getTokenCount).not.toHaveBeenCalled();
-		expect(reduce(settings.setMemoryTokens, { tokens: 5, tokensWI: 5 })).toEqual({ tokens: 0, tokensWI: 0 });
+		expect(generation.setWorldInfoTokenCount).toHaveBeenLastCalledWith(0);
+	});
+});
+
+describe('useTokenCounters session persistence', () => {
+	it('counting leaves the session unmodified and keeps counts out of stored state', async () => {
+		api.getTokenCount.mockResolvedValue(4);
+		const storage = new SessionStorage({} as DatabaseAdapter);
+		storage.sessions = { 0: { name: 'Story', modified: 1, memoryTokens: { ...emptyMemory, text: 'mem' }, authorNoteTokens: { ...emptyAuthorNote } } };
+		storage.selectedSession = 0;
+		configure();
+
+		renderHook(() => {
+			const [memoryTokens, setMemoryTokens] = useSessionState(storage, 'memoryTokens', emptyMemory);
+			const [authorNoteTokens, setAuthorNoteTokens] = useSessionState(storage, 'authorNoteTokens', emptyAuthorNote);
+			Object.assign(settings, { memoryTokens, setMemoryTokens, authorNoteTokens, setAuthorNoteTokens });
+			return useTokenCounters();
+		});
+		await advance(1000);
+
+		expect(api.getTokenCount).toHaveBeenCalled();
+		expect(storage.sessions[0]!.modified).toBe(1);
+		expect(storage.sessions[0]!.memoryTokens).toEqual({ ...emptyMemory, text: 'mem' });
+		expect(storage.sessions[0]!.authorNoteTokens).toEqual(emptyAuthorNote);
 	});
 });
 
 describe('useTokenCounters endpoint selection', () => {
 	it('skips counting entirely for OpenAI-compatible endpoints', async () => {
+		builder.assembledWorldInfo = 'wi';
 		setup({
 			endpointAPI: API_OPENAI_COMPAT,
-			authorNoteTokens: { prefix: '', text: 'note', suffix: '', tokens: 3 },
-			memoryTokens: { prefix: '', text: 'mem', suffix: '', worldInfo: 'wi', tokens: 3, tokensWI: 3 },
+			authorNoteTokens: { prefix: '', text: 'note', suffix: '' },
+			memoryTokens: { ...emptyMemory, text: 'mem' },
 		});
 
 		await advance(1000);
 
 		expect(api.getTokenCount).not.toHaveBeenCalled();
-		expect(reduce(settings.setAuthorNoteTokens, { tokens: 3 })).toEqual({ tokens: 0 });
-		expect(reduce(settings.setMemoryTokens, { tokens: 3, tokensWI: 3 })).toEqual({ tokens: 0, tokensWI: 0 });
+		expect(generation.setAuthorNoteTokenCount).toHaveBeenLastCalledWith(0);
+		expect(generation.setMemoryTokenCount).toHaveBeenLastCalledWith(0);
+		expect(generation.setWorldInfoTokenCount).toHaveBeenLastCalledWith(0);
 	});
 
 	it('skips counting entirely for DeepSeek endpoints', async () => {
-		setup({ endpointAPI: API_DEEPSEEK, authorNoteTokens: { prefix: '', text: 'note', suffix: '', tokens: 3 } });
+		setup({ endpointAPI: API_DEEPSEEK, authorNoteTokens: { prefix: '', text: 'note', suffix: '' } });
 
 		await advance(1000);
 
@@ -230,7 +268,7 @@ describe('useTokenCounters endpoint selection', () => {
 		setup({
 			isMiyapadEndpoint: true,
 			useServerTokenization: true,
-			authorNoteTokens: { prefix: '', text: 'note', suffix: '', tokens: 0 },
+			authorNoteTokens: { prefix: '', text: 'note', suffix: '' },
 		});
 
 		await advance(500);
@@ -240,7 +278,7 @@ describe('useTokenCounters endpoint selection', () => {
 			sessionEndpoint: 'http://localhost:3000',
 			content: 'note',
 		}));
-		expect(reduce(settings.setAuthorNoteTokens, { tokens: 0 })).toEqual({ tokens: 5 });
+		expect(generation.setAuthorNoteTokenCount).toHaveBeenLastCalledWith(5);
 	});
 
 	it('passes the proxy endpoint through for a miyapad endpoint without server tokenization', async () => {
@@ -248,7 +286,7 @@ describe('useTokenCounters endpoint selection', () => {
 		setup({
 			isMiyapadEndpoint: true,
 			useServerTokenization: false,
-			authorNoteTokens: { prefix: '', text: 'note', suffix: '', tokens: 0 },
+			authorNoteTokens: { prefix: '', text: 'note', suffix: '' },
 		});
 
 		await advance(500);
@@ -258,14 +296,14 @@ describe('useTokenCounters endpoint selection', () => {
 
 	it('sends the API key for llama.cpp but not for koboldcpp', async () => {
 		api.getTokenCount.mockResolvedValue(2);
-		setup({ authorNoteTokens: { prefix: '', text: 'note', suffix: '', tokens: 0 } });
+		setup({ authorNoteTokens: { prefix: '', text: 'note', suffix: '' } });
 		await advance(500);
 		expect(api.getTokenCount.mock.calls[0]![0]).toHaveProperty('endpointAPIKey', 'sk-abc');
 
 		cleanup();
 		api.getTokenCount.mockReset();
 		api.getTokenCount.mockResolvedValue(2);
-		setup({ endpointAPI: API_KOBOLD_CPP, authorNoteTokens: { prefix: '', text: 'note', suffix: '', tokens: 0 } });
+		setup({ endpointAPI: API_KOBOLD_CPP, authorNoteTokens: { prefix: '', text: 'note', suffix: '' } });
 		await advance(500);
 		expect(api.getTokenCount.mock.calls[0]![0]).not.toHaveProperty('endpointAPIKey');
 	});

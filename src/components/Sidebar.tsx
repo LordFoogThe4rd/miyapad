@@ -46,7 +46,7 @@ export function Sidebar({ sidebarRef, toggleModal, currentThemeName, setCurrentT
 		cancel, openaiModels, hordeQueuePos, hordeProcessing, tokens, tokensPerSec, undoStack, redoStack,
 		undoHovered, setUndoHovered, lastError, sessionEndpointConnecting, predictStartTokens,
 		modalState, promptEditorView,
-		rejectedAPIKey
+		rejectedAPIKey, memoryTokenCount, authorNoteTokenCount
 	} = useGeneration();
 
 	const { predict, undo, redo, undoAndPredict } = useGenerationLogic();
@@ -692,7 +692,7 @@ export function Sidebar({ sidebarRef, toggleModal, currentThemeName, setCurrentT
 			</${CollapsibleGroup}>
 			<${CollapsibleGroup} label=${t('sidebar.persistentContext')}>
 				<label className="TextArea">
-					<div>${t('sidebar.memory')} ${(memoryTokens.tokens ?? 0) > 0 ? html`<small>(${memoryTokens.tokens} ${t('sidebar.tokens')})</small>` : ""}</div>
+					<div>${t('sidebar.memory')} ${memoryTokenCount > 0 ? html`<small>(${memoryTokenCount} ${t('sidebar.tokens')})</small>` : ""}</div>
 					<textarea
 						readOnly=${!!cancel}
 						placeholder=${t('sidebar.memoryPlaceholder')}
@@ -708,7 +708,7 @@ export function Sidebar({ sidebarRef, toggleModal, currentThemeName, setCurrentT
 					</button>
 				</label>
 				<label className="TextArea">
-					<div>${t('sidebar.authorsNote')} ${(authorNoteTokens.tokens ?? 0) > 0 ? html`<small>(${authorNoteTokens.tokens} ${t('sidebar.tokens')})</small>` : ""}</div>
+					<div>${t('sidebar.authorsNote')} ${authorNoteTokenCount > 0 ? html`<small>(${authorNoteTokenCount} ${t('sidebar.tokens')})</small>` : ""}</div>
 					<textarea
 						readOnly=${!!cancel}
 						placeholder=${t('sidebar.authorsNotePlaceholder', { depth: authorNoteDepth })}

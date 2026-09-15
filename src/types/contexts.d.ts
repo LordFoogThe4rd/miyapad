@@ -278,6 +278,12 @@ export interface GenerationState {
   setOpenaiModels: Dispatch<SetStateAction<string[]>>;
   tokens: number;
   setTokens: Dispatch<SetStateAction<number>>;
+  memoryTokenCount: number;
+  setMemoryTokenCount: Dispatch<SetStateAction<number>>;
+  worldInfoTokenCount: number;
+  setWorldInfoTokenCount: Dispatch<SetStateAction<number>>;
+  authorNoteTokenCount: number;
+  setAuthorNoteTokenCount: Dispatch<SetStateAction<number>>;
   tokensPerSec: number;
   setTokensPerSec: Dispatch<SetStateAction<number>>;
   predictStartTokens: number;

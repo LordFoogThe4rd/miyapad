@@ -13,7 +13,9 @@ interface ContextModalProps {
 	closeModal: () => void;
 	tokens: number;
 	memoryTokens: MemoryTokensData;
-	authorNoteTokens: AuthorNoteData;
+	memoryTokenCount: number;
+	worldInfoTokenCount: number;
+	authorNoteTokenCount: number;
 	handleMemoryTokensChange: <K extends keyof MemoryTokensData>(key: K, value: MemoryTokensData[K]) => void;
 	finalPromptText: string;
 	defaultPresets: DefaultPresets;
@@ -28,7 +30,7 @@ interface ContextModalProps {
 	};
 }
 
-export function ContextModal({ isOpen, closeModal, tokens, memoryTokens, authorNoteTokens, handleMemoryTokensChange, finalPromptText, defaultPresets, cancel, apiConfig }: ContextModalProps) {
+export function ContextModal({ isOpen, closeModal, tokens, memoryTokens, memoryTokenCount, worldInfoTokenCount, authorNoteTokenCount, handleMemoryTokensChange, finalPromptText, defaultPresets, cancel, apiConfig }: ContextModalProps) {
 	const t = useT();
 	const { sessionStorage, endpoint, endpointAPI, endpointAPIKey, isMiyapadEndpoint, useServerTokenization } = apiConfig;
 	const [contextPlayground, setContextPlayground] = useState(finalPromptText);
@@ -89,10 +91,10 @@ export function ContextModal({ isOpen, closeModal, tokens, memoryTokens, authorN
 				<tbody>
 					<tr>
 						<th>${t('context.tokens')}</th>
-						<td>${memoryTokens.tokens ?? 0}</td>
-						<td>${memoryTokens.tokensWI ?? 0}</td>
-						<td>${authorNoteTokens.tokens ?? 0}</td>
-						<td>${Math.max(0, playgroundTokens - (memoryTokens.tokens ?? 0) - (memoryTokens.tokensWI ?? 0) - (authorNoteTokens.tokens ?? 0))}</td>
+						<td>${memoryTokenCount}</td>
+						<td>${worldInfoTokenCount}</td>
+						<td>${authorNoteTokenCount}</td>
+						<td>${Math.max(0, playgroundTokens - memoryTokenCount - worldInfoTokenCount - authorNoteTokenCount)}</td>
 						<td></td>
 						<td>${playgroundTokens}</td>
 					</tr>

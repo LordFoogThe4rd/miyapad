@@ -51,7 +51,7 @@ export function Modals({ toggleModal, currentThemeName, setCurrentThemeName, all
 		samplerPresets, setSamplerPresets, selectedSamplerPresetId,
 		stoppingStringsError, drySequenceBreakersError, bannedTokensError
 	} = useSettings();
-	const { cancel, modalState, closeModal, instructModalState, setInstructModalState, promptEditorView, replaceEditorText, lastError, sessionEndpointConnecting, predictStartTokens, tokens, contextMenuState, setContextMenuState, setTriggerPredict, sessionEndpointError, setRejectedAPIKey } = useGeneration();
+	const { cancel, modalState, closeModal, instructModalState, setInstructModalState, promptEditorView, replaceEditorText, lastError, sessionEndpointConnecting, predictStartTokens, tokens, memoryTokenCount, worldInfoTokenCount, authorNoteTokenCount, contextMenuState, setContextMenuState, setTriggerPredict, sessionEndpointError, setRejectedAPIKey } = useGeneration();
 
 	const { handleauthorNoteTokensChange, handleMemoryTokensChange } = useTokenCounters();
 	const { finalPromptText, convertChatToJSON } = usePromptBuilder();
@@ -182,6 +182,7 @@ export function Modals({ toggleModal, currentThemeName, setCurrentThemeName, all
 			isOpen=${modalState.memory}
 			closeModal=${() => closeModal("memory")}
 			memoryTokens=${memoryTokens}
+			tokenCount=${memoryTokenCount}
 			handleMemoryTokensChange=${handleMemoryTokensChange}
 			cancel=${cancel}/>
 
@@ -189,6 +190,7 @@ export function Modals({ toggleModal, currentThemeName, setCurrentThemeName, all
 			isOpen=${modalState.an}
 			closeModal=${() => closeModal("an")}
 			authorNoteTokens=${authorNoteTokens}
+			tokenCount=${authorNoteTokenCount}
 			handleauthorNoteTokensChange=${handleauthorNoteTokensChange}
 			authorNoteDepth=${authorNoteDepth}
 			setAuthorNoteDepth=${setAuthorNoteDepth}
@@ -199,7 +201,9 @@ export function Modals({ toggleModal, currentThemeName, setCurrentThemeName, all
 			closeModal=${() => closeModal("context")}
 			tokens=${tokens}
 			memoryTokens=${memoryTokens}
-			authorNoteTokens=${authorNoteTokens}
+			memoryTokenCount=${memoryTokenCount}
+			worldInfoTokenCount=${worldInfoTokenCount}
+			authorNoteTokenCount=${authorNoteTokenCount}
 			handleMemoryTokensChange=${handleMemoryTokensChange}
 			finalPromptText=${useChatAPI ? JSON.stringify(convertChatToJSON(finalPromptText, templates[selectedTemplate]), null, 4) : finalPromptText}
 			defaultPresets=${defaultPresets}

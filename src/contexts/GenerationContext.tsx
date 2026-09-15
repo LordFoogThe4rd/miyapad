@@ -28,6 +28,9 @@ export function GenerationProvider({ children, useSessionState }: { children: Re
 	const [rejectedAPIKey, setRejectedAPIKey] = useState(false);
 	const [openaiModels, setOpenaiModels] = useState([]);
 	const [tokens, setTokens] = useState(0);
+	const [memoryTokenCount, setMemoryTokenCount] = useState(0);
+	const [worldInfoTokenCount, setWorldInfoTokenCount] = useState(0);
+	const [authorNoteTokenCount, setAuthorNoteTokenCount] = useState(0);
 	const [tokensPerSec, setTokensPerSec] = useState(0.0);
 	const [predictStartTokens, setPredictStartTokens] = useState(0);
 	const [lastError, setLastError] = useState(undefined);
@@ -78,7 +81,7 @@ export function GenerationProvider({ children, useSessionState }: { children: Re
 		promptChunks, setPromptChunks, currentPromptChunk, setCurrentPromptChunk, undoHovered, setUndoHovered,
 		showProbs, setShowProbs, cancel, setCancel, sessionEndpointConnecting, setSessionEndpointConnecting,
 		sessionEndpointError, setSessionEndpointError, rejectedAPIKey, setRejectedAPIKey, openaiModels, setOpenaiModels,
-		tokens, setTokens, tokensPerSec, setTokensPerSec, predictStartTokens, setPredictStartTokens, lastError, setLastError,
+		tokens, setTokens, memoryTokenCount, setMemoryTokenCount, worldInfoTokenCount, setWorldInfoTokenCount, authorNoteTokenCount, setAuthorNoteTokenCount, tokensPerSec, setTokensPerSec, predictStartTokens, setPredictStartTokens, lastError, setLastError,
 		savedScrollTop, setSavedScrollTop, modalState, setModalState, contextMenuState, setContextMenuState,
 		instructModalState, setInstructModalState, hordeQueuePos, setHordeQueuePos, hordeProcessing, setHordeProcessing,
 		ttsAvailable, setTTSAvailable,

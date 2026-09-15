@@ -3,7 +3,7 @@ import { useT } from '../../i18n';
 import { Modal } from '../Modal';
 import { InputBox } from '../controls/InputBox';
 
-export function MemoryModal({ isOpen, closeModal, memoryTokens, handleMemoryTokensChange, cancel }: any) {
+export function MemoryModal({ isOpen, closeModal, memoryTokens, tokenCount, handleMemoryTokensChange, cancel }: any) {
 	const t = useT();
 	return html`
 		<${Modal} isOpen=${isOpen} onClose=${closeModal}
@@ -25,7 +25,7 @@ export function MemoryModal({ isOpen, closeModal, memoryTokens, handleMemoryToke
 						class="expanded-text-area-settings"
 						id="memory-area-settings"/>
 					<div class="token-counter">
-						${memoryTokens.tokens}
+						${tokenCount}
 					</div>
 				</div>
 			</${Modal}>`;

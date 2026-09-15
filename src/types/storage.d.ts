@@ -61,16 +61,12 @@ interface MemoryTokensData {
   prefix: string;
   text: string;
   suffix: string;
-  tokens?: number;
-  tokensWI?: number;
-  worldInfo?: string;
 }
 
 interface AuthorNoteData {
   prefix: string;
   text: string;
   suffix: string;
-  tokens?: number;
 }
 
 interface LogitBiasEntry {
