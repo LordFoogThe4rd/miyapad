@@ -64,7 +64,9 @@ describe('markdownCaretPlugin', () => {
 	});
 
 	it('reveals a nested construct and its parent together', () => {
-		// "**bold *and italic***" — caret inside the em is inside the strong too
+		// Deliberate: the inline-beats-line precedence does not extend to nesting.
+		// A caret in the em of "**bold *and italic***" is inside the strong too,
+		// and both pairs show, so you see the whole of what you are editing in.
 		expect(spans('**bold *and italic***', 12, 'pm-md-reveal')).toHaveLength(4);
 	});
 

@@ -9,10 +9,14 @@ import { markdownDecorationKey } from './markdownDecorations';
  * inline delimiters ("**", backticks, the brackets of a link) only when it is
  * inside the construct they delimit.
  *
- * The innermost construct under the caret wins: while an inline construct is
- * revealed, its line's prefixes stay hidden, so only one construct shows its
- * syntax at a time. Obsidian differs here and reveals a heading's "#" whenever
- * the caret is anywhere on the line.
+ * Inline beats line: while any inline construct is revealed, its line's
+ * prefixes stay hidden, so being inside a word does not also expose the
+ * heading marker for the whole line. Obsidian differs here and reveals a
+ * heading's "#" whenever the caret is anywhere on the line.
+ *
+ * That precedence is only between the two kinds. Nested inline constructs all
+ * reveal together, so a caret in the italic of "**bold *and italic***" shows
+ * both pairs: you see the whole of what you are editing inside.
  *
  * Known limitation: an inline construct spanning a soft line break is split
  * into paragraph-local decorations (`addInlineSpan` clips to paragraph bounds,
@@ -68,9 +72,9 @@ function build(state: EditorState): DecorationSet {
 		for (const m of g.markers) revealed.push(Decoration.inline(m.from, m.to, { class: 'pm-md-reveal' }));
 	}
 
-	// Innermost wins. A construct with nothing to reveal (its markers were left
-	// visible because text was not a substring of raw) leaves this empty, which
-	// correctly falls through to revealing the line.
+	// Inline beats line. A construct with nothing to reveal (its markers were
+	// left visible because text was not a substring of raw) leaves this empty,
+	// which correctly falls through to revealing the line.
 	if (revealed.length > 0) return DecorationSet.create(state.doc, revealed);
 	return DecorationSet.create(state.doc, [Decoration.node(paraFrom, paraTo, { class: 'pm-md-active' })]);
 }

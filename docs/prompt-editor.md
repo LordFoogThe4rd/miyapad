@@ -75,9 +75,11 @@ before it) emits both classes:
 - One `Decoration.node` with `pm-md-active` on the paragraph holding
   `selection.$head`, found with `$head.before(1)`. The line markers need nothing
   else, since a CSS descendant selector does the rest. It is emitted only when
-  no inline construct was revealed: the innermost construct under the caret
-  wins, so one construct at a time shows its syntax. Obsidian instead reveals a
-  heading's `#` whenever the caret is anywhere on the line.
+  no inline construct was revealed, so being inside a word does not also expose
+  the heading marker for the whole line. Obsidian instead reveals a heading's
+  `#` whenever the caret is anywhere on the line. The precedence is only
+  between the two kinds: nested inline constructs all reveal together, so a
+  caret in the italic of `**bold *and italic***` shows both pairs.
 - For inline markers, the build tags every decoration of one construct — both
   markers and the content span — with a shared `spec.md` group id. The plugin
   reads the markdown set over the caret's paragraph, groups by that id, and
