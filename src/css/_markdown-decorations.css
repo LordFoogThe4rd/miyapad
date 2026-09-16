@@ -1,6 +1,11 @@
 /* Markdown decorations rendered inside the ProseMirror prompt editor (wysiwyg
    mode). Node decorations style whole paragraphs; inline decorations style the
-   content between markers. Markers stay visible. */
+   content between markers and the markers themselves.
+
+   Markers are hidden until the caret reaches them (markdownCaret.ts): block
+   prefixes come back with .pm-md-active on their paragraph, inline delimiters
+   with .pm-md-reveal on the marker itself. The document text is never rewritten
+   -- hidden characters are still in the doc, so every flat offset is unchanged. */
 
 #pm-editor .pm-md-heading-h1 { font-size: 2em; font-weight: 700; margin: 0.4em 0; }
 #pm-editor .pm-md-heading-h2 { font-size: 1.7em; font-weight: 700; margin: 0.35em 0; }
@@ -31,6 +36,17 @@
 }
 #pm-editor .pm-md-table-header { font-weight: 700; }
 
+#pm-editor .pm-md-code {
+	font-family: var(--editor-font-family, monospace);
+	background: var(--color-bg-rule);
+	border-radius: 3px;
+	padding: 0 0.2em;
+}
+#pm-editor .pm-md-link {
+	color: var(--color-svg-1);
+	text-decoration: underline;
+}
+
 #pm-editor .pm-md-hr {
 	color: var(--color-text-hint);
 	text-align: center;
@@ -38,11 +54,36 @@
 	background-repeat: no-repeat;
 	background-position: center;
 	background-size: 100% 2px;
+	/* the "---" is hidden while the caret is away, which would collapse the
+	   paragraph's content box and leave nothing for the rule to draw across */
+	min-height: 1em;
 }
 #pm-editor .pm-md-hr-marker {
 	background: var(--color-bg-prompt);
 	padding: 0 0.5em;
 }
+
+/* Syntax hiding. The reveal rules need to beat these, which they do on
+   specificity: #id .a.b and #id .a .b both outrank #id .a. */
+#pm-editor .pm-md-marker,
+#pm-editor .pm-md-marker-line { display: none; }
+
+/* Two forms for the inline case: ProseMirror merges decorations that cover the
+   same range onto one element, but nests them when a chunk span splits the run. */
+#pm-editor .pm-md-marker.pm-md-reveal,
+#pm-editor .pm-md-reveal .pm-md-marker,
+#pm-editor .pm-md-active .pm-md-marker-line {
+	display: inline;
+	color: var(--color-text-hint);
+}
+
+/* Stands in for the hidden "- ". Suppressed when the real bullet is revealed,
+   so the two never show at once. */
+#pm-editor .pm-md-list-item-bullet::before {
+	content: '•  ';
+	color: var(--color-text-hint);
+}
+#pm-editor .pm-md-list-item-bullet.pm-md-active::before { content: none; }
 
 button.textAreaSettings.textAreaSettings-markdown-active {
 	color: var(--color-svg-1);

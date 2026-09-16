@@ -13,6 +13,7 @@ The main prompt area is a **ProseMirror** view, not a textarea. `src/components/
 | `src/editor/changedRange.ts` | `changedRange(tr)` — the span of `tr.doc` a transaction's steps actually touched. |
 | `src/editor/chunkDecorations.ts` | `chunkDecorationPlugin` (chunk highlighting) and `chunkHoverPlugin` (hover/erase overlays). |
 | `src/editor/markdownDecorations.ts` | `markdownDecorationPlugin` — in-place markdown styling for wysiwyg mode, restricted to a viewport window. |
+| `src/editor/markdownCaret.ts` | `markdownCaretPlugin` — reveals the markers `markdownDecorationPlugin` hides, for the construct the caret is in. |
 | `src/editor/chunkDecorations.bench.ts`, `src/editor/markdownDecorations.bench.ts` | `npm run bench` (Vitest benchmarks). Each ratio compares an optimisation against its absence — the reuse prefix, the viewport window, the deferred flush. Runs in jsdom, so only the ratios are meaningful, not the absolute milliseconds; there is no stored baseline, so read output by hand. |
 
 ## Text Contract
@@ -23,13 +24,14 @@ Every offset exchanged with the editor is a **flat text offset** into `docText(d
 
 ## Decoration Plugins
 
-Three plugins render into the same view; ProseMirror merges overlapping inline decorations into one DOM element, so the rendered markup is unaffected by the split.
+Four plugins render into the same view; ProseMirror merges overlapping inline decorations into one DOM element, so the rendered markup is unaffected by the split.
 
 | Plugin | Meta key | Rebuilt when |
 | :--- | :--- | :--- |
 | `chunkDecorationPlugin` | `chunkDecorationKey` | Chunks, `tokenColorMode` or `tokenHighlightMode` change. |
 | `chunkHoverPlugin` | `chunkHoverKey` | The hovered chunk index or the undo-erase range changes; also re-derived when a base-chunk rebuild would map its decorations away. |
 | `markdownDecorationPlugin` | `markdownDecorationKey` | The mode is toggled, the viewport window moves, or an idle callback flushes the edits since the last rebuild. |
+| `markdownCaretPlugin` | — (reads the selection) | The selection moves, the doc changes, or the markdown plugin rebuilds. |
 
 Hover state lives in its own plugin so moving the mouse never rebuilds the O(N) chunk set. `PromptContainer` also drops hover dispatches whose `(chunk index, erase index, highlight mode)` tuple is unchanged, since `currentPromptChunk` gets a new object identity on every mouse move.
 
@@ -37,11 +39,77 @@ Hover state lives in its own plugin so moving the mouse never rebuilds the O(N) 
 
 The toolbar's split-view button toggles `editorMode` between `'source'` and `'wysiwyg'` (`SettingsContext`, persisted to `localStorage` via `usePersistentState`; type `EditorMode` in `src/types/contexts.d.ts`). The button gets `textAreaSettings-markdown-active` while wysiwyg is on.
 
-In wysiwyg mode the document is still plain markdown source — nothing is hidden or rewritten. `marked.lexer` (GFM, `breaks: true`) tokenizes the flat text and the plugin emits decorations that style the source in place: node decorations for block constructs, inline decorations for the content between markers. **Markers stay visible**, so caret positions and offsets are identical in both modes.
+In wysiwyg mode the document is still plain markdown source — nothing is hidden
+*from the document*, rewritten, or replaced with a widget. `marked.lexer` (GFM,
+`breaks: true`) tokenizes the flat text and the plugin emits decorations that
+style the source in place. Markers are decorated too, and hidden with CSS
+`display: none`; the characters stay in the doc, so **every flat offset, the
+chunk highlighting, undo and the clipboard are identical in both modes**. That is
+the whole reason this approach is cheap.
 
-Styled constructs: headings (`h1`–`h6`), `strong` / `em` / `del`, blockquotes, lists and list items, tables (header row and body rows), horizontal rules. Anything else (code fences, links, inline code) lexes normally but is left unstyled. Classes are `.pm-md-*` and live in `src/css/_markdown-decorations.css`.
+Styled constructs: headings (`h1`–`h6`), `strong` / `em` / `del`, blockquotes,
+lists and list items, tables (header row and body rows), horizontal rules,
+inline code, links. Anything else (code fences, images) lexes normally but is
+left unstyled. Classes are `.pm-md-*` and live in
+`src/css/_markdown-decorations.css`.
 
 Mapping token offsets back to the source is done per line (`buildLineMap`), because `marked` strips per-line markers (`> `, `- `, indentation) from `raw` when building `text`, and one token can span several PM paragraphs.
+
+## Hidden Markers and the Caret
+
+Markers come in two kinds, matching what Obsidian's live preview does:
+
+| Class | Covers | Revealed by |
+| :--- | :--- | :--- |
+| `pm-md-marker-line` | `#{1,6} `, `> `, unordered `- `, the `---` of an hr | `.pm-md-active` on that **paragraph** |
+| `pm-md-marker` | `**` `*` `~~`, backticks, a link's `[` and `](url)` | `.pm-md-reveal` on that **construct's** markers |
+
+So with the caret in `bold` of `# H **bold** tail`, the asterisks come back but
+the `#` stays hidden and the line stays large; move it to `tail` and that
+reverses.
+
+`markdownCaretPlugin` (registered **after** `markdownDecorationPlugin` — PM
+applies plugins in array order and `apply` only sees the new state of the ones
+before it) emits both classes:
+
+- One `Decoration.node` with `pm-md-active` on the paragraph holding
+  `selection.$head`, found with `$head.before(1)`. The line markers need nothing
+  else — a CSS descendant selector does the rest.
+- For inline markers, the build tags every decoration of one construct — both
+  markers and the content span — with a shared `spec.md` group id. The plugin
+  reads the markdown set over the caret's paragraph, groups by that id, and
+  reveals a group whose `[min(from), max(to)]` the selection overlaps
+  **inclusively** — the caret has to be able to sit just past a closing `**` to
+  delete it.
+
+The extent of a construct is therefore derived from the mapped decoration
+positions, never from offsets stored at build time: the markdown rebuild is
+deferred, so anything recorded as a number would be stale for up to 100 ms.
+Group ids only have to be unique within one paragraph, and they are — a splice
+rebuilds whole top-level tokens and a paragraph belongs to exactly one of them,
+so every decoration in a paragraph comes from the same build.
+
+Nothing here re-lexes or rebuilds the markdown set; a cursor move costs one
+`DecorationSet.create` over a handful of decorations. That is still
+O(paragraphs) inside ProseMirror's `buildTree` regardless of how few it is
+given — measured at +0.10 ms per keystroke on 400 blocks against 0.50 ms
+without the plugin.
+
+Because markers are hidden rather than replaced, ProseMirror still serializes
+them: copying a selection that spans a hidden `**` yields markdown.
+
+Known gaps, deliberately left:
+
+- **Setext headings** (`Title` / `=====`): the underline line stays visible.
+  `display: none` on a whole paragraph makes it unreachable by click or arrow
+  key, so it could never be revealed to edit.
+- **Caret column on vertical movement.** Arrowing into a line whose markers are
+  hidden picks the target column against the collapsed text, then the line
+  expands. Obsidian behaves the same way.
+- A construct whose `text` is not a substring of its `raw` (marked escapes HTML
+  entities into `codespan.text`, among others) leaves its markers visible rather
+  than hiding the wrong characters. `codespan` sidesteps this by counting the
+  backtick run off `raw`.
 
 ## Incremental Rebuilds
 
@@ -141,4 +209,5 @@ keystroke amortised when a burst of 20 shares one flush.
 - Never mutate chunk objects when re-deriving chunks; the reuse check relies on reference identity.
 - Guard React→PM writes with the sync suppression flag so `dispatchTransaction` does not feed the change back into `promptChunks`.
 - Meta-only transactions (`hover`, mode toggle) leave `docChanged` false and need no suppression.
+- `markdownCaretPlugin` must stay after `markdownDecorationPlugin` in the plugin array; it reads that plugin's decorations, and a plugin's `apply` only sees the new state of the plugins declared before it.
 - Known soft edge, left deliberately: if chunk indices shift under a stationary pointer, the hover tuple can hold a stale index until the pointer moves. It self-heals on the next base meta and never leaves decorations wiped.

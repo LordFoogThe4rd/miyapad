@@ -158,6 +158,71 @@ describe('buildMarkdownDecorations', () => {
 	});
 });
 
+describe('hidden syntax markers', () => {
+	function spans(text: string, className: string): [number, number][] {
+		return byClass(decosFor(text), className).map((d) => [d.from, d.to]);
+	}
+
+	function groupOf(d: Decoration): number | undefined {
+		return (d.spec as { md?: number } | null)?.md;
+	}
+
+	it('hides the leading hashes of a heading', () => {
+		expect(spans('# Title', 'pm-md-marker-line')).toEqual([[1, 3]]);
+		expect(spans('### Sub', 'pm-md-marker-line')).toEqual([[1, 5]]);
+	});
+
+	it('hides inline delimiters, flanking the content span', () => {
+		expect(spans('a **bold** c', 'pm-md-marker')).toEqual([[3, 5], [9, 11]]);
+		expect(spans('a **bold** c', 'pm-md-strong')).toEqual([[5, 9]]);
+	});
+
+	it('groups the markers and content of one construct under a shared spec.md', () => {
+		const ids = decosFor('a **bold** c').map(groupOf);
+		expect(new Set(ids)).toEqual(new Set([0]));
+	});
+
+	it('gives nested constructs distinct groups', () => {
+		const ids = decosFor('**bold *and italic***')
+			.map(groupOf).filter((id): id is number => id !== undefined);
+		expect(new Set(ids).size).toBe(2);
+	});
+
+	it('hides the blockquote prefix on every line', () => {
+		expect(spans('> one\n> two', 'pm-md-marker-line')).toEqual([[1, 3], [8, 10]]);
+	});
+
+	it('hides a bare ">" line whole', () => {
+		expect(spans('> one\n>\n> two', 'pm-md-marker-line')).toEqual([[1, 3], [8, 9], [11, 13]]);
+	});
+
+	it('hides unordered bullets but leaves ordered markers alone', () => {
+		expect(spans('- one\n- two', 'pm-md-marker-line')).toEqual([[1, 3], [8, 10]]);
+		expect(spans('- one\n- two', 'pm-md-list-item-bullet')).toHaveLength(2);
+		expect(spans('1. one\n2. two', 'pm-md-marker-line')).toEqual([]);
+		expect(spans('1. one\n2. two', 'pm-md-list-item-bullet')).toEqual([]);
+	});
+
+	it('hides the backticks of inline code', () => {
+		expect(spans('a `code` b', 'pm-md-marker')).toEqual([[3, 4], [8, 9]]);
+		expect(spans('a `code` b', 'pm-md-code')).toEqual([[4, 8]]);
+	});
+
+	it('hides link brackets and the url, styling the label', () => {
+		expect(spans('[label](http://x)', 'pm-md-marker')).toEqual([[1, 2], [7, 18]]);
+		expect(spans('[label](http://x)', 'pm-md-link')).toEqual([[2, 7]]);
+	});
+
+	it('styles a bare url whole, with nothing to hide', () => {
+		expect(spans('see http://x.com now', 'pm-md-link')).toEqual([[5, 17]]);
+		expect(spans('see http://x.com now', 'pm-md-marker')).toEqual([]);
+	});
+
+	it('hides the hr rule characters', () => {
+		expect(spans('---', 'pm-md-marker-line')).toEqual([[1, 4]]);
+	});
+});
+
 describe('markdownDecorationPlugin', () => {
 	function createState(text: string, active: boolean) {
 		return EditorState.create({
@@ -167,17 +232,19 @@ describe('markdownDecorationPlugin', () => {
 	}
 
 	it('builds decorations when active at init and stays empty when inactive', () => {
-		expect(markdownDecorationKey.getState(createState('# T', true))!.decos.find().length).toBe(1);
+		// heading node class + the hidden '# ' marker
+		expect(markdownDecorationKey.getState(createState('# T', true))!.decos.find().length).toBe(2);
 		expect(markdownDecorationKey.getState(createState('# T', false))!.decos.find().length).toBe(0);
 	});
 
 	it('rebuilds decorations on doc changes while active', () => {
 		const state = createState('a **b**', true);
-		expect(markdownDecorationKey.getState(state)!.decos.find().length).toBe(1);
+		// content span + the two hidden '**' markers
+		expect(markdownDecorationKey.getState(state)!.decos.find().length).toBe(3);
 		const typed = state.apply(state.tr.insertText('x', 1));
 		const next = typed.apply(typed.tr.setMeta(markdownDecorationKey, 'flush'));
-		expect(markdownDecorationKey.getState(next)!.decos.find().length).toBe(1);
-		expect(markdownDecorationKey.getState(next)!.decos.find()[0].from).toBe(6);
+		expect(markdownDecorationKey.getState(next)!.decos.find().length).toBe(3);
+		expect(byClass(markdownDecorationKey.getState(next)!.decos.find(), 'pm-md-strong')[0].from).toBe(6);
 	});
 
 	it('defers the rebuild off the edit and flushes it from the view', async () => {
@@ -211,7 +278,7 @@ describe('markdownDecorationPlugin', () => {
 
 		mode.current = true;
 		const on = state.apply(state.tr.setMeta(markdownDecorationKey, true));
-		expect(markdownDecorationKey.getState(on)!.decos.find().length).toBe(1);
+		expect(markdownDecorationKey.getState(on)!.decos.find().length).toBe(2);
 
 		mode.current = false;
 		const off = on.apply(on.tr.setMeta(markdownDecorationKey, true));

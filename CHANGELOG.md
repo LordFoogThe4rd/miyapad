@@ -2,6 +2,14 @@
 
 ## [???] - unreleased
 
+### Added
+
+- Inline code and links are now styled in markdown formatting mode
+
+### Changed
+
+- Markdown formatting mode now hides the markup itself, the way Obsidian's live preview does. The `#` of a heading, the `>` of a quote and the `-` of a bullet come back when you put the cursor on that line; `**`, backticks and link brackets come back only when the cursor is inside the word they wrap. Nothing is rewritten — the hidden characters are still there and still copy out as markdown
+
 ## [2.8.0] - 2026-09-16
 
 ### Added
