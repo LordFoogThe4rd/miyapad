@@ -8,7 +8,7 @@
 
 ### Changed
 
-- Markdown formatting mode now hides the markup itself, the way Obsidian's live preview does. The `#` of a heading, the `>` of a quote and the `-` of a bullet come back when you put the cursor on that line; `**`, backticks and link brackets come back only when the cursor is inside the word they wrap. Nothing is rewritten — the hidden characters are still there and still copy out as markdown
+- Markdown formatting mode now hides the markup itself, like a live preview. The `#` of a heading, the `>` of a quote and the `-` of a bullet come back when you put the cursor on that line; `**`, backticks and link brackets come back only when the cursor is inside the word they wrap, and while they do, the line's own markers stay hidden so only one thing shows its syntax at a time. Nothing is rewritten, so the hidden characters are still there and still copy out as markdown
 
 ## [2.8.0] - 2026-09-16
 

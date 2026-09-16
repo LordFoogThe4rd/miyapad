@@ -65,6 +65,14 @@ interface LineSeg {
 
 const INLINE_STYLE_KINDS = new Set(['strong', 'em', 'del']);
 
+/**
+ * Source of `spec.md` group ids, never reset. The set is spliced per top-level
+ * token, so decorations from different builds coexist in it, and an edit can
+ * merge two separately-built paragraphs into one. Ids unique only within a
+ * build would collide there and widen a construct's extent.
+ */
+let nextGroup = 0;
+
 interface MarkdownBuild {
 	decorations: Decoration[];
 	/** Every top-level token of the document, to diff the next build against. */
@@ -160,14 +168,6 @@ function buildDecorations(
 		}
 	};
 
-	// Groups the decorations of one inline construct — its markers and its content
-	// — so markdownCaretPlugin can ask "is the caret inside this construct" from
-	// the mapped decoration positions alone, without storing offsets that an edit
-	// would invalidate. Only has to be unique among the decorations coexisting in
-	// one paragraph, and it is: a splice rebuilds whole top-level tokens and a
-	// paragraph belongs to exactly one of them, so every decoration in a paragraph
-	// comes from the same build as this counter.
-	let group = 0;
 
 	// Every span is clipped to paragraph bounds: br-split paragraphs and
 	// blockquote/list hard breaks split one token across several PM paragraphs,
@@ -186,7 +186,10 @@ function buildDecorations(
 					p.nodeStart + 1 + (start - p.offStart),
 					p.nodeStart + 1 + (end - p.offStart),
 					{ class: className },
-					md === undefined ? undefined : { md },
+					// spec, not attrs: markdownCaretPlugin reads `marker` to pick
+					// which of a group's decorations to reveal, and Decoration.type
+					// (where attrs live) is internal to prosemirror-view.
+					md === undefined ? undefined : { md, marker: className === 'pm-md-marker' },
 				));
 			}
 		}
@@ -263,7 +266,7 @@ function buildDecorations(
 				const inline = child as Tokens.Strong | Tokens.Em | Tokens.Del;
 				const opening = inline.raw.indexOf(inline.text);
 				const contentTextStart = at + opening;
-				const md = group++;
+				const md = nextGroup++;
 				// Emit one span per content line: a content region crossing lines
 				// contains blockquote/list markers between lines, so a flat span
 				// clipped to paragraph bounds would style marker characters.
@@ -364,7 +367,7 @@ function buildDecorations(
 				// entities into codespan.text, so indexOf would miss on `a<b`.
 				const fence = /^`+/.exec(token.raw)?.[0].length ?? 0;
 				if (fence > 0 && srcEnd - srcStart > 2 * fence) {
-					const md = group++;
+					const md = nextGroup++;
 					addInlineSpan(srcStart, srcStart + fence, 'pm-md-marker', md);
 					addInlineSpan(srcStart + fence, srcEnd - fence, 'pm-md-code', md);
 					addInlineSpan(srcEnd - fence, srcEnd, 'pm-md-marker', md);
@@ -379,7 +382,7 @@ function buildDecorations(
 				// Only the bracketed forms have markers to hide; an autolink or a
 				// bare GFM url is its own label and is styled whole.
 				if (link.raw.startsWith('[') && opening > 0) {
-					const md = group++;
+					const md = nextGroup++;
 					const contentStart = srcStart + opening;
 					const contentEnd = contentStart + link.text.length;
 					addInlineSpan(srcStart, contentStart, 'pm-md-marker', md);

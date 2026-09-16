@@ -61,7 +61,7 @@ Markers come in two kinds, matching what Obsidian's live preview does:
 
 | Class | Covers | Revealed by |
 | :--- | :--- | :--- |
-| `pm-md-marker-line` | `#{1,6} `, `> `, unordered `- `, the `---` of an hr | `.pm-md-active` on that **paragraph** |
+| `pm-md-marker-line` | `#{1,6} `, `> `, unordered `- `, the `---` of an hr | `.pm-md-active` on that **paragraph**, when no inline construct is revealed |
 | `pm-md-marker` | `**` `*` `~~`, backticks, a link's `[` and `](url)` | `.pm-md-reveal` on that **construct's** markers |
 
 So with the caret in `bold` of `# H **bold** tail`, the asterisks come back but
@@ -74,7 +74,10 @@ before it) emits both classes:
 
 - One `Decoration.node` with `pm-md-active` on the paragraph holding
   `selection.$head`, found with `$head.before(1)`. The line markers need nothing
-  else — a CSS descendant selector does the rest.
+  else, since a CSS descendant selector does the rest. It is emitted only when
+  no inline construct was revealed: the innermost construct under the caret
+  wins, so one construct at a time shows its syntax. Obsidian instead reveals a
+  heading's `#` whenever the caret is anywhere on the line.
 - For inline markers, the build tags every decoration of one construct — both
   markers and the content span — with a shared `spec.md` group id. The plugin
   reads the markdown set over the caret's paragraph, groups by that id, and

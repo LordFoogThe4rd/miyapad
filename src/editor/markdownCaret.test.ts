@@ -42,10 +42,11 @@ describe('markdownCaretPlugin', () => {
 		expect(spans(LINE, 15, 'pm-md-reveal')).toEqual([]);
 	});
 
-	it('marks the caret paragraph active, which is what reveals block prefixes', () => {
-		// Present in both cases above: the "# " comes back whenever the caret is
-		// anywhere on the line, unlike the inline markers.
-		expect(spans(LINE, 9, 'pm-md-active')).toEqual([[0, 19]]);
+	it('holds back the line prefix while an inline construct is revealed', () => {
+		// Innermost wins: in bold, only the asterisks show. In tail, no inline
+		// construct contains the caret, so the paragraph goes active and the
+		// "# " comes back.
+		expect(spans(LINE, 9, 'pm-md-active')).toEqual([]);
 		expect(spans(LINE, 15, 'pm-md-active')).toEqual([[0, 19]]);
 	});
 
@@ -82,15 +83,24 @@ describe('markdownCaretPlugin', () => {
 
 		view.dispatch(view.state.tr.setSelection(TextSelection.create(view.state.doc, 9)));
 		expect(container.querySelectorAll('.pm-md-marker.pm-md-reveal')).toHaveLength(2);
-		// and the block prefix is revealed by the paragraph class instead
-		expect(container.querySelectorAll('p.pm-md-active > .pm-md-marker-line')).toHaveLength(1);
+		// the heading's "# " stays hidden while the asterisks are showing
+		expect(container.querySelectorAll('p.pm-md-active')).toHaveLength(0);
 
+		// out of the bold, the asterisks hide and the paragraph class brings the
+		// "# " back instead
 		view.dispatch(view.state.tr.setSelection(TextSelection.create(view.state.doc, 15)));
 		expect(container.querySelectorAll('.pm-md-reveal')).toHaveLength(0);
 		expect(container.querySelectorAll('.pm-md-marker')).toHaveLength(2);
+		expect(container.querySelectorAll('p.pm-md-active > .pm-md-marker-line')).toHaveLength(1);
 
 		view.destroy();
 		container.remove();
+	});
+
+	it('reveals only the near delimiter of a construct split across lines', () => {
+		// Accepted limitation: addInlineSpan clips to paragraph bounds and only the
+		// caret's paragraph is searched, so the far "**" stays hidden.
+		expect(spans('**bold\ntext**', 4, 'pm-md-reveal')).toEqual([[1, 3]]);
 	});
 
 	it('stays empty in source mode', () => {
@@ -104,7 +114,8 @@ describe('markdownCaretPlugin', () => {
 		});
 		const inBold = state.apply(state.tr.setSelection(TextSelection.create(state.doc, 9)));
 		const inTail = inBold.apply(inBold.tr.setSelection(TextSelection.create(inBold.doc, 15)));
-		expect(markdownCaretKey.getState(inBold)!.find()).toHaveLength(3);
+		// two reveals in the bold, one active paragraph outside it
+		expect(markdownCaretKey.getState(inBold)!.find()).toHaveLength(2);
 		expect(markdownCaretKey.getState(inTail)!.find()).toHaveLength(1);
 	});
 });

@@ -178,8 +178,12 @@ describe('hidden syntax markers', () => {
 	});
 
 	it('groups the markers and content of one construct under a shared spec.md', () => {
+		// The id itself is a running counter across builds, so only its sharing
+		// is asserted, never its value.
 		const ids = decosFor('a **bold** c').map(groupOf);
-		expect(new Set(ids)).toEqual(new Set([0]));
+		expect(ids).toHaveLength(3);
+		expect(ids.every((id) => id !== undefined)).toBe(true);
+		expect(new Set(ids).size).toBe(1);
 	});
 
 	it('gives nested constructs distinct groups', () => {
