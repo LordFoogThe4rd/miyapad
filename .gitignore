@@ -51,3 +51,6 @@ server/miyapad-dist/
 
 # Opencode config
 .opencode/
+
+# Claude Code config
+.claude/
