@@ -96,7 +96,7 @@ initDatabase(storagePath).then((db) => {
 
     let shuttingDown = false;
 
-    async function gracefulShutdown() {
+    function gracefulShutdown() {
         if (shuttingDown) return;
         shuttingDown = true;
         for (const server of servers) {
@@ -104,13 +104,12 @@ initDatabase(storagePath).then((db) => {
         }
         stopAutoBackup();
         clearMaintenanceScheduler();
-        const maintConfig = await getMaintenanceConfig(db);
+        const maintConfig = getMaintenanceConfig(db);
         if (maintConfig.mode === 'shutdown') {
-            await runZstdMaintenance(db, maintConfig.duration, maintConfig.dbLoad);
+            runZstdMaintenance(db, maintConfig.duration, maintConfig.dbLoad);
         }
-        db.close(() => {
-            process.exit(0);
-        });
+        db.close();
+        process.exit(0);
     }
 
     process.on('SIGINT', gracefulShutdown);

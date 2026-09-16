@@ -17,5 +17,5 @@
 
 - **Runtime**: Node.js & Express, executed via `tsx` (TypeScript runtime) which replaces direct `node` usage.
 - **Type Definitions**: `@types/express`, `@types/cors`, `@types/minimist`.
-- **Database**: SQLite3 with the `sqlite-zstd` extension for transparent row-level compression.
+- **Database**: SQLite (better-sqlite3) with the `sqlite-zstd` extension for transparent row-level compression.
 - **HTTP Client**: Axios (used for server-side proxy requests).

@@ -4,9 +4,13 @@ Node.js — MIT
   Copyright Joyent, Inc. and other Node contributors
   https://github.com/nodejs/node/blob/main/LICENSE
 
-node-sqlite3 — BSD-3-Clause
-  Copyright (c) Mapbox
-  https://github.com/TryGhost/node-sqlite3/blob/main/LICENSE
+better-sqlite3 — MIT
+  Copyright (c) 2017 Joshua Wise
+  https://github.com/WiseLibs/better-sqlite3/blob/master/LICENSE
+
+node-addon-api — MIT
+  Copyright (c) 2017 Node.js API collaborators
+  https://github.com/nodejs/node-addon-api/blob/main/LICENSE.md
 
 Huggingface Tokenizers — Apache 2.0
   Copyright (c) 2023 Hugging Face

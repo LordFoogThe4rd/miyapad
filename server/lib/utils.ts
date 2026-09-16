@@ -1,6 +1,3 @@
-import { promisify } from 'node:util';
-import zlib from 'node:zlib';
-
 const headersToRemove = [
     'content-length',
     'cdn-loop',
@@ -34,15 +31,8 @@ const normalizeStoreName = (storeName: string): string | null => {
     return null;
 };
 
-const compressData = promisify(zlib.gzip);
-
-const decompressData = (buffer: Buffer) =>
-    (promisify(zlib.gunzip) as (buf: Buffer) => Promise<Buffer>)(buffer).then(b => b.toString());
-
 export {
     headersToRemove,
     getColumnName,
-    normalizeStoreName,
-    compressData,
-    decompressData
+    normalizeStoreName
 };
