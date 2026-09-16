@@ -190,7 +190,7 @@ export function PreferencesModal({ isOpen, closeModal, settings }: any) {
 					`}
 
 					${activeTab === 'history' && html`
-						<div style=${{ animation: 'fadeIn 0.2s ease-out', minWidth: 0, width: '100%', overflow: 'hidden' }}>
+						<div style=${{ animation: 'fadeIn 0.2s ease-out', minWidth: 0, width: '100%' }}>
 							<div className="hbox" style=${{ gap: '1em' }}>
 								<${InputBox} label=${t('preferences.historyKeep')}
 									type="number" min="1" step="1"
