@@ -1,5 +1,5 @@
 import { describe, it, expect } from 'vitest';
-import { isSamplerPresetData, coerceThemeData } from './validators';
+import { isConnectionData, isInstructTemplate, isSamplerPresetData, coerceThemeData } from './validators';
 
 function makeValid(): SamplerPresetData {
   return {
@@ -157,5 +157,105 @@ describe('coerceThemeData', () => {
     expect(coerceThemeData('dark')).toBeNull();
     expect(coerceThemeData(42)).toBeNull();
     expect(coerceThemeData([{ className: 'dark', css: '' }])).toBeNull();
+  });
+});
+
+describe('isConnectionData', () => {
+  function makeConnection(): ConnectionData {
+    return { id: 'conn-1', name: 'Local', enabled: true, api: 0, endpoint: 'http://localhost:8080' };
+  }
+
+  it('accepts a minimal connection with only the required fields', () => {
+    expect(isConnectionData(makeConnection())).toBe(true);
+  });
+
+  it('accepts every optional field when well typed', () => {
+    expect(isConnectionData({
+      ...makeConnection(),
+      key: 'sk-abc',
+      model: 'gpt-4',
+      models: ['gpt-4', 'gpt-5'],
+      strict: false,
+      chatAPI: true,
+      postSamplingProbs: false,
+    })).toBe(true);
+  });
+
+  it('accepts an empty models array', () => {
+    expect(isConnectionData({ ...makeConnection(), models: [] })).toBe(true);
+  });
+
+  it('rejects a missing required field', () => {
+    for (const field of ['id', 'name', 'enabled', 'api', 'endpoint']) {
+      const value = clone(makeConnection());
+      delete value[field];
+      expect(isConnectionData(value), `missing ${field}`).toBe(false);
+    }
+  });
+
+  it('rejects a required field of the wrong type', () => {
+    expect(isConnectionData({ ...makeConnection(), id: 1 })).toBe(false);
+    expect(isConnectionData({ ...makeConnection(), enabled: 'yes' })).toBe(false);
+    expect(isConnectionData({ ...makeConnection(), api: '0' })).toBe(false);
+    expect(isConnectionData({ ...makeConnection(), endpoint: null })).toBe(false);
+  });
+
+  it('rejects an optional field of the wrong type', () => {
+    expect(isConnectionData({ ...makeConnection(), key: 42 })).toBe(false);
+    expect(isConnectionData({ ...makeConnection(), models: 'gpt-4' })).toBe(false);
+    expect(isConnectionData({ ...makeConnection(), models: ['gpt-4', 7] })).toBe(false);
+    expect(isConnectionData({ ...makeConnection(), strict: 'true' })).toBe(false);
+    expect(isConnectionData({ ...makeConnection(), chatAPI: 1 })).toBe(false);
+    expect(isConnectionData({ ...makeConnection(), postSamplingProbs: null })).toBe(false);
+  });
+
+  it('rejects non-objects', () => {
+    expect(isConnectionData(null)).toBe(false);
+    expect(isConnectionData(undefined)).toBe(false);
+    expect(isConnectionData('conn')).toBe(false);
+    expect(isConnectionData([makeConnection()])).toBe(false);
+  });
+});
+
+describe('isInstructTemplate', () => {
+  function makeTemplate(): InstructTemplate {
+    return { sysPre: '<<SYS>>', sysSuf: '<</SYS>>', instPre: '[INST]', instSuf: '[/INST]' };
+  }
+
+  it('accepts a template without a FIM template', () => {
+    expect(isInstructTemplate(makeTemplate())).toBe(true);
+  });
+
+  it('accepts a template with a FIM template', () => {
+    expect(isInstructTemplate({ ...makeTemplate(), fimTemplate: '<PRE>{prefix}<SUF>{suffix}<MID>' })).toBe(true);
+  });
+
+  it('accepts empty strings for the affixes', () => {
+    expect(isInstructTemplate({ sysPre: '', sysSuf: '', instPre: '', instSuf: '' })).toBe(true);
+  });
+
+  it('rejects a missing affix', () => {
+    for (const field of ['sysPre', 'sysSuf', 'instPre', 'instSuf']) {
+      const value = clone(makeTemplate());
+      delete value[field];
+      expect(isInstructTemplate(value), `missing ${field}`).toBe(false);
+    }
+  });
+
+  it('rejects an affix that is not a string', () => {
+    expect(isInstructTemplate({ ...makeTemplate(), sysPre: null })).toBe(false);
+    expect(isInstructTemplate({ ...makeTemplate(), instSuf: 0 })).toBe(false);
+  });
+
+  it('rejects a non-string fimTemplate', () => {
+    expect(isInstructTemplate({ ...makeTemplate(), fimTemplate: 42 })).toBe(false);
+    expect(isInstructTemplate({ ...makeTemplate(), fimTemplate: null })).toBe(false);
+  });
+
+  it('rejects non-objects', () => {
+    expect(isInstructTemplate(null)).toBe(false);
+    expect(isInstructTemplate(undefined)).toBe(false);
+    expect(isInstructTemplate('[INST]')).toBe(false);
+    expect(isInstructTemplate([makeTemplate()])).toBe(false);
   });
 });
