@@ -33,16 +33,6 @@ export function isInstructTemplate(value: unknown): value is InstructTemplate {
   );
 }
 
-export function isThemeData(value: unknown): value is ThemeData {
-  if (!isRecord(value)) return false;
-  return (
-    typeof value.className === 'string' &&
-    typeof value.css === 'string' &&
-    typeof value.order === 'number' &&
-    typeof value.isDefault === 'boolean'
-  );
-}
-
 function hasStringArray(value: unknown): value is string[] {
   return Array.isArray(value) && value.every(v => typeof v === 'string');
 }
