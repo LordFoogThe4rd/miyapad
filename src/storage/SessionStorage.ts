@@ -8,7 +8,22 @@ function extractMeta(s: Record<string, unknown>) {
 		modified: typeof s.modified === 'number' ? s.modified : null,
 		pinned: !!s.pinned,
 		tags: Array.isArray(s.tags) ? s.tags.filter((t): t is string => typeof t === 'string') : [],
+		stats: sanitizeStats(s.stats),
 	};
+}
+
+const EMPTY_STATS: SessionStats = { generations: 0, genTokens: 0, genChars: 0, genMs: 0, typedChars: 0, deletedChars: 0 };
+
+/** A complete counter set, keeping only the values of a stored one that can be counted with. */
+export function sanitizeStats(raw: unknown): SessionStats {
+	const src = (raw && typeof raw === 'object' ? raw : {}) as Record<string, unknown>;
+	const stats = { ...EMPTY_STATS };
+	for (const key of Object.keys(EMPTY_STATS) as (keyof SessionStats)[]) {
+		const value = src[key];
+		// A negative or non-finite counter would poison every total it is summed into.
+		if (typeof value === 'number' && Number.isFinite(value) && value > 0) stats[key] = value;
+	}
+	return stats;
 }
 
 function safeSessionName(name: unknown, key: string | number, fallback = 'Untitled'): string {
@@ -20,6 +35,20 @@ function safeSessionName(name: unknown, key: string | number, fallback = 'Untitl
 /** Identical, or arrays with identical elements (preset arrays like enabledSamplers arrive as fresh copies). */
 function sameValue(a: unknown, b: unknown): boolean {
 	return Object.is(a, b) || (Array.isArray(a) && Array.isArray(b) && a.length === b.length && a.every((v, i) => Object.is(v, b[i])));
+}
+
+/**
+ * IndexedDB keys are type-sensitive and the sessions modal passes session ids as strings,
+ * so writing under "3" leaves the record at 3 orphaned and lists the session twice. The
+ * server normalizes keys of its own accord, so only browser storage ever needed this.
+ *
+ * ponytail: this stops new duplicates. The ones a database already holds are skipped by
+ * IndexedDBAdapter.loadSessionInfoFromDatabase and removed with the session they shadow,
+ * so they cost a dead row each until then. No migration sweeps them; add one to the next
+ * IndexedDB version bump if those rows ever matter.
+ */
+function sessionKey(sessionId: string | number): string | number {
+	return typeof sessionId === 'string' && /^\d+$/.test(sessionId) ? +sessionId : sessionId;
 }
 
 function sanitizeNumber(value: unknown, fallback: number): number {
@@ -42,6 +71,7 @@ function sanitizeSessionData(raw: unknown, key?: string | number): SessionData {
 		modified: typeof src.modified === 'number' ? src.modified : null,
 		pinned: !!src.pinned,
 		tags: Array.isArray(src.tags) ? src.tags.filter((t): t is string => typeof t === 'string') : [],
+		stats: sanitizeStats(src.stats),
 		inactive: !!src.inactive,
 	};
 }
@@ -90,7 +120,7 @@ export class SessionStorage extends AbstractStorage {
         if (record && Object.hasOwn(record, 'name')) {
             const nameData = extractMeta(record);
             await this.nameStorage!.saveToDatabase(db, key, nameData);
-            const { name, created, modified, pinned, tags, ...sessionData } = record;
+            const { name, created, modified, pinned, tags, stats, ...sessionData } = record;
             await super.saveToDatabase(db, key, sessionData);
         } else {
             await super.saveToDatabase(db, key, data);
@@ -109,6 +139,7 @@ export class SessionStorage extends AbstractStorage {
 				data['modified'] = null;
 				data['pinned'] = false;
 				data['tags'] = [];
+				data['stats'] = sanitizeStats(undefined);
 			} else if (nameData && typeof nameData === 'object') {
 				const meta = nameData as Record<string, unknown>;
 				data['name'] = safeSessionName(meta.name, key);
@@ -116,6 +147,7 @@ export class SessionStorage extends AbstractStorage {
 				data['modified'] = typeof meta.modified === 'number' ? meta.modified : null;
 				data['pinned'] = meta.pinned === undefined ? false : !!meta.pinned;
 				data['tags'] = Array.isArray(meta.tags) ? meta.tags : [];
+				data['stats'] = sanitizeStats(meta.stats);
 			}
 		}
 		return data;
@@ -124,8 +156,8 @@ export class SessionStorage extends AbstractStorage {
 	async deleteFromDatabase(db: DbConnection, key: string | number) {
 		// Versions first: if they can't be deleted, the session stays so its content isn't left behind unreachable.
 		await this.history.deleteAll(key);
-		await super.deleteFromDatabase(db, key);
-		await this.nameStorage!.deleteFromDatabase(db, key);
+		await super.deleteFromDatabase(db, sessionKey(key));
+		await this.nameStorage!.deleteFromDatabase(db, sessionKey(key));
 	}
 
 	/**
@@ -211,8 +243,9 @@ export class SessionStorage extends AbstractStorage {
 		const metaOnly = sessionId != this.selectedSession || session.inactive;
 		const data = metaOnly ? extractMeta(session) : { ...session };
 		const db = await this.openDatabase();
-		if (metaOnly) await this.nameStorage!.saveToDatabase(db, sessionId, data);
-		else await this.saveToDatabase(db, sessionId, data);
+		const key = sessionKey(sessionId);
+		if (metaOnly) await this.nameStorage!.saveToDatabase(db, key, data);
+		else await this.saveToDatabase(db, key, data);
 	}
 
 	async getNewId() {
@@ -296,6 +329,41 @@ export class SessionStorage extends AbstractStorage {
 		this.enqueueSave(this.selectedSession);
 	}
 
+	/**
+	 * Adds to the selected session's lifetime counters. Deliberately not `setProperty`:
+	 * counting a keystroke or a generation is not itself an edit, so it neither bumps
+	 * `modified` nor arms the version timer — whatever it counted already did both.
+	 */
+	addStats(delta: Partial<SessionStats>) {
+		if (this.selectedSession === undefined) return;
+		const session = this.sessions[this.selectedSession];
+		if (!session) return;
+		if (!Object.values(delta).some(v => typeof v === 'number' && v > 0)) return;
+		const stats = sanitizeStats(session.stats);
+		for (const key of Object.keys(stats) as (keyof SessionStats)[]) {
+			const value = delta[key];
+			if (typeof value === 'number' && Number.isFinite(value) && value > 0) stats[key] += value;
+		}
+		session.stats = stats;
+		this.enqueueSave(this.selectedSession);
+	}
+
+	/**
+	 * Clears the counters of one session, or of every session when no id is given. Each
+	 * record is written directly because `enqueueSave` remembers a single key, so a bulk
+	 * reset queued through it would only ever save the last session.
+	 */
+	async resetStats(sessionId?: string | number): Promise<void> {
+		const ids = sessionId === undefined ? Object.keys(this.sessions) : [sessionId];
+		for (const id of ids) {
+			const session = this.sessions[id];
+			if (!session) continue;
+			session.stats = sanitizeStats(undefined);
+			await this.saveSessionToDB(id);
+		}
+		this.dispatchChangeEvent();
+	}
+
 	async switchSession(sessionId: string | number) {
 		if (!this.sessions[sessionId])
 			return;
@@ -342,7 +410,7 @@ export class SessionStorage extends AbstractStorage {
 		this.sessions[sessionId].modified = Date.now();
 
 		const db = await this.openDatabase();
-		await this.renameSessionInDatabase(db, sessionId, renameSessionName);
+		await this.renameSessionInDatabase(db, sessionKey(sessionId), renameSessionName);
 
 		this.dispatchChangeEvent();
 	}
@@ -432,7 +500,10 @@ export class SessionStorage extends AbstractStorage {
 		const raw: Record<string, unknown> = {};
 
 		for (const [propertyName, value] of Object.entries(obj)) {
-			if (propertyName === 'darkMode') continue;
+			// A new session counts its own activity. Carrying the counters over from the one it
+			// was cloned, restored or imported from would count that activity twice in the
+			// all-sessions totals, and the source session is usually still there.
+			if (propertyName === 'darkMode' || propertyName === 'stats') continue;
 			try {
 				raw[propertyName] = JSON.parse(value as string);
 			} catch {

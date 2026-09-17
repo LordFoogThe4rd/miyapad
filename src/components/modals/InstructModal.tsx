@@ -1,6 +1,7 @@
 import { html } from 'htm/react';
 import { useState, useEffect, useRef } from 'react';
 import { useT } from '../../i18n';
+import { insertedLength } from '../../utils/strings';
 import { Modal } from '../Modal';
 import { Checkbox } from '../controls/Checkbox';
 import type { InstructModalState } from '../../types/contexts';
@@ -24,12 +25,16 @@ export function InstructModal({ isOpen, closeModal, predict, cancel, modalState,
 	const [prompt, setPrompt] = useState("");
 	const [includeContext, setIncludeContext] = useState(true);
 	const [result, setResult] = useState("");
+	// What the user typed into the result box on top of what the model wrote there.
+	const resultEdits = useRef(0);
 
 	const finish = (replace: boolean) => {
 		modalState.result = {
 			content: result,
-			replace: replace
+			replace: replace,
+			typedChars: prompt.length + resultEdits.current
 		};
+		resultEdits.current = 0;
 		closeModal();
 	};
 
@@ -50,6 +55,7 @@ export function InstructModal({ isOpen, closeModal, predict, cancel, modalState,
 	};
     const handlePredictInModal = () => {
 		setResult("");
+		resultEdits.current = 0;
 
 		let [prefix,suffix] = [templates[selectedTemplate]?.instPre || "", templates[selectedTemplate]?.instSuf || ""];
 		if (!(prefix || suffix))
@@ -156,7 +162,11 @@ export function InstructModal({ isOpen, closeModal, predict, cancel, modalState,
 						label=${t('instruct.result')}
 						style=${{height: "200px"}}
 						value=${result}
-						onChange=${(e: Event) => setResult((e.target as HTMLTextAreaElement).value)}
+						onChange=${(e: Event) => {
+							const next = (e.target as HTMLTextAreaElement).value;
+							resultEdits.current += insertedLength(result, next);
+							setResult(next);
+						}}
 						readOnly=${!!cancel}
 						className="wi-textarea"/>
 

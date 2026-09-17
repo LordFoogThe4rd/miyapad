@@ -4,8 +4,29 @@ interface SessionData {
   modified?: number | null;
   pinned?: boolean;
   tags?: string[];
+  stats?: SessionStats;
   inactive?: boolean;
   [key: string]: unknown;
+}
+
+/**
+ * Lifetime counters for one session. Stored alongside the session's metadata, so
+ * every session's counters are in memory once the app has loaded and totals across
+ * all of them need no extra reads.
+ */
+interface SessionStats {
+  /** Generations that produced at least one token. */
+  generations: number;
+  /** Tokens streamed from the model. */
+  genTokens: number;
+  /** Characters streamed from the model. */
+  genChars: number;
+  /** Milliseconds spent streaming. */
+  genMs: number;
+  /** Characters the user entered themselves, by typing, pasting or instructing. */
+  typedChars: number;
+  /** Characters the user removed from the prompt. */
+  deletedChars: number;
 }
 
 interface ChatMessage {

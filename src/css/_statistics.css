@@ -1,0 +1,43 @@
+.stats-modal {
+	display: flex;
+	flex-direction: column;
+	gap: 1.2rem;
+	max-height: 60vh;
+	overflow-y: auto;
+}
+.stats-section-head {
+	display: flex;
+	align-items: center;
+	justify-content: space-between;
+	gap: 0.5rem;
+}
+.stats-section-head h3 {
+	margin: 0;
+}
+.stats-section-head button {
+	flex: 0 0 auto;
+}
+.stats-session-name {
+	color: var(--color-text-hint);
+}
+.stats-table {
+	width: 100%;
+	border-collapse: collapse;
+	margin-top: 0.4rem;
+	font-size: 0.9rem;
+}
+.stats-table th,
+.stats-table td {
+	padding: 4px 8px;
+	border-bottom: 1px solid var(--color-bg-rule);
+}
+.stats-table th {
+	text-align: left;
+	font-weight: normal;
+	color: var(--color-text-hint);
+}
+.stats-table td {
+	text-align: right;
+	font-variant-numeric: tabular-nums;
+	white-space: nowrap;
+}

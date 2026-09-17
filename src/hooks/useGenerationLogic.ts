@@ -11,6 +11,20 @@ import { isAbortError } from '../utils/errors';
 
 type PredictionCallback = (chunk: CompletionChunk) => boolean;
 
+/**
+ * Tokens in a chunk that carries no per-token probabilities. A streaming provider sends one
+ * token per chunk, but a non-streaming one returns the whole completion as a single chunk,
+ * and counting that as one token would put the session totals out by the length of the reply.
+ *
+ * ponytail: four characters per token, the usual rough ratio for English. Chunks that do
+ * carry probabilities are still counted exactly, so this only covers the providers that
+ * report nothing. Read the provider's own count (llama.cpp's `tokens_predicted`, OpenAI's
+ * `usage.completion_tokens`) if it ever becomes worth threading through every api module.
+ */
+function estimateTokens(content: string): number {
+	return Math.max(1, Math.round(content.length / 4));
+}
+
 export function useGenerationLogic() {
 	const { endpoint, endpointAPI, endpointAPIKey, endpointModel, seed, maxPredictTokens, temperature, dynaTempRange, dynaTempExp, repeatPenalty, repeatLastN, penalizeNl, presencePenalty, frequencyPenalty, topK, topP, typicalP, minP, tfsZ, mirostat, mirostatTau, mirostatEta, xtcThreshold, xtcProbability, dryMultiplier, dryBase, dryAllowedLength, dryPenaltyRange, drySequenceBreakers, bannedTokens, ignoreEos, openaiPresets, stoppingStrings, useBasicStoppingMode, basicStoppingModeType, logitBias, logitBiasParam, enabledSamplers, grammar, useChatAPI, useTokenStreaming, disableLogprobs, postSamplingProbs, templates, selectedTemplate, chatMode, setChatMode, setUseChatAPI, setSelectedTemplate, isMiyapadEndpoint, sessionStorage, ttsEnabled, useServerTokenization, historyBeforeGenerate } = useSettings();
 	const { promptEditorView, undoStack, redoStack, lastEditMsRef, probsDelayTimer, keyState, sessionReconnectTimer, useScrollSmoothing, hordeTaskId, promptChunks, setPromptChunks, currentPromptChunk, setCurrentPromptChunk, undoHovered, setUndoHovered, showProbs, setShowProbs, cancel, setCancel, sessionEndpointConnecting, setSessionEndpointConnecting, sessionEndpointError, setSessionEndpointError, rejectedAPIKey, setRejectedAPIKey, openaiModels, setOpenaiModels, tokens, setTokens, tokensPerSec, setTokensPerSec, predictStartTokens, setPredictStartTokens, lastError, setLastError, savedScrollTop, setSavedScrollTop, modalState, setModalState, contextMenuState, setContextMenuState, instructModalState, setInstructModalState, hordeQueuePos, setHordeQueuePos, hordeProcessing, setHordeProcessing, ttsAvailable, setTTSAvailable, ttsNewText, ttsLastChunk, ttsQueue, ttsVoices, ttsPaused, activeGenId, abortControllerRef, triggerPredict, setTriggerPredict, restartedPredict, setRestartedPredict } = useGeneration();
@@ -103,6 +117,12 @@ export function useGenerationLogic() {
 		setLastError(undefined);
 
 		let predictCount = 0;
+		// Session counters, flushed once in the finally rather than per token.
+		let predictTokens = 0;
+		let predictChars = 0;
+		// Separate from the tok/s startTime below, which is nudged backwards to compensate
+		// for the first token and so no longer marks when streaming actually began.
+		let streamStartMs = 0;
 		ttsPushUserInput(); ttsPaused.current = false;
 		try {
 			// sometimes "getTokenCount" can take a while because the server is busy
@@ -310,6 +330,9 @@ export function useGenerationLogic() {
 					setTokens((t: number) => t + (compChunk?.completion_probabilities?.length ?? 1));
 				}
 				predictCount += 1;
+				predictTokens += compChunk?.completion_probabilities?.length ?? estimateTokens(compChunk.content);
+				predictChars += compChunk.content.length;
+				if (streamStartMs === 0) streamStartMs = performance.now();
 				ttsAddChunk(compChunk.content);
 			}
 		} catch (e: unknown) {
@@ -329,6 +352,16 @@ export function useGenerationLogic() {
 			}
 			return false;
 		} finally {
+			// Counted even when a newer generation superseded this one: the tokens it did
+			// produce were streamed into the prompt before it was cut off.
+			if (predictCount > 0) {
+				sessionStorage.addStats({
+					generations: 1,
+					genTokens: predictTokens,
+					genChars: predictChars,
+					genMs: Math.round(performance.now() - streamStartMs),
+				});
+			}
 			if (myId === activeGenId.current) {
 				setCancel((c: (() => void) | null) => c === cancelThis ? null : c);
 				abortControllerRef.current = null;

@@ -5,11 +5,16 @@
 ### Added
 
 - Inline code and links are now styled in markdown formatting mode
+- Statistics for your sessions, from Sessions → Statistics: generations run, tokens and characters the model produced, characters you wrote and deleted, time spent generating and average speed — for the session you have open and for all of them together. Text miyapad puts in the prompt for you (templates, `{predict}` and `{fill}` placeholders, search and replace, reformatting to another instruct template) is not counted as your own writing. Each section has its own Reset button
 
 ### Changed
 
 - Database backups are now LZMA-compressed `.7z` archives instead of `.gz` files, so they take up noticeably less space. Nothing needs to be installed — the server brings its own 7-Zip. Existing `.gz` backups are left alone and still count towards the retention limit
 - Markdown formatting mode now hides the markup itself, like a live preview. The `#` of a heading, the `>` of a quote and the `-` of a bullet come back when you put the cursor on that line; `**`, backticks and link brackets come back only when the cursor is inside the word they wrap, and while they do, the line's own markers stay hidden so being inside a word does not also uncover the whole line's markup. Nothing is rewritten, so the hidden characters are still there and still copy out as markdown
+
+### Fixed
+
+- Renaming, pinning or tagging a session from the Sessions list no longer leaves a duplicate of it behind with its pins, tags and creation date missing
 
 ## [2.8.0] - 2026-09-16
 

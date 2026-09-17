@@ -63,7 +63,7 @@ const { genState, settings, builder, tts, api } = vi.hoisted(() => {
 			useBasicStoppingMode: false,
 			stoppingStrings: '[]',
 			openaiPresets: false,
-			sessionStorage: { snapshot: vi.fn() },
+			sessionStorage: { snapshot: vi.fn(), addStats: vi.fn() },
 			historyBeforeGenerate: false,
 		},
 		builder: { fimPromptInfo: undefined, finalPromptText: '', convertChatToJSON: vi.fn() },
@@ -223,5 +223,39 @@ describe('useGenerationLogic undo/redo', () => {
 
 		expect(genState.promptChunks).toEqual([u('a'), m('gen'), m('gen')]);
 		expect(genState.undoStack.current).toEqual([2]);
+	});
+});
+
+describe('useGenerationLogic statistics', () => {
+	beforeEach(() => {
+		settings.sessionStorage.addStats.mockClear();
+	});
+
+	it('counts a whole non-streamed completion as more than a single token', async () => {
+		const { result } = renderLogic([u('a')]);
+		// One chunk carrying the entire reply with no per-token probabilities, the shape a
+		// non-streaming provider returns.
+		api.completion.mockImplementation(() => (async function* () { yield { content: 'x'.repeat(400) }; })());
+
+		await act(async () => { await result.current.predict(); });
+
+		expect(settings.sessionStorage.addStats).toHaveBeenCalledWith(
+			expect.objectContaining({ generations: 1, genChars: 400, genTokens: 100 }),
+		);
+	});
+
+	it('counts one token per chunk that reports its probabilities', async () => {
+		const { result } = renderLogic([u('a')]);
+		api.completion.mockImplementation(() => (async function* () {
+			for (const word of ['al', 'pha', 'bet']) {
+				yield { content: word, completion_probabilities: [{ content: word, probs: [] }] };
+			}
+		})());
+
+		await act(async () => { await result.current.predict(); });
+
+		expect(settings.sessionStorage.addStats).toHaveBeenCalledWith(
+			expect.objectContaining({ generations: 1, genChars: 8, genTokens: 3 }),
+		);
 	});
 });

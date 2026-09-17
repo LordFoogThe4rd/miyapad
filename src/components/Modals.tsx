@@ -27,6 +27,7 @@ import { ConnectionManagerModal } from './modals/ConnectionManagerModal';
 import { SamplerPresetManagerModal } from './modals/SamplerPresetManagerModal';
 import { SessionsModal } from './modals/SessionsModal';
 import { SessionHistoryModal } from './modals/SessionHistoryModal';
+import { StatisticsModal } from './modals/StatisticsModal';
 import { AboutModal } from './modals/AboutModal';
 import { QuickSwitcher } from './QuickSwitcher';
 import { EditorContextMenu } from './EditorContextMenu';
@@ -55,7 +56,7 @@ export function Modals({ toggleModal, currentThemeName, setCurrentThemeName, all
 	const { cancel, modalState, closeModal, instructModalState, setInstructModalState, promptEditorView, replaceEditorText, lastError, sessionEndpointConnecting, predictStartTokens, tokens, memoryTokenCount, worldInfoTokenCount, authorNoteTokenCount, contextMenuState, setContextMenuState, setTriggerPredict, sessionEndpointError, setRejectedAPIKey } = useGeneration();
 
 	const { handleauthorNoteTokensChange, handleMemoryTokensChange } = usePersistentContextHandlers();
-	const { finalPromptText, convertChatToJSON } = usePromptBuilder();
+	const { promptText, finalPromptText, convertChatToJSON } = usePromptBuilder();
 	const { listTTSVoices, ttsStop } = useTTS();
 	const { ttsAvailable } = useGeneration();
 	const { predict } = useGenerationLogic();
@@ -132,6 +133,9 @@ export function Modals({ toggleModal, currentThemeName, setCurrentThemeName, all
 					+ textAfter;
 
 		adapter.replaceText(finalText);
+		// The inserted content is the model's, and predict() already counted it as generated.
+		// What the user wrote here is the instruction they typed into the modal.
+		sessionStorage.addStats({ typedChars: result.typedChars });
 
 		let newCursorPos;
 		if (result.replace) {
@@ -326,13 +330,20 @@ export function Modals({ toggleModal, currentThemeName, setCurrentThemeName, all
 			closeModal=${() => closeModal("sessions")}
 			sessionStorage=${sessionStorage}
 			cancel=${cancel}
-			openHistory=${() => { closeModal("sessions"); toggleModal("sessionHistory"); }}/>
+			openHistory=${() => { closeModal("sessions"); toggleModal("sessionHistory"); }}
+			openStatistics=${() => { closeModal("sessions"); toggleModal("statistics"); }}/>
 
 		<${SessionHistoryModal}
 			isOpen=${modalState.sessionHistory}
 			closeModal=${() => closeModal("sessionHistory")}
 			sessionStorage=${sessionStorage}
 			cancel=${cancel}/>
+
+		<${StatisticsModal}
+			isOpen=${modalState.statistics}
+			closeModal=${() => closeModal("statistics")}
+			sessionStorage=${sessionStorage}
+			promptText=${promptText}/>
 
 		<${AboutModal}
 			isOpen=${modalState.about}

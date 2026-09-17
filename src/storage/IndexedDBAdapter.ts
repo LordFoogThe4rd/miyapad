@@ -113,8 +113,13 @@ export class IndexedDBAdapter {
 			request.onsuccess = async (event: Event) => {
 				const cursor = (event.target as IDBRequest<IDBCursorWithValue | null>).result;
 				if (cursor) {
-					if (cursor.key !== 'nextSessionId' && cursor.key !== 'selectedSessionId') {
-						allTables[cursor.key as string] = cursor.value;
+					const key = cursor.key as string;
+					// A rename or a pin before session keys were normalized left a second record
+					// under the string form of the id. IndexedDB visits numeric keys first and
+					// these object keys are strings either way, so without the hasOwn check that
+					// leftover would overwrite the real record and hide its tags, pins and counters.
+					if (key !== 'nextSessionId' && key !== 'selectedSessionId' && !Object.hasOwn(allTables, key)) {
+						allTables[key] = cursor.value;
 					}
 					cursor.continue();
 				} else {
@@ -144,9 +149,11 @@ export class IndexedDBAdapter {
 			const getRequest = store.get(key);
 			getRequest.onsuccess = () => {
 				const current = getRequest.result;
-				let dataToPut: { name: string; created: number | null; modified: number };
+				// Spread the stored record so what a rename has no business touching — pinned,
+				// tags, stats — survives it, the way the server's /rename already does.
+				let dataToPut: Record<string, unknown> & { name: string; created: number | null; modified: number };
 				if (current && typeof current === 'object' && current.name !== undefined) {
-					dataToPut = { name: newName, created: current.created ?? null, modified: Date.now() };
+					dataToPut = { ...current, name: newName, created: current.created ?? null, modified: Date.now() };
 				} else {
 					dataToPut = { name: newName, created: null, modified: Date.now() };
 				}
@@ -162,10 +169,18 @@ export class IndexedDBAdapter {
 		return new Promise<void>((resolve, reject) => {
 			const tx = db.transaction(storeName, 'readwrite');
 			const store = tx.objectStore(storeName);
-			const request = store.delete(key);
+			store.delete(key);
+			// Clears the string-keyed leftover described above, which only the session stores
+			// can have. Deleting the session without it would leave that record to come back as
+			// an empty session on the next load. Other stores are left alone: an imported
+			// database keeps whatever key types it was exported with, so `1` and `"1"` may
+			// legitimately be two records there.
+			if ((storeName === 'Sessions' || storeName === 'Names') && typeof key === 'number') {
+				store.delete(String(key));
+			}
 
-			request.onsuccess = () => resolve(undefined);
-			request.onerror = () => reject(request.error);
+			tx.oncomplete = () => resolve(undefined);
+			tx.onerror = () => reject(tx.error);
 		});
 	}
 

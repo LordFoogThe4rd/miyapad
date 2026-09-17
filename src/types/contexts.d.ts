@@ -232,7 +232,8 @@ export interface SettingsState {
 }
 
 export interface InstructModalState {
-  result?: { content: string; replace: boolean };
+  /** `typedChars` is the length of the instruction the user wrote, which the counters treat as their own writing — the content itself is model output and is already counted as generated. */
+  result?: { content: string; replace: boolean; typedChars: number };
   selectionStart?: number;
   selectionEnd?: number;
   instructContext?: string;
