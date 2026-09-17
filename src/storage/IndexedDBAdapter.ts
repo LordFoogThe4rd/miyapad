@@ -170,10 +170,14 @@ export class IndexedDBAdapter {
 			const tx = db.transaction(storeName, 'readwrite');
 			const store = tx.objectStore(storeName);
 			store.delete(key);
-			// Clears the string-keyed leftover described above, which only session stores can
-			// have. Deleting the session without it would leave that record to come back as an
-			// empty session on the next load.
-			if (typeof key === 'number') store.delete(String(key));
+			// Clears the string-keyed leftover described above, which only the session stores
+			// can have. Deleting the session without it would leave that record to come back as
+			// an empty session on the next load. Other stores are left alone: an imported
+			// database keeps whatever key types it was exported with, so `1` and `"1"` may
+			// legitimately be two records there.
+			if ((storeName === 'Sessions' || storeName === 'Names') && typeof key === 'number') {
+				store.delete(String(key));
+			}
 
 			tx.oncomplete = () => resolve(undefined);
 			tx.onerror = () => reject(tx.error);

@@ -148,6 +148,25 @@ describe('SessionStorage statistics', () => {
 		expect(storage.sessions[0]!.stats).toMatchObject({ typedChars: 5 });
 	});
 
+	it('starts a cloned, restored or imported session on its own counters', async () => {
+		const { adapter } = memoryAdapter();
+		const storage = new SessionStorage(adapter);
+		await storage.init();
+		clearInterval(storage.saveTimer);
+		const story = await storage.createSession('Story');
+		await storage.switchSession(story);
+		storage.addStats({ generations: 4, typedChars: 80 });
+
+		// The same shape the sessions modal builds to clone or export a session.
+		const source = Object.fromEntries(
+			Object.entries(storage.sessions[story]!).map(([k, v]) => [k, JSON.stringify(v)]),
+		) as Record<string, string>;
+		const copy = await storage.createSessionFromObject(source, true);
+
+		expect(storage.sessions[copy]!.stats).toMatchObject({ generations: 0, typedChars: 0 });
+		expect(storage.sessions[story]!.stats).toMatchObject({ generations: 4, typedChars: 80 });
+	});
+
 	it('clears every session at once, not just the last one queued', async () => {
 		const { adapter, store } = memoryAdapter();
 		const storage = await open(adapter);

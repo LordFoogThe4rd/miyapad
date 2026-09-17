@@ -500,7 +500,10 @@ export class SessionStorage extends AbstractStorage {
 		const raw: Record<string, unknown> = {};
 
 		for (const [propertyName, value] of Object.entries(obj)) {
-			if (propertyName === 'darkMode') continue;
+			// A new session counts its own activity. Carrying the counters over from the one it
+			// was cloned, restored or imported from would count that activity twice in the
+			// all-sessions totals, and the source session is usually still there.
+			if (propertyName === 'darkMode' || propertyName === 'stats') continue;
 			try {
 				raw[propertyName] = JSON.parse(value as string);
 			} catch {
