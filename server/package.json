@@ -5,12 +5,13 @@
     "start": "tsx server.ts",
     "check": "tsc --noEmit",
     "test": "echo \"Error: no test specified\" && exit 1",
-    "bundle": "esbuild server.ts --bundle --platform=node --format=cjs --outfile=dist-server/server.cjs --external:better-sqlite3 --external:@huggingface/tokenizers --log-override:empty-import-meta=silent",
+    "bundle": "esbuild server.ts --bundle --platform=node --format=cjs --outfile=dist-server/server.cjs --external:better-sqlite3 --external:@huggingface/tokenizers --external:7zip-bin --log-override:empty-import-meta=silent",
     "pack": "node scripts/pack-dist.mjs",
     "build:dist": "npm run bundle && npm ci --omit=dev && npm run pack"
   },
   "dependencies": {
     "@huggingface/tokenizers": "^0.1.3",
+    "7zip-bin": "^5.2.0",
     "axios": "^1.18.0",
     "better-sqlite3": "^13.0.3",
     "cors": "^2.8.5",

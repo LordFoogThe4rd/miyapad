@@ -46,3 +46,10 @@ sqlite-zstd — LGPL-3.0
   Note: Cargo.toml metadata declares LGPL-2.0-or-later; the LICENSE file
   bundled in the repository is LGPL-3.0. Pending upstream clarification,
   we treat this as LGPL-3.0.
+
+7zip-bin — MIT
+  Copyright (c) 2016 Vladimir Krivosheev
+  https://github.com/develar/7zip-bin/blob/master/LICENSE.txt
+  Bundles the standalone 7-Zip binary (7za) — LGPL-2.1-or-later
+  Copyright (c) 1999-2021 Igor Pavlov
+  https://www.7-zip.org/license.txt

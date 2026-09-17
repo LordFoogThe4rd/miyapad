@@ -2,6 +2,10 @@
 
 ## [???] - unreleased
 
+### Changed
+
+- Database backups are now LZMA-compressed `.7z` archives instead of `.gz` files, so they take up noticeably less space. Nothing needs to be installed — the server brings its own 7-Zip. Existing `.gz` backups are left alone and still count towards the retention limit
+
 ## [2.8.0] - 2026-09-16
 
 ### Added

@@ -51,11 +51,13 @@ The `sqlite-zstd` extension can experience index naming collisions if multiple t
 - `--backupInterval` / `MIYAPAD_BACKUP_INTERVAL`: Minutes between backups (default: `30`).
 - `--backupDir` / `MIYAPAD_BACKUP_DIR`: Directory for backup files (default: `./backups`).
 - `--backupKeep` / `MIYAPAD_BACKUP_KEEP`: Number of backups to retain (default: `10`).
+- `MIYAPAD_7Z_PATH`: Path to a 7-Zip executable to use for backup compression instead of the bundled one.
 
 ## Automatic Database Backups
 
 The server can automatically create periodic backups of the SQLite database using SQLite's `VACUUM INTO` command, which produces a clean, compacted copy without downtime.
 
 - Backups are skipped if the database file's mtime hasn't changed since the last backup.
-- Backup files are named `web-session-storage.db.<YYYYMMDDHHmmss>.backup.gz` and are gzip-compressed. They can be extracted with any archive tool (7-Zip, Ark, etc.).
+- Backup files are named `web-session-storage.db.<YYYYMMDDHHmmss>.backup.7z` and are LZMA-compressed 7-Zip archives. They can be extracted with any archive tool that reads `.7z` (7-Zip, Ark, etc.).
+- Compression is done by the 7-Zip binary bundled with the server (the `7zip-bin` package), so nothing has to be installed on the host. Set `MIYAPAD_7Z_PATH` to use a different 7-Zip executable — on a platform the bundled binary does not cover, for instance.
 - Old backups beyond the configured keep count are automatically removed.

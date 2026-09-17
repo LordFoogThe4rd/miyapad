@@ -1,10 +1,20 @@
 import fs from 'fs';
 import path from 'path';
-import zlib from 'zlib';
+import { spawn } from 'child_process';
+import { path7za } from '7zip-bin';
 import { pipeline } from 'stream';
 import type { Database } from 'better-sqlite3';
 
 let backupIntervalId: ReturnType<typeof setInterval> | null = null;
+
+// path7za is the 7-Zip binary bundled by 7zip-bin, so no host install is needed. It is
+// resolved through require() at runtime (esbuild keeps 7zip-bin external), because the
+// package locates the binary relative to its own directory.
+// ponytail: 7zip-bin ships every platform's binary, adding ~12MB to node_modules and to
+// each release archive. 7z-wasm is one ~3MB artifact instead — switch if that size starts
+// to matter, at the cost of emscripten FS plumbing and of losing the stdin stream below,
+// since the whole backup would have to be handed to the WASM filesystem in memory.
+const SEVEN_ZIP = process.env.MIYAPAD_7Z_PATH || path7za;
 
 const timestamp = () => {
     const now = new Date();
@@ -29,7 +39,8 @@ const rotateBackups = (dir: string, keep: number) => {
     let files: string[];
     try {
         files = fs.readdirSync(dir)
-            .filter(f => f.endsWith('.backup.gz'))
+            // .gz is matched too so backups written before the switch to 7-Zip still age out.
+            .filter(f => /\.backup\.(7z|gz)$/.test(f))
             .sort()
             .reverse();
     } catch {
@@ -61,6 +72,41 @@ const runIntegrityCheck = (db: Database): boolean => {
         console.error("Backup: integrity check failed, skipping backup to preserve last good copy:", rows);
     }
     return ok;
+};
+
+// Streams srcPath into a .7z archive holding a single LZMA-compressed entry named entryName.
+const compressToArchive = (srcPath: string, archivePath: string, entryName: string, done: (err: Error | null) => void) => {
+    // `7z a` appends to an existing archive, so drop a leftover before writing.
+    try { fs.rmSync(archivePath, { force: true }); } catch { /* ok */ }
+
+    const child = spawn(SEVEN_ZIP, [
+        'a', '-t7z', '-m0=lzma', '-mx=9', '-bso0', '-bsp0', `-si${entryName}`, archivePath
+    ], { stdio: ['pipe', 'ignore', 'pipe'] });
+
+    let stderr = '';
+    child.stderr.on('data', (chunk: Buffer) => { stderr += chunk; });
+
+    let settled = false;
+    const finish = (err: Error | null) => {
+        if (settled) return;
+        settled = true;
+        done(err);
+    };
+
+    child.on('error', (err: NodeJS.ErrnoException) => finish(err.code === 'ENOENT'
+        ? new Error(`7-Zip executable not found (tried "${SEVEN_ZIP}"). Set MIYAPAD_7Z_PATH to a 7-Zip executable.`)
+        : err));
+
+    child.on('close', code => finish(code === 0
+        ? null
+        : new Error(`7-Zip exited with code ${code}${stderr.trim() ? `: ${stderr.trim()}` : ''}`)));
+
+    pipeline(fs.createReadStream(srcPath), child.stdin, (err: Error | null) => {
+        if (err) {
+            child.kill();
+            finish(err);
+        }
+    });
 };
 
 const runBackup = (db: Database, dbPath: string, dir: string, keep: number, lastMtimeRef: { current: number | null }) => {
@@ -100,22 +146,16 @@ const runBackup = (db: Database, dbPath: string, dir: string, keep: number, last
         try { fs.unlinkSync(tmpPath); } catch { /* ok */ }
     };
 
-    pipeline(
-        fs.createReadStream(tmpPath),
-        zlib.createGzip(),
-        fs.createWriteStream(backupPath + '.gz'),
-        (err: Error | null) => {
-            if (err) {
-                console.error("Backup: compression failed:", err.message);
-                cleanup();
-                return;
-            }
-            cleanup();
-            lastMtimeRef.current = currentMtime;
-            console.log(`Backup created: ${backupName}.gz`);
-            rotateBackups(dir, keep);
+    compressToArchive(tmpPath, backupPath + '.7z', backupName, (err: Error | null) => {
+        cleanup();
+        if (err) {
+            console.error("Backup: compression failed:", err.message);
+            return;
         }
-    );
+        lastMtimeRef.current = currentMtime;
+        console.log(`Backup created: ${backupName}.7z`);
+        rotateBackups(dir, keep);
+    });
 };
 
 const startAutoBackup = (db: Database, dbPath: string, { interval = 30, dir = './backups', keep = 10 } = {}) => {
