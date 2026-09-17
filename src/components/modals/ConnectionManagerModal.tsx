@@ -1,5 +1,5 @@
 import { html } from 'htm/react';
-import { useState, useEffect, useLayoutEffect, useRef, type FormEvent, type MouseEvent } from 'react';
+import { Fragment, useState, useEffect, useLayoutEffect, useRef, type FormEvent, type MouseEvent } from 'react';
 import { useT } from '../../i18n';
 import { Modal } from '../Modal';
 import { InputBox } from '../controls/InputBox';
@@ -82,7 +82,7 @@ function GenericConnectionSettings({ connection, updateConnection }: GenericConn
 		? connection.models.filter((m: string) => m.toLowerCase().includes(search.toLowerCase()))
 		: [];
 
-	const iconCheck = html`<svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="3"><polyline points="20 6 9 17 4 12"></polyline></svg>`;
+	const iconCheck = html`<svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="3"><polyline points="20 6 9 17 4 12"></polyline></svg>`;
 
 	return html`
 		<div className="connection-content-scroll">
@@ -99,7 +99,7 @@ function GenericConnectionSettings({ connection, updateConnection }: GenericConn
 			/>
 
 			${connection.api !== API_LLAMA_CPP && connection.api !== API_KOBOLD_CPP && html`
-				<div className="hbox-flex" style=${{"flex-wrap": "unset"}}>
+				<div className="hbox-flex" style=${{flexWrap: "unset"}}>
 					<${InputBox} label=${t('connection.apiKey')} type=${showKey ? 'text' : 'password'}
 						value=${connection.key}
 						onValueChange=${(val: string) => updateConnection('key', val)}
@@ -119,7 +119,7 @@ function GenericConnectionSettings({ connection, updateConnection }: GenericConn
 					onValueChange=${(val: boolean) => updateConnection('postSamplingProbs', val)}
 				/>
 `}
-${(connection.api === API_OPENAI_COMPAT || connection.api === API_DEEPSEEK) && html`
+${(connection.api === API_OPENAI_COMPAT || connection.api === API_DEEPSEEK) && html`<${Fragment}>
 				<${Checkbox} label=${t('connection.strictApi')}
 					title=${t('connection.strictApiDesc')}
 					value=${connection.strict ?? false}
@@ -130,7 +130,7 @@ ${(connection.api === API_OPENAI_COMPAT || connection.api === API_DEEPSEEK) && h
 					value=${connection.chatAPI ?? false}
 					onValueChange=${(val: boolean) => updateConnection('chatAPI', val)}
 				/>
-			`}
+			<//>`}
 
 			<${InputBox} label=${t('connection.selectedModel')}
 				value=${connection.model || ""}
@@ -138,9 +138,9 @@ ${(connection.api === API_OPENAI_COMPAT || connection.api === API_DEEPSEEK) && h
 				onValueChange=${() => {}}
 			/>
 
-			<div class="connection-models-wrapper">
-				<div class="connection-models-header">
-					<label style=${{'padding-left': '8px'}}>${t('connection.availableModels')}</label>
+			<div className="connection-models-wrapper">
+				<div className="connection-models-header">
+					<label style=${{paddingLeft: '8px'}}>${t('connection.availableModels')}</label>
 					<button className="connection-action-btn"
 						style=${{padding: '0 4px', fontSize: '0.8em'}}
 						onClick=${fetchModels}
@@ -169,7 +169,7 @@ ${(connection.api === API_OPENAI_COMPAT || connection.api === API_DEEPSEEK) && h
 				<div className="connection-model-list">
 					${(connection.models && connection.models.length > 0)
 						? filteredModels.map((m: string) => html`
-							<div className="connection-model-item ${connection.model === m ? 'selected' : ''}"
+							<div key=${m} className="connection-model-item ${connection.model === m ? 'selected' : ''}"
 								onClick=${() => updateConnection('model', m)}>
 								<span>${m}</span>
 								${connection.model === m ? iconCheck : ''}
@@ -263,7 +263,7 @@ function AIHordeConnectionSettings({ connection, updateConnection }: AIHordeConn
 				onValueChange=${() => {}}
 			/>
 
-			<div className="hbox-flex" style=${{"flex-wrap": "unset"}}>
+			<div className="hbox-flex" style=${{flexWrap: "unset"}}>
 				<${InputBox} label=${t('connection.aiHordeApiKey')} type=${showKey ? 'text' : 'password'}
 					placeholder=${t('connection.aiHordeKeyPlaceholder')}
 					value=${connection.key}
@@ -287,9 +287,9 @@ function AIHordeConnectionSettings({ connection, updateConnection }: AIHordeConn
 				readOnly
 			/>
 
-			<div class="connection-models-wrapper">
-				<div class="connection-models-header">
-					<label style=${{'padding-left': '8px'}}>${t('connection.availableModels')}</label>
+			<div className="connection-models-wrapper">
+				<div className="connection-models-header">
+					<label style=${{paddingLeft: '8px'}}>${t('connection.availableModels')}</label>
 					<button className="connection-action-btn"
 						style=${{padding: '0 4px', fontSize: '0.8em'}}
 						onClick=${fetchModels}
@@ -320,7 +320,7 @@ function AIHordeConnectionSettings({ connection, updateConnection }: AIHordeConn
 						? filteredModels.map((m: AIHordeModel) => {
 							const isSelected = selectedModels.includes(m.name);
 							return html`
-								<div className="connection-model-item"
+								<div key=${m.name} className="connection-model-item"
 									style=${{flexDirection: 'column', alignItems: 'stretch', gap: '4px'}}
 									onClick=${() => toggleModel(m.name)}>
 
@@ -479,7 +479,7 @@ export function ConnectionManagerModal({ isOpen, closeModal, connections, setCon
 	const currentConn = selectedId ? connections[selectedId] : undefined;
 	const isActiveConnection = selectedId === activeConnectionId;
 
-	const iconBack = html`<svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M15 18l-6-6 6-6"/></svg>`;
+	const iconBack = html`<svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M15 18l-6-6 6-6"/></svg>`;
 
 	return html`
 		<${Modal} isOpen=${isOpen} onClose=${closeModal}
@@ -515,7 +515,7 @@ export function ConnectionManagerModal({ isOpen, closeModal, connections, setCon
 				</div>
 
 				<div className="connection-details">
-					${currentConn ? html`
+					${currentConn ? html`<${Fragment}>
 						<div className="connection-header">
 							<div className="connection-header-title">
 								<div className="connection-back-btn" onClick=${() => setMobileShowDetails(false)}>
@@ -538,7 +538,7 @@ export function ConnectionManagerModal({ isOpen, closeModal, connections, setCon
 								</div>
 
 								<button className="connection-action-btn" onClick=${() => handleCloneConnection(selectedId)} title=${t('connection.clone')}>
-									<svg width="1em" height="1em" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="9" y="9" width="13" height="13" rx="2" ry="2"></rect><path d="M5 15H4a2 2 0 0 1-2-2V4a2 2 0 0 1 2-2h9a2 2 0 0 1 2 2v1"></path></svg> ${t('connection.clone')}
+									<svg width="1em" height="1em" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><rect x="9" y="9" width="13" height="13" rx="2" ry="2"></rect><path d="M5 15H4a2 2 0 0 1-2-2V4a2 2 0 0 1 2-2h9a2 2 0 0 1 2 2v1"></path></svg> ${t('connection.clone')}
 								</button>
 
 								<button className="connection-action-btn"
@@ -576,7 +576,7 @@ options=${[
 									updateConnection=${updateCurrentConnection}
 								/>`
 						}
-					` : html`
+					<//>` : html`
 						<div className="connection-models-empty">
 							${t('connection.emptyState')}
 						</div>

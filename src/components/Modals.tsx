@@ -1,5 +1,5 @@
 import { html } from 'htm/react';
-import { useEffect, useState } from 'react';
+import { Fragment, useEffect, useState } from 'react';
 import { useSettings } from '../contexts/SettingsContext';
 import { useGeneration } from '../contexts/GenerationContext';
 import { usePersistentContextHandlers } from '../hooks/useTokenCounters';
@@ -35,7 +35,7 @@ import type { ModalsProps } from '../types/components';
 
 export function Modals({ toggleModal, currentThemeName, setCurrentThemeName, allThemes, setAllThemes, applyChatTemplate }: ModalsProps) {
 	const t = useT();
-	const { endpoint, setEndpointAPIKey, endpointAPIKey, endpointAPI, endpointModel, setEndpointModel, templates, selectedTemplate, setSelectedTemplate, templatesImport, setTemplates, templateStorage, grammar, setGrammar, isMiyapadEndpoint, sessionStorage, locale, setLocale, fontSizeMultiplier, setFontSizeMultiplier, spellCheck, setSpellCheck, attachSidebar, setAttachSidebar, preserveCursorPosition, setPreserveCursorPosition, tokenHighlightMode, setTokenHighlightMode, tokenColorMode, setTokenColorMode, showProbsMode, setShowProbsMode, ttsEnabled, setTTSEnabled, ttsVoiceId, setTTSVoiceId, ttsPitch, setTTSPitch, ttsRate, setTTSRate, ttsVolume, setTTSVolume, ttsSpeakInputs, setTTSSpeakInputs, ttsMaxUserInput, setTTSMaxUserInput, historyKeep, setHistoryKeep, historyDeletionThreshold, setHistoryDeletionThreshold, historyBeforeGenerate, setHistoryBeforeGenerate, useChatAPI, setUseChatAPI, memoryTokens, authorNoteTokens, authorNoteDepth, setAuthorNoteDepth, worldInfo, setWorldInfo, sillyTarvernWorldInfoJSON, setSillyTarvernWorldInfoJSON, logitBias, setLogitBias, logitBiasParam, setLogitBiasParam, templateList, setTemplateList,
+	const { endpoint, setEndpointAPIKey, endpointAPIKey, endpointAPI, endpointModel, setEndpointModel, templates, selectedTemplate, setSelectedTemplate, templatesImport, setTemplates, templateStorage, grammar, setGrammar, isMiyapadEndpoint, sessionStorage, locale, setLocale, fontSizeMultiplier, setFontSizeMultiplier, spellCheck, setSpellCheck, attachSidebar, setAttachSidebar, preserveCursorPosition, setPreserveCursorPosition, tokenHighlightMode, setTokenHighlightMode, tokenColorMode, setTokenColorMode, showProbsMode, setShowProbsMode, ttsEnabled, setTTSEnabled, ttsVoiceId, setTTSVoiceId, ttsPitch, setTTSPitch, ttsRate, setTTSRate, ttsVolume, setTTSVolume, ttsSpeakInputs, setTTSSpeakInputs, ttsMaxUserInput, setTTSMaxUserInput, historyKeep, setHistoryKeep, historyDeletionThreshold, setHistoryDeletionThreshold, historyBeforeGenerate, setHistoryBeforeGenerate, useChatAPI, setUseChatAPI, memoryTokens, authorNoteTokens, authorNoteDepth, setAuthorNoteDepth, worldInfo, setWorldInfo, sillyTarvernWorldInfoJSON, setSillyTarvernWorldInfoJSON, logitBias, setLogitBias, templateList, setTemplateList,
 		screenshotIncludeSessionName, setScreenshotIncludeSessionName,
 		screenshotIncludeDate, setScreenshotIncludeDate,
 		screenshotBackgroundUrl, setScreenshotBackgroundUrl,
@@ -147,7 +147,7 @@ export function Modals({ toggleModal, currentThemeName, setCurrentThemeName, all
 		adapter.setSelection(newCursorPos, newCursorPos);
 	}, [instructModalState.result]);
 
-	return html`
+	return html`<${Fragment}>
 		<${PreferencesModal}
 			isOpen=${modalState.preferences}
 			closeModal=${() => closeModal("preferences")}
@@ -236,7 +236,7 @@ export function Modals({ toggleModal, currentThemeName, setCurrentThemeName, all
 		<${LogitBiasModal}
 			isOpen=${modalState.bias}
 			closeModal=${() => closeModal("bias")}
-			biasState=${{ logitBias, setLogitBias, logitBiasParam, setLogitBiasParam, setRejectedAPIKey }}
+			biasState=${{ logitBias, setLogitBias, setRejectedAPIKey }}
 			apiConfig=${{ sessionStorage, endpoint, endpointAPI, endpointAPIKey, isMiyapadEndpoint, useServerTokenization }}
 			cancel=${cancel}/>
 
@@ -449,5 +449,5 @@ export function Modals({ toggleModal, currentThemeName, setCurrentThemeName, all
 					</div>
 				</div>
 			</div>`}
-	`;
+	<//>`;
 }

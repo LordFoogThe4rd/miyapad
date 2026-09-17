@@ -204,9 +204,9 @@ export const SVG_SearchAndReplace = ({...props}: SVGProps<SVGSVGElement>) => {
 	<${SVG}
 		...${props}
 		viewBox="0 0 29.4 35.4"
-		stroke-linecap="round"
-		stroke-width="5">
-		<path fill="none" stroke-linejoin="round" d="M5 9.1a10.6 10.6 0 0 1 9.7-6.6 10.6 10.6 0 0 1 9.8 6.6m0 7.9a10.6 10.6 0 0 1-9.8 6.7A10.6 10.6 0 0 1 5 17"/>
+		strokeLinecap="round"
+		strokeWidth="5">
+		<path fill="none" strokeLinejoin="round" d="M5 9.1a10.6 10.6 0 0 1 9.7-6.6 10.6 10.6 0 0 1 9.8 6.6m0 7.9a10.6 10.6 0 0 1-9.8 6.7A10.6 10.6 0 0 1 5 17"/>
 		<path fill="none" d="m20.4 24.5 3.6 7.1"/>
 		<path stroke="none" d="M3.6 13.2 0 23.2l13.6-6.4-10-3.6m22.2-.2 3.6-10L16 9.3l10 3.6"/>
 	</${SVG}>

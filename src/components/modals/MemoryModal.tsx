@@ -15,16 +15,15 @@ export function MemoryModal({ isOpen, closeModal, memoryTokens, tokenCount, hand
 					<${InputBox} label=${t('memory.suffix')} type="text" placeholder=${t('memory.suffixPlaceholder')}
 						readOnly=${!!cancel} value=${memoryTokens.suffix} onValueChange=${(value: any) => handleMemoryTokensChange("suffix", value)}/>
 				</div>
-				<div class="relative">
+				<div className="relative">
 					<textarea
 						readOnly=${!!cancel}
 						placeholder=${t('memory.textareaPlaceholder')}
-						defaultValue=${memoryTokens.text}
 						value=${memoryTokens.text}
 						onInput=${(e: any) => handleMemoryTokensChange("text", e.target.value) }
-						class="expanded-text-area-settings"
+						className="expanded-text-area-settings"
 						id="memory-area-settings"/>
-					<div class="token-counter">
+					<div className="token-counter">
 						${tokenCount}
 					</div>
 				</div>

@@ -76,14 +76,14 @@ export function Modal({
 					onClick=${(e: React.MouseEvent) => e.stopPropagation()}
 					onMouseDown=${(e: React.MouseEvent) => { e.stopPropagation(); mouseDownOnBackground.current = false; }}
 					...${props}>
-					<div class="modal-title">${title}</div>
-					${ description=="" ? false : html`<div style=${{ whiteSpace: 'pre-line' }} class='modal-desc'>${description}</div>` }
+					<div className="modal-title">${title}</div>
+					${ description=="" ? false : html`<div style=${{ whiteSpace: 'pre-line' }} className='modal-desc'>${description}</div>` }
 					<hr/>
 					<div className="modal-content">
 						${children}
 					</div>
 					<button
-					class="button-modal-top"
+					className="button-modal-top"
 					onClick=${onClose}>
 						<${SVG_Close}/>
 					</button>

@@ -21,15 +21,15 @@ export function AuthorNoteModal({ isOpen, closeModal, authorNoteTokens, tokenCou
 					<${InputBox} label=${t('authorNote.depth')} type="number" step="1"
 						readOnly=${!!cancel} value=${authorNoteDepth} onValueChange=${handleAuthorNoteDepthChange}/>
 				</div>
-				<div class="relative">
+				<div className="relative">
 					<textarea
 						readOnly=${!!cancel}
 						placeholder=${t('authorNote.placeholder', { depth: authorNoteDepth })}
 						value=${authorNoteTokens.text}
 						onInput=${(e: any) => handleauthorNoteTokensChange("text", e.target.value) }
-						class="expanded-text-area-settings"
+						className="expanded-text-area-settings"
 						id="expanded-an-settings"/>
-					<div class="token-counter">
+					<div className="token-counter">
 						${tokenCount}
 					</div>
 				</div>

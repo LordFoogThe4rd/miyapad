@@ -1,5 +1,5 @@
 import { describe, it, expect, vi, afterEach } from 'vitest';
-import { normalizeEndpoint, parseEventStream, applyTemperatureToProbs } from './common';
+import { normalizeEndpoint, parseEventStream, applyTemperatureToProbs, buildLogitBiasParam } from './common';
 import { API_OPENAI_COMPAT, API_KOBOLD_CPP, API_AI_HORDE, API_LLAMA_CPP, API_DEEPSEEK } from '../constants';
 
 describe('normalizeEndpoint', () => {
@@ -236,5 +236,32 @@ describe('applyTemperatureToProbs', () => {
 		const { probs } = applyTemperatureToProbs(input, 'a', 1);
 		expect(probs).toBe(input);
 		expect(input[0].prob).toBeCloseTo(0.5, 10);
+	});
+});
+
+describe('buildLogitBiasParam', () => {
+	const bias = { bias: {
+		hello: { ids: [1, 2], strings: ['hello'], power: 55 },
+		banned: { ids: [3], strings: ['banned'], power: -100 },
+	}, model: 'none' };
+
+	it('sends llama.cpp pairs, banned tokens as false and the rest scaled down', () => {
+		expect(buildLogitBiasParam(bias, API_LLAMA_CPP)).toEqual([[1, 5.5], [2, 5.5], [3, false]]);
+	});
+
+	it('clamps to KoboldCpp/Horde range keyed by token id', () => {
+		expect(buildLogitBiasParam(bias, API_KOBOLD_CPP)).toEqual({ 1: 55, 2: 55, 3: -100 });
+		expect(buildLogitBiasParam(bias, API_AI_HORDE)).toEqual({ 1: 55, 2: 55, 3: -100 });
+	});
+
+	it('rounds to one decimal for OpenAI-compatible endpoints', () => {
+		const odd = { bias: { x: { ids: [7], strings: ['x'], power: 12.345 } }, model: 'none' };
+		expect(buildLogitBiasParam(odd, API_OPENAI_COMPAT)).toEqual({ 7: 12.3 });
+		expect(buildLogitBiasParam(odd, API_DEEPSEEK)).toEqual({ 7: 12.3 });
+	});
+
+	it('is empty when there is no bias set', () => {
+		expect(buildLogitBiasParam({ bias: {}, model: 'none' }, API_LLAMA_CPP)).toEqual([]);
+		expect(buildLogitBiasParam(bias, -1)).toEqual({});
 	});
 });

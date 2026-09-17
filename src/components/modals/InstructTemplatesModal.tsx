@@ -1,5 +1,5 @@
 import { html } from 'htm/react';
-import { useState, useEffect } from 'react';
+import { Fragment, useState, useEffect } from 'react';
 import { useT } from '../../i18n';
 import { Modal } from '../Modal';
 import { InputBox } from '../controls/InputBox';
@@ -271,7 +271,7 @@ export function InstructTemplatesModal({ isOpen, closeModal, templateStorage, se
 				</table>
 			</div>
 			<hr/>
-			<div class="instructTemplatesImportExport">
+			<div className="instructTemplatesImportExport">
 				<button
 					title=${t('instructTemplates.importTitle')}
 					disabled=${!!cancel}
@@ -293,7 +293,7 @@ export function InstructTemplatesModal({ isOpen, closeModal, templateStorage, se
 				<button
 					title=${t('instructTemplates.applyChatTitle')}
 					disabled=${!!cancel}
-					class="hbox-button"
+					className="hbox-button"
 					onClick=${() => applyChatTemplate()}>
 					${t('instructTemplates.applyButton')}
 				</button>
@@ -310,27 +310,27 @@ export function InstructTemplatesModal({ isOpen, closeModal, templateStorage, se
 				<button
 					title=${t('instructTemplates.duplicateTitle')}
 					disabled=${!!cancel}
-					class="hbox-button"
+					className="hbox-button"
 					onClick=${() => handleInstructTemplateDuplicate()}>
 					${t('instructTemplates.duplicateButton')}
 				</button>
 				<button
 					title=${t('instructTemplates.addTitle')}
 					disabled=${!!cancel}
-					class="hbox-button"
+					className="hbox-button"
 					onClick=${() => handleInstructTemplateAdd()}>
 					${t('instructTemplates.newButton')}
 				</button>
 				<button
 					title=${t('instructTemplates.deleteTitle')}
 					disabled=${!!cancel}
-					class="hbox-button"
+					className="hbox-button"
 					onClick=${() => handleInstructTemplateDelete(selectedTemplate)}>
 					${t('instructTemplates.deleteButton')}
 				</button>
 			</div>
 			<hr/>
-			<div class="instructtemplatesmodal-edits">
+			<div className="instructtemplatesmodal-edits">
 				<${InputBox} label=${t('instructTemplates.nameLabel')}
 						placeholder=${t('instructTemplates.namePlaceholder')}
 						id="instructtemplatesmodal-name"
@@ -398,12 +398,12 @@ export function InstructTemplatesModal({ isOpen, closeModal, templateStorage, se
 					</div>
 					<div id="advancedContextPlaceholders">
 						${getArrObjByName(templateList,selectedTemplate)?.affixes?.fimTemplate !== undefined
-							? html`
+							? html`<${Fragment}>
 								<div>${t('instructTemplates.fimHelpPre')}<b>{fill}</b>${t('instructTemplates.fimHelpPost')}</div>
-								<div><b>{prefix}</b>${t('instructTemplates.fimPrefixHelp1')}<b>{suffix}</b>${t('instructTemplates.fimPrefixHelp2')}</div>`
-							: html`
+								<div><b>{prefix}</b>${t('instructTemplates.fimPrefixHelp1')}<b>{suffix}</b>${t('instructTemplates.fimPrefixHelp2')}</div><//>`
+							: html`<${Fragment}>
 								<div>${t('instructTemplates.noFimTemplate')}</div>
-								<div>${t('instructTemplates.noFimHelpPre')}<b>{predict}</b>${t('instructTemplates.noFimHelpPost')}</div>`}
+								<div>${t('instructTemplates.noFimHelpPre')}<b>{predict}</b>${t('instructTemplates.noFimHelpPost')}</div><//>`}
 					</div>
 				</div>
 			</div>

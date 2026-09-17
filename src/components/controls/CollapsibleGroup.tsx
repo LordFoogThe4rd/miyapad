@@ -1,5 +1,5 @@
 import { html } from 'htm/react';
-import { useState, useEffect, useRef } from 'react';
+import { Fragment, useState, useEffect, useRef } from 'react';
 import { usePersistentState } from '../../hooks/usePersistentState';
 import { SVG_ArrowUp } from '../icons/index';
 
@@ -75,8 +75,8 @@ export function CollapsibleGroup({ label, stateLabel, menu, expanded, children }
 			<div className="collapsible-header" onClick=${toggle}>
 				<${SVG_ArrowUp} style=${{ 'transform': isCollapsed ? 'rotate(180deg)' : 'rotate(0deg)', 'transition': 'transform 0.15s ease-in-out' }}/>
 				${label}
-				<div class="flex-separator"></div>
-				${menu && html`
+				<div className="flex-separator"></div>
+				${menu && html`<${Fragment}>
 					<button style=${{ 'padding': '0px 7px'}} onClick=${(e: any) => (setIsMenuVisible(!isMenuVisible), e.stopPropagation())}>
 						⋮
 					</button>
@@ -84,12 +84,12 @@ export function CollapsibleGroup({ label, stateLabel, menu, expanded, children }
 						<div ref=${menuRef} className="floating-menu" onClick=${(e: any) => e.stopPropagation()}>
 							${typeof menu === 'function' ? menu(() => setIsMenuVisible(false)) : menu}
 						</div>`}
-					`}
+				<//>`}
 			</div>
 			<div
 				ref=${contentArea}
 				className="collapsible-content ${isCollapsed ? 'collapsed' : 'expanded'}"
-				style=${{ 'max-height': contentHeight === 'none' ? 'none' : (contentHeight + 'px') }}>
+				style=${{ maxHeight: contentHeight === 'none' ? 'none' : (contentHeight + 'px') }}>
 				${children}
 			</div>
 		</div>`;

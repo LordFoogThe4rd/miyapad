@@ -1,9 +1,10 @@
-import { useEffect, useRef } from 'react';
+import { useEffect, useMemo, useRef } from 'react';
 import { useSettings } from '../contexts/SettingsContext';
 import { useGeneration } from '../contexts/GenerationContext';
 import { usePromptBuilder } from './usePromptBuilder';
 import { useTTS } from './useTTS';
 import { getTokenCount, serverTokenCount, completion, chatCompletion, abortCompletion } from '../api/index';
+import { buildLogitBiasParam } from '../api/common';
 import { API_LLAMA_CPP, API_KOBOLD_CPP, API_OPENAI_COMPAT, API_AI_HORDE, API_DEEPSEEK } from '../constants';
 import { replaceNewlines } from '../utils/strings';
 import { regexLastIndexOf, createLenientRegex } from '../utils/regex';
@@ -26,9 +27,10 @@ function estimateTokens(content: string): number {
 }
 
 export function useGenerationLogic() {
-	const { endpoint, endpointAPI, endpointAPIKey, endpointModel, seed, maxPredictTokens, temperature, dynaTempRange, dynaTempExp, repeatPenalty, repeatLastN, penalizeNl, presencePenalty, frequencyPenalty, topK, topP, typicalP, minP, tfsZ, mirostat, mirostatTau, mirostatEta, xtcThreshold, xtcProbability, dryMultiplier, dryBase, dryAllowedLength, dryPenaltyRange, drySequenceBreakers, bannedTokens, ignoreEos, openaiPresets, stoppingStrings, useBasicStoppingMode, basicStoppingModeType, logitBias, logitBiasParam, enabledSamplers, grammar, useChatAPI, useTokenStreaming, disableLogprobs, postSamplingProbs, templates, selectedTemplate, chatMode, setChatMode, setUseChatAPI, setSelectedTemplate, isMiyapadEndpoint, sessionStorage, ttsEnabled, useServerTokenization, historyBeforeGenerate } = useSettings();
+	const { endpoint, endpointAPI, endpointAPIKey, endpointModel, seed, maxPredictTokens, temperature, dynaTempRange, dynaTempExp, repeatPenalty, repeatLastN, penalizeNl, presencePenalty, frequencyPenalty, topK, topP, typicalP, minP, tfsZ, mirostat, mirostatTau, mirostatEta, xtcThreshold, xtcProbability, dryMultiplier, dryBase, dryAllowedLength, dryPenaltyRange, drySequenceBreakers, bannedTokens, ignoreEos, openaiPresets, stoppingStrings, useBasicStoppingMode, basicStoppingModeType, logitBias, enabledSamplers, grammar, useChatAPI, useTokenStreaming, disableLogprobs, postSamplingProbs, templates, selectedTemplate, chatMode, setChatMode, setUseChatAPI, setSelectedTemplate, isMiyapadEndpoint, sessionStorage, ttsEnabled, useServerTokenization, historyBeforeGenerate } = useSettings();
 	const { promptEditorView, undoStack, redoStack, lastEditMsRef, probsDelayTimer, keyState, sessionReconnectTimer, useScrollSmoothing, hordeTaskId, promptChunks, setPromptChunks, currentPromptChunk, setCurrentPromptChunk, undoHovered, setUndoHovered, showProbs, setShowProbs, cancel, setCancel, sessionEndpointConnecting, setSessionEndpointConnecting, sessionEndpointError, setSessionEndpointError, rejectedAPIKey, setRejectedAPIKey, openaiModels, setOpenaiModels, tokens, setTokens, tokensPerSec, setTokensPerSec, predictStartTokens, setPredictStartTokens, lastError, setLastError, savedScrollTop, setSavedScrollTop, modalState, setModalState, contextMenuState, setContextMenuState, instructModalState, setInstructModalState, hordeQueuePos, setHordeQueuePos, hordeProcessing, setHordeProcessing, ttsAvailable, setTTSAvailable, ttsNewText, ttsLastChunk, ttsQueue, ttsVoices, ttsPaused, activeGenId, abortControllerRef, triggerPredict, setTriggerPredict, restartedPredict, setRestartedPredict } = useGeneration();
 	const { fimPromptInfo, finalPromptText, convertChatToJSON } = usePromptBuilder();
+	const logitBiasParam = useMemo(() => buildLogitBiasParam(logitBias, endpointAPI), [logitBias, endpointAPI]);
 	const { ttsProcessQueue, ttsStop, ttsPushUserInput, ttsAddChunk, listTTSVoices } = useTTS();
 
 	// predicts one {fill} placeholder

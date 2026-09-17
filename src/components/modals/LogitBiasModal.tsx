@@ -1,8 +1,8 @@
 import { html } from 'htm/react';
-import { useState, useEffect, useMemo } from 'react';
+import { Fragment, useState, useEffect, useMemo } from 'react';
 import { Modal } from '../Modal';
 import { InputBox } from '../controls/InputBox';
-import { API_LLAMA_CPP, API_KOBOLD_CPP, API_AI_HORDE, API_OPENAI_COMPAT, API_DEEPSEEK } from '../../constants';
+import { API_LLAMA_CPP, API_OPENAI_COMPAT, API_DEEPSEEK } from '../../constants';
 import { getTokens, serverTokenize } from '../../api/index';
 import { useT } from '../../i18n';
 import { SVG_Regen } from '../icons';
@@ -21,7 +21,7 @@ type BiasTempState = { positive: BiasItem[]; negative: BiasItem[]; [key: string]
 // ponytail: logit bias list import/export to be added as a separate feature
 export function LogitBiasModal({ isOpen, closeModal, biasState, apiConfig, cancel }: any) {
 	const t = useT();
-	const { logitBias, setLogitBias, logitBiasParam, setLogitBiasParam, setRejectedAPIKey } = biasState;
+	const { logitBias, setLogitBias, setRejectedAPIKey } = biasState;
 	const { sessionStorage, endpoint, endpointAPI, endpointAPIKey, isMiyapadEndpoint, useServerTokenization } = apiConfig;
 	const [lastBiasError, setLastBiasError] = useState<string | undefined>(undefined);
 	const [logitBiasTemp, setLogitBiasTemp] = useState<BiasTempState>({ positive: [], negative: [] });
@@ -156,63 +156,6 @@ export function LogitBiasModal({ isOpen, closeModal, biasState, apiConfig, cance
 		}
 	};
 
-	const clamp = (num: any, min = -Infinity, max = Infinity) => {
-		return Math.min(Math.max(num, min), max);
-	};
-
-	const llamaCppSetLogitBiasParams = () => {
-		const param: any[] = [];
-		Object.keys(logitBias.bias).forEach((entry: any) => {
-			// set banned tokens to false, else divide power by 10 to remain within
-			// reasonable range
-			const power = logitBias.bias[entry].power < -99 ? false : Number(logitBias.bias[entry].power) / 10;
-			logitBias.bias[entry].ids.forEach((id: any) => {
-				param.push( [ Number(id), power ] );
-			});
-		});
-		setLogitBiasParam(param);
-	};
-	const koboldCppSetLogitBiasParams = () => {
-		const param: any = {};
-		Object.keys(logitBias.bias).forEach((entry: any) => {
-			// -100 to 100
-			const clampedPower = clamp(Number(logitBias.bias[entry].power),-100,100);
-			logitBias.bias[entry].ids.forEach((id: any) => {
-				param[Number(id)] = clampedPower;
-			});
-		});
-		setLogitBiasParam(param);
-	};
-	const openaiSetLogitBiasParams = () => {
-		const param: any = {};
-		Object.keys(logitBias.bias).forEach((entry: any) => {
-			// -100 to 100
-			const clampedPower = Number(clamp(Number(logitBias.bias[entry].power),-100,100).toFixed(1));
-			logitBias.bias[entry].ids.forEach((id: any) => {
-				param[String(id)] = clampedPower;
-			});
-		});
-		setLogitBiasParam(param);
-	};
-
-	useMemo(() => {
-		// set the parameters sent to the model in the format expected by the endpoint
-		switch (endpointAPI) {
-			case API_LLAMA_CPP:
-				llamaCppSetLogitBiasParams();
-				break;
-			case API_KOBOLD_CPP:
-			case API_AI_HORDE:
-				koboldCppSetLogitBiasParams();
-				break;
-			case API_OPENAI_COMPAT:
-		case API_DEEPSEEK:
-				openaiSetLogitBiasParams();
-				break;
-		}
-	}, [logitBias, endpointAPI]);
-
-
 	useEffect(() => {
 		const tempArray = logitBiasSorted.map((string, index) =>  ({
 			value: string,
@@ -268,9 +211,9 @@ export function LogitBiasModal({ isOpen, closeModal, biasState, apiConfig, cance
 			title=${t('logitBias.title')}
 			description=${t('logitBias.description')}>
 			${isOpen 
-				&& html`
+				&& html`<${Fragment}>
 					<div className="hbox-flex logitBiasContainer">
-						<div class="small-inputBox">
+						<div className="small-inputBox">
 							<${InputBox} label=${t('logitBias.bias')} className="logitBiasPower-container"
 								type="enumber"  max=100 min=-100 step=1
 								readOnly=${!!cancel}
@@ -286,21 +229,21 @@ export function LogitBiasModal({ isOpen, closeModal, biasState, apiConfig, cance
 							onValueChange=${() => {} }
 							onInput=${(e: any) => {handleLogitBiasInput("string",e.target.value)} }
 							/>
-						<button disabled=${!!cancel} class="hbox-button" onClick=${() => logitBiasAdd(logitBiasInput.power,logitBiasInput.string)}>
+						<button disabled=${!!cancel} className="hbox-button" onClick=${() => logitBiasAdd(logitBiasInput.power,logitBiasInput.string)}>
 							+
 						</button>
 					</div>
 					${!!lastBiasError && html`
 						<div style=${{margin:"8px auto"}} className="error-text">${lastBiasError}</div>`}
 				<hr style=${{width:"95%",margin:"8px auto"}} />
-				<div class="lb-modal-biasList" >
+				<div className="lb-modal-biasList" >
 					${Object.keys(logitBiasTemp).map((key: any) => {
 						return html`
-							<div class="overflow-container lb-modal-grid-column" id="lb-modal-${key}">
+							<div className="overflow-container lb-modal-grid-column" key=${key} id="lb-modal-${key}">
 								${logitBiasTemp[key].map((bias: any, index: any) => {
 									return html`
-										<div class="lb-modal-entry lb-modal-grid-row" key=${index}>
-											<${InputBox} label=${t('logitBias.bias')} class="lb-modal-power"
+										<div className="lb-modal-entry lb-modal-grid-row" key=${index}>
+											<${InputBox} label=${t('logitBias.bias')} className="lb-modal-power"
 												type="enumber" max=100 min=-100 step=1
 												id="lb-modal-power-${index}"
 												readOnly=${!!cancel}
@@ -315,7 +258,7 @@ export function LogitBiasModal({ isOpen, closeModal, biasState, apiConfig, cance
 												onValueChange=${() => {} }
 												onInput=${(e: any) => handleBiasTempChange(key,"value", index, e.target.value) }
 												/>
-											<div class="lb-modal-tokenized">
+											<div className="lb-modal-tokenized">
 												${(endpointAPI == API_LLAMA_CPP || endpointAPI == API_DEEPSEEK) && bias.strings != ""
 													? "["+bias.strings.join("|")+"] "
 													: "["+bias.tokens+"]" } 
@@ -323,13 +266,13 @@ export function LogitBiasModal({ isOpen, closeModal, biasState, apiConfig, cance
 											</div>
 											<button
 												disabled=${!!cancel}
-												class="hbox-button lb-modal-button lb-modal-button-add"
+												className="hbox-button lb-modal-button lb-modal-button-add"
 												onClick=${() => logitBiasAdd(bias.power, bias.value, bias.valueBack)}>
 												<${SVG_Regen}/>
 											</button>
 											<button
 												disabled=${!!cancel}
-												class="hbox-button lb-modal-button lb-modal-button-remove"
+												className="hbox-button lb-modal-button lb-modal-button-remove"
 												onClick=${() => logitBiasAdd("0", bias.valueBack, bias.valueBack)}
 												>
 												-
@@ -337,6 +280,6 @@ export function LogitBiasModal({ isOpen, closeModal, biasState, apiConfig, cance
 											<hr/>
 										</div>`})}
 							</div>`})}
-				</div>`}
+				</div><//>`}
 			</${Modal}>`;
 }

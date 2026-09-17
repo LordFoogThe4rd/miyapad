@@ -36,8 +36,6 @@ export interface SettingsState {
   setSelectedSamplerPresetId: Dispatch<SetStateAction<string>>;
   templates: Record<string, InstructTemplate>;
   setTemplates: Dispatch<SetStateAction<Record<string, InstructTemplate>>>;
-  templateReplacements: Record<string, string>;
-  setTemplateReplacements: Dispatch<SetStateAction<Record<string, string>>>;
   templatesImport: boolean;
   setTemplatesImport: Dispatch<SetStateAction<boolean>>;
   selectedTemplate: string;
@@ -146,8 +144,6 @@ export interface SettingsState {
   setBasicStoppingModeType: Dispatch<SetStateAction<string>>;
   logitBias: LogitBiasState;
   setLogitBias: Dispatch<SetStateAction<LogitBiasState>>;
-  logitBiasParam: Record<string, number>;
-  setLogitBiasParam: Dispatch<SetStateAction<Record<string, number>>>;
   contextLength: number;
   setContextLength: Dispatch<SetStateAction<number>>;
   memoryTokens: MemoryTokensData;

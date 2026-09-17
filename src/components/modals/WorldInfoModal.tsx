@@ -170,10 +170,10 @@ export function WorldInfoModal({ isOpen, closeModal, worldInfo, setWorldInfo, ca
 			</div>
 			<div className="modal-wi-content overflow-container">
 				${!Array.isArray(worldInfo.entries) ? null : worldInfo.entries.map((entry: any, index: any) => html`
-					<div class="wi-entry" key=${index}>
-						<div class="wi-entry-controls">
-							<div class="wi-entry-filler" />
-							<div class="wi-entry-name">
+					<div className="wi-entry" key=${index}>
+						<div className="wi-entry-controls">
+							<div className="wi-entry-filler" />
+							<div className="wi-entry-name">
 								<${InputBox}
 								label=${`${t('worldInfo.entryLabel')}${index+1}`}
 								type="text"
@@ -183,8 +183,8 @@ export function WorldInfoModal({ isOpen, closeModal, worldInfo, setWorldInfo, ca
 								onValueChange=${(value: any) => handleWorldInfoChange("displayName",index,value)}
 								/>
 							</div>
-							<div class="wi-entry-buttons">
-								<div class="wi-entry-buttons-container">
+							<div className="wi-entry-buttons">
+								<div className="wi-entry-buttons-container">
 									<button disabled=${!!cancel} onClick=${() => handleWorldInfoMove(index,-1)}>
 										<${SVG_ArrowUp}/>
 									</button>
@@ -196,8 +196,8 @@ export function WorldInfoModal({ isOpen, closeModal, worldInfo, setWorldInfo, ca
 									</button>
 								</div>
 							</div>
-							<div class="wi-entry-text">
-								<div class="hbox">
+							<div className="wi-entry-text">
+								<div className="hbox">
 									<${InputBox}
 										label=${t('worldInfo.regexKeys')}
 										type="text"
@@ -212,21 +212,20 @@ export function WorldInfoModal({ isOpen, closeModal, worldInfo, setWorldInfo, ca
 
 										type="text"
 										readOnly=${!!cancel}
-										inputmode="numeric"
+										inputMode="numeric"
 										value=${entry.search}
 										placeholder="2048"
 										onValueChange=${(value: any) => handleWorldInfoChange("search",index,value)}
 										/>
 								</div>
-								<label class="TextArea">
+								<label className="TextArea">
 									${t('worldInfo.text')}
 									<textarea
 										readOnly=${!!cancel}
 										placeholder=${t('worldInfo.textPlaceholder')}
 										value=${entry.text ? entry.text : ""}
-										defaultValue=${entry.text ? entry.text : ""}
 										onInput=${(e: any) => handleWorldInfoChange("text",index, e.target.value)}
-										class="wi-textarea" />
+										className="wi-textarea" />
 								</label>
 							</div>
 						</div>

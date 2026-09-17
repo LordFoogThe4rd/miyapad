@@ -1,5 +1,5 @@
 import { html } from 'htm/react';
-import { useState, useEffect, useRef, type FormEvent } from 'react';
+import { Fragment, useState, useEffect, useRef, type FormEvent } from 'react';
 import { useSettings } from '../contexts/SettingsContext';
 import { useGeneration } from '../contexts/GenerationContext';
 import { useT } from '../i18n';
@@ -281,7 +281,7 @@ export function Sidebar({ sidebarRef, toggleModal, currentThemeName, setCurrentT
 	}
 
 	return html`
-		<div id="sidebar" ref=${sidebarRef} style=${{ 'max-height': ''}}>
+		<div id="sidebar" ref=${sidebarRef} style=${{ maxHeight: ''}}>
 			<div className="buttons instructTemplateSidebar theme-selector">
 				<${SelectBox}
 					label=${t('sidebar.theme')}
@@ -331,7 +331,7 @@ export function Sidebar({ sidebarRef, toggleModal, currentThemeName, setCurrentT
 						<${SVG_Settings} style=${{ 'width':'.95em','transform':'translate(-50%, -45%)' }}/>
 					</button>
 				</div>
-				${(selectedConnectionId === 'custom') && html`
+				${(selectedConnectionId === 'custom') && html`<${Fragment}>
 				<${InputBox} label=${t('sidebar.server')}
 					className=${isMixedContent() ? 'mixed-content' : ''}
 					tooltip=${isMixedContent() ? t('sidebar.mixedContentWarning') : ''}
@@ -351,7 +351,7 @@ export function Sidebar({ sidebarRef, toggleModal, currentThemeName, setCurrentT
 						{ name: t('sidebar.api.deepseek'), value: API_DEEPSEEK },
 					]}/>
 				${(endpointAPI != API_AI_HORDE) && html`
-					<div className="hbox-flex" style=${{"flex-wrap": "unset"}}>
+					<div className="hbox-flex" style=${{flexWrap: "unset"}}>
 						<${InputBox} label=${t('sidebar.apiKey')} type=${!showAPIKey ? "password" : "text"}
 							className=${rejectedAPIKey ? 'rejected' : ''}
 							tooltip=${rejectedAPIKey ? t('sidebar.apiKeyRejected') : ''}
@@ -381,27 +381,27 @@ export function Sidebar({ sidebarRef, toggleModal, currentThemeName, setCurrentT
 						/>
 						<button onClick=${() => toggleModal("horde")}>${t('sidebar.configureAiHorde')}</button>
 					</div>`}
-				${endpointAPI != API_AI_HORDE && html`
+				${endpointAPI != API_AI_HORDE && html`<${Fragment}>
 					${endpointAPI == API_LLAMA_CPP && html`
 						<${Checkbox} label=${t('sidebar.postSamplingProbs')}
 							title=${t('sidebar.postSamplingProbsTooltip')}
 							disabled=${!!cancel} value=${postSamplingProbs} onValueChange=${setPostSamplingProbs}/>`}
-					${(endpointAPI == API_OPENAI_COMPAT || endpointAPI == API_DEEPSEEK) && html`
+					${(endpointAPI == API_OPENAI_COMPAT || endpointAPI == API_DEEPSEEK) && html`<${Fragment}>
 						<${Checkbox} label=${t('sidebar.strictApi')}
 							title=${t('sidebar.strictApiTooltip')}
 							disabled=${!!cancel} value=${openaiPresets} onValueChange=${setOpenaiPresets}/>
 						<${Checkbox} label=${t('sidebar.chatCompletionsApi')}
 							title=${t('sidebar.chatCompletionsApiTooltip')}
-							disabled=${!!cancel} value=${useChatAPI} onValueChange=${setUseChatAPI}/>`}
-				`}
-			`}
-				${endpointAPI != API_AI_HORDE && html`
+							disabled=${!!cancel} value=${useChatAPI} onValueChange=${setUseChatAPI}/><//>`}
+				<//>`}
+			<//>`}
+				${endpointAPI != API_AI_HORDE && html`<${Fragment}>
 					<${Checkbox} label=${t('sidebar.tokenStreaming')}
 						disabled=${!!cancel} value=${useTokenStreaming} onValueChange=${setUseTokenStreaming}/>
 					<${Checkbox} label=${t('sidebar.disableLogprobs')}
 						title=${t('sidebar.disableLogprobsTooltip')}
 						disabled=${!!cancel} value=${disableLogprobs} onValueChange=${setDisableLogprobs}/>
-				`}
+				<//>`}
 				<div className="buttons instructTemplateSidebar">
 					<${SelectBox}
 						label=${t('sidebar.instructTemplate')}
@@ -442,13 +442,13 @@ export function Sidebar({ sidebarRef, toggleModal, currentThemeName, setCurrentT
 						}
 					</button>
 				</div>
-				<${InputBox} label=${t('sidebar.seed')} type="text" inputmode="numeric"
+				<${InputBox} label=${t('sidebar.seed')} type="text" inputMode="numeric"
 					readOnly=${!!cancel} value=${seed} onValueChange=${setSeed}/>
-				<${InputBox} tooltip=${t('sidebar.maxContextLengthTooltip')} label=${t('sidebar.maxContextLength')} type="text" inputmode="numeric"
+				<${InputBox} tooltip=${t('sidebar.maxContextLengthTooltip')} label=${t('sidebar.maxContextLength')} type="text" inputMode="numeric"
 					readOnly=${!!cancel} value=${contextLength} onValueChange=${setContextLength}/>
-				<${InputBox} label=${endpointAPI === API_AI_HORDE ? t('sidebar.maxPredictTokensLimited512') : endpointAPI !== API_LLAMA_CPP ? t('sidebar.maxPredictTokensLimited1024') : t('sidebar.maxPredictTokensInfinite')} type="text" inputmode="numeric"
+				<${InputBox} label=${endpointAPI === API_AI_HORDE ? t('sidebar.maxPredictTokensLimited512') : endpointAPI !== API_LLAMA_CPP ? t('sidebar.maxPredictTokensLimited1024') : t('sidebar.maxPredictTokensInfinite')} type="text" inputMode="numeric"
 					readOnly=${!!cancel} value=${maxPredictTokens} onValueChange=${setMaxPredictTokens}/>
-				<div className="hbox-flex" style=${{ "flex-wrap": "unset", "align-items": "flex-end" }}>
+				<div className="hbox-flex" style=${{ flexWrap: "unset", alignItems: "flex-end" }}>
 					<div style=${{ "flex": "1" }}>
 						${useBasicStoppingMode ? html`
 							<${SelectBox}
@@ -478,7 +478,7 @@ export function Sidebar({ sidebarRef, toggleModal, currentThemeName, setCurrentT
 					</button>
 				</div>
 			</${CollapsibleGroup} >
-			<${CollapsibleGroup} label=${t('sidebar.sampling')} expanded menu=${(closeMenu: () => void) => html`
+			<${CollapsibleGroup} label=${t('sidebar.sampling')} expanded menu=${(closeMenu: () => void) => html`<${Fragment}>
 					<div className="buttons instructTemplateSidebar" style=${{marginBottom: '4px'}}>
 						<${SelectBox}
 							label=${t('sidebar.samplerPreset')}
@@ -562,11 +562,11 @@ export function Sidebar({ sidebarRef, toggleModal, currentThemeName, setCurrentT
 						disabled=${!!cancel}
 						value=${enabledSamplers.includes('ban_tokens')}
 						onValueChange=${toggleSampler('ban_tokens')}/>
-				`}>
+				<//>`}>
 				<${InputSlider} label=${t('sidebar.temperature')} type="number" step="0.01" max="5"
 					hidden=${!enabledSamplers.includes('temperature')}
 					readOnly=${!!cancel} value=${temperature} onValueChange=${setTemperature}/>
-				${(!openaiPresets || (endpointAPI != API_OPENAI_COMPAT && endpointAPI != API_DEEPSEEK)) && html`
+				${(!openaiPresets || (endpointAPI != API_OPENAI_COMPAT && endpointAPI != API_DEEPSEEK)) && html`<${Fragment}>
 					${enabledSamplers.includes('dynatemp') && html`
 						<div className="hbox">
 							<${InputSlider} label=${t('sidebar.dynaTempRange')} type="number" step="0.01"
@@ -575,7 +575,7 @@ export function Sidebar({ sidebarRef, toggleModal, currentThemeName, setCurrentT
 								<${InputSlider} label=${t('sidebar.dynaTempExp')} type="number" step="0.01"
 									readOnly=${!!cancel} value=${dynaTempExp} onValueChange=${setDynaTempExp}/>`}
 						</div>`}
-					${enabledSamplers.includes('rep_pen') && html`
+					${enabledSamplers.includes('rep_pen') && html`<${Fragment}>
 						<div className="hbox">
 							<${InputSlider} label=${t('sidebar.repeatPenalty')} type="number" step="0.01" min="1" max="3"
 								readOnly=${!!cancel} value=${repeatPenalty} onValueChange=${setRepeatPenalty}/>
@@ -583,8 +583,8 @@ export function Sidebar({ sidebarRef, toggleModal, currentThemeName, setCurrentT
 								readOnly=${!!cancel} value=${repeatLastN} onValueChange=${setRepeatLastN}/>
 						</div>
 						<${Checkbox} label=${t('sidebar.penalizeNl')}
-							disabled=${!!cancel} value=${penalizeNl} onValueChange=${setPenalizeNl}/>`}
-					`}
+							disabled=${!!cancel} value=${penalizeNl} onValueChange=${setPenalizeNl}/><//>`}
+					<//>`}
 				${(enabledSamplers.includes('pres_pen') || enabledSamplers.includes('freq_pen')) && html`
 					<div className="hbox">
 						<${InputSlider} label=${t('sidebar.presPenalty')} type="number" step="0.01" min="-2" max="2"
@@ -594,7 +594,7 @@ export function Sidebar({ sidebarRef, toggleModal, currentThemeName, setCurrentT
 							hidden=${!enabledSamplers.includes('freq_pen')}
 							readOnly=${!!cancel} value=${frequencyPenalty} onValueChange=${setFrequencyPenalty}/>
 					</div>`}
-				${temperature <= 0 ? null : html`
+				${temperature <= 0 ? null : html`<${Fragment}>
 					${(!openaiPresets || (endpointAPI != API_OPENAI_COMPAT && endpointAPI != API_DEEPSEEK)) && html`
 						<${SelectBox}
 							label=${t('sidebar.mirostat')}
@@ -615,7 +615,7 @@ export function Sidebar({ sidebarRef, toggleModal, currentThemeName, setCurrentT
 								readOnly=${!!cancel} value=${mirostatEta} onValueChange=${setMirostatEta}/>
 						</div>
 					` : html`
-						${(!openaiPresets || (endpointAPI != API_OPENAI_COMPAT && endpointAPI != API_DEEPSEEK)) && html`
+						${(!openaiPresets || (endpointAPI != API_OPENAI_COMPAT && endpointAPI != API_DEEPSEEK)) && html`<${Fragment}>
 							${enabledSamplers.includes('xtc') && html`
 								<div className="hbox">
 									<${InputSlider} label=${t('sidebar.xtcThreshold')} type="number" step="0.01" max="0.5"
@@ -623,11 +623,11 @@ export function Sidebar({ sidebarRef, toggleModal, currentThemeName, setCurrentT
 									<${InputSlider} label=${t('sidebar.xtcProbability')} type="number" step="0.01" max="1"
 										readOnly=${!!cancel} value=${xtcProbability} onValueChange=${setXtcProbability}/>
 								</div>`}
-							${enabledSamplers.includes('dry') && html`
+							${enabledSamplers.includes('dry') && html`<${Fragment}>
 								<div className="hbox">
 									<${InputSlider} label=${t('sidebar.dryMultiplier')} type="number" step="0.01" max="5"
 										readOnly=${!!cancel} value=${dryMultiplier} onValueChange=${setDryMultiplier}/>
-									<${InputSlider} label=${html`<br/>${t('sidebar.dryBase')}`} type="number" step="0.01" min="1" max="4"
+									<${InputSlider} label=${html`<${Fragment}><br/>${t('sidebar.dryBase')}<//>`} type="number" step="0.01" min="1" max="4"
 										readOnly=${!!cancel} value=${dryBase} onValueChange=${setDryBase}/>
 									<${InputSlider} label=${t('sidebar.allowedLength')} type="number" step="1" max="20"
 										readOnly=${!!cancel} value=${dryAllowedLength} onValueChange=${setDryAllowedLength}/>
@@ -639,11 +639,11 @@ export function Sidebar({ sidebarRef, toggleModal, currentThemeName, setCurrentT
 									tooltip=${drySequenceBreakersError ? drySequenceBreakersError : ''}
 									readOnly=${!!cancel}
 									value=${drySequenceBreakers}
-									onValueChange=${setDrySequenceBreakers}/>`}
-						`}
+									onValueChange=${setDrySequenceBreakers}/><//>`}
+						<//>`}
 					`}
-				`}
-				${(!openaiPresets || (endpointAPI != API_OPENAI_COMPAT && endpointAPI != API_DEEPSEEK)) && html`
+				<//>`}
+				${(!openaiPresets || (endpointAPI != API_OPENAI_COMPAT && endpointAPI != API_DEEPSEEK)) && html`<${Fragment}>
 					${(enabledSamplers.includes('top_k') || enabledSamplers.includes('top_p') || enabledSamplers.includes('min_p')) && html`
 						<div className="hbox">
 							${(!openaiPresets || (endpointAPI != API_OPENAI_COMPAT && endpointAPI != API_DEEPSEEK)) && html`
@@ -667,8 +667,8 @@ export function Sidebar({ sidebarRef, toggleModal, currentThemeName, setCurrentT
 								hidden=${!enabledSamplers.includes('tfs_z')}
 								readOnly=${!!cancel} value=${tfsZ} onValueChange=${setTfsZ}/>
 						</div>`}
-				`}
-				${(!openaiPresets || (endpointAPI != API_OPENAI_COMPAT && endpointAPI != API_DEEPSEEK)) && html`
+				<//>`}
+				${(!openaiPresets || (endpointAPI != API_OPENAI_COMPAT && endpointAPI != API_DEEPSEEK)) && html`<${Fragment}>
 					${enabledSamplers.includes('ban_tokens') && html`
 						<${InputBox} label=${t('sidebar.bannedStringsJson')} type="text" pattern="^\\[.*?\\]$"
 							className=${bannedTokensError ? 'rejected' : ''}
@@ -680,7 +680,7 @@ export function Sidebar({ sidebarRef, toggleModal, currentThemeName, setCurrentT
 						disabled=${!!cancel}
 						onClick=${() => toggleModal("grammar")}>
 						${t('sidebar.grammar')}
-					</button>`}
+					</button><//>`}
 				<button
 					disabled=${!!cancel}
 					onClick=${() => toggleModal("bias")}>
@@ -696,7 +696,6 @@ export function Sidebar({ sidebarRef, toggleModal, currentThemeName, setCurrentT
 					<textarea
 						readOnly=${!!cancel}
 						placeholder=${t('sidebar.memoryPlaceholder')}
-						defaultValue=${memoryTokens.text}
 						value=${memoryTokens.text}
 						onInput=${(e: FormEvent<HTMLTextAreaElement>) => handleMemoryTokensChange("text", e.currentTarget.value)}
 						id="memory-area"/>
@@ -712,7 +711,6 @@ export function Sidebar({ sidebarRef, toggleModal, currentThemeName, setCurrentT
 					<textarea
 						readOnly=${!!cancel}
 						placeholder=${t('sidebar.authorsNotePlaceholder', { depth: authorNoteDepth })}
-						defaultValue=${authorNoteTokens.text}
 						value=${authorNoteTokens.text}
 						onInput=${(e: FormEvent<HTMLTextAreaElement>) => handleauthorNoteTokensChange("text", e.currentTarget.value)}
 						id="an-area"/>
@@ -782,7 +780,7 @@ export function Sidebar({ sidebarRef, toggleModal, currentThemeName, setCurrentT
 						{ name: t('sidebar.maintenanceMode.shutdown'), value: 'shutdown' },
 					]}/>
 				${maintMode === 'interval' && html`
-					<${InputBox} label=${t('sidebar.intervalMin')} type="number" inputmode="numeric"
+					<${InputBox} label=${t('sidebar.intervalMin')} type="number" inputMode="numeric"
 						readOnly=${!!cancel} value=${maintInterval} onValueChange=${(v: number) => {
 							setMaintInterval(v);
 							saveMaintConfigToServer({ interval: v });

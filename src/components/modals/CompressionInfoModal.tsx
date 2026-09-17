@@ -50,7 +50,7 @@ export function CompressionInfoModal({ isOpen, closeModal }: any) {
 			isOpen=${isOpen}
 			onClose=${closeModal}
 			title=${t('compression.title')}
-			style=${{ 'max-width': '36em' }}>
+			style=${{ maxWidth: '36em' }}>
 			<div className="vbox" style=${{ gap: '1.2rem' }}>
 				${entries.length === 0 ? html`<div>${t('compression.noData')}</div>` : html`
 					<table border="1" frame="void" rules="all" style=${{ width: '100%', borderCollapse: 'collapse', textAlign: 'left' }}>

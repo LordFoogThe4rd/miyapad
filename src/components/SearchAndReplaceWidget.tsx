@@ -1,5 +1,5 @@
 import { html } from 'htm/react';
-import { useState, useEffect, useRef, useCallback } from 'react';
+import { Fragment, useState, useEffect, useRef, useCallback } from 'react';
 import { usePersistentState } from '../hooks/usePersistentState';
 import { Widget } from './Widget';
 import { InputBox } from './controls/InputBox';
@@ -175,7 +175,7 @@ export function SearchAndReplaceWidget({ isOpen, closeWidget, id, children, edit
 			title=${t('search.title')}
 			id="${id}">
 				${children}
-				<div class="searchAndReplace-inputs">
+				<div className="searchAndReplace-inputs">
 					<${SelectBox}
 						label=${t('search.mode')}
 						value=${searchAndReplaceMode}
@@ -184,15 +184,15 @@ export function SearchAndReplaceWidget({ isOpen, closeWidget, id, children, edit
 							{ name: t('search.plaintext'), value: 0 },
 							{ name: t('search.regex'), value: 1 },
 						]}/>
-					${searchAndReplaceMode == 0 && html`
+					${searchAndReplaceMode == 0 && html`<${Fragment}>
 						<${InputBox} label=${t('search.searchThis')} type="text"
 							placeholder=${t('search.searchPlaceholder')}
 							value=${searchTerm} onValueChange=${setSearchTerm}/>
 						<${InputBox} label=${t('search.replaceWith')} type="text"
 							placeholder=${t('search.replacePlaceholder')}
 							readOnly=${!!cancel} value=${replaceTerm} onValueChange=${setReplaceTerm}/>
-					`}
-					${searchAndReplaceMode == 1 && html`
+					<//>`}
+					${searchAndReplaceMode == 1 && html`<${Fragment}>
 						<${InputBox} label=${t('search.searchThisRegex')} type="text"
 							placeholder=${t('search.regexSearchPlaceholder')}
 							value=${searchTerm} onValueChange=${setSearchTerm}/>
@@ -204,21 +204,21 @@ export function SearchAndReplaceWidget({ isOpen, closeWidget, id, children, edit
 						<${InputBox} label=${t('search.replaceWith')} type="text"
 							placeholder=${t('search.regexReplacePlaceholder')}
 							value=${replaceTerm} onValueChange=${setReplaceTerm}/>
-					`}
+					<//>`}
 				</div>
-				<div class="searchAndReplace-buttons">
-					<div class="flexfiller"/>
-					<div class="number-matches">
+				<div className="searchAndReplace-buttons">
+					<div className="flexfiller"/>
+					<div className="number-matches">
 						${currentIndex >= 0 ? (currentIndex+1) + " /" : ""} ${ searchTerm != "" ? numMatches + (numMatches == 1 ? t('search.matchOne') : t('search.matchMany')) : ""}
 					</div>
 					<button
-						class="findButton"
+						className="findButton"
 						title=${t('search.findPrev')}
 						onClick=${() => findPrevMatch(searchAndReplaceMode, searchTerm, searchFlags)}>
 						<${SVG_ArrowUp}/>
 					</button>
 					<button
-						class="findButton"
+						className="findButton"
 						title=${t('search.findNext')}
 						onClick=${() => findNextMatch(searchAndReplaceMode, searchTerm, searchFlags)}>
 							<${SVG_ArrowDown}/>

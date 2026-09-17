@@ -1,4 +1,5 @@
 import { html } from 'htm/react';
+import { Fragment } from 'react';
 import { useT } from '../../i18n';
 import { Modal } from '../Modal';
 import { API_OPENAI_COMPAT, API_DEEPSEEK } from '../../constants';
@@ -42,12 +43,12 @@ eol       ::= "\\n"`;
 	return html`
 		<${Modal} isOpen=${isOpen} onClose=${closeModal}
 			title=${t('grammar.title')}
-			description=${html`<div>${t('grammar.description')}</div><br/><div>${t('grammar.forMoreInfo')} ${endpointAPI == API_OPENAI_COMPAT || endpointAPI == API_DEEPSEEK ? grammarEBNFHelpUrl : grammarHelpUrl}</div>`}>
+			description=${html`<${Fragment}><div>${t('grammar.description')}</div><br/><div>${t('grammar.forMoreInfo')} ${endpointAPI == API_OPENAI_COMPAT || endpointAPI == API_DEEPSEEK ? grammarEBNFHelpUrl : grammarHelpUrl}</div><//>`}>
 			<textarea
 				readOnly=${!!cancel}
 				value=${grammar}
 				placeholder=${endpointAPI == API_OPENAI_COMPAT || endpointAPI == API_DEEPSEEK ? grammarEBNFExample : grammarExample}
 				onInput=${(e: any) => setGrammar(e.target.value)}
-				class="expanded-text-area-settings"/>
+				className="expanded-text-area-settings"/>
 		</${Modal}>`;
 }

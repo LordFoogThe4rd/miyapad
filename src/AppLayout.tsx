@@ -1,5 +1,5 @@
 import { html } from 'htm/react';
-import { useEffect, useLayoutEffect, useRef, useState } from 'react';
+import { Fragment, useEffect, useLayoutEffect, useRef, useState } from 'react';
 import { usePromptBuilder } from './hooks/usePromptBuilder';
 import { useTokenCounters } from './hooks/useTokenCounters';
 import { useTTS } from './hooks/useTTS';
@@ -36,7 +36,7 @@ import { useT } from './i18n';
 export function AppLayout() {
 	const {
 		sessionStorage, templateStorage, themeStorage, useSessionState, useDBTemplates, useDBThemes, isMiyapadEndpoint,
-		templates, setTemplates, templateReplacements, setTemplateReplacements, templatesImport, setTemplatesImport,
+		templates, setTemplates, templatesImport, setTemplatesImport,
 		selectedTemplate, setSelectedTemplate, chatMode, setChatMode, templateList, setTemplateList,
 		fontSizeMultiplier, setFontSizeMultiplier, spellCheck, setSpellCheck, attachSidebar, setAttachSidebar,
 		showProbsMode, setShowProbsMode,
@@ -53,7 +53,7 @@ export function AppLayout() {
 		drySequenceBreakersError, setDrySequenceBreakersError, bannedTokens, setBannedTokens, bannedTokensError, setBannedTokensError,
 		ignoreEos, setIgnoreEos, openaiPresets, setOpenaiPresets, stoppingStrings, setStoppingStrings, stoppingStringsError, setStoppingStringsError,
 		useBasicStoppingMode, setUseBasicStoppingMode, basicStoppingModeType, setBasicStoppingModeType, logitBias, setLogitBias,
-		logitBiasParam, setLogitBiasParam, contextLength, setContextLength, memoryTokens, setMemoryTokens, authorNoteTokens, setAuthorNoteTokens,
+		contextLength, setContextLength, memoryTokens, setMemoryTokens, authorNoteTokens, setAuthorNoteTokens,
 		authorNoteDepth, setAuthorNoteDepth, worldInfo, setWorldInfo, sillyTarvernWorldInfoJSON, setSillyTarvernWorldInfoJSON,
 		enabledSamplers, setEnabledSamplers, grammar, setGrammar, useChatAPI, setUseChatAPI, useTokenStreaming, setUseTokenStreaming,
 		disableLogprobs, setDisableLogprobs, postSamplingProbs, setPostSamplingProbs, currentThemeName, setCurrentThemeName, allThemes, setAllThemes,
@@ -434,7 +434,7 @@ export function AppLayout() {
 
 	const { ttsProcessQueue, ttsStop, ttsPushUserInput, ttsAddChunk, listTTSVoices } = useTTS();
 
-	return html`
+	return html`<${Fragment}>
 		<${PromptContainer} sidebarHeight=${sidebarHeight}/>
 		<${ProbsDisplay}/>
 		<${Sidebar}
@@ -453,5 +453,5 @@ export function AppLayout() {
 			allThemes=${allThemes}
 			setAllThemes=${setAllThemes}
 			applyChatTemplate=${applyChatTemplate}/>
-	`;
+	<//>`;
 }

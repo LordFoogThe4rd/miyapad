@@ -460,7 +460,7 @@ export function PromptContainer({ sidebarHeight }: PromptContainerProps) {
 	}
 
 	return html`
-		<div ref=${promptContainerRef} id="prompt-container" onMouseMove=${onEditorMouseMove} style=${{ 'margin-bottom': isMobile ? sidebarHeight + 'px' : 0 }}>
+		<div ref=${promptContainerRef} id="prompt-container" onMouseMove=${onEditorMouseMove} style=${{ marginBottom: isMobile ? sidebarHeight + 'px' : 0 }}>
 			<div style=${{ position: 'sticky', top: 0, zIndex: 1 }}>
 				<button
 					title=${t('prompt.preferences')}
@@ -470,21 +470,21 @@ export function PromptContainer({ sidebarHeight }: PromptContainerProps) {
 				</button>
 				<button
 					title=${t('prompt.searchAndReplace')}
-					style=${{ "margin-top": "1.5em" }}
+					style=${{ marginTop: "1.5em" }}
 					className="textAreaSettings"
 					onClick=${() => toggleModal("searchAndReplace")}>
 					<${SVG_SearchAndReplace} style=${{ "height": "1.3em" }} />
 				</button>
 				<button
 					title=${t('prompt.toggleMarkdownMode')}
-					style=${{ "margin-top": "3em" }}
+					style=${{ marginTop: "3em" }}
 					className=${editorMode === 'wysiwyg' ? 'textAreaSettings textAreaSettings-markdown-active' : 'textAreaSettings'}
 					onClick=${() => setEditorMode((m: 'source' | 'wysiwyg') => m === 'source' ? 'wysiwyg' : 'source')}>
 					<${SVG_SplitView}/>
 				</button>
 				<button
 					title=${t('prompt.takeScreenshot')}
-					style=${{ "margin-top": "4.5em" }}
+					style=${{ marginTop: "4.5em" }}
 					className="textAreaSettings"
 					onClick=${takeScreenshot}>
 					<${SVG_Camera} style=${{ "height": "1.3em" }} />

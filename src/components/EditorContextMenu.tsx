@@ -1,5 +1,5 @@
 import { html } from 'htm/react';
-import { useState, useEffect, useRef, useCallback } from 'react';
+import { Fragment, useState, useEffect, useRef, useCallback } from 'react';
 import type { MouseEvent } from 'react';
 import type { ContextMenuItem, EditorContextMenuProps } from '../types/components';
 
@@ -82,6 +82,7 @@ export function EditorContextMenu({ isOpen, closeMenu, menuItems, className, ...
 				${menuItems.map(
 					(item: ContextMenuItem) => html`
 						<li
+							key=${item.label}
 							className="MenuItem ${item.disabled ? 'disabled' : ''} ${item.subItems ? 'hasSubItems' : ''}"
 							onClick=${(event: MouseEvent<HTMLLIElement>) => {
 								if (item.action && !item.disabled && !item.subItems) {
@@ -97,14 +98,14 @@ export function EditorContextMenu({ isOpen, closeMenu, menuItems, className, ...
 							}}>
 							${item.label}
 							${item.subItems
-								? html`
+								? html`<${Fragment}>
 									<span className="arrow">→</span>
 									<${EditorContextMenu}
 										isOpen=${item.label === subMenuOpen}
 										menuItems=${item.subItems}
 										closeMenu=${handleClose}
 										className="nested"
-									/>`
+									/><//>`
 								: ''}
 						</li>
 					`

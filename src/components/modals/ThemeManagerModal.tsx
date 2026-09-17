@@ -216,7 +216,7 @@ export function ThemeManagerModal({ isOpen, closeModal, allThemes, setAllThemes,
     return html`
         <${Modal} isOpen=${isOpen} onClose=${closeModal}
             title=${t('themeManager.title')}>
-            <div class="instructTemplatesImportExport">
+            <div className="instructTemplatesImportExport">
                 <button disabled=${!!cancel} onClick=${handleImportTheme}>${t('themeManager.importTheme')}</button>
                 <button disabled=${!!cancel || editingThemeName === 'Serif Light'} onClick=${handleExportTheme}>${t('themeManager.exportTheme')}</button>
                 <button disabled=${!!cancel} onClick=${handleReAddDefaults}>${t('themeManager.reAddDefaults')}</button>
@@ -228,12 +228,12 @@ export function ThemeManagerModal({ isOpen, closeModal, allThemes, setAllThemes,
                     value=${editingThemeName}
                     onValueChange=${(val: any) => { setEditingThemeName(val); setNewThemeName(undefined); }}
                     options=${themeOptions}/>
-				<button title=${t('themeManager.duplicateTitle')} disabled=${!!cancel || editingThemeName === 'Serif Light'} class="hbox-button" onClick=${handleDuplicateTheme}>${t('themeManager.duplicate')}</button>
-                <button title=${t('themeManager.newTitle')} disabled=${!!cancel} class="hbox-button" onClick=${handleNewTheme}>${t('themeManager.new')}</button>
-                <button title=${t('themeManager.deleteTitle')} disabled=${!!cancel || editingThemeName === 'Serif Light'} class="hbox-button" onClick=${handleDeleteTheme}>${t('themeManager.delete')}</button>
+				<button title=${t('themeManager.duplicateTitle')} disabled=${!!cancel || editingThemeName === 'Serif Light'} className="hbox-button" onClick=${handleDuplicateTheme}>${t('themeManager.duplicate')}</button>
+                <button title=${t('themeManager.newTitle')} disabled=${!!cancel} className="hbox-button" onClick=${handleNewTheme}>${t('themeManager.new')}</button>
+                <button title=${t('themeManager.deleteTitle')} disabled=${!!cancel || editingThemeName === 'Serif Light'} className="hbox-button" onClick=${handleDeleteTheme}>${t('themeManager.delete')}</button>
             </div>
             <hr/>
-			<div class="instructtemplatesmodal-edits">
+			<div className="instructtemplatesmodal-edits">
 				<${InputBox} label=${t('themeManager.themeName')}
 					id="thememodal-name"
 					readOnly=${!!cancel}
@@ -252,13 +252,13 @@ export function ThemeManagerModal({ isOpen, closeModal, allThemes, setAllThemes,
 					onInput=${(e: any) => setNewClassName(e.target.value)}
 					onValueChange=${() => {}}
 					/>
-				<label class="TextArea">
+				<label className="TextArea">
 					${t('themeManager.css')}
 					<textarea
 						readOnly=${!!cancel}
 						value=${editingThemeData.css || ''}
 						onInput=${(e: any) => handleThemeCssChange(e.target.value)}
-						class="wi-textarea"
+						className="wi-textarea"
 						style=${{ height: '30vh', fontFamily: 'monospace' }}
 						/>
 				</label>

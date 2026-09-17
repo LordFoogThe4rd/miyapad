@@ -61,9 +61,9 @@ export function Widget({ isOpen, onClose, title, id, children, ...props }: any) 
 		<div className="widget-body"
 			id="${id}"
 			style=${{ transform: `translate(${position.x}px, ${position.y}px)` }}>
-			<div class="widget-container">
-				<div class="widget-title-bar">
-					<div class="widget-title"
+			<div className="widget-container">
+				<div className="widget-title-bar">
+					<div className="widget-title"
 						style=${{ cursor: isDragging ? 'grabbing' : 'grab' }}
 						onMouseDown=${handleMouseDown}
 						onMouseMove=${() => {}}
@@ -73,7 +73,7 @@ export function Widget({ isOpen, onClose, title, id, children, ...props }: any) 
 						${title}
 					</div>
 					<button
-						class="button-widget-top"
+						className="button-widget-top"
 						onClick=${onClose}>
 						<${SVG_Close}/>
 					</button>

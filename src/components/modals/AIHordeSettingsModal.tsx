@@ -87,7 +87,7 @@ export function AIHordeSettingsModal({ isOpen, closeModal, endpoint, endpointAPI
     const filteredModels = models.filter((model: any) => model.name.toLowerCase().includes(searchTerm.toLowerCase()));
 
     return html`
-        <${Modal} isOpen=${isOpen} onClose=${closeModal} title=${t('aihorde.title')} style=${{width: '50em', 'max-height': '90vh'}}>
+        <${Modal} isOpen=${isOpen} onClose=${closeModal} title=${t('aihorde.title')} style=${{width: '50em', maxHeight: '90vh'}}>
             <div className="vbox" style=${{gap: '1em'}}>
                 <div>${t('aihorde.description')}
 					<a href="https://aihorde.net/faq" target="_blank" rel="noopener noreferrer" style=${{marginLeft: '8px'}}>${t('aihorde.moreInfo')}</a>
@@ -110,19 +110,19 @@ export function AIHordeSettingsModal({ isOpen, closeModal, endpoint, endpointAPI
 
                 <hr />
 
-				<div class="modal-title" style=${{fontSize: '125%'}}>${t('aihorde.selectModels')}</div>
+				<div className="modal-title" style=${{fontSize: '125%'}}>${t('aihorde.selectModels')}</div>
                 <div className="hbox">
                     <${InputBox} label=${t('aihorde.searchModels')} value=${searchTerm} onValueChange=${setSearchTerm} placeholder=${t('aihorde.filterModelsPlaceholder')}/>
                     <button onClick=${() => fetchModels(new AbortController().signal)} disabled=${loading}>
                         ${loading ? t('aihorde.refreshing') : t('aihorde.refresh')}
                     </button>
                 </div>
-                ${error && html`<div class="error-text">${error}</div>`}
+                ${error && html`<div className="error-text">${error}</div>`}
                 <div className="overflow-container" style=${{maxHeight: '45vh', background: 'var(--color-bg-popover-1)', borderRadius: '4px'}}>
                     ${loading && !models.length ? html`<div style=${{padding: '1em'}}>${t('aihorde.loadingModels')}</div>` : ''}
                     ${filteredModels.map((model: any) => html`
                         <div key=${model.name} className="horde-model-entry" onClick=${() => handleSelect(model.name)}>
-							<div class="model-header">
+							<div className="model-header">
 								<input type="checkbox" checked=${localSelected.includes(model.name)} readOnly/>
 								<div className="model-name" title=${model.name}>${model.name}</div>
 							</div>

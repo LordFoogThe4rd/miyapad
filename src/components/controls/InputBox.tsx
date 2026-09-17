@@ -57,7 +57,7 @@ export function InputBox({
 						</option>`)}
 				</datalist>`}
 			${tooltip && html`
-				<span class="tooltiptext ${tooltipSize || ''}">
+				<span className="tooltiptext ${tooltipSize || ''}">
 					${tooltip}
 				</span>`}
 		</label>`;

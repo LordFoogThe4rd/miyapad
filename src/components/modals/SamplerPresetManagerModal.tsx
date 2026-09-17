@@ -1,5 +1,5 @@
 import { html } from 'htm/react';
-import { useState, useLayoutEffect, type FormEvent } from 'react';
+import { Fragment, useState, useLayoutEffect, type FormEvent } from 'react';
 import { Modal } from '../Modal';
 import { InputBox } from '../controls/InputBox';
 import { InputSlider } from '../controls/InputSlider';
@@ -255,7 +255,7 @@ export function SamplerPresetManagerModal({ isOpen, closeModal, presets, setPres
   const currentPreset = selectedId ? presets[selectedId] : undefined;
   const isActivePreset = selectedId === activePresetId;
 
-  const iconBack = html`<svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M15 18l-6-6 6-6"/></svg>`;
+  const iconBack = html`<svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M15 18l-6-6 6-6"/></svg>`;
 
   return html`
     <${Modal} isOpen=${isOpen} onClose=${closeModal}
@@ -289,7 +289,7 @@ export function SamplerPresetManagerModal({ isOpen, closeModal, presets, setPres
         </div>
 
         <div className="sampler-preset-details">
-          ${currentPreset ? html`
+          ${currentPreset ? html`<${Fragment}>
             <div className="sampler-preset-header">
               <div className="sampler-preset-header-title">
                 <div className="sampler-preset-back-btn" role="button" tabIndex=${0}
@@ -316,13 +316,13 @@ export function SamplerPresetManagerModal({ isOpen, closeModal, presets, setPres
                   </span>
                 </div>
                 <button className="sampler-preset-action-btn" onClick=${() => handleClonePreset(selectedId)} title=${t('samplerPreset.clone')}>
-                  <svg width="1em" height="1em" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="9" y="9" width="13" height="13" rx="2" ry="2"></rect><path d="M5 15H4a2 2 0 0 1-2-2V4a2 2 0 0 1 2-2h9a2 2 0 0 1 2 2v1"></path></svg> ${t('samplerPreset.clone')}
+                  <svg width="1em" height="1em" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><rect x="9" y="9" width="13" height="13" rx="2" ry="2"></rect><path d="M5 15H4a2 2 0 0 1-2-2V4a2 2 0 0 1 2-2h9a2 2 0 0 1 2 2v1"></path></svg> ${t('samplerPreset.clone')}
                 </button>
                 <button className="sampler-preset-action-btn" onClick=${() => exportPreset(currentPreset)} title=${t('samplerPreset.export')}>
                   ${t('samplerPreset.export')}
                 </button>
                 <button className="sampler-preset-action-btn" onClick=${() => copyPresetToClipboard(currentPreset)} title=${t('samplerPreset.copyToClipboard')}>
-                  <svg width="1em" height="1em" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M16 4h2a2 2 0 0 1 2 2v14a2 2 0 0 1-2 2H6a2 2 0 0 1-2-2V6a2 2 0 0 1 2-2h2"/><rect x="8" y="2" width="8" height="4" rx="1" ry="1"/></svg>
+                  <svg width="1em" height="1em" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M16 4h2a2 2 0 0 1 2 2v14a2 2 0 0 1-2 2H6a2 2 0 0 1-2-2V6a2 2 0 0 1 2-2h2"/><rect x="8" y="2" width="8" height="4" rx="1" ry="1"/></svg>
                 </button>
                 <button className="sampler-preset-action-btn"
                   disabled=${isActivePreset}
@@ -415,14 +415,14 @@ export function SamplerPresetManagerModal({ isOpen, closeModal, presets, setPres
               <${Checkbox} label=${t('sidebar.ignoreEos')} value=${currentPreset.ignoreEos}
                 onValueChange=${(v: boolean) => updateCurrentPreset('ignoreEos', v)}/>
 
-              <${InputBox} label=${t('sidebar.seed')} type="text" inputmode="numeric"
+              <${InputBox} label=${t('sidebar.seed')} type="text" inputMode="numeric"
                 value=${currentPreset.seed}
                 onValueChange=${(v: string | number) => updateCurrentPreset('seed', Number(v))}/>
-              <${InputBox} label=${t('sidebar.maxPredictTokens')} type="text" inputmode="numeric"
+              <${InputBox} label=${t('sidebar.maxPredictTokens')} type="text" inputMode="numeric"
                 value=${currentPreset.maxPredictTokens}
                 onValueChange=${(v: string | number) => updateCurrentPreset('maxPredictTokens', Number(v))}/>
             </div>
-          ` : html`
+          <//>` : html`
             <div className="sampler-preset-empty">
               ${t('samplerPreset.emptyState')}
             </div>

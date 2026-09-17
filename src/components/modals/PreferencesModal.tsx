@@ -1,5 +1,5 @@
 import { html } from 'htm/react';
-import { useState, useEffect, useLayoutEffect, useCallback, useRef } from 'react';
+import { Fragment, useState, useEffect, useLayoutEffect, useCallback, useRef } from 'react';
 import { Modal } from '../Modal';
 import { Checkbox } from '../controls/Checkbox';
 import { InputBox } from '../controls/InputBox';
@@ -151,7 +151,7 @@ export function PreferencesModal({ isOpen, closeModal, settings }: any) {
 	return html`
 		<${Modal} isOpen=${isOpen} onClose=${closeModal}
 			title=${t('preferences.title')}
-			style=${{ 'max-width': '35em' }}>
+			style=${{ maxWidth: '35em' }}>
 			<div className="vbox">
 				<div className="hbox" style=${{ gap: 0 }}>
 					<button style=${tabStyle(activeTab === 'general')}
@@ -229,7 +229,7 @@ export function PreferencesModal({ isOpen, closeModal, settings }: any) {
 									{ name: t('preferences.tokenHighlightShowToken'), value: 1 },
 									{ name: t('preferences.hide'), value: -1 },
 								]}/>
-							${tokenHighlightMode !== -1 && html`
+							${tokenHighlightMode !== -1 && html`<${Fragment}>
 								<${SelectBox}
 									label=${t('preferences.tokenHighlightColor')}
 									value=${tokenColorMode}
@@ -247,7 +247,7 @@ export function PreferencesModal({ isOpen, closeModal, settings }: any) {
 										{ name: t('preferences.showOnHover'), value: 0 },
 										{ name: t('preferences.showOnHoverCtrl'), value: 1 },
 										{ name: t('preferences.hide'), value: -1 },
-									]}/>`}
+									]}/><//>`}
 							<div className="vbox" style=${{ marginTop: '10px', gap: '8px' }}>
 								${!isMiyapadEndpoint && html`
 									<div className="hbox" style=${{ gap: '8px' }}>
@@ -263,8 +263,8 @@ export function PreferencesModal({ isOpen, closeModal, settings }: any) {
 								disabled=${!!cancel || !ttsAvailable}
 								title=${!ttsAvailable ? t('preferences.ttsNotAvailable') : ''}
 								value=${ttsEnabled} onValueChange=${setTTSEnabled}/>
-							${ttsEnabled && html`
-								<div className="hbox-flex" style=${{ "flex-wrap": "unset" }}>
+							${ttsEnabled && html`<${Fragment}>
+								<div className="hbox-flex" style=${{ flexWrap: "unset" }}>
 									<${SelectBox}
 										id="voices"
 										label=${t('preferences.voice')}
@@ -290,7 +290,7 @@ export function PreferencesModal({ isOpen, closeModal, settings }: any) {
 									<${InputSlider} label=${t('preferences.ttsVolume')} type="number" step="0.1" max="2"
 										readOnly=${!!cancel} value=${ttsVolume} onValueChange=${setTTSVolume}/>
 								</div>
-							`}
+							<//>`}
 						</div>
 					`}
 

@@ -131,3 +131,38 @@ export function applyTemperatureToProbs(probsArr: ProbItem[], token: string, tem
 	}
 	return { probs: probsArr, prob: chosenProb };
 }
+
+const clamp = (num: number, min: number, max: number) => Math.min(Math.max(num, min), max);
+
+/** The logit bias map in the shape the given endpoint expects. */
+export function buildLogitBiasParam(logitBias: LogitBiasState, endpointAPI: number) {
+	const entries = Object.values(logitBias?.bias ?? {});
+	switch (endpointAPI) {
+	case API_LLAMA_CPP: {
+		// banned tokens go as false, the rest divided by 10 to stay within a reasonable range
+		const param: [number, number | false][] = [];
+		for (const entry of entries)
+			for (const id of entry.ids)
+				param.push([Number(id), entry.power < -99 ? false : Number(entry.power) / 10]);
+		return param;
+	}
+	case API_KOBOLD_CPP:
+	case API_AI_HORDE: {
+		const param: Record<string, number> = {};
+		for (const entry of entries)
+			for (const id of entry.ids)
+				param[Number(id)] = clamp(Number(entry.power), -100, 100);
+		return param;
+	}
+	case API_OPENAI_COMPAT:
+	case API_DEEPSEEK: {
+		const param: Record<string, number> = {};
+		for (const entry of entries)
+			for (const id of entry.ids)
+				param[String(id)] = Number(clamp(Number(entry.power), -100, 100).toFixed(1));
+		return param;
+	}
+	default:
+		return {};
+	}
+}

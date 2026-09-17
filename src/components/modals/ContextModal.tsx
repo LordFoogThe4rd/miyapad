@@ -141,18 +141,17 @@ export function ContextModal({ isOpen, closeModal, tokens, memoryTokens, memoryT
 				<textarea
 					readOnly=${!!cancel}
 					placeholder=${defaultPresets.memoryTokens.contextOrder}
-					defaultValue=${memoryTokens.contextOrder}
 					value=${memoryTokens.contextOrder}
 					onInput=${(e: InputEvent) => handleMemoryTokensChange("contextOrder", (e.target as HTMLTextAreaElement).value)}
-					class="expanded-text-area-settings"
+					className="expanded-text-area-settings"
 					id="advanced-context-order-settings"/>
 			</${CollapsibleGroup}>
 			<textarea
 				value=${contextPlayground}
 				onInput=${(e: InputEvent) => setContextPlayground((e.target as HTMLTextAreaElement).value)}
-				class="expanded-text-area-settings"
+				className="expanded-text-area-settings"
 				id="context-area-settings" />
-			<div class="hbox" style=${{ justifyContent: 'flex-end', marginTop: '8px' }}>
+			<div className="hbox" style=${{ justifyContent: 'flex-end', marginTop: '8px' }}>
 				<button onClick=${() => setContextPlayground(finalPromptText)}>
 					${t('context.resetContext')}
 				</button>

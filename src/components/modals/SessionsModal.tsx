@@ -1,5 +1,5 @@
 import { html } from 'htm/react';
-import { useState, useEffect, useMemo, type ChangeEvent, type KeyboardEvent, type MouseEvent } from 'react';
+import { Fragment, useState, useEffect, useMemo, type ChangeEvent, type KeyboardEvent, type MouseEvent } from 'react';
 import { Modal } from '../Modal';
 import { InputBox } from '../controls/InputBox';
 import { SelectBox } from '../controls/SelectBox';
@@ -424,10 +424,10 @@ onKeyDown=${(e: KeyboardEvent<HTMLInputElement>) => {
 								<td className="sessions-col-created">${formatDate(session.created)}</td>
 								<td className="sessions-col-actions" onClick=${(e: MouseEvent) => e.stopPropagation()}>
 									<div className="sessions-col-actions-inner">
-										${renamingId == sessionId ? html`
+										${renamingId == sessionId ? html`<${Fragment}>
 											<button className="sessions-action-btn" onClick=${() => renameSession(sessionId)}><${SVG_Confirm}/></button>
 											<button className="sessions-action-btn" onClick=${() => setRenamingId(undefined)}><${SVG_Cancel}/></button>
-										` : html`
+										<//>` : html`<${Fragment}>
 											<button className="sessions-action-btn" disabled=${disabled}
 												onClick=${() => startRenameSession(sessionId, session.name ?? '')}>
 												<${SVG_Rename}/>
@@ -436,7 +436,7 @@ onKeyDown=${(e: KeyboardEvent<HTMLInputElement>) => {
 												onClick=${() => deleteSession(sessionId)}>
 												<${SVG_Trash}/>
 											</button>
-										`}
+										<//>`}
 									</div>
 								</td>
 							</tr>

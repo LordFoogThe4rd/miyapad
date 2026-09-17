@@ -37,7 +37,6 @@ interface ProviderProps {
 export function SettingsProvider({ children, sessionStorage, templateStorage, themeStorage, connectionStorage, samplerPresetStorage, useSessionState, useDBTemplates, useDBThemes, useDBConnections, useDBSamplerPresets, isMiyapadEndpoint }: ProviderProps) {
 	const [templates, setTemplates] = useDBTemplates(defaultPresets.instructTemplates);
 	const [locale, setLocale] = usePersistentState('locale', detectLocale());
-	const [templateReplacements, setTemplateReplacements] = useState<Record<string, string>>({});
 	const [templatesImport, setTemplatesImport] = useState(false);
 	const [selectedTemplate, setSelectedTemplate] = useSessionState('template', "Mistral");
 	const [chatMode, setChatMode] = useSessionState('chatMode', false);
@@ -118,7 +117,6 @@ export function SettingsProvider({ children, sessionStorage, templateStorage, th
 		}
 		return rawLogitBias;
 	}, [rawLogitBias]);
-	const [logitBiasParam, setLogitBiasParam] = useState({});
 	const [contextLength, setContextLength] = useSessionState('contextLength', defaultPresets.contextLength);
 	const [memoryTokens, setMemoryTokens] = useSessionState('memoryTokens', defaultPresets.memoryTokens);
 	const [authorNoteTokens, setAuthorNoteTokens] = useSessionState('authorNoteTokens', defaultPresets.authorNoteTokens);
@@ -187,7 +185,7 @@ export function SettingsProvider({ children, sessionStorage, templateStorage, th
 		locale, setLocale,
 		connections, setConnections, selectedConnectionId, setSelectedConnectionId,
 		samplerPresets, setSamplerPresets, selectedSamplerPresetId, setSelectedSamplerPresetId,
-		templates, setTemplates, templateReplacements, setTemplateReplacements, templatesImport, setTemplatesImport,
+		templates, setTemplates, templatesImport, setTemplatesImport,
 		selectedTemplate, setSelectedTemplate, chatMode, setChatMode, templateList, setTemplateList,
 		fontSizeMultiplier, setFontSizeMultiplier, spellCheck, setSpellCheck, attachSidebar, setAttachSidebar,
 		showProbsMode, setShowProbsMode,
@@ -204,7 +202,7 @@ export function SettingsProvider({ children, sessionStorage, templateStorage, th
 		drySequenceBreakersError, setDrySequenceBreakersError, bannedTokens, setBannedTokens, bannedTokensError, setBannedTokensError,
 		ignoreEos, setIgnoreEos, openaiPresets, setOpenaiPresets, stoppingStrings, setStoppingStrings, stoppingStringsError, setStoppingStringsError,
 		useBasicStoppingMode, setUseBasicStoppingMode, basicStoppingModeType, setBasicStoppingModeType, logitBias, setLogitBias,
-		logitBiasParam, setLogitBiasParam, contextLength, setContextLength, memoryTokens, setMemoryTokens, authorNoteTokens, setAuthorNoteTokens,
+		contextLength, setContextLength, memoryTokens, setMemoryTokens, authorNoteTokens, setAuthorNoteTokens,
 		authorNoteDepth, setAuthorNoteDepth, worldInfo, setWorldInfo, sillyTarvernWorldInfoJSON, setSillyTarvernWorldInfoJSON,
 		enabledSamplers, setEnabledSamplers, grammar, setGrammar, useChatAPI, setUseChatAPI, useTokenStreaming, setUseTokenStreaming,
 		disableLogprobs, setDisableLogprobs, postSamplingProbs, setPostSamplingProbs, isMobile, setIsMobile, currentThemeName, setCurrentThemeName, allThemes, setAllThemes,

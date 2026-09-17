@@ -6,7 +6,7 @@ import { joinPrompt, replaceNewlines } from '../utils/strings';
 import { regexSplitString, regexIndexOf, prefixMatchLength, createLenientPrefixRegex, createLenientRegex } from '../utils/regex';
 
 export function usePromptBuilder() {
-	const { templates, selectedTemplate, worldInfo, memoryTokens, authorNoteTokens, authorNoteDepth, contextLength, templateReplacements, setTemplateReplacements } = useSettings();
+	const { templates, selectedTemplate, worldInfo, memoryTokens, authorNoteTokens, authorNoteDepth, contextLength } = useSettings();
 	const { promptChunks, cancel } = useGeneration();
 
 	function replacePlaceholders(string: string, placeholders: Record<string, string>) {
@@ -16,8 +16,7 @@ export function usePromptBuilder() {
 				: placeholder;
 		}).replace(/\\n/g, '\n')
 	};
-	useMemo(() => {
-		setTemplateReplacements({
+	const templateReplacements = useMemo(() => ({
 			"{inst}": templates[selectedTemplate]?.instPre && templates[selectedTemplate]?.instPre !== ""
 				? templates[selectedTemplate]?.instPre
 				: "",
@@ -30,8 +29,7 @@ export function usePromptBuilder() {
 			"{/sys}": templates[selectedTemplate]?.sysSuf && templates[selectedTemplate]?.sysSuf !== ""
 				? templates[selectedTemplate]?.sysSuf
 				: "",
-		})
-	}, [selectedTemplate,templates])
+	}), [selectedTemplate,templates])
 	const promptText = useMemo(() => joinPrompt(promptChunks), [promptChunks]);
 
 	const displayPromptChunks = promptChunks;
