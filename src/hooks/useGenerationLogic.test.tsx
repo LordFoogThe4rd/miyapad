@@ -63,7 +63,7 @@ const { genState, settings, builder, tts, api } = vi.hoisted(() => {
 			useBasicStoppingMode: false,
 			stoppingStrings: '[]',
 			openaiPresets: false,
-			sessionStorage: { snapshot: vi.fn() },
+			sessionStorage: { snapshot: vi.fn(), addStats: vi.fn() },
 			historyBeforeGenerate: false,
 		},
 		builder: { fimPromptInfo: undefined, finalPromptText: '', convertChatToJSON: vi.fn() },

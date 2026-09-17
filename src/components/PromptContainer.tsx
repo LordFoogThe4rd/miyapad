@@ -16,7 +16,7 @@ import { chunkDecorationPlugin, chunkDecorationKey, chunkHoverPlugin, chunkHover
 import { markdownDecorationPlugin, markdownDecorationKey } from '../editor/markdownDecorations';
 import { diffPromptChunksWithMeta, applyChunksToPM, textToDoc } from '../editor/syncReactToPM';
 import { docText, flatTextLength } from '../editor/docText';
-import { ProseMirrorAdapter } from '../editor/EditorAdapter';
+import { ProseMirrorAdapter, PROGRAMMATIC_EDIT } from '../editor/EditorAdapter';
 import { schema } from '../editor/schema';
 import { DEFAULT_HISTORY_DELETION_THRESHOLD, positiveCount } from '../storage/SessionHistory';
 import type { PromptContainerProps } from '../types/components';
@@ -32,6 +32,20 @@ function stepDeletedLength(tr: Transaction): number {
 		});
 	});
 	return deleted;
+}
+
+/** Characters a transaction's steps add, the mirror of stepDeletedLength. */
+function stepInsertedLength(tr: Transaction): number {
+	let inserted = 0;
+	tr.steps.forEach((step, i) => {
+		// The doc each step produced: tr.docs[i] is the doc it started from, so the one
+		// after it is the next entry, and tr.doc for the last step.
+		const after = tr.docs[i + 1] ?? tr.doc;
+		step.getMap().forEach((_oldStart, _oldEnd, newStart, newEnd) => {
+			inserted += after.textBetween(newStart, newEnd, '\n').length;
+		});
+	});
+	return inserted;
 }
 
 /**
@@ -111,10 +125,15 @@ export function PromptContainer({ sidebarHeight }: PromptContainerProps) {
 				if (tr.docChanged && !suppressSyncRef.current) {
 					const newDoc = docText(newState.doc);
 					const prevChunks = lastPromptChunksRef.current;
+					const deleted = stepDeletedLength(tr);
+					// Text the adapter put in the document is not text the user entered, so it is
+					// left out of the session's counters. Everything below still runs for it.
+					if (!tr.getMeta(PROGRAMMATIC_EDIT))
+						sessionStorage.addStats({ typedChars: stepInsertedLength(tr), deletedChars: deleted });
 					// A large deletion can land within the idle window after the last version, so
 					// version the text it removes right away.
 					const threshold = deletionThresholdRef.current;
-					if (stepDeletedLength(tr) >= threshold && replacedSpanLength(docText(tr.before), newDoc) >= threshold) {
+					if (deleted >= threshold && replacedSpanLength(docText(tr.before), newDoc) >= threshold) {
 						sessionStorage.snapshot('deletion', { prompt: prevChunks });
 					}
 					const { chunks: newChunks } = diffPromptChunksWithMeta(prevChunks, newDoc);

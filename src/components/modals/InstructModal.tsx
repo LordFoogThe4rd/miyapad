@@ -28,7 +28,8 @@ export function InstructModal({ isOpen, closeModal, predict, cancel, modalState,
 	const finish = (replace: boolean) => {
 		modalState.result = {
 			content: result,
-			replace: replace
+			replace: replace,
+			typedChars: prompt.length
 		};
 		closeModal();
 	};

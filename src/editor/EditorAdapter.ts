@@ -1,5 +1,5 @@
 import type { EditorView as PMEditorView } from 'prosemirror-view';
-import { TextSelection } from 'prosemirror-state';
+import { TextSelection, type Transaction } from 'prosemirror-state';
 import { textOffsetToPMPos, pmPosToTextOffset } from './chunkDecorations';
 import { textToDoc } from './syncReactToPM';
 import { docText } from './docText';
@@ -21,8 +21,20 @@ export interface EditorAdapter {
   destroy(): void;
 }
 
+/**
+ * Marks a transaction as text the adapter put in the document rather than text the user
+ * entered — template and placeholder insertion, search and replace, reformatting a whole
+ * prompt. Everything programmatic goes through this class, so tagging here is what keeps
+ * those out of the typing counters without each caller having to remember.
+ */
+export const PROGRAMMATIC_EDIT = 'programmaticEdit';
+
 export class ProseMirrorAdapter implements EditorAdapter {
   constructor(private view: PMEditorView, private scroller?: HTMLElement | null) {}
+
+  private dispatchEdit(tr: Transaction): void {
+    this.view.dispatch(tr.setMeta(PROGRAMMATIC_EDIT, true));
+  }
 
   getText(): string {
     return docText(this.view.state.doc);
@@ -38,7 +50,7 @@ export class ProseMirrorAdapter implements EditorAdapter {
     // Compare using the same \n-separated representation as getText()
     if (newText === docText(doc)) return;
     const newDoc = textToDoc(this.view.state.schema, newText);
-    this.view.dispatch(
+    this.dispatchEdit(
       this.view.state.tr.replaceWith(0, doc.content.size, newDoc.content)
     );
   }
@@ -55,7 +67,7 @@ export class ProseMirrorAdapter implements EditorAdapter {
     const { doc } = this.view.state;
     const pmFrom = textOffsetToPMPos(doc, from);
     const pmTo = textOffsetToPMPos(doc, to);
-    this.view.dispatch(this.view.state.tr.insertText(insert, pmFrom, pmTo));
+    this.dispatchEdit(this.view.state.tr.insertText(insert, pmFrom, pmTo));
   }
 
   replaceRanges(changes: { from: number; to: number; insert: string }[]): void {
@@ -77,7 +89,7 @@ export class ProseMirrorAdapter implements EditorAdapter {
       const pmTo = textOffsetToPMPos(this.view.state.doc, change.to);
       tr = tr.insertText(change.insert, pmFrom, pmTo);
     }
-    this.view.dispatch(tr);
+    this.dispatchEdit(tr);
   }
 
   focus(): void {

@@ -56,7 +56,7 @@ const { genState, bridge, views, settings, logic, t, screenshot } = vi.hoisted((
 			showProbsMode: -1,
 			setShowProbsMode: vi.fn(),
 			spellCheck: true,
-			sessionStorage: { snapshot: vi.fn() },
+			sessionStorage: { snapshot: vi.fn(), addStats: vi.fn() },
 			historyDeletionThreshold: 100,
 		} as Record<string, any>,
 		logic: { undo: vi.fn(), redo: vi.fn(), undoAndPredict: vi.fn() },
@@ -255,5 +255,51 @@ describe('PromptContainer transaction synchronization', () => {
 		await act(async () => settings.setEditorMode('source'));
 		expect(container.querySelectorAll('.pm-md-heading-h1')).toHaveLength(0);
 		expect(container.querySelectorAll('.pm-md-strong')).toHaveLength(0);
+	});
+});
+
+describe('PromptContainer typing statistics', () => {
+	beforeEach(() => {
+		settings.historyDeletionThreshold = 100;
+	});
+
+	it('counts what the user types and deletes', () => {
+		const { view } = renderEditor([u('hello')]);
+		settings.sessionStorage.addStats.mockClear();
+
+		act(() => view.dispatch(view.state.tr.insertText('!', 6)));
+
+		expect(settings.sessionStorage.addStats).toHaveBeenCalledWith({ typedChars: 1, deletedChars: 0 });
+
+		settings.sessionStorage.addStats.mockClear();
+		act(() => view.dispatch(view.state.tr.delete(1, 4)));
+
+		expect(settings.sessionStorage.addStats).toHaveBeenCalledWith({ typedChars: 0, deletedChars: 3 });
+	});
+
+	it('leaves out text the adapter inserted, such as a template or a replace-all', () => {
+		renderEditor([u('hello')]);
+		const adapter = genState.promptEditorView.current!;
+		settings.sessionStorage.addStats.mockClear();
+		const syncs = setPromptChunksCalls.length;
+
+		act(() => adapter.replaceRange(5, 5, ' world'));
+
+		// The edit still has to reach the sync below the counting, or this proves nothing.
+		expect(setPromptChunksCalls.length).toBeGreaterThan(syncs);
+		expect(settings.sessionStorage.addStats).not.toHaveBeenCalled();
+	});
+
+	it('leaves out a whole-prompt rewrite, such as reformatting to another template', () => {
+		renderEditor([u('hello')]);
+		const adapter = genState.promptEditorView.current!;
+		settings.sessionStorage.addStats.mockClear();
+		const syncs = setPromptChunksCalls.length;
+
+		act(() => adapter.replaceText('an entirely different prompt'));
+
+		// The edit still has to reach the sync below the counting, or this proves nothing.
+		expect(setPromptChunksCalls.length).toBeGreaterThan(syncs);
+		expect(settings.sessionStorage.addStats).not.toHaveBeenCalled();
 	});
 });

@@ -144,9 +144,11 @@ export class IndexedDBAdapter {
 			const getRequest = store.get(key);
 			getRequest.onsuccess = () => {
 				const current = getRequest.result;
-				let dataToPut: { name: string; created: number | null; modified: number };
+				// Spread the stored record so what a rename has no business touching — pinned,
+				// tags, stats — survives it, the way the server's /rename already does.
+				let dataToPut: Record<string, unknown> & { name: string; created: number | null; modified: number };
 				if (current && typeof current === 'object' && current.name !== undefined) {
-					dataToPut = { name: newName, created: current.created ?? null, modified: Date.now() };
+					dataToPut = { ...current, name: newName, created: current.created ?? null, modified: Date.now() };
 				} else {
 					dataToPut = { name: newName, created: null, modified: Date.now() };
 				}
