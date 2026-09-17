@@ -12,6 +12,7 @@ import { useT } from '../i18n';
 import { SVG_Settings, SVG_SearchAndReplace, SVG_SplitView, SVG_Camera } from './icons/index';
 import { SearchAndReplaceWidget } from './SearchAndReplaceWidget';
 import { useScreenshotCapture } from '../hooks/useScreenshotCapture';
+import { ScreenshotPreviewModal } from './modals/ScreenshotPreviewModal';
 import { chunkDecorationPlugin, chunkDecorationKey, chunkHoverPlugin, chunkHoverKey, type ChunkDecorationState, type ChunkHoverState } from '../editor/chunkDecorations';
 import { markdownDecorationPlugin, markdownDecorationKey } from '../editor/markdownDecorations';
 import { markdownCaretPlugin } from '../editor/markdownCaret';
@@ -68,7 +69,7 @@ export function PromptContainer({ sidebarHeight }: PromptContainerProps) {
 	const { promptText } = usePromptBuilder();
 	const { undo, redo, undoAndPredict } = useGenerationLogic();
 	const t = useT();
-	const { takeScreenshot } = useScreenshotCapture();
+	const { takeScreenshot, screenshot } = useScreenshotCapture();
 
 	const promptContainerRef = useRef<HTMLDivElement>(null);
 	const editorRef = useRef<HTMLDivElement>(null);
@@ -497,6 +498,10 @@ export function PromptContainer({ sidebarHeight }: PromptContainerProps) {
 				editorView=${promptEditorView}
 				promptText=${promptText}
 				cancel=${cancel}/>
+			<${ScreenshotPreviewModal}
+				isOpen=${!!modalState.screenshot}
+				closeModal=${() => closeModal("screenshot")}
+				screenshot=${screenshot}/>
 		</div>
 	`;
 }

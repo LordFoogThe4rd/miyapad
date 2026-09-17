@@ -1,16 +1,20 @@
 import { API_LLAMA_CPP, API_KOBOLD_CPP, API_OPENAI_COMPAT, API_AI_HORDE, API_DEEPSEEK } from '../constants';
 
-export function exportText(filename: string, text: string) {
-	const textBlob = new Blob([text], {type: 'text/plain;charset=utf-8'});
-	const textURL = URL.createObjectURL(textBlob);
+export function exportUrl(filename: string, url: string) {
 	var element = document.createElement('a');
-	element.setAttribute('href', textURL);
+	element.setAttribute('href', url);
 	element.setAttribute('download', filename);
 	element.style.display = 'none';
 	document.body.appendChild(element);
 	element.click();
-	URL.revokeObjectURL(textURL);
 	document.body.removeChild(element);
+}
+
+export function exportText(filename: string, text: string) {
+	const textBlob = new Blob([text], {type: 'text/plain;charset=utf-8'});
+	const textURL = URL.createObjectURL(textBlob);
+	exportUrl(filename, textURL);
+	URL.revokeObjectURL(textURL);
 }
 
 export function normalizeEndpoint(endpoint: string, endpointAPI: number) {

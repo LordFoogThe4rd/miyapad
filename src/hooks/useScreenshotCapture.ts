@@ -1,9 +1,17 @@
-import { useCallback } from 'react';
+import { useCallback, useState } from 'react';
 
 const escapeHtml = (s: string) => s.replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;').replace(/"/g, '&quot;').replace(/'/g, '&#039;');
 import { useSettings } from '../contexts/SettingsContext';
 import { useGeneration } from '../contexts/GenerationContext';
 import { toPng } from 'html-to-image';
+
+export interface ScreenshotResult {
+	/** Object URL for the preview <img>: a data URL would make the browser
+	 *  suggest a filename built from its own base64 payload on save/copy. */
+	url: string;
+	blob: Blob;
+	name: string;
+}
 
 export function useScreenshotCapture() {
 	const {
@@ -15,7 +23,9 @@ export function useScreenshotCapture() {
 		sessionStorage, endpointModel
 	} = useSettings();
 
-	const { promptEditorView, promptChunks } = useGeneration();
+	const { promptEditorView, promptChunks, openModal } = useGeneration();
+
+	const [screenshot, setScreenshot] = useState<ScreenshotResult | null>(null);
 
 	const toDataURL = useCallback(async (url: any) => {
 		if (!url) return '';
@@ -88,9 +98,8 @@ export function useScreenshotCapture() {
 				.replace(/'/g, "&#039;");
 		}
 
-		const storyTitle = screenshotIncludeSessionName
-			? (document.querySelector('.Session.selected')?.textContent?.trim() || sessionStorage.getProperty('name') || 'Untitled')
-			: 'Excerpt';
+		const sessionName = document.querySelector('.Session.selected')?.textContent?.trim() || sessionStorage.getProperty('name') || 'Untitled';
+		const storyTitle = screenshotIncludeSessionName ? sessionName : 'Excerpt';
 		const dateString = new Date().toISOString().split('T')[0];
 		const modelName = endpointModel || 'Unknown';
 
@@ -197,17 +206,11 @@ export function useScreenshotCapture() {
 				skipFonts: true,
 			});
 			const blob = await (await fetch(dataUrl)).blob();
-
-			const url = URL.createObjectURL(blob);
-			const win = window.open();
-			if (win) {
-				win.document.title = dateString; // TODO: make name customizable; TODO: show screenshot in a modal instead of a new tab
-				win.document.write('<img src="' + url + '"/>');
-				win.document.close();
-				win.addEventListener('beforeunload', () => URL.revokeObjectURL(url));
-			} else {
-				URL.revokeObjectURL(url);
-			}
+			setScreenshot((prev) => {
+				if (prev) URL.revokeObjectURL(prev.url);
+				return { url: URL.createObjectURL(blob), blob, name: `${sessionName} ${dateString}` };
+			});
+			openModal('screenshot');
 		} catch (e: unknown) {
 			console.error("Screenshot failed:", e);
 		} finally {
@@ -220,8 +223,8 @@ export function useScreenshotCapture() {
 		screenshotStoryFont, screenshotGeneralFont,
 		screenshotFontWeight, screenshotFontSize, screenshotLineHeight,
 		screenshotFontColor, screenshotAiTextColor, screenshotModelAvatarUrl,
-		sessionStorage, endpointModel, toDataURL
+		sessionStorage, endpointModel, toDataURL, openModal
 	]);
 
-	return { takeScreenshot };
+	return { takeScreenshot, screenshot };
 }

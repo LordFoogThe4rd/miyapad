@@ -316,6 +316,7 @@ export interface GenerationState {
   setTriggerPredict: Dispatch<SetStateAction<boolean>>;
   restartedPredict: boolean;
   setRestartedPredict: Dispatch<SetStateAction<boolean>>;
+  openModal: (modalKey: string) => void;
   toggleModal: (modalKey: string) => void;
   closeModal: (modalKey: string) => void;
 }

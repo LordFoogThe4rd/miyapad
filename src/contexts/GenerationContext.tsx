@@ -50,6 +50,16 @@ export function GenerationProvider({ children, useSessionState }: { children: Re
 		}));
 	};
 
+	// toggleModal is for buttons; anything opening a modal after an await needs this,
+	// or a second completion toggles the modal shut
+	const openModal = (modalKey: string) => {
+		setShowProbs(false);
+		setModalState((prevState) => ({
+			...prevState,
+			[modalKey]: true,
+		}));
+	};
+
 	const closeModal = (modalKey: string) => {
 		setModalState((prevState) => ({
 			...prevState,
@@ -82,7 +92,7 @@ export function GenerationProvider({ children, useSessionState }: { children: Re
 		showProbs, setShowProbs, cancel, setCancel, sessionEndpointConnecting, setSessionEndpointConnecting,
 		sessionEndpointError, setSessionEndpointError, rejectedAPIKey, setRejectedAPIKey, openaiModels, setOpenaiModels,
 		tokens, setTokens, memoryTokenCount, setMemoryTokenCount, worldInfoTokenCount, setWorldInfoTokenCount, authorNoteTokenCount, setAuthorNoteTokenCount, tokensPerSec, setTokensPerSec, predictStartTokens, setPredictStartTokens, lastError, setLastError,
-		savedScrollTop, setSavedScrollTop, modalState, setModalState, contextMenuState, setContextMenuState,
+		savedScrollTop, setSavedScrollTop, modalState, setModalState, openModal, contextMenuState, setContextMenuState,
 		instructModalState, setInstructModalState, hordeQueuePos, setHordeQueuePos, hordeProcessing, setHordeProcessing,
 		ttsAvailable, setTTSAvailable,
 		ttsNewText, ttsLastChunk, ttsQueue, ttsVoices, ttsPaused, activeGenId, abortControllerRef, triggerPredict, setTriggerPredict, restartedPredict, setRestartedPredict,
