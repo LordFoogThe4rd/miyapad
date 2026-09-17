@@ -79,6 +79,9 @@ export function PromptContainer({ sidebarHeight }: PromptContainerProps) {
 	// Initialised to a null hover so the first render does not dispatch an empty set
 	const lastHoverRef = useRef<{ current: number | null; erase: number | null; mode: number }>({ current: null, erase: null, mode: tokenHighlightMode });
 	const suppressSyncRef = useRef(false);
+	// A session opens scrolled to the bottom: that is where its caret is put and where
+	// the user left off. Consumed by the sync effect below, once the new text is in the doc.
+	const scrollToBottomRef = useRef(true);
 	const lastMouseToken = useRef<string | null>(null);
 	const lastMousePos = useRef({ x: 0, y: 0 });
 	const undoRef = useRef(undo);
@@ -175,6 +178,12 @@ export function PromptContainer({ sidebarHeight }: PromptContainerProps) {
 		};
 	}, []);
 
+	useEffect(() => {
+		function onSessionChange() { scrollToBottomRef.current = true; }
+		sessionStorage.addEventListener('sessionchange', onSessionChange);
+		return () => sessionStorage.removeEventListener('sessionchange', onSessionChange);
+	}, []);
+
 	// Declared before the hover effect: React runs effects in declaration order
 	// within a commit, which keeps lastPromptChunksRef fresh for the hover one.
 	useEffect(() => {
@@ -194,6 +203,10 @@ export function PromptContainer({ sidebarHeight }: PromptContainerProps) {
 		}
 		lastPromptChunksRef.current = promptChunks;
 		suppressSyncRef.current = false;
+		if (scrollToBottomRef.current && editorRef.current) {
+			scrollToBottomRef.current = false;
+			editorRef.current.scrollTop = editorRef.current.scrollHeight;
+		}
 	}, [promptChunks, tokenColorMode, tokenHighlightMode]);
 
 	useEffect(() => {

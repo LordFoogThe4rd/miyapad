@@ -56,7 +56,7 @@ const { genState, bridge, views, settings, logic, t, screenshot } = vi.hoisted((
 			showProbsMode: -1,
 			setShowProbsMode: vi.fn(),
 			spellCheck: true,
-			sessionStorage: { snapshot: vi.fn(), addStats: vi.fn() },
+			sessionStorage: Object.assign(new EventTarget(), { snapshot: vi.fn(), addStats: vi.fn() }),
 			historyDeletionThreshold: 100,
 		} as Record<string, any>,
 		logic: { undo: vi.fn(), redo: vi.fn(), undoAndPredict: vi.fn() },
@@ -301,5 +301,33 @@ describe('PromptContainer typing statistics', () => {
 		// The edit still has to reach the sync below the counting, or this proves nothing.
 		expect(setPromptChunksCalls.length).toBeGreaterThan(syncs);
 		expect(settings.sessionStorage.addStats).not.toHaveBeenCalled();
+	});
+});
+
+describe('PromptContainer session open', () => {
+	function trackScroll(container: HTMLElement) {
+		const el = container.querySelector('#pm-editor') as HTMLElement;
+		const scrolled: number[] = [];
+		Object.defineProperty(el, 'scrollHeight', { value: 500, configurable: true });
+		Object.defineProperty(el, 'scrollTop', {
+			configurable: true,
+			get: () => scrolled[scrolled.length - 1] ?? 0,
+			set: (v: number) => { scrolled.push(v); },
+		});
+		return scrolled;
+	}
+
+	it('scrolls to the bottom on a session change, but not on an ordinary prompt update', () => {
+		const { container } = renderEditor([u('a'), m('bc')]);
+		const scrolled = trackScroll(container);
+
+		act(() => bridge.setPromptChunks!([u('a'), m('bcd')]));
+		expect(scrolled).toEqual([]);
+
+		act(() => {
+			settings.sessionStorage.dispatchEvent(new CustomEvent('sessionchange'));
+			bridge.setPromptChunks!([u('another session')]);
+		});
+		expect(scrolled).toEqual([500]);
 	});
 });
