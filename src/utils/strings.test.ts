@@ -1,5 +1,5 @@
 import { describe, it, expect } from 'vitest';
-import { joinPrompt, replaceNewlines, replaceUnprintableBytes } from './strings';
+import { insertedLength, joinPrompt, replaceNewlines, replaceUnprintableBytes } from './strings';
 
 describe('joinPrompt', () => {
 	it('concatenates prompt segment contents', () => {
@@ -41,5 +41,16 @@ describe('replaceNewlines', () => {
 	it('leaves non-string values unchanged', () => {
 		const input = { a: 1, b: null, c: { d: 'x\\ny' } };
 		expect(replaceNewlines(input)).toEqual(input);
+	});
+});
+
+describe('insertedLength', () => {
+	it('counts what was added and ignores the ends the two strings share', () => {
+		expect(insertedLength('hello', 'hello!')).toBe(1);
+		expect(insertedLength('', 'typed')).toBe(5);
+		// A replacement counts only the new text, not the text it stood in for.
+		expect(insertedLength('hello', 'heLLLLo')).toBe(4);
+		expect(insertedLength('hello', 'hello')).toBe(0);
+		expect(insertedLength('hello world', 'hello')).toBe(0);
 	});
 });

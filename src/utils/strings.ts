@@ -32,3 +32,13 @@ export function replaceNewlines<T extends object>(template: T): T {
 		Object.entries(template).map(([key, value]) => [key, typeof value === "string" ? value.replaceAll("\\n", "\n") : value])
 	) as T;
 }
+
+/** Characters `after` adds over `before`, ignoring what the two share at each end. */
+export function insertedLength(before: string, after: string): number {
+	const max = Math.min(before.length, after.length);
+	let start = 0;
+	while (start < max && before.charCodeAt(start) === after.charCodeAt(start)) start++;
+	let end = 0;
+	while (end < max - start && before.charCodeAt(before.length - 1 - end) === after.charCodeAt(after.length - 1 - end)) end++;
+	return after.length - start - end;
+}

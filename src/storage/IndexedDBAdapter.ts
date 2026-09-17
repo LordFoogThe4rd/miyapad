@@ -113,8 +113,13 @@ export class IndexedDBAdapter {
 			request.onsuccess = async (event: Event) => {
 				const cursor = (event.target as IDBRequest<IDBCursorWithValue | null>).result;
 				if (cursor) {
-					if (cursor.key !== 'nextSessionId' && cursor.key !== 'selectedSessionId') {
-						allTables[cursor.key as string] = cursor.value;
+					const key = cursor.key as string;
+					// A rename or a pin before session keys were normalized left a second record
+					// under the string form of the id. IndexedDB visits numeric keys first and
+					// these object keys are strings either way, so without the hasOwn check that
+					// leftover would overwrite the real record and hide its tags, pins and counters.
+					if (key !== 'nextSessionId' && key !== 'selectedSessionId' && !Object.hasOwn(allTables, key)) {
+						allTables[key] = cursor.value;
 					}
 					cursor.continue();
 				} else {
@@ -164,10 +169,14 @@ export class IndexedDBAdapter {
 		return new Promise<void>((resolve, reject) => {
 			const tx = db.transaction(storeName, 'readwrite');
 			const store = tx.objectStore(storeName);
-			const request = store.delete(key);
+			store.delete(key);
+			// Clears the string-keyed leftover described above, which only session stores can
+			// have. Deleting the session without it would leave that record to come back as an
+			// empty session on the next load.
+			if (typeof key === 'number') store.delete(String(key));
 
-			request.onsuccess = () => resolve(undefined);
-			request.onerror = () => reject(request.error);
+			tx.oncomplete = () => resolve(undefined);
+			tx.onerror = () => reject(tx.error);
 		});
 	}
 

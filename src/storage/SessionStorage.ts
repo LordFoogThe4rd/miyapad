@@ -42,11 +42,10 @@ function sameValue(a: unknown, b: unknown): boolean {
  * so writing under "3" leaves the record at 3 orphaned and lists the session twice. The
  * server normalizes keys of its own accord, so only browser storage ever needed this.
  *
- * ponytail: this stops new duplicates, it does not remove the ones already written. A
- * database that was renamed or pinned before this fix still holds a string-keyed record
- * per affected session, which shows up as an extra entry with no content, no tags and no
- * creation date. Sweep them on load (drop string keys whose numeric twin exists) if the
- * duplicates turn out to bother anyone.
+ * ponytail: this stops new duplicates. The ones a database already holds are skipped by
+ * IndexedDBAdapter.loadSessionInfoFromDatabase and removed with the session they shadow,
+ * so they cost a dead row each until then. No migration sweeps them; add one to the next
+ * IndexedDB version bump if those rows ever matter.
  */
 function sessionKey(sessionId: string | number): string | number {
 	return typeof sessionId === 'string' && /^\d+$/.test(sessionId) ? +sessionId : sessionId;
