@@ -65,6 +65,14 @@ interface LineSeg {
 
 const INLINE_STYLE_KINDS = new Set(['strong', 'em', 'del']);
 
+/**
+ * Source of `spec.md` group ids, never reset. The set is spliced per top-level
+ * token, so decorations from different builds coexist in it, and an edit can
+ * merge two separately-built paragraphs into one. Ids unique only within a
+ * build would collide there and widen a construct's extent.
+ */
+let nextGroup = 0;
+
 interface MarkdownBuild {
 	decorations: Decoration[];
 	/** Every top-level token of the document, to diff the next build against. */
@@ -160,10 +168,11 @@ function buildDecorations(
 		}
 	};
 
+
 	// Every span is clipped to paragraph bounds: br-split paragraphs and
 	// blockquote/list hard breaks split one token across several PM paragraphs,
 	// and separator newlines belong to no paragraph.
-	const addInlineSpan = (rawFrom: number, rawTo: number, className: string): void => {
+	const addInlineSpan = (rawFrom: number, rawTo: number, className: string, md?: number): void => {
 		const from = Math.max(rawFrom, blockFrom);
 		const to = Math.min(rawTo, blockTo);
 		if (from >= to) return;
@@ -177,6 +186,10 @@ function buildDecorations(
 					p.nodeStart + 1 + (start - p.offStart),
 					p.nodeStart + 1 + (end - p.offStart),
 					{ class: className },
+					// spec, not attrs: markdownCaretPlugin reads `marker` to pick
+					// which of a group's decorations to reveal, and Decoration.type
+					// (where attrs live) is internal to prosemirror-view.
+					md === undefined ? undefined : { md, marker: className === 'pm-md-marker' },
 				));
 			}
 		}
@@ -224,8 +237,26 @@ function buildDecorations(
 		return last ? last.srcStart + last.textEnd - last.textStart : 0;
 	};
 
-	const walkTextChildren = (text: string, tokens: Token[], srcStart: number): void => {
+	// `hidePrefixes` hides the per-line markers marked stripped to build `text`:
+	// the gap between the start of a source line and where that line's content was
+	// found is exactly the "> " or "- " (or the continuation indent) it removed.
+	// Only the block that owns those markers passes it — a nested list inside a
+	// blockquote hides "> " from the blockquote's segs and "- " from its own.
+	const walkTextChildren = (text: string, tokens: Token[], srcStart: number, hidePrefixes = false): void => {
 		const segs = buildLineMap(srcStart, text);
+		if (hidePrefixes) {
+			for (const seg of segs) {
+				const lineStart = seg.srcStart === 0 ? 0 : source.lastIndexOf('\n', seg.srcStart - 1) + 1;
+				// A line whose content is empty is all marker — a bare ">" in a
+				// blockquote. Hide to the end of the source line, not to the content.
+				let end = seg.srcStart;
+				if (seg.textEnd === seg.textStart) {
+					const nl = source.indexOf('\n', seg.srcStart);
+					end = nl === -1 ? source.length : nl;
+				}
+				addInlineSpan(lineStart, end, 'pm-md-marker-line');
+			}
+		}
 		let textCursor = 0;
 		for (const child of tokens) {
 			const at = text.indexOf(child.raw, textCursor);
@@ -235,6 +266,7 @@ function buildDecorations(
 				const inline = child as Tokens.Strong | Tokens.Em | Tokens.Del;
 				const opening = inline.raw.indexOf(inline.text);
 				const contentTextStart = at + opening;
+				const md = nextGroup++;
 				// Emit one span per content line: a content region crossing lines
 				// contains blockquote/list markers between lines, so a flat span
 				// clipped to paragraph bounds would style marker characters.
@@ -242,8 +274,16 @@ function buildDecorations(
 				for (const line of inline.text.split('\n')) {
 					const from = mapText(segs, contentTextStart + lineStart);
 					const to = mapText(segs, contentTextStart + lineStart + line.length);
-					addInlineSpan(from, to, `pm-md-${child.type}`);
+					addInlineSpan(from, to, `pm-md-${child.type}`, md);
 					lineStart += line.length + 1;
+				}
+				// opening <= 0 means text is not a substring of raw (marked escapes
+				// entities in some token kinds); leave the markers visible rather
+				// than hide the wrong characters.
+				if (opening > 0) {
+					addInlineSpan(mapText(segs, at), mapText(segs, contentTextStart), 'pm-md-marker', md);
+					const contentTextEnd = contentTextStart + inline.text.length;
+					addInlineSpan(mapText(segs, contentTextEnd), mapText(segs, at + inline.raw.length), 'pm-md-marker', md);
 				}
 				if (inline.tokens.length > 0) {
 					walkTextChildren(inline.text, inline.tokens, mapText(segs, contentTextStart));
@@ -259,6 +299,10 @@ function buildDecorations(
 		}
 	};
 
+	// Whether the list_item currently being walked belongs to an ordered list.
+	// Saved and restored around nested lists.
+	let listOrdered = false;
+
 	const walkToken = (token: Token, srcStart: number, srcEnd: number): void => {
 		switch (token.type) {
 			case 'heading': {
@@ -266,6 +310,9 @@ function buildDecorations(
 				// raw embeds the trailing blank line; style only up to content end
 				const opening = heading.raw.indexOf(heading.text);
 				addNodeClass(`pm-md-heading-h${heading.depth}`, srcStart, srcStart + opening + heading.text.length);
+				// "# " — setext underlines and the "# #x" case (where indexOf finds
+				// the marker itself) give opening 0 and hide nothing.
+				if (opening > 0) addInlineSpan(srcStart, srcStart + opening, 'pm-md-marker-line');
 				walkTextChildren(heading.text, heading.tokens, srcStart);
 				break;
 			}
@@ -277,24 +324,31 @@ function buildDecorations(
 			case 'blockquote': {
 				const blockquote = token as Tokens.Blockquote;
 				addNodeClass('pm-md-blockquote', srcStart, srcEnd);
-				walkTextChildren(blockquote.text, blockquote.tokens, srcStart);
+				walkTextChildren(blockquote.text, blockquote.tokens, srcStart, true);
 				break;
 			}
 			case 'list': {
 				const list = token as Tokens.List;
 				addNodeClass('pm-md-list', srcStart, srcEnd);
+				const outerOrdered = listOrdered;
+				listOrdered = list.ordered;
 				let cursor = srcStart;
 				for (const item of list.items) {
 					const itemStart = cursor;
 					cursor += item.raw.length;
 					walkToken(item, itemStart, cursor);
 				}
+				listOrdered = outerOrdered;
 				break;
 			}
 			case 'list_item': {
 				const item = token as Tokens.ListItem;
 				addNodeClass('pm-md-list-item', srcStart, srcEnd);
-				walkTextChildren(item.text, item.tokens, srcStart);
+				// Ordered items keep their "1." — there is no glyph to stand in for
+				// it. Unordered ones hide the bullet and get one back from CSS, so
+				// the class goes on the item's first paragraph only.
+				if (!listOrdered) addNodeClass('pm-md-list-item-bullet', srcStart, srcStart + 1);
+				walkTextChildren(item.text, item.tokens, srcStart, !listOrdered);
 				break;
 			}
 			case 'table': {
@@ -306,8 +360,40 @@ function buildDecorations(
 			}
 			case 'hr':
 				addNodeClass('pm-md-hr', srcStart, srcEnd);
-				addInlineSpan(srcStart, srcEnd, 'pm-md-hr-marker');
+				addInlineSpan(srcStart, srcEnd, 'pm-md-hr-marker pm-md-marker-line');
 				break;
+			case 'codespan': {
+				// Counted off raw rather than located via text: marked escapes HTML
+				// entities into codespan.text, so indexOf would miss on `a<b`.
+				const fence = /^`+/.exec(token.raw)?.[0].length ?? 0;
+				if (fence > 0 && srcEnd - srcStart > 2 * fence) {
+					const md = nextGroup++;
+					addInlineSpan(srcStart, srcStart + fence, 'pm-md-marker', md);
+					addInlineSpan(srcStart + fence, srcEnd - fence, 'pm-md-code', md);
+					addInlineSpan(srcEnd - fence, srcEnd, 'pm-md-marker', md);
+				} else {
+					addInlineSpan(srcStart, srcEnd, 'pm-md-code');
+				}
+				break;
+			}
+			case 'link': {
+				const link = token as Tokens.Link;
+				const opening = link.raw.indexOf(link.text);
+				// Only the bracketed forms have markers to hide; an autolink or a
+				// bare GFM url is its own label and is styled whole.
+				if (link.raw.startsWith('[') && opening > 0) {
+					const md = nextGroup++;
+					const contentStart = srcStart + opening;
+					const contentEnd = contentStart + link.text.length;
+					addInlineSpan(srcStart, contentStart, 'pm-md-marker', md);
+					addInlineSpan(contentStart, contentEnd, 'pm-md-link', md);
+					addInlineSpan(contentEnd, srcEnd, 'pm-md-marker', md);
+					if (link.tokens.length > 0) walkTextChildren(link.text, link.tokens, contentStart);
+				} else {
+					addInlineSpan(srcStart, srcEnd, 'pm-md-link');
+				}
+				break;
+			}
 			default:
 				break;
 		}

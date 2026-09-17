@@ -13,6 +13,7 @@ import type { Node } from 'prosemirror-model';
 import { schema } from './schema';
 import { textToDoc } from './syncReactToPM';
 import { markdownDecorationKey, markdownDecorationPlugin, paddedWindow } from './markdownDecorations';
+import { markdownCaretPlugin } from './markdownCaret';
 
 /** Heading + bold/italic/strike prose + list + blockquote, repeated — heavy on markers, so both the lexer and the decoration walk have real work to do. */
 function heavy(blocks: number): string {
@@ -82,5 +83,28 @@ test('markdownDecorationPlugin: deferred flush', async ({ bench }) => {
 		let state = windowedBase;
 		for (let k = 0; k < 20; k++) state = state.apply(state.tr.insertText('z', AT));
 		flush(state);
+	}).run();
+});
+
+/**
+ * What markdownCaretPlugin adds to the keystroke path. It emits a handful of
+ * decorations, but DecorationSet.create walks every top-level child regardless
+ * of how few it is given, so the cost is O(paragraphs) — that is the thing to
+ * watch, not the decoration count. Benched against the same keystroke without
+ * the plugin registered.
+ */
+test('markdownCaretPlugin: cost on the keystroke path', async ({ bench }) => {
+	const withCaret = EditorState.create({
+		doc: DOC,
+		plugins: [markdownDecorationPlugin({ current: true }), markdownCaretPlugin],
+	});
+	const aimed = withCaret.apply(withCaret.tr.setMeta(markdownDecorationKey, { window: paddedWindow(DOC, AT, AT, 60) }));
+
+	await bench('keystroke, markdown plugin only', () => {
+		windowedBase.apply(windowedBase.tr.insertText('x', AT));
+	}).run();
+
+	await bench('keystroke, with the caret plugin', () => {
+		aimed.apply(aimed.tr.insertText('x', AT));
 	}).run();
 });

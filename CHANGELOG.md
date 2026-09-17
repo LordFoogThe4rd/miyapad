@@ -2,9 +2,14 @@
 
 ## [???] - unreleased
 
+### Added
+
+- Inline code and links are now styled in markdown formatting mode
+
 ### Changed
 
 - Database backups are now LZMA-compressed `.7z` archives instead of `.gz` files, so they take up noticeably less space. Nothing needs to be installed — the server brings its own 7-Zip. Existing `.gz` backups are left alone and still count towards the retention limit
+- Markdown formatting mode now hides the markup itself, like a live preview. The `#` of a heading, the `>` of a quote and the `-` of a bullet come back when you put the cursor on that line; `**`, backticks and link brackets come back only when the cursor is inside the word they wrap, and while they do, the line's own markers stay hidden so being inside a word does not also uncover the whole line's markup. Nothing is rewritten, so the hidden characters are still there and still copy out as markdown
 
 ## [2.8.0] - 2026-09-16
 

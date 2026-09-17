@@ -14,6 +14,7 @@ import { SearchAndReplaceWidget } from './SearchAndReplaceWidget';
 import { useScreenshotCapture } from '../hooks/useScreenshotCapture';
 import { chunkDecorationPlugin, chunkDecorationKey, chunkHoverPlugin, chunkHoverKey, type ChunkDecorationState, type ChunkHoverState } from '../editor/chunkDecorations';
 import { markdownDecorationPlugin, markdownDecorationKey } from '../editor/markdownDecorations';
+import { markdownCaretPlugin } from '../editor/markdownCaret';
 import { diffPromptChunksWithMeta, applyChunksToPM, textToDoc } from '../editor/syncReactToPM';
 import { docText, flatTextLength } from '../editor/docText';
 import { ProseMirrorAdapter } from '../editor/EditorAdapter';
@@ -85,6 +86,9 @@ export function PromptContainer({ sidebarHeight }: PromptContainerProps) {
 				chunkDecorationPlugin,
 				chunkHoverPlugin,
 				markdownDecorationPlugin(mdModeRef),
+				// after the markdown plugin: it reads that plugin's decorations, and
+				// apply() only sees the new state of plugins declared before it
+				markdownCaretPlugin,
 				keymap({
 					'Mod-z': () => { if (cancelRef.current) (cancelRef.current as () => void)(); undoRef.current(); return true; },
 					'Mod-y': () => { if (cancelRef.current) (cancelRef.current as () => void)(); redoRef.current(); return true; },
