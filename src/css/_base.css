@@ -155,3 +155,9 @@ body {
 	box-sizing: border-box;
 	height:24em;
 }
+
+/* scrollbar-color is inherited, so this themes every scroll container at once.
+   Width is left alone: .textAreaSettings is positioned against the native width. */
+html {
+	scrollbar-color: var(--color-base-70) transparent;
+}

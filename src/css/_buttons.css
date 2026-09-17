@@ -32,11 +32,12 @@ button.textAreaSettings {
 	width:1.25em;
 	position:absolute;
 	top:calc(1.25em + 1px);
-	right:1px;
+	/* 17px clears the widest default scrollbar (Firefox) plus the original 1px. */
+	right:18px;
 }
 button.textAreaSettings.textAreaSettings-bias {
 	top: 1.45em;
-	right: 5px;
+	right: 22px;
 }
 .token-counter {
 	pointer-events: none;
