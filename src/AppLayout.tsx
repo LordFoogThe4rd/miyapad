@@ -71,7 +71,7 @@ export function AppLayout() {
 		showProbs, setShowProbs, cancel, setCancel, sessionEndpointConnecting, setSessionEndpointConnecting,
 		sessionEndpointError, setSessionEndpointError, rejectedAPIKey, setRejectedAPIKey, openaiModels, setOpenaiModels,
 		tokens, setTokens, tokensPerSec, setTokensPerSec, predictStartTokens, setPredictStartTokens, lastError, setLastError,
-		savedScrollTop, setSavedScrollTop, modalState, setModalState, contextMenuState, setContextMenuState,
+		modalState, setModalState, contextMenuState, setContextMenuState,
 		instructModalState, setInstructModalState, hordeQueuePos, setHordeQueuePos, hordeProcessing, setHordeProcessing,
 		ttsAvailable, setTTSAvailable,
 		ttsNewText, ttsLastChunk, ttsQueue, ttsVoices, ttsPaused, activeGenId, triggerPredict, setTriggerPredict, restartedPredict, setRestartedPredict,

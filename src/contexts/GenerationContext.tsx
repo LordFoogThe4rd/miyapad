@@ -34,7 +34,6 @@ export function GenerationProvider({ children, useSessionState }: { children: Re
 	const [tokensPerSec, setTokensPerSec] = useState(0.0);
 	const [predictStartTokens, setPredictStartTokens] = useState(0);
 	const [lastError, setLastError] = useState(undefined);
-	const [savedScrollTop, setSavedScrollTop] = useSessionState('scrollTop', defaultPresets.scrollTop);
 	const [modalState, setModalState] = useState<Record<string, boolean>>({});
 	const [contextMenuState, setContextMenuState] = useState({ visible: false, x: 0, y: 0 });
 	const [instructModalState, setInstructModalState] = useState<InstructModalState>({});
@@ -92,7 +91,7 @@ export function GenerationProvider({ children, useSessionState }: { children: Re
 		showProbs, setShowProbs, cancel, setCancel, sessionEndpointConnecting, setSessionEndpointConnecting,
 		sessionEndpointError, setSessionEndpointError, rejectedAPIKey, setRejectedAPIKey, openaiModels, setOpenaiModels,
 		tokens, setTokens, memoryTokenCount, setMemoryTokenCount, worldInfoTokenCount, setWorldInfoTokenCount, authorNoteTokenCount, setAuthorNoteTokenCount, tokensPerSec, setTokensPerSec, predictStartTokens, setPredictStartTokens, lastError, setLastError,
-		savedScrollTop, setSavedScrollTop, modalState, setModalState, openModal, contextMenuState, setContextMenuState,
+		modalState, setModalState, openModal, contextMenuState, setContextMenuState,
 		instructModalState, setInstructModalState, hordeQueuePos, setHordeQueuePos, hordeProcessing, setHordeProcessing,
 		ttsAvailable, setTTSAvailable,
 		ttsNewText, ttsLastChunk, ttsQueue, ttsVoices, ttsPaused, activeGenId, abortControllerRef, triggerPredict, setTriggerPredict, restartedPredict, setRestartedPredict,

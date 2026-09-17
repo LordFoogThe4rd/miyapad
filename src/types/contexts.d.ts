@@ -294,8 +294,6 @@ export interface GenerationState {
   setPredictStartTokens: Dispatch<SetStateAction<number>>;
   lastError: string | undefined;
   setLastError: Dispatch<SetStateAction<string | undefined>>;
-  savedScrollTop: number;
-  setSavedScrollTop: Dispatch<SetStateAction<number>>;
   modalState: Record<string, boolean>;
   setModalState: Dispatch<SetStateAction<Record<string, boolean>>>;
   contextMenuState: { visible: boolean; x: number; y: number };

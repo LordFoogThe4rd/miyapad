@@ -43,7 +43,6 @@ interface DefaultPresets {
   worldInfo: WorldInfoData;
   logitBias: LogitBiasState;
   instructTemplates: Record<string, InstructTemplate>;
-  scrollTop: number;
   enabledSamplers: string[];
   grammar: string;
   useServerTokenization: boolean;

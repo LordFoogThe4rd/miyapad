@@ -51,7 +51,6 @@ export const defaultPresets = {
 	}),
 	logitBias:{ bias:{},model:"none" },
 	instructTemplates: defaultTemplates,
-	scrollTop: 0,
 	enabledSamplers: ['temperature', 'rep_pen', 'pres_pen', 'freq_pen', 'mirostat', 'top_k', 'top_p', 'min_p'],
 	grammar: '',
 	useServerTokenization: false,
