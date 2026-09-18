@@ -15,6 +15,7 @@ Tags are stored as `string[]` in the session metadata (the `Names` store):
 | `modified` | `number\|null` | `null` |
 | `pinned` | `boolean` | `false` |
 | `tags` | `string[]` | `[]` |
+| `folder` | `string\|undefined` | `undefined` (see [Session Folders](session-folders.md)) |
 
 No DB schema migration is needed — the `Names` store is a flexible key-value store in both IndexedDB and SQLite.
 

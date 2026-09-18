@@ -19,3 +19,4 @@ Web-based AI text generation interface. React 19/TypeScript frontend with option
 - [Development Conventions](docs/development-conventions.md) (IMPORTANT! READ BEFORE WORKING)
 - [Screenshot Capture](docs/screenshot-capture.md)
 - [Session Tags](docs/session-tags.md)
+- [Session Folders](docs/session-folders.md)

@@ -13,7 +13,7 @@ The database has eight main tables:
 5. **`connections`**: Stores connection preset data (endpoint, API type, API key, model, per-API options). Uses column `connection_data`.
 6. **`samplerpresets`**: Stores sampler preset data (all generation parameters). Uses column `sampler_preset_data`.
 7. **`sessionhistory`**: Stores saved session versions and each session's version index. Uses column `history_data`. Created on every start (`CREATE TABLE IF NOT EXISTS`), so no schema version bump.
-8. **`names`**: Stores lightweight key-to-metadata mapping `{name, created, modified, pinned}` (as JSON) for session listing, searching, sorting, and pinning.
+8. **`names`**: Stores lightweight key-to-metadata mapping `{name, created, modified, pinned, tags, folder, stats}` (as JSON) for session listing, searching, sorting, pinning and folders.
 
 ### Schema Column Constraints
 

@@ -107,6 +107,26 @@ describe('SessionStorage pins and tags on sessions that are not open', () => {
 		expect(store('Names').get(key)).toMatchObject({ pinned: true });
 		expect(store('Sessions').get(key)).toMatchObject({ prompt: [{ content: 'keep me' }] });
 	});
+
+	it('keeps folders as metadata, open or not, and a blank name takes a session out', async () => {
+		const { adapter, store, first, story, key } = await withStory();
+		await first.switchSession(0);
+		const modified = first.sessions[story].modified;
+
+		await first.setFolder([key, 0], '  Old   drafts ');
+
+		expect(store('Sessions').get(key)).toMatchObject({ prompt: [{ content: 'keep me' }] });
+		expect(store('Sessions').get('0')).not.toHaveProperty('folder');
+		expect(first.sessions[story].modified).toBe(modified);
+
+		const reloaded = await open(adapter);
+		expect(reloaded.sessions[story].folder).toBe('Old drafts');
+		expect(reloaded.sessions[0].folder).toBe('Old drafts');
+
+		await reloaded.setFolder([key], ' ');
+		expect((store('Names').get(key) as SessionData).folder).toBeUndefined();
+		expect(store('Sessions').get(key)).toMatchObject({ prompt: [{ content: 'keep me' }] });
+	});
 });
 
 describe('SessionStorage statistics', () => {
