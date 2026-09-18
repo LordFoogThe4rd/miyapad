@@ -178,10 +178,13 @@
 	.sessions-col-created {
 		display: none;
 	}
-	.sessions-modal-table:not(.session-history-table) thead th:nth-child(3) {
-		display: none;
-	}
 	.sessions-col-modified {
 		width: 9em;
+	}
+}
+/* A phone's table is too narrow for a date column and a readable name. */
+@media (max-width: 480px) {
+	.sessions-modal-table:not(.session-history-table) .sessions-col-modified {
+		display: none;
 	}
 }

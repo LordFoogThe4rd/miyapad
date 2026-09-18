@@ -18,6 +18,7 @@
 
 - Scrollbars now follow the theme's colors everywhere instead of showing the browser's default gray ones in modals, text areas and lists
 - Renaming, pinning or tagging a session from the Sessions list no longer leaves a duplicate of it behind with its pins, tags and creation date missing
+- The Sessions list on narrow screens no longer puts the column headers over the wrong columns or squeezes session names down to a letter or two
 
 ## [2.8.0] - 2026-09-16
 
