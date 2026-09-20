@@ -4,6 +4,8 @@ interface SessionData {
   modified?: number | null;
   pinned?: boolean;
   tags?: string[];
+  /** Name of the folder the session is in; sessions with the same name share a folder. */
+  folder?: string;
   stats?: SessionStats;
   inactive?: boolean;
   [key: string]: unknown;

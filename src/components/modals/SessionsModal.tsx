@@ -1,12 +1,12 @@
 import { html } from 'htm/react';
-import { Fragment, useState, useEffect, useMemo, type ChangeEvent, type KeyboardEvent, type MouseEvent } from 'react';
+import { Fragment, useState, useEffect, useMemo, type ChangeEvent, type DragEvent, type KeyboardEvent, type MouseEvent } from 'react';
 import { Modal } from '../Modal';
 import { InputBox } from '../controls/InputBox';
 import { SelectBox } from '../controls/SelectBox';
-import { SVG_Confirm, SVG_Cancel, SVG_Rename, SVG_Trash, SVG_Star, SVG_StarOutline } from '../icons/index';
+import { SVG_ArrowDown, SVG_Close, SVG_Confirm, SVG_Cancel, SVG_Folder, SVG_Rename, SVG_Trash, SVG_Star, SVG_StarOutline } from '../icons/index';
 import { exportText } from '../../api/common';
 import { useT } from '../../i18n';
-import type { SessionStorage } from '../../storage/SessionStorage';
+import { folderName, type SessionStorage } from '../../storage/SessionStorage';
 
 interface SessionsModalProps {
   isOpen: boolean;
@@ -18,6 +18,37 @@ interface SessionsModalProps {
 }
 
 type TagGroup = Array<{ pattern: string; negate: boolean; regex: RegExp | null }>;
+type SessionEntry = [string, SessionData];
+
+/** A top-level row of the list: a folder with its sessions, or a session in no folder. */
+interface ListItem { folder?: string; entries: SessionEntry[] }
+
+const COLLAPSED_KEY = 'miyapad-sessions-collapsedFolders';
+
+function loadCollapsed(): Set<string> {
+	try {
+		const raw: unknown = JSON.parse(localStorage.getItem(COLLAPSED_KEY) ?? '[]');
+		return new Set(Array.isArray(raw) ? raw.filter((f): f is string => typeof f === 'string') : []);
+	} catch {
+		return new Set();
+	}
+}
+
+/** Puts each folder where its first session sorts to, with its sessions in their sorted order. */
+function groupByFolder(entries: SessionEntry[]): ListItem[] {
+	const items: ListItem[] = [];
+	const folders = new Map<string, ListItem>();
+	for (const entry of entries) {
+		const folder = entry[1].folder;
+		let item = folder ? folders.get(folder) : undefined;
+		if (!item) {
+			items.push(item = { folder, entries: [] });
+			if (folder) folders.set(folder, item);
+		}
+		item.entries.push(entry);
+	}
+	return items;
+}
 
 function compileTagRegex(pattern: string) {
 	if (!pattern.includes('*')) return null;
@@ -80,6 +111,12 @@ export function SessionsModal({ isOpen, closeModal, sessionStorage, cancel, open
 	const [editTagsValue, setEditTagsValue] = useState('');
 	const [sortBy, setSortByState] = useState(() => localStorage.getItem('miyapad-sessions-sortBy') || 'modified');
 	const [sortAsc, setSortAscState] = useState(() => localStorage.getItem('miyapad-sessions-sortAsc') === 'true');
+	const [collapsed, setCollapsed] = useState(loadCollapsed);
+	const [renamingFolder, setRenamingFolder] = useState<string | undefined>(undefined);
+	const [renameFolderValue, setRenameFolderValue] = useState('');
+	/** The session being dragged, and the row it would be dropped on. */
+	const [dragId, setDragId] = useState<string | null>(null);
+	const [dropTarget, setDropTarget] = useState<string | null>(null);
 
 	const setSortBy = (v: string) => { setSortByState(v); localStorage.setItem('miyapad-sessions-sortBy', v); };
 	const setSortAsc = (v: boolean | ((prev: boolean) => boolean)) => {
@@ -112,6 +149,7 @@ export function SessionsModal({ isOpen, closeModal, sessionStorage, cancel, open
 			setEditingTagsId(undefined);
 			setEditTagsValue('');
 			setRenamingId(undefined);
+			setRenamingFolder(undefined);
 			setIsCreating(false);
 			setSortByState(localStorage.getItem('miyapad-sessions-sortBy') || 'modified');
 			setSortAscState(localStorage.getItem('miyapad-sessions-sortAsc') === 'true');
@@ -126,7 +164,7 @@ export function SessionsModal({ isOpen, closeModal, sessionStorage, cancel, open
 		// Filter by search query and tags
 		const q = searchQuery.trim().toLowerCase();
 		entries = entries.filter(([_, s]) => {
-			const nameMatch = !q || (s.name || '').toLowerCase().includes(q);
+			const nameMatch = !q || (s.name || '').toLowerCase().includes(q) || (s.folder || '').toLowerCase().includes(q);
 			const tagMatch = sessionMatches(s, parsedTagFilter);
 			return nameMatch && tagMatch;
 		});
@@ -153,6 +191,85 @@ export function SessionsModal({ isOpen, closeModal, sessionStorage, cancel, open
 
 		return [...pinned, ...unpinned];
 	}, [version, searchQuery, parsedTagFilter, sortBy, sortAsc, sessionStorage.sessions]);
+
+	const listItems = useMemo(() => groupByFolder(sortedSessions), [sortedSessions]);
+	// A filter shows what matched inside collapsed folders too.
+	const filtering = !!searchQuery.trim() || !!parsedTagFilter;
+
+	const setFolderCollapsed = (folder: string, value: boolean) => {
+		const next = new Set(collapsed);
+		if (value) next.add(folder);
+		else next.delete(folder);
+		localStorage.setItem(COLLAPSED_KEY, JSON.stringify([...next]));
+		setCollapsed(next);
+	};
+
+	/** Every session in a folder, including those the filters hide. */
+	const folderIds = (folder: string) =>
+		Object.keys(sessionStorage.sessions).filter(id => sessionStorage.sessions[id].folder === folder);
+
+	/** Puts sessions in a new folder and opens its name for editing. */
+	const createFolder = async (ids: string[]) => {
+		const taken = new Set(Object.values(sessionStorage.sessions).map(s => s.folder));
+		const base = t('sessions.newFolder');
+		let name = base;
+		for (let n = 2; taken.has(name); n++) name = `${base} ${n}`;
+		setFolderCollapsed(name, false);
+		setRenameFolderValue(name);
+		setRenamingFolder(name);
+		await sessionStorage.setFolder(ids, name);
+	};
+
+	const renameFolder = async () => {
+		const from = renamingFolder;
+		const to = folderName(renameFolderValue);
+		setRenamingFolder(undefined);
+		// Renaming onto another folder's name merges the two.
+		if (from !== undefined && to && to !== from) await sessionStorage.setFolder(folderIds(from), to);
+	};
+
+	const removeFolder = async (folder: string) => {
+		setFolderCollapsed(folder, false);
+		await sessionStorage.setFolder(folderIds(folder), undefined);
+	};
+
+	/** The keyboard and touch way in or out of a folder: type its name, or clear it. */
+	const moveToFolder = async (sessionId: string, session: SessionData) => {
+		const folder = window.prompt(t('sessions.moveToFolderPrompt'), session.folder ?? '');
+		if (folder !== null) await sessionStorage.setFolder([sessionId], folder);
+	};
+
+	const startDrag = (e: DragEvent, sessionId: string) => {
+		e.dataTransfer.effectAllowed = 'move';
+		e.dataTransfer.setData('text/plain', sessionId);
+		// Chrome ends a drag whose dragstart changes the page, and the drop zone this shows would.
+		setTimeout(() => setDragId(sessionId));
+	};
+
+	const endDrag = () => {
+		setDragId(null);
+		setDropTarget(null);
+	};
+
+	/** Makes a row a drop target for a dragged session, which `onDrop` receives. */
+	const dropHandlers = (target: string, onDrop: (draggedId: string) => void) => ({
+		onDragOver: (e: DragEvent) => {
+			if (dragId === null) return;
+			e.preventDefault();
+			setDropTarget(target);
+		},
+		onDragLeave: (e: DragEvent) => {
+			if (!e.currentTarget.contains(e.relatedTarget as Node | null)) setDropTarget(cur => cur === target ? null : cur);
+		},
+		onDrop: (e: DragEvent) => {
+			e.preventDefault();
+			const id = dragId;
+			endDrag();
+			if (id !== null) onDrop(id);
+		},
+	});
+
+	const draggedFolder = dragId !== null ? sessionStorage.sessions[dragId]?.folder : undefined;
 
 	const switchSession = async (sessionId: string | number) => {
 		if (sessionStorage.selectedSession != sessionId) {
@@ -284,6 +401,161 @@ export function SessionsModal({ isOpen, closeModal, sessionStorage, cancel, open
 	const disabled = !!cancel;
 	const noSession = sessionStorage.selectedSession == null;
 
+	const renderSession = ([sessionId, session]: SessionEntry) => html`
+		<tr key=${sessionId}
+			className="sessions-modal-row ${String(sessionStorage.selectedSession) === sessionId ? 'selected' : ''} ${session.folder ? 'sessions-modal-row-in-folder' : ''} ${dropTarget === sessionId ? 'drop-target' : ''} ${dragId === sessionId ? 'dragging' : ''}"
+			draggable=${renamingId != sessionId && editingTagsId !== sessionId}
+			onDragStart=${(e: DragEvent) => startDrag(e, sessionId)}
+			onDragEnd=${endDrag}
+			...${dragId === sessionId || (session.folder && session.folder === draggedFolder) ? {} : dropHandlers(sessionId, (id) =>
+				session.folder ? sessionStorage.setFolder([id], session.folder) : createFolder([sessionId, id]))}
+			onClick=${() => switchSession(sessionId)}>
+			<td className="sessions-col-star" onClick=${(e: MouseEvent) => e.stopPropagation()}>
+				<button className="sessions-action-btn"
+					title=${session.pinned ? t('sessions.unpinSession') : t('sessions.pinSession')}
+					onClick=${() => sessionStorage.togglePinSession(sessionId)}>
+					${session.pinned ? html`<${SVG_Star}/>` : html`<${SVG_StarOutline}/>`}
+				</button>
+			</td>
+			<td className="sessions-col-name">
+				${renamingId == sessionId ? html`
+					<input
+						type="text"
+						className="sessions-modal-inline-input"
+						value=${renameSessionName}
+						onChange=${(e: ChangeEvent<HTMLInputElement>) => setRenameSessionName(e.target.value)}
+						onKeyDown=${(e: KeyboardEvent<HTMLInputElement>) => handleKeyDown(sessionId, e)}
+						onClick=${(e: MouseEvent) => e.stopPropagation()}
+						autoFocus
+					/>
+				` : html`
+					<div className="sessions-modal-name-wrapper">
+						<span className="sessions-modal-name">${session.name}</span>
+						${editingTagsId === sessionId ? html`
+							<input
+								type="text"
+								className="sessions-modal-tag-input"
+								value=${editTagsValue}
+								onChange=${(e: ChangeEvent<HTMLInputElement>) => setEditTagsValue(e.target.value)}
+								onKeyDown=${(e: KeyboardEvent<HTMLInputElement>) => {
+									if (e.key === 'Enter') {
+										sessionStorage.setTags(sessionId, editTagsValue);
+										setEditingTagsId(undefined);
+									} else if (e.key === 'Escape') {
+										setEditingTagsId(undefined);
+									}
+									e.stopPropagation();
+								}}
+								onBlur=${() => {
+									sessionStorage.setTags(sessionId, editTagsValue);
+									setEditingTagsId(undefined);
+								}}
+								onClick=${(e: MouseEvent) => e.stopPropagation()}
+								autoFocus
+								title=${t('sessions.tagsHint')}/>
+						` : html`
+							<span className="sessions-modal-tags ${session.tags && session.tags.length > 0 ? '' : 'sessions-modal-tags-empty'}"
+								onClick=${(e: MouseEvent) => {
+									e.stopPropagation();
+									setEditTagsValue(session.tags ? session.tags.join(', ') : '');
+									setEditingTagsId(sessionId);
+								}}>
+								${session.tags && session.tags.length > 0 ? session.tags.join(', ') : t('sessions.addTags')}
+							</span>
+						`}
+					</div>
+				`}
+			</td>
+			<td className="sessions-col-modified">${formatDate(session.modified)}</td>
+			<td className="sessions-col-created">${formatDate(session.created)}</td>
+			<td className="sessions-col-actions" onClick=${(e: MouseEvent) => e.stopPropagation()}>
+				<div className="sessions-col-actions-inner">
+					${renamingId == sessionId ? html`<${Fragment}>
+						<button className="sessions-action-btn" onClick=${() => renameSession(sessionId)}><${SVG_Confirm}/></button>
+						<button className="sessions-action-btn" onClick=${() => setRenamingId(undefined)}><${SVG_Cancel}/></button>
+					<//>` : html`<${Fragment}>
+						<button className="sessions-action-btn"
+							title=${t('sessions.moveToFolder')}
+							onClick=${() => moveToFolder(sessionId, session)}>
+							<${SVG_Folder}/>
+						</button>
+						<button className="sessions-action-btn" disabled=${disabled}
+							onClick=${() => startRenameSession(sessionId, session.name ?? '')}>
+							<${SVG_Rename}/>
+						</button>
+						<button className="sessions-action-btn" disabled=${disabled}
+							onClick=${() => deleteSession(sessionId)}>
+							<${SVG_Trash}/>
+						</button>
+					<//>`}
+				</div>
+			</td>
+		</tr>
+	`;
+
+	const renderFolder = (folder: string, entries: SessionEntry[]) => {
+		const open = filtering || !collapsed.has(folder);
+		const target = `folder:${folder}`;
+		return html`<${Fragment} key=${target}>
+			<tr className="sessions-modal-row sessions-modal-folder-row ${dropTarget === target ? 'drop-target' : ''}"
+				...${draggedFolder === folder ? {} : dropHandlers(target, (id) => sessionStorage.setFolder([id], folder))}
+				onClick=${() => filtering || setFolderCollapsed(folder, open)}>
+				<td className="sessions-col-star">
+					<button className="sessions-action-btn sessions-folder-toggle ${open ? 'open' : ''}"
+						aria-expanded=${open}
+						title=${open ? t('sessions.collapseFolder') : t('sessions.expandFolder')}>
+						<${SVG_ArrowDown}/>
+					</button>
+				</td>
+				<td className="sessions-col-name">
+					${renamingFolder === folder ? html`
+						<input
+							type="text"
+							className="sessions-modal-inline-input"
+							value=${renameFolderValue}
+							onChange=${(e: ChangeEvent<HTMLInputElement>) => setRenameFolderValue(e.target.value)}
+							onKeyDown=${(e: KeyboardEvent<HTMLInputElement>) => {
+								if (e.key === 'Enter') {
+									renameFolder();
+								} else if (e.key === 'Escape') {
+									e.stopPropagation();
+									setRenamingFolder(undefined);
+								}
+							}}
+							onFocus=${(e: ChangeEvent<HTMLInputElement>) => e.target.select()}
+							onClick=${(e: MouseEvent) => e.stopPropagation()}
+							autoFocus
+						/>
+					` : html`
+						<span className="sessions-modal-name sessions-folder-name">
+							${folder} <span className="sessions-folder-count">${entries.length}</span>
+						</span>
+					`}
+				</td>
+				<td className="sessions-col-modified"></td>
+				<td className="sessions-col-created"></td>
+				<td className="sessions-col-actions" onClick=${(e: MouseEvent) => e.stopPropagation()}>
+					<div className="sessions-col-actions-inner">
+						${renamingFolder === folder ? html`<${Fragment}>
+							<button className="sessions-action-btn" onClick=${renameFolder}><${SVG_Confirm}/></button>
+							<button className="sessions-action-btn" onClick=${() => setRenamingFolder(undefined)}><${SVG_Cancel}/></button>
+						<//>` : html`<${Fragment}>
+							<button className="sessions-action-btn" title=${t('sessions.renameFolder')}
+								onClick=${() => { setRenameFolderValue(folder); setRenamingFolder(folder); }}>
+								<${SVG_Rename}/>
+							</button>
+							<button className="sessions-action-btn" title=${t('sessions.removeFolder')}
+								onClick=${() => removeFolder(folder)}>
+								<${SVG_Close}/>
+							</button>
+						<//>`}
+					</div>
+				</td>
+			</tr>
+			${open && entries.map(renderSession)}
+		<//>`;
+	};
+
 	return html`
 		<${Modal} isOpen=${isOpen} onClose=${closeModal}
 			title=${t('sessions.title')}
@@ -326,6 +598,12 @@ export function SessionsModal({ isOpen, closeModal, sessionStorage, cancel, open
 					<button disabled=${disabled || noSession} onClick=${openStatistics}>${t('sessions.statistics')}</button>
 				</div>
 			</div>
+			${draggedFolder && html`
+				<div className="sessions-modal-dropzone ${dropTarget === 'root' ? 'drop-target' : ''}"
+					...${dropHandlers('root', (id) => sessionStorage.setFolder([id], undefined))}>
+					${t('sessions.dropToUngroup')}
+				</div>
+			`}
 			<div className="sessions-modal-list overflow-container">
 				<table className="sessions-modal-table">
 					<thead>
@@ -360,87 +638,7 @@ onClick=${(e: MouseEvent) => e.stopPropagation()}
 								</td>
 							</tr>
 						`}
-						${sortedSessions.map(([sessionId, session]) => html`
-							<tr key=${sessionId}
-								className="sessions-modal-row ${String(sessionStorage.selectedSession) === sessionId ? 'selected' : ''}"
-								onClick=${() => switchSession(sessionId)}>
-								<td className="sessions-col-star" onClick=${(e: MouseEvent) => e.stopPropagation()}>
-									<button className="sessions-action-btn"
-										title=${session.pinned ? t('sessions.unpinSession') : t('sessions.pinSession')}
-										onClick=${() => sessionStorage.togglePinSession(sessionId)}>
-										${session.pinned ? html`<${SVG_Star}/>` : html`<${SVG_StarOutline}/>`}
-									</button>
-								</td>
-								<td className="sessions-col-name">
-									${renamingId == sessionId ? html`
-										<input
-											type="text"
-											className="sessions-modal-inline-input"
-											value=${renameSessionName}
-											onChange=${(e: ChangeEvent<HTMLInputElement>) => setRenameSessionName(e.target.value)}
-											onKeyDown=${(e: KeyboardEvent<HTMLInputElement>) => handleKeyDown(sessionId, e)}
-onClick=${(e: MouseEvent) => e.stopPropagation()}
-									autoFocus
-								/>
-									` : html`
-										<div className="sessions-modal-name-wrapper">
-											<span className="sessions-modal-name">${session.name}</span>
-											${editingTagsId === sessionId ? html`
-												<input
-													type="text"
-													className="sessions-modal-tag-input"
-													value=${editTagsValue}
-onChange=${(e: ChangeEvent<HTMLInputElement>) => setEditTagsValue(e.target.value)}
-onKeyDown=${(e: KeyboardEvent<HTMLInputElement>) => {
-														if (e.key === 'Enter') {
-															sessionStorage.setTags(sessionId, editTagsValue);
-															setEditingTagsId(undefined);
-														} else if (e.key === 'Escape') {
-															setEditingTagsId(undefined);
-														}
-														e.stopPropagation();
-													}}
-													onBlur=${() => {
-															sessionStorage.setTags(sessionId, editTagsValue);
-															setEditingTagsId(undefined);
-														}}
-													onClick=${(e: MouseEvent) => e.stopPropagation()}
-													autoFocus
-													title=${t('sessions.tagsHint')}/>
-											` : html`
-												<span className="sessions-modal-tags ${session.tags && session.tags.length > 0 ? '' : 'sessions-modal-tags-empty'}"
-													onClick=${(e: MouseEvent) => {
-														e.stopPropagation();
-														setEditTagsValue(session.tags ? session.tags.join(', ') : '');
-														setEditingTagsId(sessionId);
-													}}>
-													${session.tags && session.tags.length > 0 ? session.tags.join(', ') : t('sessions.addTags')}
-												</span>
-											`}
-										</div>
-									`}
-								</td>
-								<td className="sessions-col-modified">${formatDate(session.modified)}</td>
-								<td className="sessions-col-created">${formatDate(session.created)}</td>
-								<td className="sessions-col-actions" onClick=${(e: MouseEvent) => e.stopPropagation()}>
-									<div className="sessions-col-actions-inner">
-										${renamingId == sessionId ? html`<${Fragment}>
-											<button className="sessions-action-btn" onClick=${() => renameSession(sessionId)}><${SVG_Confirm}/></button>
-											<button className="sessions-action-btn" onClick=${() => setRenamingId(undefined)}><${SVG_Cancel}/></button>
-										<//>` : html`<${Fragment}>
-											<button className="sessions-action-btn" disabled=${disabled}
-												onClick=${() => startRenameSession(sessionId, session.name ?? '')}>
-												<${SVG_Rename}/>
-											</button>
-											<button className="sessions-action-btn" disabled=${disabled}
-												onClick=${() => deleteSession(sessionId)}>
-												<${SVG_Trash}/>
-											</button>
-										<//>`}
-									</div>
-								</td>
-							</tr>
-						`)}
+						${listItems.map(({ folder, entries }) => folder ? renderFolder(folder, entries) : renderSession(entries[0]))}
 					</tbody>
 				</table>
 			</div>

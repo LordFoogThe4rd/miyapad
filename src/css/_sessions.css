@@ -84,6 +84,42 @@
 	cursor: default;
 	animation: fadeIn 0.2s ease-out;
 }
+.sessions-modal-row.dragging {
+	opacity: 0.5;
+}
+.sessions-modal-row.drop-target,
+.sessions-modal-dropzone.drop-target {
+	background-color: var(--color-bg-highlight-3);
+	outline: 2px dashed var(--color-light);
+	outline-offset: -2px;
+}
+.sessions-modal-folder-row .sessions-folder-name {
+	font-weight: bold;
+}
+.sessions-folder-count {
+	font-weight: normal;
+	font-size: 0.75rem;
+	color: var(--color-text-hint);
+	margin-left: 4px;
+}
+.sessions-action-btn.sessions-folder-toggle {
+	transform: rotate(-90deg);
+	transition: transform 0.15s ease-in-out, opacity 0.15s;
+}
+.sessions-action-btn.sessions-folder-toggle.open {
+	transform: none;
+}
+.sessions-modal-row-in-folder .sessions-col-name {
+	padding-left: 1.75em;
+}
+.sessions-modal-dropzone {
+	padding: 8px;
+	margin-bottom: 8px;
+	border: 1px dashed var(--color-bg-rule);
+	text-align: center;
+	font-size: 0.8rem;
+	color: var(--color-text-hint);
+}
 .sessions-modal-name {
 	overflow: hidden;
 	text-overflow: ellipsis;
@@ -178,10 +214,13 @@
 	.sessions-col-created {
 		display: none;
 	}
-	.sessions-modal-table:not(.session-history-table) thead th:nth-child(3) {
-		display: none;
-	}
 	.sessions-col-modified {
 		width: 9em;
+	}
+}
+/* A phone's table is too narrow for a date column and a readable name. */
+@media (max-width: 480px) {
+	.sessions-modal-table:not(.session-history-table) .sessions-col-modified {
+		display: none;
 	}
 }

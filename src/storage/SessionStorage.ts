@@ -8,8 +8,14 @@ function extractMeta(s: Record<string, unknown>) {
 		modified: typeof s.modified === 'number' ? s.modified : null,
 		pinned: !!s.pinned,
 		tags: Array.isArray(s.tags) ? s.tags.filter((t): t is string => typeof t === 'string') : [],
+		folder: folderName(s.folder),
 		stats: sanitizeStats(s.stats),
 	};
+}
+
+/** A folder name as stored: whitespace collapsed, and undefined (no folder) when blank. */
+export function folderName(raw: unknown): string | undefined {
+	return typeof raw === 'string' ? raw.trim().replace(/\s+/g, ' ') || undefined : undefined;
 }
 
 const EMPTY_STATS: SessionStats = { generations: 0, genTokens: 0, genChars: 0, genMs: 0, typedChars: 0, deletedChars: 0 };
@@ -71,6 +77,7 @@ function sanitizeSessionData(raw: unknown, key?: string | number): SessionData {
 		modified: typeof src.modified === 'number' ? src.modified : null,
 		pinned: !!src.pinned,
 		tags: Array.isArray(src.tags) ? src.tags.filter((t): t is string => typeof t === 'string') : [],
+		folder: folderName(src.folder),
 		stats: sanitizeStats(src.stats),
 		inactive: !!src.inactive,
 	};
@@ -120,7 +127,7 @@ export class SessionStorage extends AbstractStorage {
         if (record && Object.hasOwn(record, 'name')) {
             const nameData = extractMeta(record);
             await this.nameStorage!.saveToDatabase(db, key, nameData);
-            const { name, created, modified, pinned, tags, stats, ...sessionData } = record;
+            const { name, created, modified, pinned, tags, folder, stats, ...sessionData } = record;
             await super.saveToDatabase(db, key, sessionData);
         } else {
             await super.saveToDatabase(db, key, data);
@@ -147,6 +154,7 @@ export class SessionStorage extends AbstractStorage {
 				data['modified'] = typeof meta.modified === 'number' ? meta.modified : null;
 				data['pinned'] = meta.pinned === undefined ? false : !!meta.pinned;
 				data['tags'] = Array.isArray(meta.tags) ? meta.tags : [];
+				data['folder'] = folderName(meta.folder);
 				data['stats'] = sanitizeStats(meta.stats);
 			}
 		}
@@ -430,6 +438,21 @@ export class SessionStorage extends AbstractStorage {
 		this.sessions[sessionId].modified = Date.now();
 		this.enqueueSave(sessionId);
 		this.dispatchChangeEvent();
+	}
+
+	/**
+	 * Moves sessions into a folder, or out of their folder when the name is blank. A folder
+	 * is only a name its sessions share, so it disappears with its last session. Like a pin,
+	 * this is not an edit and leaves `modified` alone. Each record is written directly for
+	 * the same reason as in `resetStats`.
+	 */
+	async setFolder(sessionIds: (string | number)[], folder: string | undefined): Promise<void> {
+		const name = folderName(folder);
+		const ids = sessionIds.filter(id => this.sessions[id] && this.sessions[id].folder !== name);
+		if (!ids.length) return;
+		for (const id of ids) this.sessions[id].folder = name;
+		this.dispatchChangeEvent();
+		for (const id of ids) await this.saveSessionToDB(id);
 	}
 
 	deleteSession(sessionId: string | number): Promise<void> {

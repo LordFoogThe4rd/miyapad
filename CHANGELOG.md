@@ -6,6 +6,7 @@
 
 - Inline code and links are now styled in markdown formatting mode
 - Statistics for your sessions, from Sessions → Statistics: generations run, tokens and characters the model produced, characters you wrote and deleted, time spent generating and average speed — for the session you have open and for all of them together. Text miyapad puts in the prompt for you (templates, `{predict}` and `{fill}` placeholders, search and replace, reformatting to another instruct template) is not counted as your own writing. Each section has its own Reset button
+- Folders in the Sessions list: drag a session onto another session to put both in a new folder, or onto a folder (or any session in it) to add it there. Drag a session to the box that appears above the list to take it back out. Folders can be collapsed, renamed (renaming one to another folder's name merges them) and removed, which keeps their sessions. The folder button next to each session does the same by typing a folder name, for touch screens and keyboards. Searching also matches folder names
 
 ### Changed
 
@@ -18,6 +19,7 @@
 
 - Scrollbars now follow the theme's colors everywhere instead of showing the browser's default gray ones in modals, text areas and lists
 - Renaming, pinning or tagging a session from the Sessions list no longer leaves a duplicate of it behind with its pins, tags and creation date missing
+- The Sessions list on narrow screens no longer puts the column headers over the wrong columns or squeezes session names down to a letter or two
 
 ## [2.8.0] - 2026-09-16
 
