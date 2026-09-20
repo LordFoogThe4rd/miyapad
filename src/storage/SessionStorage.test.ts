@@ -126,6 +126,11 @@ describe('SessionStorage pins and tags on sessions that are not open', () => {
 		await reloaded.setFolder([key], ' ');
 		expect((store('Names').get(key) as SessionData).folder).toBeUndefined();
 		expect(store('Sessions').get(key)).toMatchObject({ prompt: [{ content: 'keep me' }] });
+
+		// A session already where it is asked to go is not written again.
+		store('Names').delete(key);
+		await reloaded.setFolder([key], '');
+		expect(store('Names').get(key)).toBeUndefined();
 	});
 });
 

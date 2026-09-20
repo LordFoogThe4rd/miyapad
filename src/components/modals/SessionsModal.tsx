@@ -196,13 +196,13 @@ export function SessionsModal({ isOpen, closeModal, sessionStorage, cancel, open
 	// A filter shows what matched inside collapsed folders too.
 	const filtering = !!searchQuery.trim() || !!parsedTagFilter;
 
-	const setFolderCollapsed = (folder: string, value: boolean) => setCollapsed(prev => {
-		const next = new Set(prev);
+	const setFolderCollapsed = (folder: string, value: boolean) => {
+		const next = new Set(collapsed);
 		if (value) next.add(folder);
 		else next.delete(folder);
 		localStorage.setItem(COLLAPSED_KEY, JSON.stringify([...next]));
-		return next;
-	});
+		setCollapsed(next);
+	};
 
 	/** Every session in a folder, including those the filters hide. */
 	const folderIds = (folder: string) =>

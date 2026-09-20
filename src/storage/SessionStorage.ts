@@ -448,7 +448,8 @@ export class SessionStorage extends AbstractStorage {
 	 */
 	async setFolder(sessionIds: (string | number)[], folder: string | undefined): Promise<void> {
 		const name = folderName(folder);
-		const ids = sessionIds.filter(id => this.sessions[id]);
+		const ids = sessionIds.filter(id => this.sessions[id] && this.sessions[id].folder !== name);
+		if (!ids.length) return;
 		for (const id of ids) this.sessions[id].folder = name;
 		this.dispatchChangeEvent();
 		for (const id of ids) await this.saveSessionToDB(id);
