@@ -656,7 +656,8 @@ ${t('sessions.removeFolderConfirm')}`)) return;
 					<${InputBox} label=${t('sessions.search')}
 						value=${searchQuery}
 						onValueChange=${setSearchQuery}
-						placeholder=${t('sessions.searchPlaceholder')}/>
+						placeholder=${t('sessions.searchPlaceholder')}
+						autoFocus/>
 					<${InputBox} label=${t('sessions.tags')}
 						value=${tagFilterQuery}
 						onValueChange=${setTagFilterQuery}
