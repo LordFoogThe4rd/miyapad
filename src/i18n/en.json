@@ -367,6 +367,7 @@
   "sessions.exportAll": "Export All",
   "sessions.exportAllWarning": "Warning: This can take a lot of time and space. Be patient if you proceed.",
   "sessions.folderPlaceholder": "Folder name, or empty to take the sessions out",
+  "sessions.hiddenByFilter": "({{count}} hidden by filter)",
   "sessions.history": "History",
   "sessions.import": "Import",
   "sessions.modified": "Modified",

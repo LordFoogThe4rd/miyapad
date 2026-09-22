@@ -229,6 +229,12 @@ export function SessionsModal({ isOpen, closeModal, sessionStorage, cancel, open
 	const selectedIds = useMemo(() => [...selected].filter(id => sessionStorage.sessions[id]),
 		[selected, version, sessionStorage.sessions]);
 
+	/** Picked sessions the filters hide. The bar's actions still apply to them, so it says so. */
+	const hiddenPicked = useMemo(() => {
+		const shown = new Set(sortedSessions.map(([id]) => id));
+		return selectedIds.filter(id => !shown.has(id)).length;
+	}, [selectedIds, sortedSessions]);
+
 	/** Top to bottom as the list shows them, for shift-click ranges. */
 	const visibleIds = useMemo(() => listItems.flatMap(({ folder, entries }) =>
 		folder && !filtering && collapsed.has(folder) ? [] : entries.map(([id]) => id)),
@@ -721,7 +727,7 @@ ${t('sessions.removeFolderConfirm')}`)) return;
 			`}
 			${selectedIds.length > 0 && html`
 				<div className="sessions-modal-bar">
-					<span>${`${selectedIds.length} ${t('sessions.selected')}`}</span>
+					<span>${`${selectedIds.length} ${t('sessions.selected')}`}${hiddenPicked > 0 && ` ${t('sessions.hiddenByFilter', { count: hiddenPicked })}`}</span>
 					<button onClick=${() => setFolderEdit({ ids: selectedIds, value: '' })}>${t('sessions.moveToFolder')}</button>
 					<button disabled=${disabled || lastSession}
 						title=${lastSession ? t('sessions.cantDeleteLast') : ''}

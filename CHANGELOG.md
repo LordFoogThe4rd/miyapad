@@ -25,6 +25,7 @@
 
 ### Fixed
 
+- When a search or tag filter hides some of the sessions you picked out, the bar above the Sessions list now says how many, e.g. "5 selected (3 hidden by filter)". Move to folder and Delete act on the hidden ones too, and nothing used to say so
 - Sorting the Sessions list by name now counts numbers as numbers, so "MiyaPad #2" comes before "MiyaPad #10" instead of after it
 - Removing a folder in the Sessions list now asks first, and says how many sessions it is about to take out — it used to ungroup the lot on one click, including sessions the filter was hiding
 - The Delete button in the Sessions list is now greyed out when you only have one session left, instead of looking like it works and doing nothing when clicked
