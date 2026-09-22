@@ -464,15 +464,19 @@ ${t('sessions.removeFolderConfirm')}`)) return;
 		exportText(`${name}.json`, JSON.stringify(stringifyAll(record)));
 	};
 
-	const exportAll = async () => {
-		if (confirm(t('sessions.exportAllWarning'))) {
-			for (const sessionId of Object.keys(sessionStorage.sessions)) await exportSession(sessionId);
-		}
+	const exportSessions = async (ids: string[]) => {
+		for (const sessionId of ids) await exportSession(sessionId);
 	};
 
-	const cloneSession = async (sessionId: string) => {
-		const newId = await sessionStorage.createSessionFromObject(stringifyAll(await loadRecord(sessionId)), true);
-		await sessionStorage.switchSession(newId);
+	const exportAll = async () => {
+		if (confirm(t('sessions.exportAllWarning'))) await exportSessions(Object.keys(sessionStorage.sessions));
+	};
+
+	/** Opens the last clone made. */
+	const cloneSessions = async (ids: string[]) => {
+		let newId: number | undefined;
+		for (const sessionId of ids) newId = await sessionStorage.createSessionFromObject(stringifyAll(await loadRecord(sessionId)), true);
+		if (newId !== undefined) await sessionStorage.switchSession(newId);
 	};
 
 	function handleKeyDown(sessionId: string | number | undefined, e: KeyboardEvent<HTMLInputElement>) {
@@ -500,23 +504,28 @@ ${t('sessions.removeFolderConfirm')}`)) return;
 	const lastSession = Object.keys(sessionStorage.sessions).length <= 1;
 
 	/** What a row can do beyond its buttons: the actions that used to sit in the toolbar. */
-	const rowMenuItems = (sessionId: string): ContextMenuItem[] => [
-		{
-			label: selected.has(sessionId) ? t('sessions.deselect') : t('sessions.select'),
-			disabled: false,
-			action: () => {
-				const next = new Set(selected);
-				if (!next.delete(sessionId)) next.add(sessionId);
-				setSelected(next);
-				setAnchorId(sessionId);
+	const rowMenuItems = (sessionId: string): ContextMenuItem[] => {
+		// Like the row's buttons, these act on the whole selection when the row is part of it.
+		const ids = targetIds(sessionId);
+		const count = ids.length > 1 ? ` (${ids.length})` : '';
+		return [
+			{
+				label: selected.has(sessionId) ? t('sessions.deselect') : t('sessions.select'),
+				disabled: false,
+				action: () => {
+					const next = new Set(selected);
+					if (!next.delete(sessionId)) next.add(sessionId);
+					setSelected(next);
+					setAnchorId(sessionId);
+				},
 			},
-		},
-		{ label: t('sessions.export'), disabled, action: () => exportSession(sessionId) },
-		{ label: t('sessions.clone'), disabled, action: () => cloneSession(sessionId) },
-		// History is one session's, and a multi-selection does not say which.
-		{ label: t('sessions.history'), disabled: disabled || selectedIds.length > 1, action: () => openForSession(sessionId, openHistory) },
-		{ label: t('sessions.statistics'), disabled, action: () => openForSession(sessionId, openStatistics) },
-	];
+			{ label: t('sessions.export') + count, disabled, action: () => exportSessions(ids) },
+			{ label: t('sessions.clone') + count, disabled, action: () => cloneSessions(ids) },
+			// History is one session's, and a multi-selection does not say which.
+			{ label: t('sessions.history'), disabled: disabled || ids.length > 1, action: () => openForSession(sessionId, openHistory) },
+			{ label: t('sessions.statistics'), disabled, action: () => openForSession(sessionId, openStatistics) },
+		];
+	};
 
 	const renderSession = ([sessionId, session]: SessionEntry) => html`
 		<tr key=${sessionId}
