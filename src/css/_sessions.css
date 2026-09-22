@@ -191,7 +191,8 @@
 	all: unset;
 	cursor: pointer;
 	padding: 2px;
-	opacity: 0.5;
+	/* Any fainter falls below text contrast, and touch screens never get the hover. */
+	opacity: 0.8;
 	display: inline-flex;
 	align-items: center;
 	line-height: 0;
