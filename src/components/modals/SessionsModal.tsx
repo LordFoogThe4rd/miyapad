@@ -67,12 +67,15 @@ export function tagSuggestions(value: string, tags: string[]): string[] {
 }
 
 /**
- * The next row whose name starts with the typed text, wrapping round. A search one letter long
- * starts below the row at `at`, so pressing the same letter again steps through the matches.
+ * The next row whose name starts with the typed text, wrapping round. One letter, or the same
+ * letter pressed again and again, searches from below the row at `at` for names starting with
+ * that letter, so repeating it steps through the matches.
  */
 export function typeAheadMatch(ids: string[], nameOf: (id: string) => string, at: number, text: string): string | undefined {
-	const start = text.length === 1 ? at + 1 : at;
-	return [...ids.slice(start), ...ids.slice(0, start)].find(id => nameOf(id).toLowerCase().startsWith(text));
+	const oneLetter = [...text].every(c => c === text[0]);
+	const query = oneLetter ? text.slice(0, 1) : text;
+	const start = oneLetter ? at + 1 : at;
+	return [...ids.slice(start), ...ids.slice(0, start)].find(id => nameOf(id).toLowerCase().startsWith(query));
 }
 
 function compileTagRegex(pattern: string) {

@@ -29,6 +29,11 @@ describe('typeAheadMatch', () => {
 		expect(typeAheadMatch(ids, nameOf, 2, 'a')).toBe('a');
 	});
 
+	it('steps on when the same letter is pressed again quickly, instead of looking for "aa"', () => {
+		expect(typeAheadMatch(ids, nameOf, 2, 'aa')).toBe('a');
+		expect(typeAheadMatch(ids, nameOf, 0, 'aaa')).toBe('c');
+	});
+
 	it('stays on the row while it still matches the longer text', () => {
 		expect(typeAheadMatch(ids, nameOf, 0, 'alp')).toBe('a');
 		expect(typeAheadMatch(ids, nameOf, 0, 'alps')).toBe('c');

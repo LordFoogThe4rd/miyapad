@@ -51,9 +51,9 @@
 	display: flex;
 	flex-direction: column;
 }
-/* The modal takes focus itself when nothing inside asks for it; a ring round the whole box says nothing. */
-.modal:focus {
-	outline: none;
+/* The modal takes focus itself when nothing inside asks for it. Same ring as a focused button. */
+.modal:focus-visible {
+	outline: 1px solid var(--color-base-0);
 }
 .modal.closing {
 	animation: slideDown 0.15s ease-out forwards;
