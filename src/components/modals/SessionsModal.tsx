@@ -197,6 +197,7 @@ export function SessionsModal({ isOpen, closeModal, sessionStorage, cancel, open
 			setFolderEdit(null);
 			setRowMenu(null);
 			setShowTrash(false);
+			typeAhead.current = { text: '', at: 0 };
 			setSortByState(localStorage.getItem('miyapad-sessions-sortBy') || 'modified');
 			setSortAscState(localStorage.getItem('miyapad-sessions-sortAsc') === 'true');
 		}
