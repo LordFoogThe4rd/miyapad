@@ -190,7 +190,8 @@ export function SessionsModal({ isOpen, closeModal, sessionStorage, cancel, open
 		const compare = ([idA, a]: [string, SessionData], [idB, b]: [string, SessionData]) => {
 			let cmp = 0;
 			if (sortBy === 'name') {
-				cmp = (a.name || '').localeCompare(b.name || '');
+				// Numeric, or the default `MiyaPad #10` sorts before `MiyaPad #2`.
+				cmp = (a.name || '').localeCompare(b.name || '', undefined, { numeric: true });
 			} else if (sortBy === 'created') {
 				cmp = (a.created || 0) - (b.created || 0);
 			} else {
