@@ -167,7 +167,6 @@ describe('SessionStorage version history', () => {
 	});
 
 	it('deleting the selected session removes its versions and leaves none behind', async () => {
-		vi.spyOn(window, 'confirm').mockReturnValue(true);
 		const { storage, store } = await setup();
 		await storage.createSession('Two');
 		storage.setProperty('prompt', [u('draft')]);
@@ -184,7 +183,6 @@ describe('SessionStorage version history', () => {
 			const ctx = await setup();
 			await ctx.storage.createSession('Two');
 			ctx.storage.setProperty('prompt', [u('draft')]);
-			vi.spyOn(window, 'confirm').mockReturnValue(true);
 			let release!: () => void;
 			const held = new Promise<void>(r => { release = r; });
 			const save = ctx.adapter.saveToDatabase;
@@ -218,8 +216,7 @@ describe('SessionStorage version history', () => {
 		});
 	});
 
-	it('deletes confirmed back to back run one at a time and never write a deleted session back', async () => {
-		vi.spyOn(window, 'confirm').mockReturnValue(true);
+	it('deletes started back to back run one at a time and never write a deleted session back', async () => {
 		const { storage, store, adapter } = await setup();
 		await storage.createSession('Two');
 		await storage.createSession('Three');
@@ -241,7 +238,6 @@ describe('SessionStorage version history', () => {
 	});
 
 	it('deleting the last two sessions at once keeps one', async () => {
-		vi.spyOn(window, 'confirm').mockReturnValue(true);
 		const { storage, store } = await setup();
 		await storage.createSession('Two');
 
@@ -253,7 +249,6 @@ describe('SessionStorage version history', () => {
 	});
 
 	it('an edit made while the selected session is being deleted does not bring its versions back', async () => {
-		vi.spyOn(window, 'confirm').mockReturnValue(true);
 		const { storage, store } = await setup();
 		await storage.createSession('Two');
 
@@ -266,7 +261,6 @@ describe('SessionStorage version history', () => {
 	});
 
 	it('keeps the session when its versions cannot be deleted', async () => {
-		vi.spyOn(window, 'confirm').mockReturnValue(true);
 		const { storage, store } = await setup();
 		await storage.createSession('Two');
 		storage.setProperty('prompt', [u('unsaved')]);
@@ -316,7 +310,6 @@ describe('SessionStorage version history', () => {
 	});
 
 	it('gives up replacing the content when the session is deleted while the version loads', async () => {
-		vi.spyOn(window, 'confirm').mockReturnValue(true);
 		const { storage, store, adapter } = await setup();
 		await storage.createSession('Two');
 		storage.setProperty('prompt', [u('old')]);

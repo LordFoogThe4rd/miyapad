@@ -359,6 +359,8 @@
   "sessions.created": "Created",
   "sessions.defaultNamePrefix": "MiyaPad #",
   "sessions.delete": "Delete",
+  "sessions.deleteConfirm": "Are you sure you want to delete this session? This action can't be undone.",
+  "sessions.deleteConfirmMany": "Are you sure you want to delete {{count}} sessions? This action can't be undone.",
   "sessions.deleteSession": "Delete session",
   "sessions.deselect": "Deselect",
   "sessions.dropToUngroup": "Drop here to take the session out of its folder",

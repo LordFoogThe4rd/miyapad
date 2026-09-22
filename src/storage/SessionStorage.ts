@@ -462,19 +462,14 @@ export class SessionStorage extends AbstractStorage {
 	}
 
 	/**
-	 * Deletes sessions after one confirmation for the lot. The last session is never deleted:
-	 * `#deleteSession` checks again before each, so a batch of every session leaves one behind.
+	 * Deletes sessions without asking; confirming is the caller's job. The last session is never
+	 * deleted: `#deleteSession` checks again before each, so a batch of every session leaves one behind.
 	 */
 	deleteSessions(sessionIds: (string | number)[]): Promise<void> {
 		const ids = sessionIds.filter(id => this.sessions[id]);
 		if (!ids.length || Object.keys(this.sessions).length === 1)
 			return Promise.resolve();
-		const message = ids.length > 1
-			? `Are you sure you want to delete ${ids.length} sessions? This action can't be undone.`
-			: "Are you sure you want to delete this session? This action can't be undone.";
-		if (!window.confirm(message))
-			return Promise.resolve();
-		// One delete at a time, so two confirmed back to back can't both pass the last-session check.
+		// One delete at a time, so two started back to back can't both pass the last-session check.
 		const run = this.#deleteQueue.then(async () => {
 			for (const id of ids) await this.#deleteSession(id);
 		});

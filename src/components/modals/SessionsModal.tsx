@@ -292,6 +292,12 @@ ${t('sessions.removeFolderConfirm')}`)) return;
 		await sessionStorage.setFolder(ids, resolveFolder(value));
 	};
 
+	/** One confirmation for the lot. */
+	const deleteSessions = (ids: string[]) => {
+		if (window.confirm(ids.length > 1 ? t('sessions.deleteConfirmMany', { count: ids.length }) : t('sessions.deleteConfirm')))
+			sessionStorage.deleteSessions(ids);
+	};
+
 	const draggedIds = dragId === null ? [] : targetIds(dragId);
 	const draggedFolder = dragId !== null ? sessionStorage.sessions[dragId]?.folder : undefined;
 
@@ -601,7 +607,7 @@ ${t('sessions.removeFolderConfirm')}`)) return;
 							title=${lastSession ? t('sessions.cantDeleteLast')
 								: targetIds(sessionId).length > 1 ? `${t('sessions.delete')}: ${targetIds(sessionId).length} ${t('sessions.selected')}`
 								: t('sessions.deleteSession')}
-							onClick=${() => sessionStorage.deleteSessions(targetIds(sessionId))}>
+							onClick=${() => deleteSessions(targetIds(sessionId))}>
 							<${SVG_Trash}/>
 						</button>
 						<button className="sessions-action-btn sessions-more-btn"
@@ -748,7 +754,7 @@ ${t('sessions.removeFolderConfirm')}`)) return;
 					<button onClick=${() => setFolderEdit({ ids: selectedIds, value: '' })}>${t('sessions.moveToFolder')}</button>
 					<button disabled=${disabled || lastSession}
 						title=${lastSession ? t('sessions.cantDeleteLast') : ''}
-						onClick=${() => sessionStorage.deleteSessions(selectedIds)}>${t('sessions.delete')}</button>
+						onClick=${() => deleteSessions(selectedIds)}>${t('sessions.delete')}</button>
 					<button onClick=${() => setSelected(new Set())}>${t('sessions.clearSelection')}</button>
 				</div>
 			`}
