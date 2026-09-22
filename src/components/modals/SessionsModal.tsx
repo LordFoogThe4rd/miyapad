@@ -685,13 +685,16 @@ ${t('sessions.removeFolderConfirm')}`)) return;
 		</tr>
 	`;
 
-	/** Clicking the sorted column reverses it; another column starts at A, or at the newest date. */
+	/** A newly picked column starts at A for names, and at the newest for dates. */
+	const pickSortColumn = (key: string) => {
+		setSortBy(key);
+		setSortAsc(key === 'name');
+	};
+
+	/** Clicking the sorted column reverses it. */
 	const sortHeader = (key: string, label: string) => html`
 		<button className="sessions-sort-header"
-			onClick=${() => {
-				if (sortBy === key) setSortAsc((v: boolean) => !v);
-				else { setSortBy(key); setSortAsc(key === 'name'); }
-			}}>
+			onClick=${() => sortBy === key ? setSortAsc((v: boolean) => !v) : pickSortColumn(key)}>
 			${label}${sortBy === key && html`<span className="sessions-sort-arrow">${sortAsc ? '↑' : '↓'}</span>`}
 		</button>`;
 
@@ -833,7 +836,7 @@ ${t('sessions.removeFolderConfirm')}`)) return;
 						<${SelectBox}
 							label=${t('sessions.sortBy')}
 							value=${sortBy}
-							onValueChange=${setSortBy}
+							onValueChange=${pickSortColumn}
 							options=${[
 								{ name: t('sessions.sortLastModified'), value: 'modified' },
 								{ name: t('sessions.sortCreated'), value: 'created' },
@@ -842,6 +845,7 @@ ${t('sessions.removeFolderConfirm')}`)) return;
 						<button
 							className="sessions-modal-sort-btn"
 							title=${sortAsc ? t('sessions.sortAscending') : t('sessions.sortDescending')}
+							aria-label=${sortAsc ? t('sessions.sortAscending') : t('sessions.sortDescending')}
 							onClick=${() => setSortAsc((v: boolean) => !v)}
 							style=${{ transform: sortAsc ? 'rotate(0deg)' : 'rotate(180deg)' }}>
 							↑

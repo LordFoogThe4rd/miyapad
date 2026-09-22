@@ -15,7 +15,7 @@
 	flex: 1;
 	min-width: 0;
 }
-/* The column headers sort the list. Narrow screens hide the date columns, so they get this box back. */
+/* The column headers sort the list. Below 600px Created is hidden (and Modified below 480px), so the box comes back. */
 .sessions-modal-sort {
 	display: none;
 	flex: 1;
