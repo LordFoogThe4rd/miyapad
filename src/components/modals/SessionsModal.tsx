@@ -516,7 +516,7 @@ ${t('sessions.removeFolderConfirm')}`)) return;
 					/>
 				` : html`
 					<div className="sessions-modal-name-wrapper">
-						<span className="sessions-modal-name">${session.name}</span>
+						<span className="sessions-modal-name" title=${session.name}>${session.name}</span>
 						${editingTagsId === sessionId ? html`
 							<input
 								type="text"
@@ -541,6 +541,7 @@ ${t('sessions.removeFolderConfirm')}`)) return;
 								title=${t('sessions.tagsHint')}/>
 						` : html`
 							<span className="sessions-modal-tags ${session.tags && session.tags.length > 0 ? '' : 'sessions-modal-tags-empty'}"
+								title=${session.tags && session.tags.length > 0 ? session.tags.join(', ') : t('sessions.tagsHint')}
 								onClick=${(e: MouseEvent) => {
 									e.stopPropagation();
 									setEditTagsValue(session.tags ? session.tags.join(', ') : '');
@@ -622,7 +623,7 @@ ${t('sessions.removeFolderConfirm')}`)) return;
 							autoFocus
 						/>
 					` : html`
-						<span className="sessions-modal-name sessions-folder-name">
+						<span className="sessions-modal-name sessions-folder-name" title=${folder}>
 							${folder} <span className="sessions-folder-count">${entries.length}</span>
 						</span>
 					`}
