@@ -1,7 +1,10 @@
 import { html } from 'htm/react';
-import { useEffect, useRef, useState } from 'react';
+import { useEffect, useId, useRef, useState } from 'react';
 import type { ModalProps } from '../types/components';
 import { SVG_Close } from './icons/index';
+import { useT } from '../i18n';
+
+const FOCUSABLE = 'a[href], button:not(:disabled), input:not(:disabled), select:not(:disabled), textarea:not(:disabled), [tabindex]:not([tabindex="-1"])';
 
 export function Modal({
 	isOpen,
@@ -9,6 +12,7 @@ export function Modal({
 	title,
 	description,
 	children,
+	onKeyDown,
 	...props
 }: ModalProps & Omit<React.HTMLAttributes<HTMLDivElement>, keyof ModalProps>) {
 	const [internalVisible, setInternalVisible] = useState(isOpen);
@@ -16,6 +20,30 @@ export function Modal({
 	const closeTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
 	const isClosing = !isOpen && internalVisible;
 	const mouseDownOnBackground = useRef<boolean>(false);
+	const modalRef = useRef<HTMLDivElement>(null);
+	/** What had focus before the modal opened, to give it back on close. */
+	const returnFocus = useRef<Element | null>(null);
+	const titleId = useId();
+	const t = useT();
+
+	useEffect(() => {
+		if (isOpen) {
+			returnFocus.current = document.activeElement;
+			return;
+		}
+		const back = returnFocus.current;
+		returnFocus.current = null;
+		// Unless something else took focus already, like the modal opened next.
+		const active = document.activeElement;
+		if (back instanceof HTMLElement && back.isConnected && (!active || active === document.body || modalRef.current?.contains(active)))
+			back.focus();
+	}, [isOpen]);
+
+	// The modal mounts a render after it opens. A field inside with autoFocus has focus by then; otherwise the modal takes it.
+	useEffect(() => {
+		if (isOpen && internalVisible && !modalRef.current?.contains(document.activeElement))
+			modalRef.current?.focus();
+	}, [isOpen, internalVisible]);
 
 	useEffect(() => {
 		if (isOpen) {
@@ -60,6 +88,26 @@ export function Modal({
 		mouseDownOnBackground.current = true;
 	};
 
+	/** Keeps Tab inside the modal, so it never walks the page behind the overlay. */
+	const trapTab = (e: React.KeyboardEvent) => {
+		if (e.key !== 'Tab' || !modalRef.current) return;
+		const focusable = [...modalRef.current.querySelectorAll<HTMLElement>(FOCUSABLE)].filter(el => el.getClientRects().length);
+		const first = focusable[0];
+		const last = focusable.at(-1);
+		if (!first || !last) {
+			e.preventDefault();
+			return;
+		}
+		const active = document.activeElement;
+		if (e.shiftKey && (active === first || active === modalRef.current)) {
+			e.preventDefault();
+			last.focus();
+		} else if (!e.shiftKey && active === last) {
+			e.preventDefault();
+			first.focus();
+		}
+	};
+
 	const handleOverlayClick = (e: React.MouseEvent) => {
 		if (mouseDownOnBackground.current) {
 			onClose();
@@ -73,10 +121,16 @@ export function Modal({
 			onClick=${handleOverlayClick}>
 			<div className="modal-container">
 				<div className="modal ${isClosing ? 'closing' : ''}"
+					ref=${modalRef}
+					role="dialog"
+					aria-modal="true"
+					aria-labelledby=${titleId}
+					tabIndex="-1"
+					onKeyDown=${(e: React.KeyboardEvent<HTMLDivElement>) => { trapTab(e); onKeyDown?.(e); }}
 					onClick=${(e: React.MouseEvent) => e.stopPropagation()}
 					onMouseDown=${(e: React.MouseEvent) => { e.stopPropagation(); mouseDownOnBackground.current = false; }}
 					...${props}>
-					<div className="modal-title">${title}</div>
+					<div className="modal-title" id=${titleId}>${title}</div>
 					${ description=="" ? false : html`<div style=${{ whiteSpace: 'pre-line' }} className='modal-desc'>${description}</div>` }
 					<hr/>
 					<div className="modal-content">
@@ -84,6 +138,7 @@ export function Modal({
 					</div>
 					<button
 					className="button-modal-top"
+					aria-label=${t('modals.close')}
 					onClick=${onClose}>
 						<${SVG_Close}/>
 					</button>

@@ -204,6 +204,7 @@
   "memory.suffixPlaceholder": "[/INST]",
   "memory.textareaPlaceholder": "Anything written here will be injected at the head of the prompt. Tokens here DO count towards the Context Limit.",
   "memory.title": "Memory",
+  "modals.close": "Close",
   "modals.exportDbError": "Failed to export database. See console for details.",
   "modals.fillInTheMiddleHere": "Fill-In-The-Middle Here",
   "modals.importDbConfirm": "This will overwrite your current database and reload the page. Are you sure you want to continue?",

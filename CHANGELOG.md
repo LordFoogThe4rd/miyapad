@@ -36,6 +36,7 @@
 
 ### Fixed
 
+- Opening a window such as Sessions, Preferences or Memory now moves the keyboard focus into it. Tab and Shift+Tab stay inside the window instead of moving through the editor behind it, and closing the window puts the focus back where it was. Screen readers now announce these windows as dialogs with their title, and read the × button as Close
 - A folder's arrow in the Sessions list is now greyed out while a search or tag filter is on. Folders stay open while you filter, and the arrow used to look like it would still collapse them
 - Creating or importing a session while the Sessions list is filtered now clears the search and tag filters, so the new session shows up in the list instead of being hidden by them
 - Importing sessions now tells you when some of the files could not be read as sessions, and names them. They used to be skipped with no message
