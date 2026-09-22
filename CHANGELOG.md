@@ -14,11 +14,11 @@
 
 ### Changed
 
-- The session you have open is now shown in bold in the Sessions list. Its background colour alone was hard to tell apart from a picked-out session's, and screen readers now announce it as the current one
-- The icon buttons in the Sessions list (pin, folder, rename, delete, ⋯) are easier to see before you hover them. They used to sit at half strength, which was hard to read and stayed that way on touch screens
-- Picking out a session or starting a drag in the Sessions list no longer pushes the list down under your pointer. The selection bar, the folder box and the drop zone now take turns in one space above the list that is always there. While none of them is showing, it tells you about ctrl-click and shift-click
+- The session you have open is now shown in bold in the Sessions list, because its background colour alone looked too much like a picked-out session's. Screen readers also announce it as the current session
+- The icon buttons in the Sessions list (pin, folder, rename, delete, ⋯) are no longer faded to half opacity until you hover them. They were hard to see that way, and touch screens have no hover to bring them up
+- Picking out a session or starting a drag in the Sessions list no longer pushes the list down under your pointer. The selection bar, the folder box and the drop zone now take turns in one space above the list that is always there. When none of them is showing, that space has a hint about picking out sessions with ctrl-click and shift-click
 - Sessions in the Sessions list can now be opened from the keyboard: Tab to a row and press Enter or Space. A row used to open only with a mouse click
-- The bar that appears when you pick out sessions in the Sessions list can now pin and export them too, instead of one click per session. Pin unpins instead when every picked session is already pinned
+- The bar that appears when you pick out sessions in the Sessions list now has Pin and Export buttons, so you no longer have to pin or export them one at a time. When every picked session is already pinned, Pin becomes Unpin
 - Export and Clone in a session's ⋯ menu now act on all the sessions you picked out when that session is one of them, the same as its folder and delete buttons, and say how many, e.g. "Export (3)". They used to act on that one session only
 - A search or tag filter that matches nothing in the Sessions list now says so, instead of showing the column headers over an empty list
 - Session names, folder names and tags in the Sessions list are cut off with an ellipsis when they are too long for the column; hovering one now shows the whole thing, the same as the dates do
@@ -36,9 +36,9 @@
 
 - A folder's arrow in the Sessions list is now greyed out while a search or tag filter is on. Folders stay open while you filter, and the arrow used to look like it would still collapse them
 - Creating or importing a session while the Sessions list is filtered now clears the search and tag filters, so the new session shows up in the list instead of being hidden by them
-- Importing sessions now tells you when some of the files could not be read as sessions, and names them. They used to be skipped without a word
+- Importing sessions now tells you when some of the files could not be read as sessions, and names them. They used to be skipped with no message
 - Renaming a session while the new-session box is open in the Sessions list no longer creates a session when you press Enter and leaves the rename unfinished. Starting one now closes the other
-- When a search or tag filter hides some of the sessions you picked out, the bar above the Sessions list now says how many, e.g. "5 selected (3 hidden by filter)". Move to folder and Delete act on the hidden ones too, and nothing used to say so
+- When a search or tag filter hides some of the sessions you picked out, the bar above the Sessions list now says how many, e.g. "5 selected (3 hidden by filter)". The bar's buttons act on the hidden ones too, and nothing used to say so
 - Sorting the Sessions list by name now counts numbers as numbers, so "MiyaPad #2" comes before "MiyaPad #10" instead of after it
 - Removing a folder in the Sessions list now asks first, and says how many sessions it is about to take out — it used to ungroup the lot on one click, including sessions the filter was hiding
 - The Delete button in the Sessions list is now greyed out when you only have one session left, instead of looking like it works and doing nothing when clicked

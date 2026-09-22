@@ -23,6 +23,8 @@ No schema migration is needed: the `Names` store is a loose key-value store in b
 
 Tags sit below the session name as muted comma-separated text. Click them to edit in place. Enter or clicking away saves, Escape cancels. What you type is one comma-separated string.
 
+While you type, the box suggests the tags your sessions already use, most used first, from a `<datalist>`. A datalist matches against the whole value, so `tagSuggestions()` starts each suggestion with what is typed up to the last comma: typing `wip, ar` offers `wip, archived`. Tags already in the box are left out.
+
 On save each tag is trimmed, lowercased, and has internal runs of whitespace collapsed to one space. Empty strings and duplicates are dropped.
 
 ## Tag Filter Syntax
@@ -85,6 +87,6 @@ Empty OR groups are thrown away during parsing. Left in, they would match every 
 
 `src/storage/SessionStorage.ts` carries tags in session metadata everywhere metadata is built: `saveToDatabase()`, `loadFromDatabase()`, `loadSessions()`, `switchSession()`, `createSession()` and `createSessionFromObject()`. The `tags` property is destructured out of the session data, so it never lands in the session body. `setTags(sessionId, rawInput)` splits the comma-separated string, normalizes and deduplicates it, sets it on the session, bumps `modified` (unlike pinning or moving to a folder, tagging counts as an edit), enqueues the save and dispatches the change event.
 
-`src/components/modals/SessionsModal.tsx` holds the filter box's `tagFilterQuery`, the inline editor's `editingTagsId` and `editTagsValue`, and memoizes the parse as `parsedTagFilter`.
+`src/components/modals/SessionsModal.tsx` holds the filter box's `tagFilterQuery`, the inline editor's `editingTagsId` and `editTagsValue`, and memoizes the parse as `parsedTagFilter` and the suggestion list as `tagNames`.
 
 `src/css/_sessions.css` styles them: `.sessions-modal-tags` for the smaller muted line under the name, truncated with an ellipsis when it overflows the column, `.sessions-modal-tag-input` for the inline editor.

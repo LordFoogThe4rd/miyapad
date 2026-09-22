@@ -8,7 +8,7 @@ Miyapad is a user-friendly, browser-based interface for interacting with languag
 
 * **Multiple Backends**: Supports **llama.cpp**, **koboldcpp**, **AI Horde**, **DeepSeek** and any **OpenAI Compatible** API.
 * **Connection Manager**: Save named connection presets (endpoint, API type, API key, model) and switch between them per-session. Each session remembers its selected connection. Presets include per-API-type settings, a model browser, and CRUD operations (create, clone, delete, enable/disable).
-* **Session Persistence**: Your prompt is automatically saved and restored across multiple sessions. Import and export sessions for sharing or backups. The dedicated Sessions modal provides search, sort by name/created/modified, and a table layout for managing sessions.
+* **Session Persistence**: Your prompt is automatically saved and restored across multiple sessions. Import and export sessions for sharing or backups. The Sessions modal lets you search and sort sessions by name/created/modified, pin and tag them, and group them into folders. Ctrl-click or shift-click to pick out several and pin, export, move or delete them together.
 * **Optional Server**: Can be hosted on a local Node.js server for remote or LAN access. Features **sqlite-zstd** transparent Zstandard compression and optional **server-side tokenization** — drop a `tokenizer.json` into `server/tokenizers/<name>/` and enable via Preferences → Server.
 * **Persistent Context**:
   * **Memory**: Seamlessly inject text at the beginning of the context.

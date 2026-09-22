@@ -48,7 +48,7 @@ The order in `src/styles.css` matters. Variables and the base reset load first, 
 | `_sampler-presets.css` | Sampler Preset Manager modal: sidebar/detail layout, import/export actions, mobile-responsive toggle. |
 | `_markdown-decorations.css` | Markdown decoration classes (`.pm-md-*`) rendered inside the ProseMirror prompt editor in wysiwyg mode. |
 | `_sidebar.css` | Main sidebar layout: width, collapse states, drag resize, scroll. |
-| `_sessions.css` | Sessions browser modal: session cards, search bar, sort controls, action buttons. |
+| `_sessions.css` | Sessions modal: the session table and its folder rows, the toolbar, the slot above the list for the selection bar, folder box and drop zone, and the row action buttons. |
 | `_statistics.css` | Statistics modal: section headers with their Reset buttons, the counter tables, and the per-session name line. |
 | `_form-controls.css` | Shared form element styling: text inputs, selects, checkboxes, radio buttons, range sliders, number inputs. |
 | `_buttons.css` | Button styles: primary, secondary, icon-only, danger variants, disabled states. |
