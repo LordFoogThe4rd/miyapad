@@ -400,6 +400,7 @@ ${t('sessions.removeFolderConfirm')}`)) return;
 
 			const sortedFiles = Array.from(files ?? []).sort((a: File, b: File) => a.lastModified - b.lastModified);
 			let lastNewId = null;
+			const skipped: string[] = [];
 
 			for (const file of sortedFiles) {
 				try {
@@ -412,10 +413,14 @@ ${t('sessions.removeFolderConfirm')}`)) return;
 					lastNewId = await sessionStorage.createSessionFromObject(JSON.parse(text), false);
 				} catch (err) {
 					console.warn(`Skipped malformed import file "${file.name}":`, err);
+					skipped.push(file.name);
 				}
 			}
 			if (lastNewId !== null) {
 				await sessionStorage.switchSession(lastNewId);
+			}
+			if (skipped.length) {
+				alert(t('sessions.importSkipped', { count: skipped.length, total: sortedFiles.length, files: skipped.join('\n') }));
 			}
 		};
 		document.body.appendChild(fileInput);

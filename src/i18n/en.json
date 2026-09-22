@@ -370,6 +370,7 @@
   "sessions.hiddenByFilter": "({{count}} hidden by filter)",
   "sessions.history": "History",
   "sessions.import": "Import",
+  "sessions.importSkipped": "{{count}} of {{total}} files were skipped because they are not session files:\n\n{{files}}",
   "sessions.modified": "Modified",
   "sessions.moreActions": "More actions",
   "sessions.moveToFolder": "Move to folder",
