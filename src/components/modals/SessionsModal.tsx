@@ -605,7 +605,7 @@ ${t('sessions.removeFolderConfirm')}`)) return;
 						</button>
 						<button className="sessions-action-btn" disabled=${disabled || lastSession}
 							title=${lastSession ? t('sessions.cantDeleteLast')
-								: targetIds(sessionId).length > 1 ? `${t('sessions.delete')}: ${targetIds(sessionId).length} ${t('sessions.selected')}`
+								: targetIds(sessionId).length > 1 ? `${t('sessions.delete')}: ${t('sessions.selectedCount', { count: targetIds(sessionId).length })}`
 								: t('sessions.deleteSession')}
 							onClick=${() => deleteSessions(targetIds(sessionId))}>
 							<${SVG_Trash}/>
@@ -750,7 +750,7 @@ ${t('sessions.removeFolderConfirm')}`)) return;
 			`}
 			${selectedIds.length > 0 && html`
 				<div className="sessions-modal-bar">
-					<span>${`${selectedIds.length} ${t('sessions.selected')}`}${hiddenPicked > 0 && ` ${t('sessions.hiddenByFilter', { count: hiddenPicked })}`}</span>
+					<span>${t('sessions.selectedCount', { count: selectedIds.length })}${hiddenPicked > 0 && ` ${t('sessions.hiddenByFilter', { count: hiddenPicked })}`}</span>
 					<button onClick=${() => setFolderEdit({ ids: selectedIds, value: '' })}>${t('sessions.moveToFolder')}</button>
 					<button disabled=${disabled || lastSession}
 						title=${lastSession ? t('sessions.cantDeleteLast') : ''}
