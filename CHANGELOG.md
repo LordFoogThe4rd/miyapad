@@ -4,6 +4,7 @@
 
 ### Added
 
+- A Select all button in the Sessions toolbar picks out every session the list is showing, so a search or tag filter followed by Select all picks out everything that matched. It adds to what you already picked, and leaves out sessions inside collapsed folders
 - Inline code and links are now styled in markdown formatting mode
 - Statistics for your sessions, from Sessions → Statistics: generations run, tokens and characters the model produced, characters you wrote and deleted, time spent generating and average speed — for the session you have open and for all of them together. Text miyapad puts in the prompt for you (templates, `{predict}` and `{fill}` placeholders, search and replace, reformatting to another instruct template) is not counted as your own writing. Each section has its own Reset button
 - Pick out several sessions in the Sessions list with ctrl-click, or a run of them with shift-click (or Select in a session's ⋯ menu, for touch screens). A bar above the list then moves all of them into a folder at once, or deletes them after a single confirmation

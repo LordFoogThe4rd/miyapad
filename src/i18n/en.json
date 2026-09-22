@@ -390,6 +390,7 @@
   "sessions.search": "Search",
   "sessions.searchPlaceholder": "Filter sessions…",
   "sessions.select": "Select",
+  "sessions.selectAll": "Select all",
   "sessions.selectedCount": "{{count}} selected",
   "sessions.sortAscending": "Ascending",
   "sessions.sortBy": "Sort By",

@@ -240,6 +240,9 @@ export function SessionsModal({ isOpen, closeModal, sessionStorage, cancel, open
 		folder && !filtering && collapsed.has(folder) ? [] : entries.map(([id]) => id)),
 		[listItems, collapsed, filtering]);
 
+	/** Adds the rows on screen to the selection: like shift-click, none from collapsed folders. */
+	const selectAll = () => setSelected(new Set([...selected, ...visibleIds]));
+
 	/** The bar's Pin unpins only when every picked session is pinned, so a mixed selection ends up all pinned. */
 	const allPinned = selectedIds.every(id => sessionStorage.sessions[id].pinned);
 
@@ -735,6 +738,7 @@ ${t('sessions.removeFolderConfirm')}`)) return;
 					<button disabled=${disabled} onClick=${importSession}>${t('sessions.import')}</button>
 					<button disabled=${disabled} onClick=${exportAll}>${t('sessions.exportAll')}</button>
 					<button disabled=${disabled || noSession} onClick=${openStatistics}>${t('sessions.statistics')}</button>
+					<button onClick=${selectAll}>${t('sessions.selectAll')}</button>
 				</div>
 			</div>
 			${folderEdit && html`
