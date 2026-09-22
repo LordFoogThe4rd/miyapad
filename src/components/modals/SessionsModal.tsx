@@ -381,6 +381,7 @@ ${t('sessions.removeFolderConfirm')}`)) return;
 	const importSession = () => {
 		const fileInput = document.createElement("input");
 		fileInput.type = 'file';
+		fileInput.accept = '.json';
 		fileInput.multiple = true;
 		fileInput.style.display = 'none';
 		fileInput.onchange = async (e: Event) => {

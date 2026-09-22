@@ -12,6 +12,7 @@
 
 ### Changed
 
+- Importing sessions now shows only `.json` files in the file picker, the same as importing a database does
 - Opening Sessions now puts the cursor in the search box, so you can type straight away
 - Screenshots now open in a preview window inside miyapad instead of a new browser tab, with buttons to copy the image to the clipboard or save it. The file name is filled in from the session name and the date — change it before saving if you want something else
 - Database backups are now LZMA-compressed `.7z` archives instead of `.gz` files, so they take up noticeably less space. Nothing needs to be installed — the server brings its own 7-Zip. Existing `.gz` backups are left alone and still count towards the retention limit
