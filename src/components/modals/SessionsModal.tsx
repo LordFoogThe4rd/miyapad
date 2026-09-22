@@ -784,6 +784,9 @@ onClick=${(e: MouseEvent) => e.stopPropagation()}
 							</tr>
 						`}
 						${listItems.map(({ folder, entries }) => folder ? renderFolder(folder, entries) : renderSession(entries[0]))}
+						${listItems.length === 0 && html`
+							<tr key="empty"><td colSpan="5" className="sessions-modal-empty">${t('sessions.noMatches')}</td></tr>
+						`}
 					</tbody>
 				</table>
 			</div>

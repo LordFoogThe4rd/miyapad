@@ -86,6 +86,11 @@
 	background-color: var(--color-bg-highlight-2);
 	box-shadow: inset 2px 0 0 var(--color-light);
 }
+.sessions-modal-empty {
+	padding: 16px 8px;
+	text-align: center;
+	color: var(--color-text-hint);
+}
 .sessions-modal-row-new {
 	cursor: default;
 	animation: fadeIn 0.2s ease-out;

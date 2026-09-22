@@ -377,6 +377,7 @@
   "sessions.name": "Name",
   "sessions.newFolder": "New folder",
   "sessions.noDate": "—",
+  "sessions.noMatches": "No sessions match the search or tag filter.",
   "sessions.pinSession": "Pin session",
   "sessions.removeFolder": "Remove folder (its sessions are kept)",
   "sessions.removeFolderConfirm": "Take every session out of this folder? The folder disappears with them, and sessions the filter is hiding are taken out too.",

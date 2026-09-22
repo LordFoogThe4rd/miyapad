@@ -12,6 +12,7 @@
 
 ### Changed
 
+- A search or tag filter that matches nothing in the Sessions list now says so, instead of showing the column headers over an empty list
 - Session names, folder names and tags in the Sessions list are cut off with an ellipsis when they are too long for the column; hovering one now shows the whole thing, the same as the dates do
 - The rename and delete buttons on a session row now say what they do when you hover them, like the other buttons there. Delete also says how many sessions it is about to delete when you have several picked out
 - Importing sessions now shows only `.json` files in the file picker, the same as importing a database does
