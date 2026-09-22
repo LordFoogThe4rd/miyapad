@@ -527,18 +527,21 @@ export class SessionStorage extends AbstractStorage {
 		}
 	}
 
-	/** Takes sessions out of the trash with their folder, tags and pin as they were. */
+	/**
+	 * Takes sessions out of the trash with their folder, tags and pin as they were. Each is written
+	 * before it moves, so one that fails to save stays in the trash, where the database has it.
+	 */
 	restoreSessions(sessionIds: (string | number)[]): Promise<void> {
 		return this.#queueTrash(async () => {
-			const ids = sessionIds.filter(id => this.trash[id]);
-			if (!ids.length) return;
-			for (const id of ids) {
-				this.sessions[id] = { ...this.trash[id], trashed: undefined };
+			for (const id of sessionIds) {
+				if (!this.trash[id]) continue;
+				const session = { ...this.trash[id], trashed: undefined };
+				const db = await this.openDatabase();
+				await this.nameStorage!.saveToDatabase(db, sessionKey(id), extractMeta(session));
 				delete this.trash[id];
+				this.sessions[id] = session;
+				this.dispatchChangeEvent();
 			}
-			this.dispatchChangeEvent();
-			// Each written directly, for the same reason as in `resetStats`.
-			for (const id of ids) await this.saveSessionToDB(id);
 		});
 	}
 

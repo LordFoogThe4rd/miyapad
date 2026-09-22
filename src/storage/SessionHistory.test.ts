@@ -310,6 +310,23 @@ describe('SessionStorage version history', () => {
 		expect(store('Sessions').get('0')).toMatchObject({ prompt: [u('keep me')] });
 	});
 
+	it('leaves a session in the trash when restoring it cannot be saved', async () => {
+		const { storage, store, adapter } = await setup();
+		await storage.createSession('Two');
+		await storage.trashSessions(['0']);
+		const save = adapter.saveToDatabase;
+		adapter.saveToDatabase = async (db, name, key, data) => {
+			if (name === 'Names') throw new Error('disk full');
+			return save(db, name, key, data);
+		};
+
+		await expect(storage.restoreSessions(['0'])).rejects.toThrow('disk full');
+
+		expect(storage.trash['0']).toBeDefined();
+		expect(storage.sessions['0']).toBeUndefined();
+		expect(store('Names').get('0')).toMatchObject({ trashed: expect.any(Number) });
+	});
+
 	it('keeps a session in the trash when its versions cannot be deleted', async () => {
 		const { storage, store } = await setup();
 		await storage.createSession('Two');
