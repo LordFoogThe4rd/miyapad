@@ -31,6 +31,10 @@ The main prompt editor is a ProseMirror view (`src/components/PromptContainer.ts
 
 See [Prompt Editor](prompt-editor.md) for the full reference.
 
+## Modals
+
+Build dialogs on `Modal` (`src/components/Modal.tsx`). It marks the box as a dialog (`role="dialog"`, `aria-modal`, `aria-labelledby` pointing at the title). When it opens, it moves focus inside: to a field with `autoFocus` if there is one, otherwise to the box itself. It keeps Tab and Shift+Tab inside, and when it closes it gives focus back to whatever had it before, unless something else has taken it by then. Give the field people type into first `autoFocus`.
+
 ## UI Strings (Localization)
 
 Don't hardcode user-facing text. Get strings through the `useT()` hook from `src/i18n`, and add the key to `src/i18n/en.json`. Keys are dot-namespaced by feature (e.g. `preferences.language`) and kept in alphabetical order.
