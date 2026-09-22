@@ -268,8 +268,13 @@ export function SessionsModal({ isOpen, closeModal, sessionStorage, cancel, open
 	};
 
 	const removeFolder = async (folder: string) => {
+		const ids = folderIds(folder);
+		// The count matters: a filter hides some of what this is about to ungroup.
+		if (!window.confirm(`${folder} (${ids.length})
+
+${t('sessions.removeFolderConfirm')}`)) return;
 		setFolderCollapsed(folder, false);
-		await sessionStorage.setFolder(folderIds(folder), undefined);
+		await sessionStorage.setFolder(ids, undefined);
 	};
 
 	/** The keyboard and touch way in or out of a folder, and the only one that suggests names. */

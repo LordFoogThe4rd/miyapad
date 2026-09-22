@@ -21,6 +21,7 @@
 
 ### Fixed
 
+- Removing a folder in the Sessions list now asks first, and says how many sessions it is about to take out — it used to ungroup the lot on one click, including sessions the filter was hiding
 - The Delete button in the Sessions list is now greyed out when you only have one session left, instead of looking like it works and doing nothing when clicked
 - Export All now saves your sessions when miyapad runs on its own without the server, instead of stopping on the first one and writing nothing
 - Scrollbars now follow the theme's colors everywhere instead of showing the browser's default gray ones in modals, text areas and lists
