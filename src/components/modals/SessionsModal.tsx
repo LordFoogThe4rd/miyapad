@@ -464,7 +464,11 @@ ${t('sessions.removeFolderConfirm')}`)) return;
 
 	const disabled = !!cancel;
 	const noSession = sessionStorage.selectedSession == null;
-	/** Storage refuses to delete the last session, so the buttons that would say why instead. */
+	/**
+	 * Storage refuses to delete the last session, so the buttons that would say why instead.
+	 * ponytail: Chrome shows no tooltip on a disabled button, so the why only appears in Firefox;
+	 * `aria-disabled` and a no-op click instead of `disabled` would show it everywhere.
+	 */
 	const lastSession = Object.keys(sessionStorage.sessions).length <= 1;
 
 	/** What a row can do beyond its buttons: the actions that used to sit in the toolbar. */
