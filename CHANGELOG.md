@@ -4,6 +4,7 @@
 
 ### Added
 
+- Editing a session's tags in the Sessions list now suggests the tags your sessions already use, most used first, so you don't have to retype them or end up with a misspelt second copy of one. Suggestions follow the tag you are typing after the last comma, and leave out tags already in the box
 - A Select all button in the Sessions toolbar picks out every session the list is showing, so a search or tag filter followed by Select all picks out everything that matched. It adds to what you already picked, and leaves out sessions inside collapsed folders
 - Inline code and links are now styled in markdown formatting mode
 - Statistics for your sessions, from Sessions → Statistics: generations run, tokens and characters the model produced, characters you wrote and deleted, time spent generating and average speed — for the session you have open and for all of them together. Text miyapad puts in the prompt for you (templates, `{predict}` and `{fill}` placeholders, search and replace, reformatting to another instruct template) is not counted as your own writing. Each section has its own Reset button

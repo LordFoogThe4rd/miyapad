@@ -53,6 +53,17 @@ function groupByFolder(entries: SessionEntry[]): ListItem[] {
 	return items;
 }
 
+/**
+ * A datalist matches against the whole value, so each suggestion starts with what is typed
+ * up to the last comma: "wip, ar" is offered "wip, archived". Tags already typed are left out.
+ */
+export function tagSuggestions(value: string, tags: string[]): string[] {
+	const cut = value.lastIndexOf(',') + 1;
+	const prefix = value.slice(0, cut) + value.slice(cut).match(/^\s*/)![0];
+	const typed = new Set(value.slice(0, cut).split(',').map(tag => tag.trim().toLowerCase()));
+	return tags.filter(tag => !typed.has(tag)).map(tag => prefix + tag);
+}
+
 function compileTagRegex(pattern: string) {
 	if (!pattern.includes('*')) return null;
 	const escaped = pattern.replace(/[.+?^${}()|[\]\\]/g, '\\$&').replace(/\*/g, '.*');
@@ -218,6 +229,15 @@ export function SessionsModal({ isOpen, closeModal, sessionStorage, cancel, open
 	const folderNames = useMemo(() => [...new Set(Object.values(sessionStorage.sessions)
 		.map(s => s.folder).filter((f): f is string => !!f))].sort((a, b) => a.localeCompare(b)),
 		[version, sessionStorage.sessions]);
+
+	/** Every tag in use, most used first, for the tag box's suggestions. */
+	const tagNames = useMemo(() => {
+		const counts = new Map<string, number>();
+		for (const s of Object.values(sessionStorage.sessions)) {
+			for (const tag of s.tags ?? []) counts.set(tag, (counts.get(tag) ?? 0) + 1);
+		}
+		return [...counts.keys()].sort((a, b) => counts.get(b)! - counts.get(a)! || a.localeCompare(b));
+	}, [version, sessionStorage.sessions]);
 
 	/** An existing folder's spelling wins, so "Drafts" and "drafts" never become two folders. */
 	const resolveFolder = (raw: string, except?: string) => {
@@ -574,7 +594,7 @@ ${t('sessions.removeFolderConfirm')}`)) return;
 				` : html`
 					<div className="sessions-modal-name-wrapper">
 						<span className="sessions-modal-name" title=${session.name}>${session.name}</span>
-						${editingTagsId === sessionId ? html`
+						${editingTagsId === sessionId ? html`<${Fragment}>
 							<input
 								type="text"
 								className="sessions-modal-tag-input"
@@ -595,8 +615,12 @@ ${t('sessions.removeFolderConfirm')}`)) return;
 								}}
 								onClick=${(e: MouseEvent) => e.stopPropagation()}
 								autoFocus
+								list="sessions-tag-names"
 								title=${t('sessions.tagsHint')}/>
-						` : html`
+							<datalist id="sessions-tag-names">
+								${tagSuggestions(editTagsValue, tagNames).map(s => html`<option key=${s} value=${s}/>`)}
+							</datalist>
+						<//>` : html`
 							<span className="sessions-modal-tags ${session.tags && session.tags.length > 0 ? '' : 'sessions-modal-tags-empty'}"
 								title=${session.tags && session.tags.length > 0 ? session.tags.join(', ') : t('sessions.tagsHint')}
 								onClick=${(e: MouseEvent) => {
