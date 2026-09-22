@@ -363,6 +363,13 @@ ${t('sessions.removeFolderConfirm')}`)) return;
 		}
 	};
 
+	/** Enter or Space opens a focused row. Keys pressed in the row's own inputs and buttons are theirs. */
+	const rowKeyDown = (e: KeyboardEvent, sessionId: string) => {
+		if (e.target !== e.currentTarget || (e.key !== 'Enter' && e.key !== ' ')) return;
+		e.preventDefault();
+		switchSession(sessionId);
+	};
+
 	/** History and statistics read the open session, so the row's is opened first. */
 	const openForSession = async (sessionId: string, open: () => void) => {
 		if (String(sessionStorage.selectedSession) !== sessionId) {
@@ -541,7 +548,9 @@ ${t('sessions.removeFolderConfirm')}`)) return;
 			onDragEnd=${endDrag}
 			...${draggedIds.includes(sessionId) || (session.folder && session.folder === draggedFolder) ? {} : dropHandlers(sessionId, (ids) =>
 				session.folder ? sessionStorage.setFolder(ids, session.folder) : createFolder([...new Set([sessionId, ...ids])]))}
+			tabIndex="0"
 			onClick=${(e: MouseEvent) => rowClick(e, sessionId)}
+			onKeyDown=${(e: KeyboardEvent) => rowKeyDown(e, sessionId)}
 			onContextMenu=${(e: MouseEvent) => { e.preventDefault(); setRowMenu({ id: sessionId, x: e.clientX, y: e.clientY }); }}>
 			<td className="sessions-col-star" onClick=${(e: MouseEvent) => e.stopPropagation()}>
 				<button className="sessions-action-btn"
