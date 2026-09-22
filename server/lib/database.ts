@@ -7,6 +7,15 @@ import * as tokenizer from '../tokenizer.js';
 
 type DB = Database.Database;
 
+// sqlite-zstd's triggers store new rows uncompressed and zstd_incremental_maintenance
+// compresses them afterwards, so the level is paid in maintenance time (at shutdown, per
+// DEFAULT_MAINTENANCE_CONFIG) rather than on the save path. Measured over the session tables
+// (73.7MB of text in 131 rows): level 3 stores 20.0MB, 9 stores 18.1MB, and 19 stores 15.2MB
+// for ~8x the maintenance time.
+// Only governs rows compressed from here on - maintenance skips rows that already carry a
+// dictionary, so existing rows keep their level until something rewrites them.
+const ZSTD_COMPRESSION_LEVEL = 9;
+
 const runMigrationToV3 = (db: DB): boolean => {
     const row = db.prepare(`
         SELECT 'migration_needed' as status
@@ -61,7 +70,7 @@ const enableTransparentCompressionIfMissing = (db: DB, tableName: string) => {
     const config = JSON.stringify({
         table: tableName,
         column: colName,
-        compression_level: 3,
+        compression_level: ZSTD_COMPRESSION_LEVEL,
         dict_chooser: "'a'"
     });
     try {
@@ -127,7 +136,7 @@ const runMigrationToV4 = (db: DB): boolean => {
         const config = JSON.stringify({
             table: tableName,
             column: colName,
-            compression_level: 3,
+            compression_level: ZSTD_COMPRESSION_LEVEL,
             dict_chooser: "'a'"
         });
         db.prepare(`SELECT zstd_enable_transparent(?)`).run(config);
