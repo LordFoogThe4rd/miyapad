@@ -549,6 +549,7 @@ ${t('sessions.removeFolderConfirm')}`)) return;
 			...${draggedIds.includes(sessionId) || (session.folder && session.folder === draggedFolder) ? {} : dropHandlers(sessionId, (ids) =>
 				session.folder ? sessionStorage.setFolder(ids, session.folder) : createFolder([...new Set([sessionId, ...ids])]))}
 			tabIndex="0"
+			aria-current=${String(sessionStorage.selectedSession) === sessionId || undefined}
 			onClick=${(e: MouseEvent) => rowClick(e, sessionId)}
 			onKeyDown=${(e: KeyboardEvent) => rowKeyDown(e, sessionId)}
 			onContextMenu=${(e: MouseEvent) => { e.preventDefault(); setRowMenu({ id: sessionId, x: e.clientX, y: e.clientY }); }}>

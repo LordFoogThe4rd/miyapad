@@ -13,6 +13,7 @@
 
 ### Changed
 
+- The session you have open is now shown in bold in the Sessions list. Its background colour alone was hard to tell apart from a picked-out session's, and screen readers now announce it as the current one
 - The icon buttons in the Sessions list (pin, folder, rename, delete, ⋯) are easier to see before you hover them. They used to sit at half strength, which was hard to read and stayed that way on touch screens
 - Picking out a session or starting a drag in the Sessions list no longer pushes the list down under your pointer. The selection bar, the folder box and the drop zone now take turns in one space above the list that is always there. While none of them is showing, it tells you about ctrl-click and shift-click
 - Sessions in the Sessions list can now be opened from the keyboard: Tab to a row and press Enter or Space. A row used to open only with a mouse click

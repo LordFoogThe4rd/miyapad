@@ -86,6 +86,10 @@
 .sessions-modal-row.selected {
 	background-color: var(--color-bg-active);
 }
+/* The open session's background is close to a picked row's, so its name says it too. */
+.sessions-modal-row.selected .sessions-modal-name {
+	font-weight: bold;
+}
 .sessions-modal-row.picked {
 	background-color: var(--color-bg-highlight-2);
 	box-shadow: inset 2px 0 0 var(--color-light);
