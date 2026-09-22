@@ -244,6 +244,19 @@ describe('SessionStorage version history', () => {
 		expect(store('Sessions').get('0')).toMatchObject({ prompt: [u('late edit')] });
 	});
 
+	it('trashing the open session with others opens one that stays, in a single switch', async () => {
+		const { storage } = await setup();
+		await storage.createSession('Two');
+		await storage.createSession('Three');
+		const switches = vi.fn();
+		storage.addEventListener('sessionchange', switches);
+
+		await storage.trashSessions(['0', '1']);
+
+		expect(storage.selectedSession).toBe(2);
+		expect(switches).toHaveBeenCalledTimes(1);
+	});
+
 	it('trashing the last two sessions at once keeps one', async () => {
 		const { storage, store } = await setup();
 		await storage.createSession('Two');

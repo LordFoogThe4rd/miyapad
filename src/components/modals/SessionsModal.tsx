@@ -325,10 +325,18 @@ ${t('sessions.removeFolderConfirm')}`)) return;
 		await sessionStorage.setFolder(ids, resolveFolder(value));
 	};
 
+	/** Storage only reports its errors to the console and the server banner, so say the action did not happen. */
+	const trashAction = (run: Promise<void>) => run.catch((e: unknown) => {
+		console.error('Trash action failed:', e);
+		alert(t('sessions.trashFailed'));
+	});
+
+	const trashSessions = (ids: string[]) => trashAction(sessionStorage.trashSessions(ids));
+
 	/** The trash can give them back, so only deleting them from there asks first. One confirmation for the lot. */
 	const purgeSessions = (ids: string[]) => {
 		if (window.confirm(ids.length > 1 ? t('sessions.purgeConfirmMany', { count: ids.length }) : t('sessions.purgeConfirm')))
-			sessionStorage.purgeSessions(ids);
+			trashAction(sessionStorage.purgeSessions(ids));
 	};
 
 	const draggedIds = dragId === null ? [] : targetIds(dragId);
@@ -663,7 +671,7 @@ ${t('sessions.removeFolderConfirm')}`)) return;
 							title=${lastSession ? t('sessions.cantDeleteLast')
 								: targetIds(sessionId).length > 1 ? `${t('sessions.delete')}: ${t('sessions.selectedCount', { count: targetIds(sessionId).length })}`
 								: t('sessions.deleteSession')}
-							onClick=${() => sessionStorage.trashSessions(targetIds(sessionId))}>
+							onClick=${() => trashSessions(targetIds(sessionId))}>
 							<${SVG_Trash}/>
 						</button>
 						<button className="sessions-action-btn sessions-more-btn"
@@ -774,7 +782,7 @@ ${t('sessions.removeFolderConfirm')}`)) return;
 								<td className="sessions-col-actions">
 									<div className="sessions-col-actions-inner">
 										<button className="sessions-action-btn" title=${t('sessions.restore')}
-											onClick=${() => sessionStorage.restoreSessions([sessionId])}>
+											onClick=${() => trashAction(sessionStorage.restoreSessions([sessionId]))}>
 											<${SVG_Undo}/>
 										</button>
 										<button className="sessions-action-btn" title=${t('sessions.deleteForever')}
@@ -873,7 +881,7 @@ ${t('sessions.removeFolderConfirm')}`)) return;
 					<button onClick=${() => setFolderEdit({ ids: selectedIds, value: '' })}>${t('sessions.moveToFolder')}</button>
 					<button disabled=${disabled || lastSession}
 						title=${lastSession ? t('sessions.cantDeleteLast') : t('sessions.deleteSession')}
-						onClick=${() => sessionStorage.trashSessions(selectedIds)}>${t('sessions.delete')}</button>
+						onClick=${() => trashSessions(selectedIds)}>${t('sessions.delete')}</button>
 					<button onClick=${() => setSelected(new Set())}>${t('sessions.clearSelection')}</button>
 				</div>
 			` : html`

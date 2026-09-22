@@ -412,6 +412,7 @@
   "sessions.trash": "Trash",
   "sessions.trashCount": "Trash ({{count}})",
   "sessions.trashEmpty": "The trash is empty. Deleted sessions stay here until you delete them for good.",
+  "sessions.trashFailed": "The trash could not be updated. The browser console has the details.",
   "sessions.trashed": "Deleted",
   "sessions.unpin": "Unpin",
   "sessions.unpinSession": "Unpin session",

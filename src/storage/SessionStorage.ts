@@ -489,18 +489,23 @@ export class SessionStorage extends AbstractStorage {
 	 */
 	trashSessions(sessionIds: (string | number)[]): Promise<void> {
 		return this.#queueTrash(async () => {
-			for (const id of sessionIds) await this.#trashSession(id);
+			const going = new Set(sessionIds.map(String));
+			for (const id of sessionIds) await this.#trashSession(id, going);
 		});
 	}
 
-	async #trashSession(sessionId: string | number) {
+	/** `going` is the whole batch, so the open session is swapped for one that stays, not one about to go too. */
+	async #trashSession(sessionId: string | number, going: Set<string>) {
 		if (Object.keys(this.sessions).length === 1 || !this.sessions[sessionId])
 			return;
 		// `==` because the modal passes string keys.
 		if (sessionId == this.selectedSession) {
 			const ids = Object.keys(this.sessions);
 			const idx = ids.indexOf(String(sessionId));
-			await this.switchSession(ids[idx - 1] ?? ids[idx + 1]);
+			const staying = (id: string) => !going.has(id);
+			// When the batch is every session, the last-session check keeps one anyway, so any neighbour will do.
+			const next = ids.slice(0, idx).reverse().find(staying) ?? ids.slice(idx + 1).find(staying) ?? ids[idx - 1] ?? ids[idx + 1];
+			await this.switchSession(next);
 			// The switch gives up when the open session's last edits can't be saved.
 			if (sessionId == this.selectedSession) return;
 		}
