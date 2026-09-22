@@ -52,7 +52,7 @@
 .sessions-col-modified,
 .sessions-col-created { width: 10em; }
 .sessions-col-actions {
-	width: 5em;
+	width: 6.5em;
 	text-align: center;
 }
 .sessions-col-actions-inner {
@@ -65,6 +65,8 @@
 .sessions-modal-row {
 	cursor: pointer;
 	transition: background-color 0.15s ease-in-out;
+	/* Shift-click picks out a run of rows; without this it drags a text selection along. */
+	user-select: none;
 }
 .sessions-modal-row td {
 	padding: 5px 8px;
@@ -79,6 +81,10 @@
 }
 .sessions-modal-row.selected {
 	background-color: var(--color-bg-active);
+}
+.sessions-modal-row.picked {
+	background-color: var(--color-bg-highlight-2);
+	box-shadow: inset 2px 0 0 var(--color-light);
 }
 .sessions-modal-row-new {
 	cursor: default;
@@ -111,6 +117,26 @@
 }
 .sessions-modal-row-in-folder .sessions-col-name {
 	padding-left: 1.75em;
+}
+.sessions-modal-bar {
+	display: flex;
+	align-items: center;
+	gap: 6px;
+	margin-bottom: 8px;
+	font-size: 0.85rem;
+}
+.sessions-modal-bar .sessions-modal-inline-input {
+	flex: 1;
+	min-width: 0;
+}
+.sessions-action-btn.sessions-more-btn {
+	line-height: 1;
+	font-size: 0.9rem;
+}
+/* The modal's overlay is above the menu's own layer, and its box would clip an absolute one. */
+.EditorContextMenu.sessions-row-menu {
+	position: fixed;
+	z-index: 1002;
 }
 .sessions-modal-dropzone {
 	padding: 8px;

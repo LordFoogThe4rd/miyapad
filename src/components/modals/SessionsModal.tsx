@@ -7,6 +7,8 @@ import { SVG_ArrowDown, SVG_Close, SVG_Confirm, SVG_Cancel, SVG_Folder, SVG_Rena
 import { exportText } from '../../api/common';
 import { useT } from '../../i18n';
 import { folderName, type SessionStorage } from '../../storage/SessionStorage';
+import { EditorContextMenu } from '../EditorContextMenu';
+import type { ContextMenuItem } from '../../types/components';
 
 interface SessionsModalProps {
   isOpen: boolean;
@@ -117,6 +119,12 @@ export function SessionsModal({ isOpen, closeModal, sessionStorage, cancel, open
 	/** The session being dragged, and the row it would be dropped on. */
 	const [dragId, setDragId] = useState<string | null>(null);
 	const [dropTarget, setDropTarget] = useState<string | null>(null);
+	/** Rows picked out with ctrl/shift-click; a row action applies to the whole selection. */
+	const [selected, setSelected] = useState<Set<string>>(new Set());
+	const [anchorId, setAnchorId] = useState<string | null>(null);
+	/** The sessions whose folder is being picked, and the name typed so far. */
+	const [folderEdit, setFolderEdit] = useState<{ ids: string[]; value: string } | null>(null);
+	const [rowMenu, setRowMenu] = useState<{ id: string; x: number; y: number } | null>(null);
 
 	const setSortBy = (v: string) => { setSortByState(v); localStorage.setItem('miyapad-sessions-sortBy', v); };
 	const setSortAsc = (v: boolean | ((prev: boolean) => boolean)) => {
@@ -151,6 +159,10 @@ export function SessionsModal({ isOpen, closeModal, sessionStorage, cancel, open
 			setRenamingId(undefined);
 			setRenamingFolder(undefined);
 			setIsCreating(false);
+			setSelected(new Set());
+			setAnchorId(null);
+			setFolderEdit(null);
+			setRowMenu(null);
 			setSortByState(localStorage.getItem('miyapad-sessions-sortBy') || 'modified');
 			setSortAscState(localStorage.getItem('miyapad-sessions-sortAsc') === 'true');
 		}
@@ -196,6 +208,28 @@ export function SessionsModal({ isOpen, closeModal, sessionStorage, cancel, open
 	// A filter shows what matched inside collapsed folders too.
 	const filtering = !!searchQuery.trim() || !!parsedTagFilter;
 
+	/** Every folder that exists, for the picker's suggestions. */
+	const folderNames = useMemo(() => [...new Set(Object.values(sessionStorage.sessions)
+		.map(s => s.folder).filter((f): f is string => !!f))].sort((a, b) => a.localeCompare(b)),
+		[version, sessionStorage.sessions]);
+
+	/** An existing folder's spelling wins, so "Drafts" and "drafts" never become two folders. */
+	const resolveFolder = (raw: string, except?: string) => {
+		const name = folderName(raw);
+		return folderNames.find(f => f !== except && f.toLowerCase() === name?.toLowerCase()) ?? name;
+	};
+
+	/** The selection, minus anything deleted since it was picked. */
+	const selectedIds = useMemo(() => [...selected].filter(id => sessionStorage.sessions[id]),
+		[selected, version, sessionStorage.sessions]);
+
+	/** Top to bottom as the list shows them, for shift-click ranges. */
+	const visibleIds = useMemo(() => listItems.flatMap(({ folder, entries }) =>
+		folder && !filtering && collapsed.has(folder) ? [] : entries.map(([id]) => id)),
+		[listItems, collapsed, filtering]);
+
+	const targetIds = (sessionId: string) => selected.has(sessionId) && selectedIds.length > 1 ? selectedIds : [sessionId];
+
 	const setFolderCollapsed = (folder: string, value: boolean) => {
 		const next = new Set(collapsed);
 		if (value) next.add(folder);
@@ -222,7 +256,7 @@ export function SessionsModal({ isOpen, closeModal, sessionStorage, cancel, open
 
 	const renameFolder = async () => {
 		const from = renamingFolder;
-		const to = folderName(renameFolderValue);
+		const to = resolveFolder(renameFolderValue, from);
 		setRenamingFolder(undefined);
 		// Renaming onto another folder's name merges the two.
 		if (from !== undefined && to && to !== from) await sessionStorage.setFolder(folderIds(from), to);
@@ -233,11 +267,16 @@ export function SessionsModal({ isOpen, closeModal, sessionStorage, cancel, open
 		await sessionStorage.setFolder(folderIds(folder), undefined);
 	};
 
-	/** The keyboard and touch way in or out of a folder: type its name, or clear it. */
-	const moveToFolder = async (sessionId: string, session: SessionData) => {
-		const folder = window.prompt(t('sessions.moveToFolderPrompt'), session.folder ?? '');
-		if (folder !== null) await sessionStorage.setFolder([sessionId], folder);
+	/** The keyboard and touch way in or out of a folder, and the only one that suggests names. */
+	const commitFolder = async () => {
+		if (!folderEdit) return;
+		const { ids, value } = folderEdit;
+		setFolderEdit(null);
+		await sessionStorage.setFolder(ids, resolveFolder(value));
 	};
+
+	const draggedIds = dragId === null ? [] : targetIds(dragId);
+	const draggedFolder = dragId !== null ? sessionStorage.sessions[dragId]?.folder : undefined;
 
 	const startDrag = (e: DragEvent, sessionId: string) => {
 		e.dataTransfer.effectAllowed = 'move';
@@ -251,8 +290,8 @@ export function SessionsModal({ isOpen, closeModal, sessionStorage, cancel, open
 		setDropTarget(null);
 	};
 
-	/** Makes a row a drop target for a dragged session, which `onDrop` receives. */
-	const dropHandlers = (target: string, onDrop: (draggedId: string) => void) => ({
+	/** Makes a row a drop target for the dragged sessions, which `onDrop` receives. */
+	const dropHandlers = (target: string, onDrop: (draggedIds: string[]) => void) => ({
 		onDragOver: (e: DragEvent) => {
 			if (dragId === null) return;
 			e.preventDefault();
@@ -263,13 +302,13 @@ export function SessionsModal({ isOpen, closeModal, sessionStorage, cancel, open
 		},
 		onDrop: (e: DragEvent) => {
 			e.preventDefault();
-			const id = dragId;
+			const ids = draggedIds;
 			endDrag();
-			if (id !== null) onDrop(id);
+			if (ids.length) onDrop(ids);
 		},
 	});
 
-	const draggedFolder = dragId !== null ? sessionStorage.sessions[dragId]?.folder : undefined;
+	const draggedFromFolder = draggedIds.some(id => sessionStorage.sessions[id]?.folder);
 
 	const switchSession = async (sessionId: string | number) => {
 		if (sessionStorage.selectedSession != sessionId) {
@@ -277,6 +316,31 @@ export function SessionsModal({ isOpen, closeModal, sessionStorage, cancel, open
 			await sessionStorage.switchSession(sessionId);
 		}
 		closeModal();
+	};
+
+	/** Ctrl-click picks rows out, shift-click extends the run; a plain click opens the session. */
+	const rowClick = (e: MouseEvent, sessionId: string) => {
+		if (e.ctrlKey || e.metaKey) {
+			const next = new Set(selected);
+			if (!next.delete(sessionId)) next.add(sessionId);
+			setSelected(next);
+			setAnchorId(sessionId);
+		} else if (e.shiftKey) {
+			const from = visibleIds.indexOf(anchorId ?? sessionId);
+			const to = visibleIds.indexOf(sessionId);
+			if (from >= 0 && to >= 0) setSelected(new Set(visibleIds.slice(Math.min(from, to), Math.max(from, to) + 1)));
+		} else {
+			switchSession(sessionId);
+		}
+	};
+
+	/** History and statistics read the open session, so the row's is opened first. */
+	const openForSession = async (sessionId: string, open: () => void) => {
+		if (String(sessionStorage.selectedSession) !== sessionId) {
+			cancel?.();
+			await sessionStorage.switchSession(sessionId);
+		}
+		open();
 	};
 
 	const startRenameSession = (sessionId: string | number, name: string) => {
@@ -288,10 +352,6 @@ export function SessionsModal({ isOpen, closeModal, sessionStorage, cancel, open
 		if (sessionId == null || !renameSessionName) return;
 		await sessionStorage.renameSession(sessionId, renameSessionName);
 		setRenamingId(undefined);
-	};
-
-	const deleteSession = async (sessionId: string | number) => {
-		await sessionStorage.deleteSession(sessionId);
 	};
 
 	const startCreateSession = () => {
@@ -342,44 +402,36 @@ export function SessionsModal({ isOpen, closeModal, sessionStorage, cancel, open
 		document.body.removeChild(fileInput);
 	};
 
-	const exportSession = () => {
-		const sid = sessionStorage.selectedSession;
-		if (sid == null) return;
-		const sessionObj = { ...sessionStorage.sessions[sid] };
+	/** Only the open session is held in full; the rest are read back from the database. */
+	const loadRecord = async (sessionId: string): Promise<Record<string, unknown>> => {
+		if (String(sessionStorage.selectedSession) === sessionId) return { ...sessionStorage.sessions[sessionId] };
+		const db = await sessionStorage.openDatabase();
+		return (await sessionStorage.loadFromDatabase(db, sessionId)) as Record<string, unknown>;
+	};
 
-		delete sessionObj.endpoint;
-		delete sessionObj.endpointAPIKey;
+	/** The stored shape: every property as its own JSON string. */
+	const stringifyAll = (record: Record<string, unknown>) => {
+		for (const [key, value] of Object.entries(record)) record[key] = JSON.stringify(value);
+		return record as Record<string, string>;
+	};
 
-		for (const [key, value] of Object.entries(sessionObj)) {
-			sessionObj[key] = JSON.stringify(value);
-		}
-		exportText(`${sessionStorage.getProperty('name')}.json`, JSON.stringify(sessionObj));
+	const exportSession = async (sessionId: string) => {
+		const record = await loadRecord(sessionId);
+		delete record.endpoint;
+		delete record.endpointAPIKey;
+		// Read before stringifying, which would wrap the filename in quotes.
+		const name = record.name;
+		exportText(`${name}.json`, JSON.stringify(stringifyAll(record)));
 	};
 
 	const exportAll = async () => {
 		if (confirm(t('sessions.exportAllWarning'))) {
-			const db = await sessionStorage.openDatabase();
-			const sessionKeys = Object.keys(sessionStorage.sessions);
-			for (const sessionKey of sessionKeys) {
-				const processedSession = (await sessionStorage.loadFromDatabase(db, sessionKey)) as Record<string, unknown>;
-				delete processedSession.endpoint;
-				delete processedSession.endpointAPIKey;
-				for (const [key, value] of Object.entries(processedSession)) {
-					processedSession[key] = JSON.stringify(value);
-				}
-				exportText(`${processedSession.name}.json`, JSON.stringify(processedSession));
-			}
+			for (const sessionId of Object.keys(sessionStorage.sessions)) await exportSession(sessionId);
 		}
 	};
 
-	const cloneSession = async () => {
-		const sid = sessionStorage.selectedSession;
-		if (sid == null) return;
-		const sessionObj = { ...sessionStorage.sessions[sid] };
-		for (const [key, value] of Object.entries(sessionObj)) {
-			sessionObj[key] = JSON.stringify(value);
-		}
-		const newId = await sessionStorage.createSessionFromObject(sessionObj as Record<string, string>, true);
+	const cloneSession = async (sessionId: string) => {
+		const newId = await sessionStorage.createSessionFromObject(stringifyAll(await loadRecord(sessionId)), true);
 		await sessionStorage.switchSession(newId);
 	};
 
@@ -401,15 +453,35 @@ export function SessionsModal({ isOpen, closeModal, sessionStorage, cancel, open
 	const disabled = !!cancel;
 	const noSession = sessionStorage.selectedSession == null;
 
+	/** What a row can do beyond its buttons: the actions that used to sit in the toolbar. */
+	const rowMenuItems = (sessionId: string): ContextMenuItem[] => [
+		{
+			label: selected.has(sessionId) ? t('sessions.deselect') : t('sessions.select'),
+			disabled: false,
+			action: () => {
+				const next = new Set(selected);
+				if (!next.delete(sessionId)) next.add(sessionId);
+				setSelected(next);
+				setAnchorId(sessionId);
+			},
+		},
+		{ label: t('sessions.export'), disabled, action: () => exportSession(sessionId) },
+		{ label: t('sessions.clone'), disabled, action: () => cloneSession(sessionId) },
+		// History is one session's, and a multi-selection does not say which.
+		{ label: t('sessions.history'), disabled: disabled || selectedIds.length > 1, action: () => openForSession(sessionId, openHistory) },
+		{ label: t('sessions.statistics'), disabled, action: () => openForSession(sessionId, openStatistics) },
+	];
+
 	const renderSession = ([sessionId, session]: SessionEntry) => html`
 		<tr key=${sessionId}
-			className="sessions-modal-row ${String(sessionStorage.selectedSession) === sessionId ? 'selected' : ''} ${session.folder ? 'sessions-modal-row-in-folder' : ''} ${dropTarget === sessionId ? 'drop-target' : ''} ${dragId === sessionId ? 'dragging' : ''}"
+			className="sessions-modal-row ${String(sessionStorage.selectedSession) === sessionId ? 'selected' : ''} ${selected.has(sessionId) ? 'picked' : ''} ${session.folder ? 'sessions-modal-row-in-folder' : ''} ${dropTarget === sessionId ? 'drop-target' : ''} ${draggedIds.includes(sessionId) ? 'dragging' : ''}"
 			draggable=${renamingId != sessionId && editingTagsId !== sessionId}
 			onDragStart=${(e: DragEvent) => startDrag(e, sessionId)}
 			onDragEnd=${endDrag}
-			...${dragId === sessionId || (session.folder && session.folder === draggedFolder) ? {} : dropHandlers(sessionId, (id) =>
-				session.folder ? sessionStorage.setFolder([id], session.folder) : createFolder([sessionId, id]))}
-			onClick=${() => switchSession(sessionId)}>
+			...${draggedIds.includes(sessionId) || (session.folder && session.folder === draggedFolder) ? {} : dropHandlers(sessionId, (ids) =>
+				session.folder ? sessionStorage.setFolder(ids, session.folder) : createFolder([...new Set([sessionId, ...ids])]))}
+			onClick=${(e: MouseEvent) => rowClick(e, sessionId)}
+			onContextMenu=${(e: MouseEvent) => { e.preventDefault(); setRowMenu({ id: sessionId, x: e.clientX, y: e.clientY }); }}>
 			<td className="sessions-col-star" onClick=${(e: MouseEvent) => e.stopPropagation()}>
 				<button className="sessions-action-btn"
 					title=${session.pinned ? t('sessions.unpinSession') : t('sessions.pinSession')}
@@ -476,7 +548,7 @@ export function SessionsModal({ isOpen, closeModal, sessionStorage, cancel, open
 					<//>` : html`<${Fragment}>
 						<button className="sessions-action-btn"
 							title=${t('sessions.moveToFolder')}
-							onClick=${() => moveToFolder(sessionId, session)}>
+							onClick=${() => setFolderEdit({ ids: targetIds(sessionId), value: session.folder ?? '' })}>
 							<${SVG_Folder}/>
 						</button>
 						<button className="sessions-action-btn" disabled=${disabled}
@@ -484,8 +556,13 @@ export function SessionsModal({ isOpen, closeModal, sessionStorage, cancel, open
 							<${SVG_Rename}/>
 						</button>
 						<button className="sessions-action-btn" disabled=${disabled}
-							onClick=${() => deleteSession(sessionId)}>
+							onClick=${() => sessionStorage.deleteSessions(targetIds(sessionId))}>
 							<${SVG_Trash}/>
+						</button>
+						<button className="sessions-action-btn sessions-more-btn"
+							title=${t('sessions.moreActions')}
+							onClick=${(e: MouseEvent) => setRowMenu({ id: sessionId, x: e.clientX, y: e.clientY })}>
+							⋯
 						</button>
 					<//>`}
 				</div>
@@ -498,7 +575,7 @@ export function SessionsModal({ isOpen, closeModal, sessionStorage, cancel, open
 		const target = `folder:${folder}`;
 		return html`<${Fragment} key=${target}>
 			<tr className="sessions-modal-row sessions-modal-folder-row ${dropTarget === target ? 'drop-target' : ''}"
-				...${draggedFolder === folder ? {} : dropHandlers(target, (id) => sessionStorage.setFolder([id], folder))}
+				...${draggedFolder === folder ? {} : dropHandlers(target, (ids) => sessionStorage.setFolder(ids, folder))}
 				onClick=${() => filtering || setFolderCollapsed(folder, open)}>
 				<td className="sessions-col-star">
 					<button className="sessions-action-btn sessions-folder-toggle ${open ? 'open' : ''}"
@@ -591,16 +668,44 @@ export function SessionsModal({ isOpen, closeModal, sessionStorage, cancel, open
 				<div className="sessions-modal-toolbar-row">
 					<button disabled=${disabled} onClick=${startCreateSession}>${t('sessions.create')}</button>
 					<button disabled=${disabled} onClick=${importSession}>${t('sessions.import')}</button>
-					<button disabled=${disabled || noSession} onClick=${exportSession}>${t('sessions.export')}</button>
 					<button disabled=${disabled} onClick=${exportAll}>${t('sessions.exportAll')}</button>
-					<button disabled=${disabled || noSession} onClick=${cloneSession}>${t('sessions.clone')}</button>
-					<button disabled=${disabled || noSession} onClick=${openHistory}>${t('sessions.history')}</button>
 					<button disabled=${disabled || noSession} onClick=${openStatistics}>${t('sessions.statistics')}</button>
 				</div>
 			</div>
-			${draggedFolder && html`
+			${folderEdit && html`
+				<div className="sessions-modal-bar">
+					<label htmlFor="sessions-folder-input">${t('sessions.moveToFolder')}</label>
+					<input
+						id="sessions-folder-input"
+						type="text"
+						list="sessions-folder-names"
+						className="sessions-modal-inline-input"
+						placeholder=${t('sessions.folderPlaceholder')}
+						value=${folderEdit.value}
+						onChange=${(e: ChangeEvent<HTMLInputElement>) => setFolderEdit({ ...folderEdit, value: e.target.value })}
+						onKeyDown=${(e: KeyboardEvent<HTMLInputElement>) => {
+							if (e.key === 'Enter') commitFolder();
+							else if (e.key === 'Escape') { e.stopPropagation(); setFolderEdit(null); }
+						}}
+						autoFocus/>
+					<datalist id="sessions-folder-names">
+						${folderNames.map(f => html`<option key=${f} value=${f}/>`)}
+					</datalist>
+					<button className="sessions-action-btn" onClick=${commitFolder}><${SVG_Confirm}/></button>
+					<button className="sessions-action-btn" onClick=${() => setFolderEdit(null)}><${SVG_Cancel}/></button>
+				</div>
+			`}
+			${selectedIds.length > 0 && html`
+				<div className="sessions-modal-bar">
+					<span>${`${selectedIds.length} ${t('sessions.selected')}`}</span>
+					<button onClick=${() => setFolderEdit({ ids: selectedIds, value: '' })}>${t('sessions.moveToFolder')}</button>
+					<button disabled=${disabled} onClick=${() => sessionStorage.deleteSessions(selectedIds)}>${t('sessions.delete')}</button>
+					<button onClick=${() => setSelected(new Set())}>${t('sessions.clearSelection')}</button>
+				</div>
+			`}
+			${draggedFromFolder && html`
 				<div className="sessions-modal-dropzone ${dropTarget === 'root' ? 'drop-target' : ''}"
-					...${dropHandlers('root', (id) => sessionStorage.setFolder([id], undefined))}>
+					...${dropHandlers('root', (ids) => sessionStorage.setFolder(ids, undefined))}>
 					${t('sessions.dropToUngroup')}
 				</div>
 			`}
@@ -642,5 +747,14 @@ onClick=${(e: MouseEvent) => e.stopPropagation()}
 					</tbody>
 				</table>
 			</div>
+			${rowMenu && html`
+				<${EditorContextMenu}
+					isOpen=${true}
+					className="sessions-row-menu"
+					closeMenu=${() => setRowMenu(null)}
+					x=${rowMenu.x}
+					y=${rowMenu.y}
+					menuItems=${rowMenuItems(rowMenu.id)}/>
+			`}
 		</${Modal}>`;
 }

@@ -19,10 +19,18 @@ A folder is only a name its sessions share: the optional `folder` string in the 
 | Drag a session onto a session in no folder | Both go into a new folder (`New folder`, `New folder 2`, …), whose name opens for editing |
 | Drag a session onto a folder row, or onto a session in a folder | The session joins that folder |
 | Drag a session in a folder onto the drop zone above the list | The session leaves its folder (the zone only shows while such a session is dragged) |
-| Folder button on a session row | Prompts for a folder name; blank takes the session out. The way in and out for touch screens and keyboards, where HTML5 drag and drop is unreliable |
+| Folder button on a session row | Opens the folder box above the list, filled in with the session's folder; blank takes the session out. The way in and out for touch screens and keyboards, where HTML5 drag and drop is unreliable |
 | Click a folder row | Collapses or expands it. Collapsed folder names are kept in `localStorage` (`miyapad-sessions-collapsedFolders`) |
 | Rename a folder | Renames it on all its sessions. Renaming onto another folder's name merges the two |
 | Remove a folder (×) | Takes all its sessions out of the folder; no session is deleted |
+
+## Selection
+
+Ctrl-click picks a session out of the list, shift-click extends the run from the last one picked over the rows as they are shown (a collapsed folder's sessions are not among them), and *Select* in a row's ⋯ menu does the same where those keys are not available. A bar above the list says how many are picked and moves or deletes them together, and a row's own folder or delete button covers the whole selection when that row is part of it. *History* in the row menu is disabled while more than one is picked, since a version history is one session's. `selectedIds` drops ids whose session is gone, so a deleted session cannot linger in a count or an action.
+
+## Folder Names
+
+The folder box (`folderEdit`) is one input above the list, used by the folder button and by the selection bar. Its `<datalist>` suggests every folder that exists. `resolveFolder()` matches what is typed against those names without regard to case and keeps the existing spelling, so "drafts" joins *Drafts* instead of making a second folder; renaming a folder resolves the same way, minus the folder being renamed, so it can still be recapitalised.
 
 ## Listing
 

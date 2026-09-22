@@ -6,7 +6,9 @@
 
 - Inline code and links are now styled in markdown formatting mode
 - Statistics for your sessions, from Sessions → Statistics: generations run, tokens and characters the model produced, characters you wrote and deleted, time spent generating and average speed — for the session you have open and for all of them together. Text miyapad puts in the prompt for you (templates, `{predict}` and `{fill}` placeholders, search and replace, reformatting to another instruct template) is not counted as your own writing. Each section has its own Reset button
-- Folders in the Sessions list: drag a session onto another session to put both in a new folder, or onto a folder (or any session in it) to add it there. Drag a session to the box that appears above the list to take it back out. Folders can be collapsed, renamed (renaming one to another folder's name merges them) and removed, which keeps their sessions. The folder button next to each session does the same by typing a folder name, for touch screens and keyboards. Searching also matches folder names
+- Pick out several sessions in the Sessions list with ctrl-click, or a run of them with shift-click (or Select in a session's ⋯ menu, for touch screens). A bar above the list then moves all of them into a folder at once, or deletes them after a single confirmation
+- Every session in the list now has a ⋯ button, and a right-click menu, with Export, Clone, History and Statistics for that session (History is greyed out while several sessions are picked, since a version history belongs to one of them). They used to be in the toolbar and only ever acted on the session you had open, so getting at another one meant opening it first. The toolbar keeps Create, Import, Export All and Statistics
+- Folders in the Sessions list: drag a session onto another session to put both in a new folder, or onto a folder (or any session in it) to add it there. Drag a session to the box that appears above the list to take it back out. Folders can be collapsed, renamed (renaming one to another folder's name merges them) and removed, which keeps their sessions. The folder button next to each session does the same without dragging, for touch screens and keyboards: it opens a box that suggests the folders you already have, and typing a name that only differs in capitalisation joins the existing folder instead of making a second one. Leaving it empty takes the session out. Searching also matches folder names
 
 ### Changed
 
@@ -17,6 +19,7 @@
 
 ### Fixed
 
+- Export All now saves your sessions when miyapad runs on its own without the server, instead of stopping on the first one and writing nothing
 - Scrollbars now follow the theme's colors everywhere instead of showing the browser's default gray ones in modals, text areas and lists
 - Renaming, pinning or tagging a session from the Sessions list no longer leaves a duplicate of it behind with its pins, tags and creation date missing
 - The Sessions list on narrow screens no longer puts the column headers over the wrong columns or squeezes session names down to a letter or two

@@ -135,11 +135,13 @@ export class SessionStorage extends AbstractStorage {
 	}
 
 	async loadFromDatabase(db: DbConnection, key: string | number): Promise<unknown> {
-		const raw = await super.loadFromDatabase(db, key);
+		// Normalized like the writes below it: a session loaded under "3" misses the record at 3.
+		const id = sessionKey(key);
+		const raw = await super.loadFromDatabase(db, id);
 		if (typeof raw !== 'object' || raw === null) return raw;
 		const data = raw as Record<string, unknown>;
 		if (!['selectedSessionId', 'nextSessionId'].includes(key as string)) {
-			const nameData = await this.nameStorage!.loadFromDatabase(db, key);
+			const nameData = await this.nameStorage!.loadFromDatabase(db, id);
 			if (typeof nameData === 'string') {
 				data['name'] = nameData === '[object Object]' ? `Session #${key}` : nameData;
 				data['created'] = null;
@@ -456,12 +458,26 @@ export class SessionStorage extends AbstractStorage {
 	}
 
 	deleteSession(sessionId: string | number): Promise<void> {
-		if (Object.keys(this.sessions).length === 1)
+		return this.deleteSessions([sessionId]);
+	}
+
+	/**
+	 * Deletes sessions after one confirmation for the lot. The last session is never deleted:
+	 * `#deleteSession` checks again before each, so a batch of every session leaves one behind.
+	 */
+	deleteSessions(sessionIds: (string | number)[]): Promise<void> {
+		const ids = sessionIds.filter(id => this.sessions[id]);
+		if (!ids.length || Object.keys(this.sessions).length === 1)
 			return Promise.resolve();
-		if (!window.confirm("Are you sure you want to delete this session? This action can't be undone."))
+		const message = ids.length > 1
+			? `Are you sure you want to delete ${ids.length} sessions? This action can't be undone.`
+			: "Are you sure you want to delete this session? This action can't be undone.";
+		if (!window.confirm(message))
 			return Promise.resolve();
 		// One delete at a time, so two confirmed back to back can't both pass the last-session check.
-		const run = this.#deleteQueue.then(() => this.#deleteSession(sessionId));
+		const run = this.#deleteQueue.then(async () => {
+			for (const id of ids) await this.#deleteSession(id);
+		});
 		this.#deleteQueue = run.catch(() => {});
 		return run;
 	}
