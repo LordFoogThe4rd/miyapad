@@ -108,6 +108,21 @@ describe('SessionStorage pins and tags on sessions that are not open', () => {
 		expect(store('Sessions').get(key)).toMatchObject({ prompt: [{ content: 'keep me' }] });
 	});
 
+	it('pins several sessions at once and saves every one', async () => {
+		const { adapter, store, first, story, key } = await withStory();
+		await first.switchSession(0);
+
+		await first.setPinned([key, 0], true);
+
+		const reloaded = await open(adapter);
+		expect(reloaded.sessions[story].pinned).toBe(true);
+		expect(reloaded.sessions[0].pinned).toBe(true);
+		expect(store('Sessions').get(key)).toMatchObject({ prompt: [{ content: 'keep me' }] });
+
+		await reloaded.setPinned([key], false);
+		expect((await open(adapter)).sessions[story].pinned).toBe(false);
+	});
+
 	it('keeps folders as metadata, open or not, and a blank name takes a session out', async () => {
 		const { adapter, store, first, story, key } = await withStory();
 		await first.switchSession(0);

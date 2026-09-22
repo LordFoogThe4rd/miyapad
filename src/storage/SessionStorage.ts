@@ -425,12 +425,17 @@ export class SessionStorage extends AbstractStorage {
 		this.dispatchChangeEvent();
 	}
 
-	async togglePinSession(sessionId: string | number) {
-		if (!this.sessions[sessionId])
-			return;
-		this.sessions[sessionId].pinned = !this.sessions[sessionId].pinned;
-		this.enqueueSave(sessionId);
+	togglePinSession(sessionId: string | number): Promise<void> {
+		return this.setPinned([sessionId], !this.sessions[sessionId]?.pinned);
+	}
+
+	/** Pins or unpins sessions. Each record is written directly for the same reason as in `resetStats`. */
+	async setPinned(sessionIds: (string | number)[], pinned: boolean): Promise<void> {
+		const ids = sessionIds.filter(id => this.sessions[id] && !!this.sessions[id].pinned !== pinned);
+		if (!ids.length) return;
+		for (const id of ids) this.sessions[id].pinned = pinned;
 		this.dispatchChangeEvent();
+		for (const id of ids) await this.saveSessionToDB(id);
 	}
 
 	setTags(sessionId: string | number, rawInput: string) {

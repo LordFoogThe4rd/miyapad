@@ -240,6 +240,9 @@ export function SessionsModal({ isOpen, closeModal, sessionStorage, cancel, open
 		folder && !filtering && collapsed.has(folder) ? [] : entries.map(([id]) => id)),
 		[listItems, collapsed, filtering]);
 
+	/** The bar's Pin unpins only when every picked session is pinned, so a mixed selection ends up all pinned. */
+	const allPinned = selectedIds.every(id => sessionStorage.sessions[id].pinned);
+
 	const targetIds = (sessionId: string) => selected.has(sessionId) && selectedIds.length > 1 ? selectedIds : [sessionId];
 
 	const setFolderCollapsed = (folder: string, value: boolean) => {
@@ -760,6 +763,10 @@ ${t('sessions.removeFolderConfirm')}`)) return;
 			${selectedIds.length > 0 && html`
 				<div className="sessions-modal-bar">
 					<span>${t('sessions.selectedCount', { count: selectedIds.length })}${hiddenPicked > 0 && ` ${t('sessions.hiddenByFilter', { count: hiddenPicked })}`}</span>
+					<button onClick=${() => sessionStorage.setPinned(selectedIds, !allPinned)}>
+						${allPinned ? t('sessions.unpin') : t('sessions.pin')}
+					</button>
+					<button disabled=${disabled} onClick=${() => exportSessions(selectedIds)}>${t('sessions.export')}</button>
 					<button onClick=${() => setFolderEdit({ ids: selectedIds, value: '' })}>${t('sessions.moveToFolder')}</button>
 					<button disabled=${disabled || lastSession}
 						title=${lastSession ? t('sessions.cantDeleteLast') : ''}

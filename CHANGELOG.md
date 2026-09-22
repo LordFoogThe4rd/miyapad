@@ -12,6 +12,7 @@
 
 ### Changed
 
+- The bar that appears when you pick out sessions in the Sessions list can now pin and export them too, instead of one click per session. Pin unpins instead when every picked session is already pinned
 - Export and Clone in a session's ⋯ menu now act on all the sessions you picked out when that session is one of them, the same as its folder and delete buttons, and say how many, e.g. "Export (3)". They used to act on that one session only. History is now only greyed out in the menu of a picked session, not in every session's menu while something is picked
 - A search or tag filter that matches nothing in the Sessions list now says so, instead of showing the column headers over an empty list
 - Session names, folder names and tags in the Sessions list are cut off with an ellipsis when they are too long for the column; hovering one now shows the whole thing, the same as the dates do
