@@ -21,6 +21,7 @@
 
 ### Fixed
 
+- The Delete button in the Sessions list is now greyed out when you only have one session left, instead of looking like it works and doing nothing when clicked
 - Export All now saves your sessions when miyapad runs on its own without the server, instead of stopping on the first one and writing nothing
 - Scrollbars now follow the theme's colors everywhere instead of showing the browser's default gray ones in modals, text areas and lists
 - Renaming, pinning or tagging a session from the Sessions list no longer leaves a duplicate of it behind with its pins, tags and creation date missing

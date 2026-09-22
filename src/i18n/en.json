@@ -351,6 +351,7 @@
   "sessionHistory.words": "words",
   "sessions.actions": "Actions",
   "sessions.addTags": "+ add tags",
+  "sessions.cantDeleteLast": "miyapad always keeps one session, so your only one can't be deleted",
   "sessions.clearSelection": "Clear selection",
   "sessions.clone": "Clone",
   "sessions.collapseFolder": "Collapse folder",

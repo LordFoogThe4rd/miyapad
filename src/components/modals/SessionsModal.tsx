@@ -457,6 +457,8 @@ export function SessionsModal({ isOpen, closeModal, sessionStorage, cancel, open
 
 	const disabled = !!cancel;
 	const noSession = sessionStorage.selectedSession == null;
+	/** Storage refuses to delete the last session, so the buttons that would say why instead. */
+	const lastSession = Object.keys(sessionStorage.sessions).length <= 1;
 
 	/** What a row can do beyond its buttons: the actions that used to sit in the toolbar. */
 	const rowMenuItems = (sessionId: string): ContextMenuItem[] => [
@@ -560,7 +562,8 @@ export function SessionsModal({ isOpen, closeModal, sessionStorage, cancel, open
 							onClick=${() => startRenameSession(sessionId, session.name ?? '')}>
 							<${SVG_Rename}/>
 						</button>
-						<button className="sessions-action-btn" disabled=${disabled}
+						<button className="sessions-action-btn" disabled=${disabled || lastSession}
+							title=${lastSession ? t('sessions.cantDeleteLast') : ''}
 							onClick=${() => sessionStorage.deleteSessions(targetIds(sessionId))}>
 							<${SVG_Trash}/>
 						</button>
@@ -704,7 +707,9 @@ export function SessionsModal({ isOpen, closeModal, sessionStorage, cancel, open
 				<div className="sessions-modal-bar">
 					<span>${`${selectedIds.length} ${t('sessions.selected')}`}</span>
 					<button onClick=${() => setFolderEdit({ ids: selectedIds, value: '' })}>${t('sessions.moveToFolder')}</button>
-					<button disabled=${disabled} onClick=${() => sessionStorage.deleteSessions(selectedIds)}>${t('sessions.delete')}</button>
+					<button disabled=${disabled || lastSession}
+						title=${lastSession ? t('sessions.cantDeleteLast') : ''}
+						onClick=${() => sessionStorage.deleteSessions(selectedIds)}>${t('sessions.delete')}</button>
 					<button onClick=${() => setSelected(new Set())}>${t('sessions.clearSelection')}</button>
 				</div>
 			`}
