@@ -16,6 +16,7 @@
 - Database backups are now LZMA-compressed `.7z` archives instead of `.gz` files, so they take up noticeably less space. Nothing needs to be installed — the server brings its own 7-Zip. Existing `.gz` backups are left alone and still count towards the retention limit
 - Markdown formatting mode now hides the markup itself, like a live preview. The `#` of a heading, the `>` of a quote and the `-` of a bullet come back when you put the cursor on that line; `**`, backticks and link brackets come back only when the cursor is inside the word they wrap, and while they do, the line's own markers stay hidden so being inside a word does not also uncover the whole line's markup. Nothing is rewritten, so the hidden characters are still there and still copy out as markdown
 - Opening a session now scrolls the prompt to the bottom, where the cursor is placed, instead of leaving you at the top of a long prompt
+- The Modified and Created columns in the Sessions list now read as "2 hours ago" or "yesterday" instead of a full date. Hover a date to see the exact one
 - New databases now store sessions more compactly — about 10% smaller on disk. The extra work happens during the housekeeping pass when miyapad shuts down, not while you are writing. Databases made before this keep the setting they were created with; nothing is rewritten and there is nothing to convert. Backups also come out slightly smaller
 
 ### Fixed

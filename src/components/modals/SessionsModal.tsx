@@ -5,6 +5,7 @@ import { InputBox } from '../controls/InputBox';
 import { SelectBox } from '../controls/SelectBox';
 import { SVG_ArrowDown, SVG_Close, SVG_Confirm, SVG_Cancel, SVG_Folder, SVG_Rename, SVG_Trash, SVG_Star, SVG_StarOutline } from '../icons/index';
 import { exportText } from '../../api/common';
+import { formatRelativeTime } from '../../utils/time';
 import { useT } from '../../i18n';
 import { folderName, type SessionStorage } from '../../storage/SessionStorage';
 import { EditorContextMenu } from '../EditorContextMenu';
@@ -142,6 +143,10 @@ export function SessionsModal({ isOpen, closeModal, sessionStorage, cancel, open
 		const d = new Date(ts);
 		const pad = (n: number) => String(n).padStart(2, '0');
 		return `${d.getFullYear()}-${pad(d.getMonth() + 1)}-${pad(d.getDate())} ${pad(d.getHours())}:${pad(d.getMinutes())}`;
+	}
+
+	function formatRelative(ts: number | null | undefined) {
+		return ts ? formatRelativeTime(ts) : t('sessions.noDate');
 	}
 
 	useEffect(() => {
@@ -538,8 +543,8 @@ export function SessionsModal({ isOpen, closeModal, sessionStorage, cancel, open
 					</div>
 				`}
 			</td>
-			<td className="sessions-col-modified">${formatDate(session.modified)}</td>
-			<td className="sessions-col-created">${formatDate(session.created)}</td>
+			<td className="sessions-col-modified" title=${formatDate(session.modified)}>${formatRelative(session.modified)}</td>
+			<td className="sessions-col-created" title=${formatDate(session.created)}>${formatRelative(session.created)}</td>
 			<td className="sessions-col-actions" onClick=${(e: MouseEvent) => e.stopPropagation()}>
 				<div className="sessions-col-actions-inner">
 					${renamingId == sessionId ? html`<${Fragment}>
