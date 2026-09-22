@@ -1,13 +1,13 @@
 # Server-Side Tokenization
 
-Miyapad supports an optional server-side tokenization engine using HuggingFace tokenizers via the `@huggingface/tokenizers` npm package. When enabled, all token counting, tokenization, and detokenization operations are delegated to the backend server instead of using client-side estimators.
+The backend can tokenize with HuggingFace tokenizers through the `@huggingface/tokenizers` package. Turn it on and the server handles token counting, tokenizing and detokenizing, which the client-side estimators would otherwise do. It's optional. Without it, the frontend falls back to its own estimates.
 
 ## Key Files
 
-- `server/tokenizer.ts` — Core module: scans `server/tokenizers/` for subdirectories containing `tokenizer.json`, loads a HuggingFace `Tokenizer` from the JSON definition, provides `tokenCount()`, `tokenize()`, and `detokenize()` methods.
-- `server/routes/tokenizer.ts` — Serves API endpoints and reports `server_tokenizer: true` in the `/version` response.
-- `src/api/index.ts` — Client API functions: `serverTokenCount()`, `serverTokenize()`, `serverDetokenize()`, `getServerTokenizers()`, `loadServerTokenizer()`.
-- `src/components/modals/PreferencesModal.tsx` — UI: checkbox to enable/disable ("Use server-side tokenization") and a dropdown to select which tokenizer model to load, with a refresh button and status display.
+- `server/tokenizer.ts` is the core module. It scans `server/tokenizers/` for subdirectories holding a `tokenizer.json`, builds a HuggingFace `Tokenizer` from that file, and exposes `tokenCount()`, `tokenize()` and `detokenize()`.
+- `server/routes/tokenizer.ts` has the API endpoints, and adds `server_tokenizer: true` to the `/version` response.
+- `src/api/index.ts` is the client side: `serverTokenCount()`, `serverTokenize()`, `serverDetokenize()`, `getServerTokenizers()`, `loadServerTokenizer()`.
+- `src/components/modals/PreferencesModal.tsx` has the UI: a "Use server-side tokenization" checkbox, a dropdown of available models, a refresh button and a status line.
 
 ## Architecture
 
@@ -24,12 +24,12 @@ User clicks "Use server-side tokenization"
 
 ## Adding New Tokenizers
 
-Drop a directory containing `tokenizer.json` into `server/tokenizers/<model name>/`. The server scans for subdirectories with `tokenizer.json` on every GET `/api/v1/tokenizers` call — no restart needed if the directory already existed before the first call (the scan is dynamic, but newly added files are picked up on the next request).
+Drop a directory containing `tokenizer.json` into `server/tokenizers/<model name>/`. Every `GET /api/v1/tokenizers` re-reads that directory, so a tokenizer you add while the server is running shows up the next time the list is fetched. You never need to restart the server. If `server/tokenizers/` doesn't exist yet, the server creates it on the first call.
 
 ## Tokenizer Licenses
 
-Each tokenizer directory should include a `LICENSE` file for the redistributed tokenizer. The project is AGPL-3.0, but permissively-licensed tokenizers (MIT, Apache 2.0) can be bundled — just ensure their license notice is included.
+Each tokenizer directory should carry a `LICENSE` file for the tokenizer it redistributes. Miyapad is AGPL-3.0, so permissively licensed tokenizers (MIT, Apache 2.0) can be bundled as long as their license notice travels with them.
 
 ## Server Dependency
 
-`@huggingface/tokenizers` must be installed (`npm install` in `server/`), otherwise tokenizer operations will throw a module-load error. The `tokenizer.ts` module uses dynamic `import()` to lazily load the package.
+`@huggingface/tokenizers` has to be installed (`npm install` in `server/`), or tokenizer calls fail with a module-load error. `tokenizer.ts` pulls it in with a dynamic `import()`, so nothing loads until you use the feature.

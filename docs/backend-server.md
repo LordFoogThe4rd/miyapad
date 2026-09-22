@@ -1,63 +1,64 @@
 # Backend Server & Database
 
-The server (`server/server.ts` — entrypoint that loads modules from `lib/` and `routes/`, run via `tsx`) uses **better-sqlite3** (synchronous API) combined with the precompiled **`sqlite-zstd` extension** to perform transparent, row-level Zstandard compression on database records. Record keys are always bound as strings (`toKey` in `routes/data.ts`): better-sqlite3 binds JS numbers as REAL, so a numeric session id would otherwise be stored and looked up as `"81.0"` instead of `"81"`. Environment variables for the server are typed in `server/types/env.d.ts`.
+The server entrypoint is `server/server.ts`. It loads its modules from `lib/` and `routes/` and runs through `tsx`. Everything is stored in SQLite through better-sqlite3's synchronous API, and the precompiled `sqlite-zstd` extension compresses rows transparently with Zstandard.
+
+Record keys are always bound as strings (`toKey` in `routes/data.ts`). better-sqlite3 binds JS numbers as REAL, so a numeric session id would otherwise be stored and looked up as `"81.0"` instead of `"81"`. The server's environment variables are typed in `server/types/env.d.ts`.
 
 ## Database Schema (v4)
 
-The database has eight main tables:
+Eight tables:
 
-1. **`meta`**: Stores metadata (e.g., database schema `version = 4`).
-2. **`sessions`**: Stores main session data blobs. Uses column `session_data`.
-3. **`templates`**: Stores template configuration data. Uses column `template_data`.
-4. **`themes`**: Stores custom user CSS themes. Uses column `theme_data`.
-5. **`connections`**: Stores connection preset data (endpoint, API type, API key, model, per-API options). Uses column `connection_data`.
-6. **`samplerpresets`**: Stores sampler preset data (all generation parameters). Uses column `sampler_preset_data`.
-7. **`sessionhistory`**: Stores saved session versions and each session's version index. Uses column `history_data`. Created on every start (`CREATE TABLE IF NOT EXISTS`), so no schema version bump.
-8. **`names`**: Stores lightweight key-to-metadata mapping `{name, created, modified, pinned, tags, folder, stats}` (as JSON) for session listing, searching, sorting, pinning and folders.
+1. `meta`: metadata, including the database schema `version = 4`.
+2. `sessions`: the session data blobs. Column `session_data`.
+3. `templates`: template configuration data. Column `template_data`.
+4. `themes`: custom user CSS themes. Column `theme_data`.
+5. `connections`: connection presets (endpoint, API type, API key, model, per-API options). Column `connection_data`.
+6. `samplerpresets`: sampler presets, meaning all generation parameters. Column `sampler_preset_data`.
+7. `sessionhistory`: saved session versions and each session's version index. Column `history_data`. It's created on every start with `CREATE TABLE IF NOT EXISTS`, so adding it didn't need a schema version bump.
+8. `names`: the lightweight key-to-metadata mapping `{name, created, modified, pinned, tags, folder, stats}`, stored as JSON. Used for listing, searching, sorting, pinning and folders.
 
 ### Schema Column Constraints
 
-The `sqlite-zstd` extension can experience index naming collisions if multiple tables use identical column names (e.g., `data`). To avoid this, each table maps to a unique column name managed dynamically via the server's `getColumnName(storeName)` helper (in `lib/utils.ts`):
+`sqlite-zstd` runs into index name collisions when several tables share a column name such as `data`. So every table gets its own, handed out by the server's `getColumnName(storeName)` helper in `lib/utils.ts`:
 
-- `sessions` table uses **`session_data`**
-- `templates` table uses **`template_data`**
-- `themes` table uses **`theme_data`**
-- `connections` table uses **`connection_data`**
-- `samplerpresets` table uses **`sampler_preset_data`**
-- `sessionhistory` table uses **`history_data`**
+- `sessions` → `session_data`
+- `templates` → `template_data`
+- `themes` → `theme_data`
+- `connections` → `connection_data`
+- `samplerpresets` → `sampler_preset_data`
+- `sessionhistory` → `history_data`
 
 ## Database Compaction & Compression Settings
 
-- **Auto-Vacuum**: The database is initialized with `PRAGMA auto_vacuum = FULL`. Deleted records automatically release database pages back to the operating system, preventing storage inflation. (The `sqlite-zstd` extension recommends this mode.)
-- **Scheduled zstd Maintenance**: An additional maintenance scheduler calls `SELECT zstd_incremental_maintenance(duration, db_load)` on a configurable schedule to train compression dictionaries and optimize storage. Controlled by config stored in the `meta` table (`maintenance_config`):
-  - **Duration** (seconds): How long each maintenance cycle should run (`null` = unlimited / until idle). Default: `5`.
-  - **DB Load** (0.0–1.0): CPU load target for the maintenance call. Default: `0.5`.
-  - **Mode**: `interval` (periodic timer), `startup` (once on server start), or `shutdown` (once on server stop).
-  - **Interval**: Minutes between cycles when mode is `interval` (default: `60`).
-- **WAL Mode**: Optionally enabled via the `walEnabled` config flag. When on, `PRAGMA journal_mode=WAL` improves concurrent read performance. When off, `PRAGMA journal_mode=DELETE` is used. The mode switch is only applied when `walEnabled` differs from the previously saved setting.
-- **Transparent Compression**: Managed via `zstd_enable_transparent(config)`.
-- **Incremental Maintenance**: Periodic maintenance runs only according to the user's scheduler config (mode `interval`).
-- **Manual Maintenance**: Full `VACUUM` can be triggered via `GET /vacuum`, zstd maintenance via `POST /zstd_maintenance` (validates `duration ≥ 0` and `dbLoad` in `[0, 1]`). Scheduler config can be read/written via `GET`/`POST /maintenance_config`.
-- **Shutdown Guard**: On SIGINT, a `shuttingDown` flag prevents concurrent execution of shutdown maintenance if a second SIGINT is received before cleanup completes.
+- **Auto-Vacuum**: The database is created with `PRAGMA auto_vacuum = FULL`, the mode `sqlite-zstd` recommends. Deleted records give their pages straight back to the operating system instead of leaving the file bloated.
+- **Scheduled zstd Maintenance**: A scheduler calls `SELECT zstd_incremental_maintenance(duration, db_load)` to train compression dictionaries and tidy up storage. It only runs with the config you set, stored in the `meta` table as `maintenance_config`:
+  - **Duration** (seconds): how long one maintenance cycle runs, or `null` for no limit (until idle). Default `5`.
+  - **DB Load** (0.0 to 1.0): the CPU load target for that call. Default `0.5`.
+  - **Mode**: `interval` (periodic timer), `startup` (once when the server starts) or `shutdown` (once when it stops).
+  - **Interval**: minutes between cycles in `interval` mode. Default `60`.
+- **WAL Mode**: Optional, through the `walEnabled` config flag. On sets `PRAGMA journal_mode=WAL`, which handles concurrent reads better. Off sets `PRAGMA journal_mode=DELETE`. The mode is only switched when `walEnabled` differs from the previously saved setting.
+- **Transparent Compression**: Set up through `zstd_enable_transparent(config)`.
+- **Manual Maintenance**: `GET /vacuum` runs a full `VACUUM`. `POST /zstd_maintenance` runs zstd maintenance after checking that `duration ≥ 0` and that `dbLoad` is in `[0, 1]`. The scheduler config is read and written through `GET` and `POST /maintenance_config`.
+- **Shutdown Guard**: On SIGINT, a `shuttingDown` flag stops a second SIGINT from starting shutdown maintenance while the first is still running.
 
 ## Server CLI Options & Environment Variables
 
-- `--port` or `MIYAPAD_PORT`: Port to bind (default: `3000`).
-- `--host` or `MIYAPAD_HOST`: Host to bind (default: `127.0.0.1`).
-- `--login` / `--password`: Basic authentication login/password. If password is set, prompts standard HTTP Basic Auth on requests.
-- `--storagePath`: Path to the SQLite file (default: `./web-session-storage.db`).
-- `--open` / `MIYAPAD_NO_OPEN`: Controls whether the default web browser auto-opens the UI on server start.
-- `--noBackup` / `MIYAPAD_NO_BACKUP`: Disables automatic database backups.
-- `--backupInterval` / `MIYAPAD_BACKUP_INTERVAL`: Minutes between backups (default: `30`).
-- `--backupDir` / `MIYAPAD_BACKUP_DIR`: Directory for backup files (default: `./backups`).
-- `--backupKeep` / `MIYAPAD_BACKUP_KEEP`: Number of backups to retain (default: `10`).
-- `MIYAPAD_7Z_PATH`: Path to a 7-Zip executable to use for backup compression instead of the bundled one.
+- `--port` or `MIYAPAD_PORT`: port to bind (default: `3000`).
+- `--host` or `MIYAPAD_HOST`: host to bind (default: `127.0.0.1`).
+- `--login` / `--password`: login and password for HTTP Basic Auth. If a password is set, requests get the standard Basic Auth prompt.
+- `--storagePath`: path to the SQLite file (default: `./web-session-storage.db`).
+- `--open` / `MIYAPAD_NO_OPEN`: whether your default browser opens the UI when the server starts.
+- `--noBackup` / `MIYAPAD_NO_BACKUP`: turns off automatic database backups.
+- `--backupInterval` / `MIYAPAD_BACKUP_INTERVAL`: minutes between backups (default: `30`).
+- `--backupDir` / `MIYAPAD_BACKUP_DIR`: directory for backup files (default: `./backups`).
+- `--backupKeep` / `MIYAPAD_BACKUP_KEEP`: how many backups to keep (default: `10`).
+- `MIYAPAD_7Z_PATH`: path to a 7-Zip executable to compress backups with, instead of the bundled one.
 
 ## Automatic Database Backups
 
-The server can automatically create periodic backups of the SQLite database using SQLite's `VACUUM INTO` command, which produces a clean, compacted copy without downtime.
+The server can back up the database on a timer with SQLite's `VACUUM INTO`, which writes a clean, compacted copy without taking the database offline.
 
-- Backups are skipped if the database file's mtime hasn't changed since the last backup.
-- Backup files are named `web-session-storage.db.<YYYYMMDDHHmmss>.backup.7z` and are LZMA-compressed 7-Zip archives. They can be extracted with any archive tool that reads `.7z` (7-Zip, Ark, etc.).
-- Compression is done by the 7-Zip binary bundled with the server (the `7zip-bin` package), so nothing has to be installed on the host. Set `MIYAPAD_7Z_PATH` to use a different 7-Zip executable — on a platform the bundled binary does not cover, for instance.
-- Old backups beyond the configured keep count are automatically removed.
+- A backup is skipped if the database file's mtime hasn't changed since the last one.
+- Backup files are named `web-session-storage.db.<YYYYMMDDHHmmss>.backup.7z` and are LZMA-compressed 7-Zip archives. Any tool that reads `.7z` will open them (7-Zip, Ark and so on).
+- The 7-Zip binary ships with the server in the `7zip-bin` package, so you don't need to install anything on the host. Set `MIYAPAD_7Z_PATH` to use a different executable, for example on a platform the bundled binary doesn't cover.
+- Backups beyond the configured keep count are deleted.

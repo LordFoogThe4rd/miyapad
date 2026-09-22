@@ -2,11 +2,11 @@
 
 ## Overview
 
-Freeform tags (e.g. `"wip"`, `"archived"`, `"rp"`, `"writing"`) can be attached to sessions. Tags are displayed in the Sessions modal below the session name, filterable via a dedicated tag filter input.
+You can put freeform tags on sessions: `"wip"`, `"archived"`, `"rp"`, `"writing"`, whatever you like. The Sessions modal shows them under the session name, and a filter box in the toolbar narrows the list down to the sessions that match.
 
 ## Data Model
 
-Tags are stored as `string[]` in the session metadata (the `Names` store):
+Tags are a `string[]` in the session metadata (the `Names` store):
 
 | Field | Type | Default |
 |---|---|---|
@@ -17,24 +17,17 @@ Tags are stored as `string[]` in the session metadata (the `Names` store):
 | `tags` | `string[]` | `[]` |
 | `folder` | `string\|undefined` | `undefined` (see [Session Folders](session-folders.md)) |
 
-No DB schema migration is needed — the `Names` store is a flexible key-value store in both IndexedDB and SQLite.
+No schema migration is needed: the `Names` store is a loose key-value store in both IndexedDB and SQLite.
 
 ## Tag Editor
 
-In the Sessions modal, tags appear as muted comma-separated text below the session name. Click the tag text to enter inline edit mode. Enter or blur to save; Escape to cancel. Tags are entered as a comma-separated string.
+Tags sit below the session name as muted comma-separated text. Click them to edit in place. Enter or clicking away saves, Escape cancels. What you type is one comma-separated string.
 
-### Normalization
-
-On save, each tag is:
-- Trimmed of whitespace
-- Lowercased
-- Whitespace-collapsed (internal whitespace sequences collapsed to single space)
-- De-duplicated (duplicates removed)
-- Empty strings stripped
+On save each tag is trimmed, lowercased, and has internal runs of whitespace collapsed to one space. Empty strings and duplicates are dropped.
 
 ## Tag Filter Syntax
 
-A dedicated `InputBox` between the name search and sort dropdown in the toolbar.
+The filter is an `InputBox` between the name search and the sort dropdown.
 
 ### Grammar
 
@@ -45,24 +38,24 @@ term:        "NOT"? pattern
 pattern:     tag_fragment (wildcard pattern with `*`)
 ```
 
-- **`AND`** — implicit between consecutive terms within a group (the keyword `AND` is accepted but skipped during parsing)
-- **`OR`** — starts a new OR group; a session must match **any** OR group
-- **`NOT`** — negates the immediately following pattern
-- **`*`** — wildcard matching any substring (translated to `.*` in a generated regex)
+- `AND` is implicit between consecutive terms in a group. The keyword itself is accepted, and skipped during parsing.
+- `OR` starts a new group. A session matches if it matches any group.
+- `NOT` negates the pattern right after it.
+- `*` matches any substring, becoming `.*` in the generated regex.
 
 ### Examples
 
 | Input | Meaning |
 |---|---|
 | `wip` | tag exactly equals "wip" |
-| `wip writing` | tag equals "wip" **AND** another tag equals "writing" |
-| `wip AND writing` | same (AND implicit or explicit) |
-| `wip OR archived` | tag equals "wip" **OR** another tag equals "archived" |
+| `wip writing` | one tag equals "wip" and another equals "writing" |
+| `wip AND writing` | the same, written out |
+| `wip OR archived` | a tag equals "wip", or one equals "archived" |
 | `NOT archived` | no tag equals "archived" |
-| `wip*` | tag starts with "wip" (wildcard) |
-| `*ing` | tag ends with "ing" (wildcard) |
-| `wip* OR NOT *archived` | starts with "wip" **OR** no tag ends with "archived" |
-| `writing NOT wip` | has tag "writing" **AND** no tag "wip" |
+| `wip*` | a tag starts with "wip" |
+| `*ing` | a tag ends with "ing" |
+| `wip* OR NOT *archived` | a tag starts with "wip", or no tag ends with "archived" |
+| `writing NOT wip` | has "writing" and does not have "wip" |
 
 ### Tooltip
 
@@ -71,40 +64,27 @@ The filter input has a tooltip:
 
 ### Wildcard Resolution
 
-If a pattern contains `*`, it is converted to a case-insensitive regex via `compileTagRegex()` (compiled once during `parseTagFilter`). If no `*` is present, an exact case-insensitive match (`===`) is used.
+A pattern containing `*` becomes a case-insensitive regex through `compileTagRegex()`, compiled once inside `parseTagFilter` rather than per session. Without a `*` the comparison is a case-insensitive `===`.
 
 ## Parsing Algorithm
 
-The filter string is parsed into Disjunctive Normal Form (DNF): an array of OR groups, where each group is an array of AND conditions. Each condition is `{ pattern: string, negate: boolean }`.
+The filter string is parsed into disjunctive normal form: an array of OR groups, each an array of AND conditions, each condition `{ pattern, negate, regex }`.
 
 ```
 parseTagFilter(input) → groups[] | null
 sessionMatches(session, groups) → boolean
 ```
 
+Empty OR groups are thrown away during parsing. Left in, they would match every session.
+
 ## Combined Filter
 
-Name search and tag filter are **AND-ed** together in `sortedSessions`. Both must match for a session to appear.
+`sortedSessions` ANDs the name search and the tag filter together. A session has to satisfy both to appear.
 
 ## Implementation
 
-### `src/storage/SessionStorage.js`
+`src/storage/SessionStorage.ts` carries tags in session metadata everywhere metadata is built: `saveToDatabase()`, `loadFromDatabase()`, `loadSessions()`, `switchSession()`, `createSession()` and `createSessionFromObject()`. The `tags` property is destructured out of the session data, so it never lands in the session body. `setTags(sessionId, rawInput)` splits the comma-separated string, normalizes and deduplicates it, sets it on the session, bumps `modified` (unlike pinning or moving to a folder, tagging counts as an edit), enqueues the save and dispatches the change event.
 
-- Tags are included in session metadata at all construction points: `saveToDatabase()`, `loadFromDatabase()`, `loadSessions()`, `switchSession()`, `createSession()`, `createSessionFromObject()`
-- The `tags` property is destructured out of session data (not saved into the session body)
-- `setTags(sessionId, rawInput)` — parses comma-separated string, normalizes, deduplicates, sets on session, enqueues save, dispatches change event
+`src/components/modals/SessionsModal.tsx` holds the filter box's `tagFilterQuery`, the inline editor's `editingTagsId` and `editTagsValue`, and memoizes the parse as `parsedTagFilter`.
 
-### `src/components/modals/SessionsModal.js`
-
-- `tagFilterQuery` state — bound to the filter input
-- `editingTagsId` / `editTagsValue` state — inline tag editor management
-- `parsedTagFilter` — `useMemo` memoizing `parseTagFilter(tagFilterQuery)`
-- `compileTagRegex()` — extracted regex compilation for wildcard patterns
-- Tag display in Name column below session name (muted, smaller text)
-- Inline tag editor — `<input>` with comma-separated value
-- Empty OR groups are filtered out during parsing to avoid matching all sessions
-
-### `src/css/_sessions.css`
-
-- `.sessions-modal-tags` — smaller muted text below session name
-- `.sessions-modal-tag-input` — inline input styling for tag editing
+`src/css/_sessions.css` styles them: `.sessions-modal-tags` for the smaller muted line under the name, truncated with an ellipsis when it overflows the column, `.sessions-modal-tag-input` for the inline editor.

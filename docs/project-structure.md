@@ -7,7 +7,8 @@ miyapad/
 │   └── pages.yml                  # Deploy to GitHub Pages on v* tags
 ├── dist/                          # Frontend production build output
 ├── scripts/                       # Root build scripts
-│   └── write-version.mjs          # Generates src/version.ts from package.json (prebuild/prestart)
+│   ├── write-version.mjs          # Generates src/version.ts from package.json (prebuild/prestart)
+│   └── inline-dist.mjs            # Folds the built JS and CSS into dist/miyapad.html (postbuild)
 ├── server/dist-server/            # esbuild server bundle output (generated)
 ├── server/miyapad-dist/           # Standalone distribution folder (generated)
 ├── miyapad.html                   # HTML entry point (loads src/main.tsx as module)
@@ -50,7 +51,7 @@ miyapad/
     ├── api/                       # API modules for backends (.ts)
     ├── components/                # React components (Modals, Sidebar, controls, icons — .tsx)
     ├── contexts/                  # SettingsContext.tsx and GenerationContext.tsx
-    ├── css/                       # CSS partials (21 files, imported by styles.css)
+    ├── css/                       # CSS partials (22 files, imported by styles.css)
     ├── defaults/                  # Hardcoded defaults (.ts) — presets.ts, prompt.ts, templates.ts, themes.ts
     ├── editor/                    # ProseMirror prompt editor (.ts) — schema, React<->PM sync, adapter, decoration plugins
     ├── hooks/                     # Custom hooks (.ts)

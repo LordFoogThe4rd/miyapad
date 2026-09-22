@@ -1,8 +1,8 @@
 # TypeScript Type System
 
-## tsconfig Architecture
+## tsconfig Layout
 
-Three-file inheritance chain:
+Three files, each inheriting from the base:
 
 | File | Role | Key Settings |
 |------|------|-------------|
@@ -12,50 +12,48 @@ Three-file inheritance chain:
 
 ### Base Config (`tsconfig.base.json`)
 
-- **`strict: true`** — Full strictness: `noImplicitAny`, `strictNullChecks`, `strictFunctionTypes`, etc. all enabled.
-- **`noEmit: true`** — No JS output generated. The frontend relies on Parcel for transpilation; the server uses `tsx` as a runtime.
-- **`isolatedModules: true`** — Each file is transpiled independently, which means:
-  - Re-export types using `export type` (isolatedModules enforces this with `verbatimModuleSyntax` style behavior).
-  - Const enums are disallowed.
+- `strict: true` turns on the full set: `noImplicitAny`, `strictNullChecks`, `strictFunctionTypes` and the rest.
+- `noEmit: true` means `tsc` never writes JS. Parcel transpiles the frontend and the server runs through `tsx`.
+- `isolatedModules: true` transpiles each file on its own. Because of that, re-exported types need `export type`, and const enums are not allowed.
 
 ### Frontend Config (`tsconfig.json`)
 
-- **`moduleResolution: "bundler"`** — Allows extensionless imports (Parcel resolves them at build time).
-- **`jsx: "react-jsx"`** — Automatic JSX runtime. Combined with `htm/react`, tagged templates produce React elements.
+- `moduleResolution: "bundler"` allows extensionless imports, which Parcel resolves at build time.
+- `jsx: "react-jsx"` selects the automatic JSX runtime. `htm/react` tagged templates produce React elements through it.
 
 ### Server Config (`server/tsconfig.json`)
 
-- **`moduleResolution: "NodeNext"`** — Requires explicit `.js` extensions in import paths (Node ESM style). The `tsx` runtime handles resolution at runtime.
-- **Includes:** `**/*.ts`
-- **Excludes:** `node_modules`, `tokenizers`, `backups`, `logs`, `dist`
+- `moduleResolution: "NodeNext"` requires explicit `.js` extensions in import paths, Node ESM style. The `tsx` runtime resolves them.
+- Includes `**/*.ts`.
+- Excludes `node_modules`, `tokenizers`, `backups`, `logs`, `dist`.
 
 ## Ambient Type Declarations (`*.d.ts`)
 
-Shared domain types are declared as global ambient declarations in `src/types/*.d.ts`. These are available project-wide without explicit imports.
+Shared domain types are global ambient declarations in `src/types/*.d.ts`, so you can use them anywhere without importing them.
 
 | File | Contents |
 |------|----------|
 | `src/types/api.d.ts` | `CompletionChunk`, `ApiEndpointConfig`, `CompletionOptions`, `SamplerOptions`, `TokenCounterParams`, `LogprobToken` |
 | `src/types/storage.d.ts` | `SessionData`, `ChatMessage`, `InstructTemplate`, `ThemeData`, `ConnectionData`, `SamplerPresetData`, `WorldInfoData`, `DatabaseAdapter` |
 | `src/types/defaults.d.ts` | `DefaultPresets` interface |
-| `src/types/global.d.ts` | Ambient module declarations (`*.css`, `html-to-image`), global interface augmentations (`Window`, `Document`, `HTMLTextAreaElement`, `ViewTransition`) |
+| `src/types/global.d.ts` | Ambient module declarations (`*.css`, `html-to-image`) and global interface augmentations (`Window`, `Document`, `HTMLTextAreaElement`, `ViewTransition`) |
 
 ### Exported Type Modules
 
-Types that need explicit imports live in:
+These types have to be imported explicitly:
 
-- `src/types/components.d.ts` — Reusable component prop interfaces (`ModalProps`, `SidebarProps`, `AppProps`, etc.)
-- `src/types/contexts.d.ts` — Context value shapes (`SettingsState`, `GenerationState`)
+- `src/types/components.d.ts`: reusable component prop interfaces (`ModalProps`, `SidebarProps`, `AppProps` and so on)
+- `src/types/contexts.d.ts`: context value shapes (`SettingsState`, `GenerationState`)
 
 ### Server Types
 
-- `server/types/env.d.ts` — Augments `NodeJS.ProcessEnv` with `MIYAPAD_*` environment variables
+- `server/types/env.d.ts` augments `NodeJS.ProcessEnv` with the `MIYAPAD_*` environment variables.
 
 ## Conventions
 
-- **`interface`** for objects, props, configuration shapes
-- **`type`** for aliases, unions, tuples, function signatures
-- **`import type`** for type-only imports (enforced by `isolatedModules`)
-- **Plain function components** with explicit props interface — never `React.FC`
-- **`as` casting** only in API stream parsing; prefer type guards (`isAbortError`) for error handling
-- **Generic `<T>`** on custom hooks with explicit return type annotations
+- `interface` for objects, props and configuration shapes.
+- `type` for aliases, unions, tuples and function signatures.
+- `import type` for type-only imports, which `isolatedModules` enforces.
+- Plain function components with an explicit props interface. Never `React.FC`.
+- `as` casts only in API stream parsing. Everywhere else, use a type guard, such as `isAbortError` for error handling.
+- Custom hooks take a single generic `<T>` and annotate their return type explicitly.
