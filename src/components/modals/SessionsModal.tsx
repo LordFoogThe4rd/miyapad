@@ -566,11 +566,14 @@ ${t('sessions.removeFolderConfirm')}`)) return;
 							<${SVG_Folder}/>
 						</button>
 						<button className="sessions-action-btn" disabled=${disabled}
+							title=${t('sessions.renameSession')}
 							onClick=${() => startRenameSession(sessionId, session.name ?? '')}>
 							<${SVG_Rename}/>
 						</button>
 						<button className="sessions-action-btn" disabled=${disabled || lastSession}
-							title=${lastSession ? t('sessions.cantDeleteLast') : ''}
+							title=${lastSession ? t('sessions.cantDeleteLast')
+								: targetIds(sessionId).length > 1 ? `${t('sessions.delete')}: ${targetIds(sessionId).length} ${t('sessions.selected')}`
+								: t('sessions.deleteSession')}
 							onClick=${() => sessionStorage.deleteSessions(targetIds(sessionId))}>
 							<${SVG_Trash}/>
 						</button>

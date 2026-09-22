@@ -12,6 +12,7 @@
 
 ### Changed
 
+- The rename and delete buttons on a session row now say what they do when you hover them, like the other buttons there. Delete also says how many sessions it is about to delete when you have several picked out
 - Importing sessions now shows only `.json` files in the file picker, the same as importing a database does
 - Opening Sessions now puts the cursor in the search box, so you can type straight away
 - Screenshots now open in a preview window inside miyapad instead of a new browser tab, with buttons to copy the image to the clipboard or save it. The file name is filled in from the session name and the date — change it before saving if you want something else
