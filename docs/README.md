@@ -2,7 +2,7 @@
 
 Miyapad is a web-based interface for AI text generation. It is built around the Text Completion API rather than chat, and it talks to local and remote LLM backends: llama.cpp, KoboldCPP, OpenAI-compatible APIs, DeepSeek and AI Horde.
 
-Your sessions are saved in the browser's IndexedDB, or in SQLite when the optional backend server is running. You also get prompt templates, swappable CSS themes, an in-place markdown formatting mode for the prompt editor, text-to-speech, token counts, interactive log-probability overlays, and a keyboard-driven Quick Switcher for hopping between sessions. The Sessions modal searches and sorts by name or timestamp, pins sessions to the top, and groups them into folders and tags. Pick out several sessions and you can pin, export, move or delete them together. Deleted sessions go to a trash, where they can be restored. Sampler presets save and reload your generation parameters.
+Your sessions are saved in the browser's IndexedDB, or in SQLite when the optional backend server is running. You also get prompt templates, swappable CSS themes, an in-place markdown formatting mode for the prompt editor, text-to-speech, token counts, interactive log-probability overlays, and a keyboard-driven Quick Switcher for hopping between sessions. The Sessions modal searches and sorts by name or timestamp, pins sessions to the top, groups them into folders, and filters them by tag. Pick out several sessions and you can pin, export, move or delete them together. Deleted sessions go to a trash, where they can be restored. Sampler presets save and reload your generation parameters.
 
 ## Documentation
 
