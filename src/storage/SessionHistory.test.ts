@@ -280,6 +280,23 @@ describe('SessionStorage version history', () => {
 		expect(again.sessions['0']!.trashed).toBeUndefined();
 	});
 
+	it('opens a live session when the one last open was trashed from another tab, and restoring it keeps its content', async () => {
+		const { storage, store, adapter } = await setup();
+		await storage.createSession('Two');
+		storage.setProperty('prompt', [u('keep me')]);
+		await storage.saveTimerHandler(id => storage.saveSessionToDB(id));
+		// All the other tab writes is the flag on the metadata.
+		store('Names').set('0', { ...(store('Names').get('0') as object), trashed: 1 });
+
+		const reloaded = new SessionStorage(adapter);
+		await reloaded.init();
+		clearInterval(reloaded.saveTimer);
+		expect(reloaded.selectedSession).toBe(1);
+
+		await reloaded.restoreSessions(['0']);
+		expect(store('Sessions').get('0')).toMatchObject({ prompt: [u('keep me')] });
+	});
+
 	it('keeps a session in the trash when its versions cannot be deleted', async () => {
 		const { storage, store } = await setup();
 		await storage.createSession('Two');

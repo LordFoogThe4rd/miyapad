@@ -320,8 +320,12 @@ export class SessionStorage extends AbstractStorage {
 				await this.createSession('MiyaPad #1');
 			}
 		}
-		if (this.selectedSession !== undefined) {
-			await this.switchSession(this.selectedSession);
+		// Another tab may have trashed the session last opened. Left selected, it would count as
+		// open with none of its content loaded, and its next save would write that nothing over it.
+		const selected = this.selectedSession !== undefined && this.sessions[this.selectedSession]
+			? this.selectedSession : Object.keys(this.sessions)[0];
+		if (selected !== undefined) {
+			await this.switchSession(selected);
 		}
 	}
 
