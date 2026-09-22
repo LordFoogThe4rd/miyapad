@@ -625,7 +625,8 @@ ${t('sessions.removeFolderConfirm')}`)) return;
 				<td className="sessions-col-star">
 					<button className="sessions-action-btn sessions-folder-toggle ${open ? 'open' : ''}"
 						aria-expanded=${open}
-						title=${open ? t('sessions.collapseFolder') : t('sessions.expandFolder')}>
+						disabled=${filtering}
+						title=${filtering ? t('sessions.folderOpenWhileFiltering') : open ? t('sessions.collapseFolder') : t('sessions.expandFolder')}>
 						<${SVG_ArrowDown}/>
 					</button>
 				</td>
