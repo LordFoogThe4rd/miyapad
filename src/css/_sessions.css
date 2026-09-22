@@ -127,12 +127,27 @@
 .sessions-modal-row-in-folder .sessions-col-name {
 	padding-left: 1.75em;
 }
+/* The drop zone, the folder box and the selection bar take turns in one slot that is always
+   there, so picking a row or starting a drag never moves the rows under the pointer. It only
+   grows when a narrow screen wraps the selection bar's buttons. */
+.sessions-modal-bar-slot {
+	display: flex;
+	min-height: 2rem;
+	margin-bottom: 8px;
+}
+.sessions-modal-bar-slot > * {
+	flex: 1;
+}
 .sessions-modal-bar {
 	display: flex;
+	flex-wrap: wrap;
 	align-items: center;
 	gap: 6px;
-	margin-bottom: 8px;
 	font-size: 0.85rem;
+}
+.sessions-modal-bar-hint {
+	font-size: 0.8rem;
+	color: var(--color-text-hint);
 }
 .sessions-modal-bar .sessions-modal-inline-input {
 	flex: 1;
@@ -148,8 +163,10 @@
 	z-index: 1002;
 }
 .sessions-modal-dropzone {
-	padding: 8px;
-	margin-bottom: 8px;
+	display: flex;
+	align-items: center;
+	justify-content: center;
+	padding: 0 8px;
 	border: 1px dashed var(--color-bg-rule);
 	text-align: center;
 	font-size: 0.8rem;

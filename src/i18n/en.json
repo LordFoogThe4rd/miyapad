@@ -381,6 +381,7 @@
   "sessions.newFolder": "New folder",
   "sessions.noDate": "—",
   "sessions.noMatches": "No sessions match the search or tag filter.",
+  "sessions.pickHint": "Ctrl-click or shift-click sessions to pick out several at once",
   "sessions.pin": "Pin",
   "sessions.pinSession": "Pin session",
   "sessions.removeFolder": "Remove folder (its sessions are kept)",

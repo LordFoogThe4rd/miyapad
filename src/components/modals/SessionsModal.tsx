@@ -750,7 +750,13 @@ ${t('sessions.removeFolderConfirm')}`)) return;
 					<button onClick=${selectAll}>${t('sessions.selectAll')}</button>
 				</div>
 			</div>
-			${folderEdit && html`
+			<div className="sessions-modal-bar-slot">
+			${draggedFromFolder ? html`
+				<div className="sessions-modal-dropzone ${dropTarget === 'root' ? 'drop-target' : ''}"
+					...${dropHandlers('root', (ids) => sessionStorage.setFolder(ids, undefined))}>
+					${t('sessions.dropToUngroup')}
+				</div>
+			` : folderEdit ? html`
 				<div className="sessions-modal-bar">
 					<label htmlFor="sessions-folder-input">${t('sessions.moveToFolder')}</label>
 					<input
@@ -772,8 +778,7 @@ ${t('sessions.removeFolderConfirm')}`)) return;
 					<button className="sessions-action-btn" onClick=${commitFolder}><${SVG_Confirm}/></button>
 					<button className="sessions-action-btn" onClick=${() => setFolderEdit(null)}><${SVG_Cancel}/></button>
 				</div>
-			`}
-			${selectedIds.length > 0 && html`
+			` : selectedIds.length > 0 ? html`
 				<div className="sessions-modal-bar">
 					<span>${t('sessions.selectedCount', { count: selectedIds.length })}${hiddenPicked > 0 && ` ${t('sessions.hiddenByFilter', { count: hiddenPicked })}`}</span>
 					<button onClick=${() => sessionStorage.setPinned(selectedIds, !allPinned)}>
@@ -786,13 +791,10 @@ ${t('sessions.removeFolderConfirm')}`)) return;
 						onClick=${() => deleteSessions(selectedIds)}>${t('sessions.delete')}</button>
 					<button onClick=${() => setSelected(new Set())}>${t('sessions.clearSelection')}</button>
 				</div>
+			` : html`
+				<div className="sessions-modal-bar sessions-modal-bar-hint">${t('sessions.pickHint')}</div>
 			`}
-			${draggedFromFolder && html`
-				<div className="sessions-modal-dropzone ${dropTarget === 'root' ? 'drop-target' : ''}"
-					...${dropHandlers('root', (ids) => sessionStorage.setFolder(ids, undefined))}>
-					${t('sessions.dropToUngroup')}
-				</div>
-			`}
+			</div>
 			<div className="sessions-modal-list overflow-container">
 				<table className="sessions-modal-table">
 					<thead>

@@ -13,6 +13,7 @@
 
 ### Changed
 
+- Picking out a session or starting a drag in the Sessions list no longer pushes the list down under your pointer. The selection bar, the folder box and the drop zone now take turns in one space above the list that is always there. While none of them is showing, it tells you about ctrl-click and shift-click
 - Sessions in the Sessions list can now be opened from the keyboard: Tab to a row and press Enter or Space. A row used to open only with a mouse click
 - The bar that appears when you pick out sessions in the Sessions list can now pin and export them too, instead of one click per session. Pin unpins instead when every picked session is already pinned
 - Export and Clone in a session's ⋯ menu now act on all the sessions you picked out when that session is one of them, the same as its folder and delete buttons, and say how many, e.g. "Export (3)". They used to act on that one session only. History is now only greyed out in the menu of a picked session, not in every session's menu while something is picked
