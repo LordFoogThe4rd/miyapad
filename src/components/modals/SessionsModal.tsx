@@ -360,7 +360,9 @@ ${t('sessions.removeFolderConfirm')}`)) return;
 		open();
 	};
 
+	// Create and rename share `handleKeyDown`, which can only tell them apart if one is open at a time.
 	const startRenameSession = (sessionId: string | number, name: string) => {
+		setIsCreating(false);
 		setRenameSessionName(name);
 		setRenamingId(sessionId);
 	};
@@ -372,6 +374,7 @@ ${t('sessions.removeFolderConfirm')}`)) return;
 	};
 
 	const startCreateSession = () => {
+		setRenamingId(undefined);
 		setNewSessionName(`${t('sessions.defaultNamePrefix')}${(sessionStorage.nextId ?? 0) + 1}`);
 		setIsCreating(true);
 	};
