@@ -379,8 +379,15 @@ ${t('sessions.removeFolderConfirm')}`)) return;
 		setIsCreating(true);
 	};
 
+	/** A new session rarely matches the filters, and it would vanish from the list as it's opened. */
+	const clearFilters = () => {
+		setSearchQuery('');
+		setTagFilterQuery('');
+	};
+
 	const createSession = async () => {
 		if (newSessionName) {
+			clearFilters();
 			const newId = await sessionStorage.createSession(newSessionName);
 			await sessionStorage.switchSession(newId);
 			setIsCreating(false);
@@ -417,6 +424,7 @@ ${t('sessions.removeFolderConfirm')}`)) return;
 				}
 			}
 			if (lastNewId !== null) {
+				clearFilters();
 				await sessionStorage.switchSession(lastNewId);
 			}
 			if (skipped.length) {

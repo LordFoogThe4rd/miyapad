@@ -26,6 +26,7 @@
 
 ### Fixed
 
+- Creating or importing a session while the Sessions list is filtered now clears the search and tag filters, so the new session shows up in the list instead of being hidden by them
 - Importing sessions now tells you when some of the files could not be read as sessions, and names them. They used to be skipped without a word
 - Renaming a session while the new-session box is open in the Sessions list no longer creates a session when you press Enter and leaves the rename unfinished. Starting one now closes the other
 - When a search or tag filter hides some of the sessions you picked out, the bar above the Sessions list now says how many, e.g. "5 selected (3 hidden by filter)". Move to folder and Delete act on the hidden ones too, and nothing used to say so
