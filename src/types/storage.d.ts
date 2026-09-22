@@ -7,6 +7,8 @@ interface SessionData {
   /** Name of the folder the session is in; sessions with the same name share a folder. */
   folder?: string;
   stats?: SessionStats;
+  /** When the session was moved to the trash; unset for one that is not in it. */
+  trashed?: number;
   inactive?: boolean;
   [key: string]: unknown;
 }

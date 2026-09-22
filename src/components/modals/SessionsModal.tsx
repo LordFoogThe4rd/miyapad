@@ -3,7 +3,7 @@ import { Fragment, useState, useEffect, useMemo, type ChangeEvent, type DragEven
 import { Modal } from '../Modal';
 import { InputBox } from '../controls/InputBox';
 import { SelectBox } from '../controls/SelectBox';
-import { SVG_ArrowDown, SVG_Close, SVG_Confirm, SVG_Cancel, SVG_Folder, SVG_Rename, SVG_Trash, SVG_Star, SVG_StarOutline } from '../icons/index';
+import { SVG_ArrowDown, SVG_Close, SVG_Confirm, SVG_Cancel, SVG_Folder, SVG_Rename, SVG_Trash, SVG_Star, SVG_StarOutline, SVG_Undo } from '../icons/index';
 import { exportText } from '../../api/common';
 import { formatRelativeTime } from '../../utils/time';
 import { useT } from '../../i18n';
@@ -137,6 +137,7 @@ export function SessionsModal({ isOpen, closeModal, sessionStorage, cancel, open
 	/** The sessions whose folder is being picked, and the name typed so far. */
 	const [folderEdit, setFolderEdit] = useState<{ ids: string[]; value: string } | null>(null);
 	const [rowMenu, setRowMenu] = useState<{ id: string; x: number; y: number } | null>(null);
+	const [showTrash, setShowTrash] = useState(false);
 
 	const setSortBy = (v: string) => { setSortByState(v); localStorage.setItem('miyapad-sessions-sortBy', v); };
 	const setSortAsc = (v: boolean | ((prev: boolean) => boolean)) => {
@@ -179,6 +180,7 @@ export function SessionsModal({ isOpen, closeModal, sessionStorage, cancel, open
 			setAnchorId(null);
 			setFolderEdit(null);
 			setRowMenu(null);
+			setShowTrash(false);
 			setSortByState(localStorage.getItem('miyapad-sessions-sortBy') || 'modified');
 			setSortAscState(localStorage.getItem('miyapad-sessions-sortAsc') === 'true');
 		}
@@ -224,6 +226,11 @@ export function SessionsModal({ isOpen, closeModal, sessionStorage, cancel, open
 	const listItems = useMemo(() => groupByFolder(sortedSessions), [sortedSessions]);
 	// A filter shows what matched inside collapsed folders too.
 	const filtering = !!searchQuery.trim() || !!parsedTagFilter;
+
+	/** Most recently trashed first. */
+	const trashEntries = useMemo(() => (Object.entries(sessionStorage.trash) as SessionEntry[])
+		.sort(([, a], [, b]) => (b.trashed ?? 0) - (a.trashed ?? 0)),
+		[version, sessionStorage.trash]);
 
 	/** Every folder that exists, for the picker's suggestions. */
 	const folderNames = useMemo(() => [...new Set(Object.values(sessionStorage.sessions)
@@ -318,10 +325,10 @@ ${t('sessions.removeFolderConfirm')}`)) return;
 		await sessionStorage.setFolder(ids, resolveFolder(value));
 	};
 
-	/** One confirmation for the lot. */
-	const deleteSessions = (ids: string[]) => {
-		if (window.confirm(ids.length > 1 ? t('sessions.deleteConfirmMany', { count: ids.length }) : t('sessions.deleteConfirm')))
-			sessionStorage.deleteSessions(ids);
+	/** The trash can give them back, so only deleting them from there asks first. One confirmation for the lot. */
+	const purgeSessions = (ids: string[]) => {
+		if (window.confirm(ids.length > 1 ? t('sessions.purgeConfirmMany', { count: ids.length }) : t('sessions.purgeConfirm')))
+			sessionStorage.purgeSessions(ids);
 	};
 
 	const draggedIds = dragId === null ? [] : targetIds(dragId);
@@ -656,7 +663,7 @@ ${t('sessions.removeFolderConfirm')}`)) return;
 							title=${lastSession ? t('sessions.cantDeleteLast')
 								: targetIds(sessionId).length > 1 ? `${t('sessions.delete')}: ${t('sessions.selectedCount', { count: targetIds(sessionId).length })}`
 								: t('sessions.deleteSession')}
-							onClick=${() => deleteSessions(targetIds(sessionId))}>
+							onClick=${() => sessionStorage.trashSessions(targetIds(sessionId))}>
 							<${SVG_Trash}/>
 						</button>
 						<button className="sessions-action-btn sessions-more-btn"
@@ -734,6 +741,58 @@ ${t('sessions.removeFolderConfirm')}`)) return;
 		<//>`;
 	};
 
+	// The same Modal as the list below, so React keeps it open instead of mounting a second one.
+	if (showTrash) return html`
+		<${Modal} isOpen=${isOpen} onClose=${closeModal}
+			title=${t('sessions.trash')}
+			description="">
+			<div className="sessions-modal-bar-slot">
+				<div className="sessions-modal-bar">
+					<button onClick=${() => setShowTrash(false)}>${t('sessions.backToSessions')}</button>
+					<button disabled=${!trashEntries.length} onClick=${() => purgeSessions(trashEntries.map(([id]) => id))}>
+						${t('sessions.emptyTrash')}
+					</button>
+				</div>
+			</div>
+			<div className="sessions-modal-list overflow-container">
+				<table className="sessions-modal-table">
+					<thead>
+						<tr>
+							<th className="sessions-col-name">${t('sessions.name')}</th>
+							<th className="sessions-col-modified">${t('sessions.trashed')}</th>
+							<th className="sessions-col-actions">${t('sessions.actions')}</th>
+						</tr>
+					</thead>
+					<tbody>
+						${trashEntries.map(([sessionId, session]) => html`
+							<tr key=${sessionId} className="sessions-modal-row sessions-modal-trash-row">
+								<td className="sessions-col-name">
+									<span className="sessions-modal-name" title=${session.name}>${session.name}</span>
+									${session.folder && html`<span className="sessions-modal-tags" title=${session.folder}>${session.folder}</span>`}
+								</td>
+								<td className="sessions-col-modified" title=${formatDate(session.trashed)}>${formatRelative(session.trashed)}</td>
+								<td className="sessions-col-actions">
+									<div className="sessions-col-actions-inner">
+										<button className="sessions-action-btn" title=${t('sessions.restore')}
+											onClick=${() => sessionStorage.restoreSessions([sessionId])}>
+											<${SVG_Undo}/>
+										</button>
+										<button className="sessions-action-btn" title=${t('sessions.deleteForever')}
+											onClick=${() => purgeSessions([sessionId])}>
+											<${SVG_Trash}/>
+										</button>
+									</div>
+								</td>
+							</tr>
+						`)}
+						${trashEntries.length === 0 && html`
+							<tr key="empty"><td colSpan="3" className="sessions-modal-empty">${t('sessions.trashEmpty')}</td></tr>
+						`}
+					</tbody>
+				</table>
+			</div>
+		</${Modal}>`;
+
 	return html`
 		<${Modal} isOpen=${isOpen} onClose=${closeModal}
 			title=${t('sessions.title')}
@@ -773,6 +832,7 @@ ${t('sessions.removeFolderConfirm')}`)) return;
 					<button disabled=${disabled} onClick=${exportAll}>${t('sessions.exportAll')}</button>
 					<button disabled=${disabled || noSession} onClick=${openStatistics}>${t('sessions.statistics')}</button>
 					<button onClick=${selectAll}>${t('sessions.selectAll')}</button>
+					<button onClick=${() => setShowTrash(true)}>${t('sessions.trashCount', { count: trashEntries.length })}</button>
 				</div>
 			</div>
 			<div className="sessions-modal-bar-slot">
@@ -812,8 +872,8 @@ ${t('sessions.removeFolderConfirm')}`)) return;
 					<button disabled=${disabled} onClick=${() => exportSessions(selectedIds)}>${t('sessions.export')}</button>
 					<button onClick=${() => setFolderEdit({ ids: selectedIds, value: '' })}>${t('sessions.moveToFolder')}</button>
 					<button disabled=${disabled || lastSession}
-						title=${lastSession ? t('sessions.cantDeleteLast') : ''}
-						onClick=${() => deleteSessions(selectedIds)}>${t('sessions.delete')}</button>
+						title=${lastSession ? t('sessions.cantDeleteLast') : t('sessions.deleteSession')}
+						onClick=${() => sessionStorage.trashSessions(selectedIds)}>${t('sessions.delete')}</button>
 					<button onClick=${() => setSelected(new Set())}>${t('sessions.clearSelection')}</button>
 				</div>
 			` : html`

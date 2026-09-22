@@ -166,110 +166,130 @@ describe('SessionStorage version history', () => {
 		expect((await reopened.history.list(0)).map(e => [e.reason, e.tail])).toEqual([['open', 'unversioned']]);
 	});
 
-	it('deleting the selected session removes its versions and leaves none behind', async () => {
+	const versionKeys = (store: (name: string) => Map<string, unknown>, id: string) =>
+		[...store('SessionHistory').keys()].filter(k => k === id || k.startsWith(`${id}/`));
+
+	it('trashing the selected session keeps its content and versions and opens another', async () => {
 		const { storage, store } = await setup();
 		await storage.createSession('Two');
 		storage.setProperty('prompt', [u('draft')]);
 
-		await storage.deleteSession(0);
+		await storage.trashSessions(['0']);
+
+		expect(storage.selectedSession).toBe(1);
+		expect(storage.sessions['0']).toBeUndefined();
+		expect(storage.trash['0']).toMatchObject({ name: expect.any(String), trashed: expect.any(Number) });
+		expect(store('Names').get('0')).toMatchObject({ trashed: expect.any(Number) });
+		expect(store('Sessions').get('0')).toMatchObject({ prompt: [u('draft')] });
+		expect((await storage.history.list(0)).map(e => e.tail)).toContain('draft');
+	});
+
+	it('purging a trashed session removes its versions and leaves none behind', async () => {
+		const { storage, store } = await setup();
+		await storage.createSession('Two');
+		storage.setProperty('prompt', [u('draft')]);
+		await storage.trashSessions(['0']);
+
+		await storage.purgeSessions(['0']);
 		await storage.history.list(1);
 
-		expect([...store('SessionHistory').keys()].some(k => k === '0' || k.startsWith('0/'))).toBe(false);
+		expect(storage.trash['0']).toBeUndefined();
+		expect(versionKeys(store, '0')).toEqual([]);
 		expect(store('Sessions').has('0')).toBe(false);
+		expect(store('Names').has('0')).toBe(false);
 	});
 
-	describe('a session save racing the delete of the selected session', () => {
-		async function holdSaves() {
-			const ctx = await setup();
-			await ctx.storage.createSession('Two');
-			ctx.storage.setProperty('prompt', [u('draft')]);
-			let release!: () => void;
-			const held = new Promise<void>(r => { release = r; });
-			const save = ctx.adapter.saveToDatabase;
-			ctx.adapter.saveToDatabase = async (...args) => { await held; return save(...args); };
-			return { ...ctx, release };
-		}
+	it('purges only what is in the trash', async () => {
+		const { storage, store } = await setup();
+		await storage.createSession('Two');
 
-		it('waits for a save that was already running', async () => {
-			const { storage, store, release } = await holdSaves();
+		await storage.purgeSessions(['0', '1']);
 
-			const saving = storage.saveTimerHandler(id => storage.saveSessionToDB(id));
-			const deleting = storage.deleteSession('0');
-			await new Promise(r => setTimeout(r));
-			release();
-			await Promise.all([saving, deleting]);
-
-			expect(store('Sessions').has('0')).toBe(false);
-			expect(storage.selectedSession).toBe(1);
-		});
-
-		it('skips a save the timer starts while the delete is running', async () => {
-			const { storage, store, release } = await holdSaves();
-
-			const deleting = storage.deleteSession('0');
-			const saving = storage.saveTimerHandler(id => storage.saveSessionToDB(id));
-			await new Promise(r => setTimeout(r));
-			release();
-			await Promise.all([saving, deleting]);
-
-			expect(store('Sessions').has('0')).toBe(false);
-		});
+		expect(Object.keys(storage.sessions)).toEqual(['0', '1']);
+		expect(store('Sessions').has('0')).toBe(true);
 	});
 
-	it('deletes started back to back run one at a time and never write a deleted session back', async () => {
+	it('a save still running when the selected session is trashed cannot untrash it', async () => {
 		const { storage, store, adapter } = await setup();
 		await storage.createSession('Two');
-		await storage.createSession('Three');
 		storage.setProperty('prompt', [u('draft')]);
 		let release!: () => void;
 		const held = new Promise<void>(r => { release = r; });
-		const remove = adapter.deleteFromDatabase;
-		adapter.deleteFromDatabase = async (db, name, key) => { if (String(key) === '0') await held; return remove(db, name, key); };
+		const save = adapter.saveToDatabase;
+		// Holds the untrashed metadata this save writes, until after the trash could have written its own.
+		let hold = true;
+		adapter.saveToDatabase = async (db, name, key, data) => {
+			if (hold && name === 'Names' && String(key) === '0') { hold = false; await held; }
+			return save(db, name, key, data);
+		};
 
-		const deletes = [storage.deleteSession('0'), storage.deleteSession('1')];
+		const saving = storage.saveTimerHandler(id => storage.saveSessionToDB(id));
+		const trashing = storage.trashSessions(['0']);
 		await new Promise(r => setTimeout(r));
-		expect(store('Sessions').has('1')).toBe(true);
 		release();
-		await Promise.all(deletes);
+		await Promise.all([saving, trashing]);
 
-		expect(store('Sessions').has('0')).toBe(false);
-		expect(store('Sessions').has('1')).toBe(false);
-		expect(storage.selectedSession).toBe(2);
+		expect(store('Names').get('0')).toMatchObject({ trashed: expect.any(Number) });
+		expect(store('Sessions').get('0')).toMatchObject({ prompt: [u('draft')] });
 	});
 
-	it('deleting the last two sessions at once keeps one', async () => {
+	it('an edit made while the selected session is being trashed is kept with it', async () => {
 		const { storage, store } = await setup();
 		await storage.createSession('Two');
 
-		await Promise.all([storage.deleteSession('0'), storage.deleteSession('1')]);
+		const trashing = storage.trashSessions(['0']);
+		storage.setProperty('prompt', [u('late edit')]);
+		await trashing;
+
+		expect(store('Sessions').get('0')).toMatchObject({ prompt: [u('late edit')] });
+	});
+
+	it('trashing the last two sessions at once keeps one', async () => {
+		const { storage, store } = await setup();
+		await storage.createSession('Two');
+
+		await Promise.all([storage.trashSessions(['0']), storage.trashSessions(['1'])]);
 
 		expect(Object.keys(storage.sessions)).toEqual(['1']);
-		expect(store('Sessions').has('1')).toBe(true);
+		expect(Object.keys(storage.trash)).toEqual(['0']);
+		expect(store('Names').get('1')).not.toHaveProperty('trashed', expect.any(Number));
 		expect(storage.selectedSession).toBe(1);
 	});
 
-	it('an edit made while the selected session is being deleted does not bring its versions back', async () => {
-		const { storage, store } = await setup();
+	it('restores a trashed session with its folder, tags and pin, and it stays restored after a reload', async () => {
+		const { storage, adapter } = await setup();
 		await storage.createSession('Two');
+		await storage.setFolder(['0'], 'Drafts');
+		await storage.setPinned(['0'], true);
+		storage.setTags('0', 'wip');
+		await storage.trashSessions(['0']);
 
-		const deleting = storage.deleteSession('0');
-		storage.setProperty('prompt', [u('late edit')]);
-		await deleting;
-		await storage.history.list(1);
+		const reloaded = new SessionStorage(adapter);
+		await reloaded.init();
+		clearInterval(reloaded.saveTimer);
+		expect(reloaded.sessions['0']).toBeUndefined();
+		expect(reloaded.trash['0']).toMatchObject({ folder: 'Drafts', pinned: true, tags: ['wip'] });
 
-		expect([...store('SessionHistory').keys()].some(k => k === '0' || k.startsWith('0/'))).toBe(false);
+		await reloaded.restoreSessions(['0']);
+		const again = new SessionStorage(adapter);
+		await again.init();
+		clearInterval(again.saveTimer);
+
+		expect(again.trash['0']).toBeUndefined();
+		expect(again.sessions['0']).toMatchObject({ folder: 'Drafts', pinned: true, tags: ['wip'] });
+		expect(again.sessions['0']!.trashed).toBeUndefined();
 	});
 
-	it('keeps the session when its versions cannot be deleted', async () => {
+	it('keeps a session in the trash when its versions cannot be deleted', async () => {
 		const { storage, store } = await setup();
 		await storage.createSession('Two');
 		storage.setProperty('prompt', [u('unsaved')]);
+		await storage.trashSessions(['0']);
 		vi.spyOn(storage.history, 'deleteAll').mockRejectedValueOnce(new Error('disk full'));
 
-		await expect(storage.deleteSession(0)).rejects.toThrow('disk full');
+		await expect(storage.purgeSessions(['0'])).rejects.toThrow('disk full');
 
-		expect(storage.selectedSession).toBe(0);
-		await storage.saveTimerHandler(id => storage.saveSessionToDB(id));
+		expect(storage.trash['0']).toBeDefined();
 		expect(store('Sessions').get('0')).toMatchObject({ prompt: [u('unsaved')] });
 	});
 
@@ -309,7 +329,7 @@ describe('SessionStorage version history', () => {
 		expect(storage.getProperty('prompt')).toEqual([u('new')]);
 	});
 
-	it('gives up replacing the content when the session is deleted while the version loads', async () => {
+	it('gives up replacing the content when the session is trashed while the version loads', async () => {
 		const { storage, store, adapter } = await setup();
 		await storage.createSession('Two');
 		storage.setProperty('prompt', [u('old')]);
@@ -321,14 +341,12 @@ describe('SessionStorage version history', () => {
 		adapter.loadFromDatabase = async (db, name, key) => { if (key === `0/${version.time}`) await held; return load(db, name, key); };
 
 		const overwriting = storage.overwriteWithSnapshot(version.time);
-		const deleting = storage.deleteSession('0');
-		await new Promise(r => setTimeout(r));
+		await storage.trashSessions(['0']);
 		release();
 
 		expect(await overwriting).toBe(false);
-		await deleting;
-		await storage.history.list(1);
-		expect([...store('SessionHistory').keys()].some(k => k === '0' || k.startsWith('0/'))).toBe(false);
+		expect((await storage.history.list(0)).map(e => e.reason)).not.toContain('restore');
+		expect(store('Sessions').get('0')).toMatchObject({ prompt: [u('old')] });
 	});
 
 	it('restores a version as a new session that keeps the current settings', async () => {
