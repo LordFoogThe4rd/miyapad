@@ -4,6 +4,7 @@
 
 ### Added
 
+- The Sessions list can be used from the keyboard. The arrow keys, Home and End move between sessions, and holding Shift with them picks out a run of sessions the way shift-click does. Typing the start of a name jumps to the next session with that name, and typing the same letter again moves on to the one after. Down in the search box goes to the first session in the list
 - Deleting a session in the Sessions list now moves it to a trash, with its content and version history, instead of deleting it for good, so it no longer asks first. Trash in the Sessions toolbar shows how many sessions are in it and opens it, where you can restore a session, with its folder, tags and pin, or delete it for good. Empty trash deletes all of them for good. Only deleting for good asks first
 - Editing a session's tags in the Sessions list now suggests the tags your sessions already use, most used first, so you don't have to retype them or end up with a misspelt second copy of one. Suggestions follow the tag you are typing after the last comma, and leave out tags already in the box
 - A Select all button in the Sessions toolbar picks out every session the list is showing, so a search or tag filter followed by Select all picks out everything that matched. It adds to what you already picked, and leaves out sessions inside collapsed folders
