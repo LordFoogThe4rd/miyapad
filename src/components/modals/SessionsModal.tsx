@@ -1,5 +1,5 @@
 import { html } from 'htm/react';
-import { Fragment, useState, useEffect, useMemo, type ChangeEvent, type DragEvent, type KeyboardEvent, type MouseEvent } from 'react';
+import { Fragment, useState, useEffect, useMemo, useRef, type ChangeEvent, type DragEvent, type KeyboardEvent, type MouseEvent } from 'react';
 import { Modal } from '../Modal';
 import { InputBox } from '../controls/InputBox';
 import { SelectBox } from '../controls/SelectBox';
@@ -27,6 +27,8 @@ type SessionEntry = [string, SessionData];
 interface ListItem { folder?: string; entries: SessionEntry[] }
 
 const COLLAPSED_KEY = 'miyapad-sessions-collapsedFolders';
+/** Letters typed on the list less than this far apart are one type-ahead search. */
+const TYPE_AHEAD_MS = 500;
 
 function loadCollapsed(): Set<string> {
 	try {
@@ -62,6 +64,18 @@ export function tagSuggestions(value: string, tags: string[]): string[] {
 	const prefix = value.slice(0, cut) + value.slice(cut).match(/^\s*/)![0];
 	const typed = new Set(value.slice(0, cut).split(',').map(tag => tag.trim().toLowerCase()));
 	return tags.filter(tag => !typed.has(tag)).map(tag => prefix + tag);
+}
+
+/**
+ * The next row whose name starts with the typed text, wrapping round. One letter, or the same
+ * letter pressed again and again, searches from below the row at `at` for names starting with
+ * that letter, so repeating it steps through the matches.
+ */
+export function typeAheadMatch(ids: string[], nameOf: (id: string) => string, at: number, text: string): string | undefined {
+	const oneLetter = [...text].every(c => c === text[0]);
+	const query = oneLetter ? text.slice(0, 1) : text;
+	const start = oneLetter ? at + 1 : at;
+	return [...ids.slice(start), ...ids.slice(0, start)].find(id => nameOf(id).toLowerCase().startsWith(query));
 }
 
 function compileTagRegex(pattern: string) {
@@ -138,6 +152,8 @@ export function SessionsModal({ isOpen, closeModal, sessionStorage, cancel, open
 	const [folderEdit, setFolderEdit] = useState<{ ids: string[]; value: string } | null>(null);
 	const [rowMenu, setRowMenu] = useState<{ id: string; x: number; y: number } | null>(null);
 	const [showTrash, setShowTrash] = useState(false);
+	const listRef = useRef<HTMLTableSectionElement>(null);
+	const typeAhead = useRef({ text: '', at: 0 });
 
 	const setSortBy = (v: string) => { setSortByState(v); localStorage.setItem('miyapad-sessions-sortBy', v); };
 	const setSortAsc = (v: boolean | ((prev: boolean) => boolean)) => {
@@ -181,6 +197,7 @@ export function SessionsModal({ isOpen, closeModal, sessionStorage, cancel, open
 			setFolderEdit(null);
 			setRowMenu(null);
 			setShowTrash(false);
+			typeAhead.current = { text: '', at: 0 };
 			setSortByState(localStorage.getItem('miyapad-sessions-sortBy') || 'modified');
 			setSortAscState(localStorage.getItem('miyapad-sessions-sortAsc') === 'true');
 		}
@@ -382,6 +399,17 @@ ${t('sessions.removeFolderConfirm')}`)) return;
 		closeModal();
 	};
 
+	/** Picks out the rows on screen from one session to another, as shift-click and shift-arrows do. */
+	const pickRun = (fromId: string, toId: string) => {
+		const from = visibleIds.indexOf(fromId);
+		const to = visibleIds.indexOf(toId);
+		if (from >= 0 && to >= 0) setSelected(new Set(visibleIds.slice(Math.min(from, to), Math.max(from, to) + 1)));
+	};
+
+	const focusRow = (sessionId: string | undefined) => {
+		if (sessionId !== undefined) listRef.current?.querySelector<HTMLElement>(`[data-session-id="${sessionId}"]`)?.focus();
+	};
+
 	/** Ctrl-click picks rows out, shift-click extends the run; a plain click opens the session. */
 	const rowClick = (e: MouseEvent, sessionId: string) => {
 		if (e.ctrlKey || e.metaKey) {
@@ -390,19 +418,51 @@ ${t('sessions.removeFolderConfirm')}`)) return;
 			setSelected(next);
 			setAnchorId(sessionId);
 		} else if (e.shiftKey) {
-			const from = visibleIds.indexOf(anchorId ?? sessionId);
-			const to = visibleIds.indexOf(sessionId);
-			if (from >= 0 && to >= 0) setSelected(new Set(visibleIds.slice(Math.min(from, to), Math.max(from, to) + 1)));
+			pickRun(anchorId ?? sessionId, sessionId);
 		} else {
 			switchSession(sessionId);
 		}
 	};
 
-	/** Enter or Space opens a focused row. Keys pressed in the row's own inputs and buttons are theirs. */
+	/**
+	 * Keys on a focused row. Enter or Space opens it. Arrows, Home and End move between the rows
+	 * on screen, and with Shift pick out the run from the anchor, like shift-click. Typing the start
+	 * of a name jumps to the next session it matches. Keys pressed in the row's own inputs and
+	 * buttons are theirs.
+	 */
 	const rowKeyDown = (e: KeyboardEvent, sessionId: string) => {
-		if (e.target !== e.currentTarget || (e.key !== 'Enter' && e.key !== ' ')) return;
+		if (e.target !== e.currentTarget || e.ctrlKey || e.metaKey || e.altKey) return;
+		const at = visibleIds.indexOf(sessionId);
+		const moves: Record<string, number> = { ArrowDown: at + 1, ArrowUp: at - 1, Home: 0, End: visibleIds.length - 1 };
+		const ahead = typeAhead.current;
+		const now = Date.now();
+		const recent = now - ahead.at < TYPE_AHEAD_MS;
+		// A space right after a letter is part of the name being typed; on its own it opens the row.
+		const typed = e.key.length === 1 && (e.key !== ' ' || recent);
+		let to: string | undefined;
+		if (typed) {
+			ahead.text = (recent ? ahead.text : '') + e.key.toLowerCase();
+			ahead.at = now;
+			to = typeAheadMatch(visibleIds, id => sessionStorage.sessions[id]?.name ?? '', at, ahead.text);
+		} else if (e.key === 'Enter' || e.key === ' ') {
+			e.preventDefault();
+			switchSession(sessionId);
+			return;
+		} else if (Object.hasOwn(moves, e.key)) {
+			to = visibleIds[moves[e.key]];
+		} else {
+			return;
+		}
 		e.preventDefault();
-		switchSession(sessionId);
+		if (to === undefined) return;
+		if (e.shiftKey && !typed) {
+			const anchor = anchorId !== null && visibleIds.includes(anchorId) ? anchorId : sessionId;
+			setAnchorId(anchor);
+			pickRun(anchor, to);
+		} else {
+			setAnchorId(to);
+		}
+		focusRow(to);
 	};
 
 	/** History and statistics read the open session, so the row's is opened first. */
@@ -584,6 +644,7 @@ ${t('sessions.removeFolderConfirm')}`)) return;
 			...${draggedIds.includes(sessionId) || (session.folder && session.folder === draggedFolder) ? {} : dropHandlers(sessionId, (ids) =>
 				session.folder ? sessionStorage.setFolder(ids, session.folder) : createFolder([...new Set([sessionId, ...ids])]))}
 			tabIndex="0"
+			data-session-id=${sessionId}
 			aria-current=${String(sessionStorage.selectedSession) === sessionId || undefined}
 			onClick=${(e: MouseEvent) => rowClick(e, sessionId)}
 			onKeyDown=${(e: KeyboardEvent) => rowKeyDown(e, sessionId)}
@@ -826,6 +887,13 @@ ${t('sessions.removeFolderConfirm')}`)) return;
 						value=${searchQuery}
 						onValueChange=${setSearchQuery}
 						placeholder=${t('sessions.searchPlaceholder')}
+						onKeyDown=${(e: KeyboardEvent<HTMLInputElement>) => {
+							// Down from the search box goes to the first match.
+							if (e.key === 'ArrowDown' && visibleIds.length) {
+								e.preventDefault();
+								focusRow(visibleIds[0]);
+							}
+						}}
 						autoFocus/>
 					<${InputBox} label=${t('sessions.tags')}
 						value=${tagFilterQuery}
@@ -917,7 +985,7 @@ ${t('sessions.removeFolderConfirm')}`)) return;
 							<th className="sessions-col-actions">${t('sessions.actions')}</th>
 						</tr>
 					</thead>
-					<tbody>
+					<tbody ref=${listRef}>
 						${isCreating && html`
 							<tr key="new" className="sessions-modal-row sessions-modal-row-new">
 								<td></td>
