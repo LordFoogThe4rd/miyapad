@@ -10,7 +10,13 @@ function extractMeta(s: Record<string, unknown>) {
 		tags: Array.isArray(s.tags) ? s.tags.filter((t): t is string => typeof t === 'string') : [],
 		folder: folderName(s.folder),
 		stats: sanitizeStats(s.stats),
+		trashed: trashedAt(s.trashed),
 	};
+}
+
+/** When a session went to the trash, or undefined for one that is not in it. */
+function trashedAt(raw: unknown): number | undefined {
+	return typeof raw === 'number' ? raw : undefined;
 }
 
 /** A folder name as stored: whitespace collapsed, and undefined (no folder) when blank. */
@@ -79,6 +85,7 @@ function sanitizeSessionData(raw: unknown, key?: string | number): SessionData {
 		tags: Array.isArray(src.tags) ? src.tags.filter((t): t is string => typeof t === 'string') : [],
 		folder: folderName(src.folder),
 		stats: sanitizeStats(src.stats),
+		trashed: trashedAt(src.trashed),
 		inactive: !!src.inactive,
 	};
 }
@@ -96,9 +103,12 @@ export class SessionStorage extends AbstractStorage {
 	#idleSnapshotTimer: ReturnType<typeof setTimeout> | undefined;
 	/** Settles once every session save started so far has finished. */
 	#saving: Promise<void> = Promise.resolve();
-	/** Ids (as strings, since the sessions modal passes string keys) of sessions being deleted. */
-	#deletingSessions = new Set<string>();
-	#deleteQueue: Promise<void> = Promise.resolve();
+	/**
+	 * Sessions in the trash, kept out of `sessions` so nothing that lists, counts, opens or
+	 * saves sessions has to skip them. Metadata only, like any session that is not open.
+	 */
+	trash: Record<string, SessionData> = {};
+	#trashQueue: Promise<void> = Promise.resolve();
 
 	constructor(dbAdapter: DatabaseAdapter) {
 		super('Sessions', dbAdapter);
@@ -127,7 +137,7 @@ export class SessionStorage extends AbstractStorage {
         if (record && Object.hasOwn(record, 'name')) {
             const nameData = extractMeta(record);
             await this.nameStorage!.saveToDatabase(db, key, nameData);
-            const { name, created, modified, pinned, tags, folder, stats, ...sessionData } = record;
+            const { name, created, modified, pinned, tags, folder, stats, trashed, ...sessionData } = record;
             await super.saveToDatabase(db, key, sessionData);
         } else {
             await super.saveToDatabase(db, key, data);
@@ -178,8 +188,7 @@ export class SessionStorage extends AbstractStorage {
 	snapshot(reason: HistoryReason, overrides?: Partial<SessionData>): Promise<void> {
 		const sessionId = this.selectedSession;
 		const session = sessionId !== undefined ? this.sessions[sessionId] : undefined;
-		// A session being deleted may already have had its versions removed; this would bring one back.
-		if (sessionId === undefined || !session || session.inactive || this.#deletingSessions.has(String(sessionId))) return Promise.resolve();
+		if (sessionId === undefined || !session || session.inactive) return Promise.resolve();
 		return this.history.snapshot(sessionId, { ...session, ...overrides }, reason).then(() => {}, () => {});
 	}
 
@@ -216,9 +225,7 @@ export class SessionStorage extends AbstractStorage {
 		const sessionId = this.selectedSession;
 		if (sessionId === undefined || !this.sessions[sessionId]) return false;
 		const content = await this.history.load(sessionId, time);
-		// Deleted while the version loaded: its history is already queued for removal, and backing
-		// up the current content would put some back.
-		if (!content || this.#deletingSessions.has(String(sessionId))) return false;
+		if (!content) return false;
 		clearTimeout(this.#idleSnapshotTimer);
 		this.#idleSnapshotTimer = undefined;
 		await this.history.snapshot(sessionId, { ...this.sessions[sessionId] }, 'restore');
@@ -244,7 +251,6 @@ export class SessionStorage extends AbstractStorage {
 	}
 
 	async #saveSessionToDB(sessionId: string | number) {
-		if (this.#deletingSessions.has(String(sessionId))) return;
 		const session = this.sessions[sessionId];
 		if (!session) return;
 		// Only the selected session has its content in memory; the others hold just their
@@ -304,15 +310,22 @@ export class SessionStorage extends AbstractStorage {
 	async loadSessions(db: DbConnection) {
 		const sessions = await this.loadSessionInfoFromDatabase(db);
 		for (const [key, data] of Object.entries(sessions)) {
-			this.sessions[key] = sanitizeSessionData(data, key);
+			const session = sanitizeSessionData(data, key);
+			if (session.trashed) this.trash[key] = session;
+			else this.sessions[key] = session;
 		}
 		if (Object.keys(this.sessions).length === 0) {
-			if (!await this.migrateSessions()) {
+			// Sessions from before IndexedDB only move into an empty database.
+			if (Object.keys(this.trash).length || !await this.migrateSessions()) {
 				await this.createSession('MiyaPad #1');
 			}
 		}
-		if (this.selectedSession !== undefined) {
-			await this.switchSession(this.selectedSession);
+		// Another tab may have trashed the session last opened. Left selected, it would count as
+		// open with none of its content loaded, and its next save would write that nothing over it.
+		const selected = this.selectedSession !== undefined && this.sessions[this.selectedSession]
+			? this.selectedSession : Object.keys(this.sessions)[0];
+		if (selected !== undefined) {
+			await this.switchSession(selected);
 		}
 	}
 
@@ -462,64 +475,87 @@ export class SessionStorage extends AbstractStorage {
 		for (const id of ids) await this.saveSessionToDB(id);
 	}
 
-	deleteSession(sessionId: string | number): Promise<void> {
-		return this.deleteSessions([sessionId]);
+	/** Runs trash, restore and purge one at a time, so none of them sees another half done. */
+	#queueTrash(run: () => Promise<void>): Promise<void> {
+		const next = this.#trashQueue.then(run);
+		this.#trashQueue = next.catch(() => {});
+		return next;
 	}
 
 	/**
-	 * Deletes sessions without asking; confirming is the caller's job. The last session is never
-	 * deleted: `#deleteSession` checks again before each, so a batch of every session leaves one behind.
+	 * Moves sessions to the trash, content and versions included, until `purgeSessions`.
+	 * The last session is never trashed, since there would be nothing left to open:
+	 * `#trashSession` checks again before each, so a batch of every session leaves one behind.
 	 */
-	deleteSessions(sessionIds: (string | number)[]): Promise<void> {
-		const ids = sessionIds.filter(id => this.sessions[id]);
-		if (!ids.length || Object.keys(this.sessions).length === 1)
-			return Promise.resolve();
-		// One delete at a time, so two started back to back can't both pass the last-session check.
-		const run = this.#deleteQueue.then(async () => {
-			for (const id of ids) await this.#deleteSession(id);
+	trashSessions(sessionIds: (string | number)[]): Promise<void> {
+		return this.#queueTrash(async () => {
+			const going = new Set(sessionIds.map(String));
+			for (const id of sessionIds) await this.#trashSession(id, going);
 		});
-		this.#deleteQueue = run.catch(() => {});
-		return run;
 	}
 
-	async #deleteSession(sessionId: string | number) {
-		// Checked again: the deletes queued before this one may have changed either.
+	/** `going` is the whole batch, so the open session is swapped for one that stays, not one about to go too. */
+	async #trashSession(sessionId: string | number, going: Set<string>) {
 		if (Object.keys(this.sessions).length === 1 || !this.sessions[sessionId])
 			return;
 		// `==` because the modal passes string keys.
-		const selected = sessionId == this.selectedSession;
-		// Otherwise switching away below would flush a version for the session being deleted.
-		if (selected) {
-			clearTimeout(this.#idleSnapshotTimer);
-			this.#idleSnapshotTimer = undefined;
+		if (sessionId == this.selectedSession) {
+			const ids = Object.keys(this.sessions);
+			const idx = ids.indexOf(String(sessionId));
+			const staying = (id: string) => !going.has(id);
+			// When the batch is every session, the last-session check keeps one anyway, so any neighbour will do.
+			const next = ids.slice(0, idx).reverse().find(staying) ?? ids.slice(idx + 1).find(staying) ?? ids[idx - 1] ?? ids[idx + 1];
+			await this.switchSession(next);
+			// The switch gives up when the open session's last edits can't be saved.
+			if (sessionId == this.selectedSession) return;
 		}
-		// Saves of this session are skipped from here on and a save already running finishes
-		// first, so neither can write the records back after they're deleted.
-		this.#deletingSessions.add(String(sessionId));
+		const session = { ...this.sessions[sessionId], trashed: Date.now() };
+		// Out of `sessions` before anything is awaited, so no save started from here on writes it back untrashed.
+		delete this.sessions[sessionId];
+		this.trash[sessionId] = session;
+		this.dispatchChangeEvent();
 		try {
-			try {
-				await this.#saving;
-				const db = await this.openDatabase();
-				await this.deleteFromDatabase(db, sessionId);
-			} catch (e) {
-				// The session is still open, and its queued save may have been skipped above.
-				if (selected) this.enqueueSave(this.selectedSession!);
-				throw e;
-			}
-
-			// Select another session if the current was deleted
-			if (sessionId == this.selectedSession) {
-				const sessionIds = Object.keys(this.sessions).map(x => +x);
-				const sessionIdx = sessionIds.indexOf(+sessionId);
-				const newSessionId = sessionIds[sessionIdx - 1] ?? sessionIds[sessionIdx + 1];
-				await this.switchSession(+newSessionId)
-			}
-
-			delete this.sessions[sessionId];
+			// A save already running would land after this one and untrash it.
+			await this.#saving;
+			const db = await this.openDatabase();
+			await this.nameStorage!.saveToDatabase(db, sessionKey(sessionId), extractMeta(session));
+		} catch (e) {
+			delete this.trash[sessionId];
+			this.sessions[sessionId] = { ...session, trashed: undefined };
 			this.dispatchChangeEvent();
-		} finally {
-			this.#deletingSessions.delete(String(sessionId));
+			throw e;
 		}
+	}
+
+	/**
+	 * Takes sessions out of the trash with their folder, tags and pin as they were. Each is written
+	 * before it moves, so one that fails to save stays in the trash, where the database has it.
+	 */
+	restoreSessions(sessionIds: (string | number)[]): Promise<void> {
+		return this.#queueTrash(async () => {
+			for (const id of sessionIds) {
+				if (!this.trash[id]) continue;
+				const session = { ...this.trash[id], trashed: undefined };
+				const db = await this.openDatabase();
+				await this.nameStorage!.saveToDatabase(db, sessionKey(id), extractMeta(session));
+				delete this.trash[id];
+				this.sessions[id] = session;
+				this.dispatchChangeEvent();
+			}
+		});
+	}
+
+	/** Deletes trashed sessions for good, versions first; confirming is the caller's job. */
+	purgeSessions(sessionIds: (string | number)[]): Promise<void> {
+		return this.#queueTrash(async () => {
+			for (const id of sessionIds) {
+				if (!this.trash[id]) continue;
+				const db = await this.openDatabase();
+				await this.deleteFromDatabase(db, id);
+				delete this.trash[id];
+				this.dispatchChangeEvent();
+			}
+		});
 	}
 
 	async createSession(newSessionName: string) {

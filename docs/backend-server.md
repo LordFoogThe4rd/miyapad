@@ -15,7 +15,7 @@ Eight tables:
 5. `connections`: connection presets (endpoint, API type, API key, model, per-API options). Column `connection_data`.
 6. `samplerpresets`: sampler presets, meaning all generation parameters. Column `sampler_preset_data`.
 7. `sessionhistory`: saved session versions and each session's version index. Column `history_data`. It's created on every start with `CREATE TABLE IF NOT EXISTS`, so adding it didn't need a schema version bump.
-8. `names`: the lightweight key-to-metadata mapping `{name, created, modified, pinned, tags, folder, stats}`, stored as JSON. Used for listing, searching, sorting, pinning and folders.
+8. `names`: the lightweight key-to-metadata mapping `{name, created, modified, pinned, tags, folder, stats, trashed}`, stored as JSON. Used for listing, searching, sorting, pinning, folders and the trash.
 
 ### Schema Column Constraints
 

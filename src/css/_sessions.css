@@ -103,6 +103,9 @@
 	cursor: default;
 	animation: fadeIn 0.2s ease-out;
 }
+.sessions-modal-trash-row {
+	cursor: default;
+}
 .sessions-modal-row.dragging {
 	opacity: 0.5;
 }
