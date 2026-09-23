@@ -15,6 +15,7 @@
 
 ### Changed
 
+- Click the Name, Modified or Created heading in the Sessions list to sort by that column, and click it again to reverse the order. An arrow next to the heading shows which column the list is sorted by, and in which direction. A newly clicked column starts at A for names and at the newest session for dates. The Sort By box and its arrow button are gone from the toolbar, except on narrow screens, which hide the Created column (and on phones the Modified one too). Picking a column in that box now starts in the same direction as clicking its heading
 - The session you have open is now shown in bold in the Sessions list, because its background colour alone looked too much like a picked-out session's. Screen readers also announce it as the current session
 - The icon buttons in the Sessions list (pin, folder, rename, delete, ⋯) are no longer faded to half opacity until you hover them. They were hard to see that way, and touch screens have no hover to bring them up
 - Picking out a session or starting a drag in the Sessions list no longer pushes the list down under your pointer. The selection bar, the folder box and the drop zone now take turns in one space above the list that is always there. When none of them is showing, that space has a hint about picking out sessions with ctrl-click and shift-click

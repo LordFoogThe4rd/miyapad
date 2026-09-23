@@ -685,6 +685,21 @@ ${t('sessions.removeFolderConfirm')}`)) return;
 		</tr>
 	`;
 
+	/** A newly picked column starts at A for names, and at the newest for dates. */
+	const pickSortColumn = (key: string) => {
+		setSortBy(key);
+		setSortAsc(key === 'name');
+	};
+
+	/** Clicking the sorted column reverses it. */
+	const sortHeader = (key: string, label: string) => html`
+		<button className="sessions-sort-header"
+			onClick=${() => sortBy === key ? setSortAsc((v: boolean) => !v) : pickSortColumn(key)}>
+			${label}${sortBy === key && html`<span className="sessions-sort-arrow">${sortAsc ? '↑' : '↓'}</span>`}
+		</button>`;
+
+	const ariaSort = (key: string) => sortBy === key ? (sortAsc ? 'ascending' : 'descending') : undefined;
+
 	const renderFolder = (folder: string, entries: SessionEntry[]) => {
 		const open = filtering || !collapsed.has(folder);
 		const target = `folder:${folder}`;
@@ -817,22 +832,25 @@ ${t('sessions.removeFolderConfirm')}`)) return;
 						onValueChange=${setTagFilterQuery}
 						placeholder=${t('sessions.tagsPlaceholder')}
 						tooltip=${t('sessions.tagsTooltip')}/>
-					<${SelectBox}
-						label=${t('sessions.sortBy')}
-						value=${sortBy}
-						onValueChange=${setSortBy}
-						options=${[
-							{ name: t('sessions.sortLastModified'), value: 'modified' },
-							{ name: t('sessions.sortCreated'), value: 'created' },
-							{ name: t('sessions.sortName'), value: 'name' },
-						]}/>
-					<button
-						className="sessions-modal-sort-btn"
-						title=${sortAsc ? t('sessions.sortAscending') : t('sessions.sortDescending')}
-						onClick=${() => setSortAsc((v: boolean) => !v)}
-						style=${{ transform: sortAsc ? 'rotate(0deg)' : 'rotate(180deg)' }}>
-						↑
-					</button>
+					<div className="sessions-modal-sort">
+						<${SelectBox}
+							label=${t('sessions.sortBy')}
+							value=${sortBy}
+							onValueChange=${pickSortColumn}
+							options=${[
+								{ name: t('sessions.sortLastModified'), value: 'modified' },
+								{ name: t('sessions.sortCreated'), value: 'created' },
+								{ name: t('sessions.sortName'), value: 'name' },
+							]}/>
+						<button
+							className="sessions-modal-sort-btn"
+							title=${sortAsc ? t('sessions.sortAscending') : t('sessions.sortDescending')}
+							aria-label=${sortAsc ? t('sessions.sortAscending') : t('sessions.sortDescending')}
+							onClick=${() => setSortAsc((v: boolean) => !v)}
+							style=${{ transform: sortAsc ? 'rotate(0deg)' : 'rotate(180deg)' }}>
+							↑
+						</button>
+					</div>
 				</div>
 				<div className="sessions-modal-toolbar-row">
 					<button disabled=${disabled} onClick=${startCreateSession}>${t('sessions.create')}</button>
@@ -893,9 +911,9 @@ ${t('sessions.removeFolderConfirm')}`)) return;
 					<thead>
 						<tr>
 							<th className="sessions-col-star"></th>
-							<th className="sessions-col-name">${t('sessions.name')}</th>
-							<th className="sessions-col-modified">${t('sessions.modified')}</th>
-							<th className="sessions-col-created">${t('sessions.created')}</th>
+							<th className="sessions-col-name" aria-sort=${ariaSort('name')}>${sortHeader('name', t('sessions.name'))}</th>
+							<th className="sessions-col-modified" aria-sort=${ariaSort('modified')}>${sortHeader('modified', t('sessions.modified'))}</th>
+							<th className="sessions-col-created" aria-sort=${ariaSort('created')}>${sortHeader('created', t('sessions.created'))}</th>
 							<th className="sessions-col-actions">${t('sessions.actions')}</th>
 						</tr>
 					</thead>

@@ -11,9 +11,17 @@
 	align-items: flex-end;
 }
 .sessions-modal-toolbar-row > .InputBox,
-.sessions-modal-toolbar-row > .SelectBox {
+.sessions-modal-sort > .SelectBox {
 	flex: 1;
 	min-width: 0;
+}
+/* The column headers sort the list. Below 600px Created is hidden (and Modified below 480px), so the box comes back. */
+.sessions-modal-sort {
+	display: none;
+	flex: 1;
+	min-width: 0;
+	gap: 6px;
+	align-items: flex-end;
 }
 .sessions-modal-sort-btn {
 	padding: 4px 10px;
@@ -43,6 +51,19 @@
 	background: var(--color-bg-ui-1);
 	z-index: 1;
 	white-space: nowrap;
+}
+.sessions-sort-header {
+	all: unset;
+	cursor: pointer;
+}
+.sessions-sort-header:hover {
+	text-decoration: underline;
+}
+.sessions-sort-header:focus-visible {
+	outline: 1px solid var(--color-base-0);
+}
+.sessions-sort-arrow {
+	margin-left: 4px;
 }
 .sessions-col-star {
 	width: 2em;
@@ -277,6 +298,9 @@
 }
 
 @media (max-width: 600px) {
+	.sessions-modal-sort {
+		display: flex;
+	}
 	.sessions-col-created {
 		display: none;
 	}
