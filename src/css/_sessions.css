@@ -5,8 +5,10 @@
 	gap: 6px;
 	margin-bottom: 8px;
 }
+/* Wraps so the buttons stay inside the modal on a phone; the fields shrink instead, having no base width. */
 .sessions-modal-toolbar-row {
 	display: flex;
+	flex-wrap: wrap;
 	gap: 6px;
 	align-items: flex-end;
 }
