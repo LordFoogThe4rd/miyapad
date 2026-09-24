@@ -69,15 +69,16 @@ export function Modal({
 
 	useEffect(() => {
 		if (!isOpen) return;
+		// Only the modal on top closes, so one opened over another leaves that one for the next Escape. Modals share
+		// a z-index, so the one on top is the last open in the page. Handling it tells the rest, and the shortcuts, to leave it.
 		const onKeyDown = (event: KeyboardEvent) => {
-			if (event.key === 'Escape') {
-				onClose();
-			}
+			if (event.key !== 'Escape' || event.defaultPrevented || [...document.querySelectorAll('.modal:not(.closing)')].at(-1) !== modalRef.current)
+				return;
+			event.preventDefault();
+			onClose();
 		};
 		document.addEventListener('keydown', onKeyDown);
-		return () => {
-			document.removeEventListener('keydown', onKeyDown);
-		};
+		return () => document.removeEventListener('keydown', onKeyDown);
 	}, [isOpen]);
 
 	if (!internalVisible) {

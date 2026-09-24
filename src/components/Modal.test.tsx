@@ -60,6 +60,21 @@ describe('Modal', () => {
 		document.removeEventListener('mousedown', pressed);
 	});
 
+	it('closes only the top one of two modals on Escape, wherever focus is', () => {
+		const closeUnder = vi.fn();
+		const closeTop = vi.fn();
+		render(html`
+			<div>
+				<${Modal} isOpen=${true} onClose=${closeUnder} title="Under"><button>under</button><//>
+				<${Modal} isOpen=${true} onClose=${closeTop} title="Top"><button id="top">top</button><//>
+			</div>`);
+		fireEvent.keyDown(document.getElementById('top')!, { key: 'Escape' });
+		// A field that closed on Escape can leave focus nowhere.
+		fireEvent.keyDown(document.body, { key: 'Escape' });
+		expect(closeTop).toHaveBeenCalledTimes(2);
+		expect(closeUnder).not.toHaveBeenCalled();
+	});
+
 	it('leaves focus with a field that asked for it', () => {
 		const { rerender } = render(html`<${Modal} isOpen=${false} onClose=${() => {}} title="Test"><input autoFocus/><//>`);
 		rerender(html`<${Modal} isOpen=${true} onClose=${() => {}} title="Test"><input autoFocus/><//>`);
