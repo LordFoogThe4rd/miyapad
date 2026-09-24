@@ -24,7 +24,9 @@ permissions:
   contents: read
 
 concurrency:
-  group: edge-${{ github.event_name == 'delete' && github.ref || github.ref_name }}
+  # github.ref is the default branch on delete events, which would put every
+  # deletion in one group and cancel all but the last.
+  group: edge-${{ github.event_name == 'delete' && github.event.ref || github.ref_name }}
   cancel-in-progress: true
 
 jobs:
