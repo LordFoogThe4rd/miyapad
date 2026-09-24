@@ -51,6 +51,7 @@
 - Renaming, pinning or tagging a session from the Sessions list no longer leaves a duplicate of it behind with its pins, tags and creation date missing
 - The Sessions list on narrow screens no longer puts the column headers over the wrong columns or squeezes session names down to a letter or two
 - Escape now closes only the window on top when one is open over another, such as the question about how to import World Info entries over World Info. It used to close both
+- Closing the Quick Switcher (Ctrl+P) now puts the keyboard focus back where it was, so you can carry on typing in the prompt, instead of leaving it nowhere. Tab no longer leaves its search box for the page behind, and screen readers announce it as a dialog
 
 ## [2.8.0] - 2026-09-16
 

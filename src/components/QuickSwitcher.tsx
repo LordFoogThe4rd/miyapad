@@ -1,6 +1,7 @@
 import { html } from 'htm/react';
 import { useState, useEffect, useMemo, useRef } from 'react';
 import { useT } from '../i18n';
+import { useReturnFocus } from '../hooks/useReturnFocus';
 import { SVG_Star } from './icons/index';
 
 export function QuickSwitcher({ isOpen, closeModal, sessionStorage, cancel }: any) {
@@ -9,6 +10,7 @@ export function QuickSwitcher({ isOpen, closeModal, sessionStorage, cancel }: an
 	const [selectedIndex, setSelectedIndex] = useState(-1);
 	const inputRef = useRef<HTMLInputElement | null>(null);
 	const [version, setVersion] = useState(0);
+	useReturnFocus(!!isOpen, inputRef);
 
 	useEffect(() => {
 		const incrementVersion = () => setVersion(v => v + 1);
@@ -69,6 +71,10 @@ export function QuickSwitcher({ isOpen, closeModal, sessionStorage, cancel }: an
 				e.preventDefault();
 				closeModal();
 				break;
+			// The box is all there is to focus, and Tab would carry on into the page behind.
+			case 'Tab':
+				e.preventDefault();
+				break;
 		}
 	}
 
@@ -76,7 +82,11 @@ export function QuickSwitcher({ isOpen, closeModal, sessionStorage, cancel }: an
 
 	return html`
 		<div className="quick-switcher-overlay" onClick=${closeModal}>
-			<div className="quick-switcher-panel" 			onClick=${(e: any) => e.stopPropagation()}>
+			<div className="quick-switcher-panel"
+				role="dialog"
+				aria-modal="true"
+				aria-label=${t('quickSwitcher.title')}
+				onClick=${(e: any) => e.stopPropagation()}>
 				<input
 					ref=${inputRef}
 					className="quick-switcher-input"

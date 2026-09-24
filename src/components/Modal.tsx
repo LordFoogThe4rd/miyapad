@@ -3,6 +3,7 @@ import { useEffect, useId, useRef, useState } from 'react';
 import type { ModalProps } from '../types/components';
 import { SVG_Close } from './icons/index';
 import { useT } from '../i18n';
+import { useReturnFocus } from '../hooks/useReturnFocus';
 
 const FOCUSABLE = 'a[href], button:not(:disabled), input:not(:disabled), select:not(:disabled), textarea:not(:disabled), [tabindex]:not([tabindex="-1"])';
 
@@ -26,23 +27,9 @@ export function Modal({
 	const isClosing = !isOpen && internalVisible;
 	const mouseDownOnBackground = useRef<boolean>(false);
 	const modalRef = useRef<HTMLDivElement>(null);
-	/** What had focus before the modal opened, to give it back on close. */
-	const returnFocus = useRef<Element | null>(null);
 	const titleId = useId();
 	const t = useT();
-
-	useEffect(() => {
-		if (isOpen) {
-			returnFocus.current = document.activeElement;
-			return;
-		}
-		const back = returnFocus.current;
-		returnFocus.current = null;
-		// Unless something else took focus already, like the modal opened next.
-		const active = document.activeElement;
-		if (back instanceof HTMLElement && back.isConnected && (!active || active === document.body || modalRef.current?.contains(active)))
-			back.focus();
-	}, [isOpen]);
+	useReturnFocus(!!isOpen, modalRef);
 
 	// The modal mounts a render after it opens. A field inside with autoFocus has focus by then; otherwise the modal takes it.
 	// It takes focus back when what had it goes away or is disabled, like a deleted row or the view it was in, instead of

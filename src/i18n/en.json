@@ -283,6 +283,7 @@
   "prompt.toggleMarkdownMode": "Toggle Markdown Mode",
   "quickSwitcher.noSessions": "No sessions found",
   "quickSwitcher.searchPlaceholder": "Search sessions…",
+  "quickSwitcher.title": "Switch session",
   "samplerPreset.addNew": "Add New",
   "samplerPreset.cannotDeleteActive": "Cannot delete the currently active preset",
   "samplerPreset.cannotDisableActive": "Cannot disable the currently active preset",
