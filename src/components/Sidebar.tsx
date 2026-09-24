@@ -103,6 +103,12 @@ export function Sidebar({ sidebarRef, toggleModal, currentThemeName, setCurrentT
 					const configJson = await configRes.json();
 					if (configJson.ok) {
 						setConfigData(Object.keys(configJson.configs ?? {}).length > 0 ? configJson.configs : null);
+						// Update writes these boxes to every table, so they start from what the tables use.
+						const first = Object.values(configJson.configs ?? {})[0] as { compression_level?: unknown; train_dict_samples_ratio?: unknown } | undefined;
+						const level = Number(first?.compression_level);
+						const ratio = Number(first?.train_dict_samples_ratio);
+						if (Number.isFinite(level)) setZstdLevel(level);
+						if (Number.isFinite(ratio)) setZstdRatio(ratio);
 					}
 					const maintRes = await fetch('/maintenance_config');
 					if (maintRes.ok) {

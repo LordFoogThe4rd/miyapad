@@ -2,6 +2,10 @@
 
 ## [???] - unreleased
 
+### Fixed
+
+- The Compression Level and Samples Ratio boxes in Database Tools now show the values your database uses, instead of always starting at 3 and 100. Clicking Update without changing them no longer turns compression down on new databases, which start at level 9
+
 ## [2.9.0] - 2026-09-24
 
 ### Added
