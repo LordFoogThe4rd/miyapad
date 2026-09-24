@@ -17,7 +17,7 @@ const page = (isOpen: boolean) => html`
 		<//>
 	</div>`;
 
-describe('Modal focus', () => {
+describe('Modal', () => {
 	it('takes focus on open, keeps Tab inside, and gives focus back on close', () => {
 		// jsdom has no layout, so every element would count as hidden.
 		vi.spyOn(Element.prototype, 'getClientRects').mockReturnValue([{}] as unknown as DOMRectList);
@@ -39,6 +39,25 @@ describe('Modal focus', () => {
 
 		rerender(page(false));
 		expect(document.activeElement).toBe(document.getElementById('trigger'));
+	});
+
+	it('lets a press inside reach the document, and closes only on a press that starts on the background', () => {
+		const onClose = vi.fn();
+		const pressed = vi.fn();
+		document.addEventListener('mousedown', pressed);
+		render(html`<${Modal} isOpen=${true} onClose=${onClose} title="Test"><button id="inner">x</button><//>`);
+		const overlay = document.querySelector('.modal-overlay')!;
+
+		fireEvent.mouseDown(document.getElementById('inner')!);
+		expect(pressed).toHaveBeenCalled();
+		// Pressed inside and let go outside, as when selecting text.
+		fireEvent.click(overlay);
+		expect(onClose).not.toHaveBeenCalled();
+
+		fireEvent.mouseDown(overlay);
+		fireEvent.click(overlay);
+		expect(onClose).toHaveBeenCalledOnce();
+		document.removeEventListener('mousedown', pressed);
 	});
 
 	it('leaves focus with a field that asked for it', () => {

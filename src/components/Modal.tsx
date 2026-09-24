@@ -84,8 +84,9 @@ export function Modal({
 		return null;
 	}
 
+	// Presses inside the box bubble on to the document, where menus in it listen for a press outside themselves to close.
 	const handleOverlayMouseDown = (e: React.MouseEvent) => {
-		mouseDownOnBackground.current = true;
+		mouseDownOnBackground.current = !modalRef.current?.contains(e.target as Node);
 	};
 
 	/** Keeps Tab inside the modal, so it never walks the page behind the overlay. */
@@ -128,7 +129,6 @@ export function Modal({
 					tabIndex="-1"
 					onKeyDown=${(e: React.KeyboardEvent<HTMLDivElement>) => { trapTab(e); onKeyDown?.(e); }}
 					onClick=${(e: React.MouseEvent) => e.stopPropagation()}
-					onMouseDown=${(e: React.MouseEvent) => { e.stopPropagation(); mouseDownOnBackground.current = false; }}
 					...${props}>
 					<div className="modal-title" id=${titleId}>${title}</div>
 					${ description=="" ? false : html`<div style=${{ whiteSpace: 'pre-line' }} className='modal-desc'>${description}</div>` }
