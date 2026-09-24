@@ -1,5 +1,5 @@
 import { afterEach, describe, expect, it, vi } from 'vitest';
-import { cleanup, fireEvent, render } from '@testing-library/react';
+import { cleanup, fireEvent, render, waitFor } from '@testing-library/react';
 import { html } from 'htm/react';
 import { Modal } from './Modal';
 
@@ -73,6 +73,24 @@ describe('Modal', () => {
 		fireEvent.keyDown(document.body, { key: 'Escape' });
 		expect(closeTop).toHaveBeenCalledTimes(2);
 		expect(closeUnder).not.toHaveBeenCalled();
+	});
+
+	it('takes focus back when the focused element goes away or is disabled', async () => {
+		const view = (removed: boolean, disabled: boolean) => html`
+			<${Modal} isOpen=${true} onClose=${() => {}} title="Test">
+				${!removed && html`<button id="row">row</button>`}
+				<button id="empty" disabled=${disabled}>empty</button>
+			<//>`;
+		const { rerender } = render(view(false, false));
+		const dialog = document.querySelector('[role="dialog"]');
+
+		document.getElementById('row')!.focus();
+		rerender(view(true, false));
+		await waitFor(() => expect(document.activeElement).toBe(dialog));
+
+		document.getElementById('empty')!.focus();
+		rerender(view(true, true));
+		await waitFor(() => expect(document.activeElement).toBe(dialog));
 	});
 
 	it('leaves focus with a field that asked for it', () => {

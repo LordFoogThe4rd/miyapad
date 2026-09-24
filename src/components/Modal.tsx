@@ -6,6 +6,9 @@ import { useT } from '../i18n';
 
 const FOCUSABLE = 'a[href], button:not(:disabled), input:not(:disabled), select:not(:disabled), textarea:not(:disabled), [tabindex]:not([tabindex="-1"])';
 
+/** Modals share a z-index, so the one drawn on top of the rest is the last open in the page. */
+const isTopModal = (modal: HTMLElement | null) => !!modal && [...document.querySelectorAll('.modal:not(.closing)')].at(-1) === modal;
+
 export function Modal({
 	isOpen,
 	onClose,
@@ -40,9 +43,19 @@ export function Modal({
 	}, [isOpen]);
 
 	// The modal mounts a render after it opens. A field inside with autoFocus has focus by then; otherwise the modal takes it.
+	// It takes focus back when what had it goes away or is disabled, like a deleted row or the view it was in, instead of
+	// leaving it on the page, where a screen reader loses its place.
 	useEffect(() => {
-		if (isOpen && internalVisible && !modalRef.current?.contains(document.activeElement))
-			modalRef.current?.focus();
+		const modal = modalRef.current;
+		if (!isOpen || !internalVisible || !modal) return;
+		if (!modal.contains(document.activeElement)) modal.focus();
+		const observer = new MutationObserver(() => {
+			const active = document.activeElement;
+			if (isTopModal(modal) && (!active || active === document.body || (modal.contains(active) && active.matches(':disabled'))))
+				modal.focus();
+		});
+		observer.observe(modal, { childList: true, subtree: true, attributeFilter: ['disabled'] });
+		return () => observer.disconnect();
 	}, [isOpen, internalVisible]);
 
 	useEffect(() => {
@@ -69,10 +82,10 @@ export function Modal({
 
 	useEffect(() => {
 		if (!isOpen) return;
-		// Only the modal on top closes, so one opened over another leaves that one for the next Escape. Modals share
-		// a z-index, so the one on top is the last open in the page. Handling it tells the rest, and the shortcuts, to leave it.
+		// Only the modal on top closes, so one opened over another leaves that one for the next Escape.
+		// Handling it tells the rest, and the shortcuts, to leave it.
 		const onKeyDown = (event: KeyboardEvent) => {
-			if (event.key !== 'Escape' || event.defaultPrevented || [...document.querySelectorAll('.modal:not(.closing)')].at(-1) !== modalRef.current)
+			if (event.key !== 'Escape' || event.defaultPrevented || !isTopModal(modalRef.current))
 				return;
 			event.preventDefault();
 			onClose();
