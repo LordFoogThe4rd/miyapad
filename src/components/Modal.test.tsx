@@ -98,4 +98,20 @@ describe('Modal', () => {
 		rerender(html`<${Modal} isOpen=${true} onClose=${() => {}} title="Test"><input autoFocus/><//>`);
 		expect(document.activeElement?.tagName).toBe('INPUT');
 	});
+
+	it('gives the field focus again when reopened before it has faded out', () => {
+		const view = (isOpen: boolean) => html`
+			<div>
+				<button id="opener">open</button>
+				<${Modal} isOpen=${isOpen} onClose=${() => {}} title="Test"><input autoFocus/><//>
+			</div>`;
+		const { rerender } = render(view(false));
+		document.getElementById('opener')!.focus();
+		rerender(view(true));
+		// Closing gives focus back to the opener while the modal fades out, over 150ms that do not pass here.
+		rerender(view(false));
+		expect(document.activeElement?.id).toBe('opener');
+		rerender(view(true));
+		expect(document.activeElement?.tagName).toBe('INPUT');
+	});
 });

@@ -19,6 +19,8 @@ export function Modal({
 	...props
 }: ModalProps & Omit<React.HTMLAttributes<HTMLDivElement>, keyof ModalProps>) {
 	const [internalVisible, setInternalVisible] = useState(isOpen);
+	/** Changes when the modal reopens before it has faded out, so its content mounts afresh as on any other open. */
+	const [contentKey, setContentKey] = useState(0);
 	const prevIsOpen = useRef(isOpen);
 	const closeTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
 	const isClosing = !isOpen && internalVisible;
@@ -64,6 +66,8 @@ export function Modal({
 				clearTimeout(closeTimerRef.current);
 				closeTimerRef.current = null;
 			}
+			// Still showing from before: nothing was unmounted, so a field with autoFocus would not take focus again.
+			if (internalVisible) setContentKey(k => k + 1);
 			setInternalVisible(true);
 		} else if (prevIsOpen.current) {
 			closeTimerRef.current = setTimeout(() => {
@@ -147,7 +151,7 @@ export function Modal({
 					<div className="modal-title" id=${titleId}>${title}</div>
 					${ description=="" ? false : html`<div style=${{ whiteSpace: 'pre-line' }} className='modal-desc'>${description}</div>` }
 					<hr/>
-					<div className="modal-content">
+					<div className="modal-content" key=${contentKey}>
 						${children}
 					</div>
 					<button
