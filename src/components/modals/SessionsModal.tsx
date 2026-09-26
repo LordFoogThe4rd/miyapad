@@ -535,10 +535,10 @@ ${t('sessions.removeFolderConfirm')}`)) return;
 
 	const openItem = (key: string) => isFolderKey(key) ? enterFolder(folderOfKey(key)) : switchSession(key);
 
-	/** Ctrl-click picks sessions out and shift-click extends the run. A plain click shows the item in the pane, and a second one opens it. */
+	/** Ctrl-click picks sessions out, not folders, and shift-click extends the run. A plain click shows the item in the pane, and a second one opens it. */
 	const itemClick = (e: MouseEvent, key: string) => {
-		if ((e.ctrlKey || e.metaKey) && !isFolderKey(key)) {
-			toggleSelected(key);
+		if (e.ctrlKey || e.metaKey) {
+			if (!isFolderKey(key)) toggleSelected(key);
 		} else if (e.shiftKey) {
 			pickRun(anchorId ?? key, key);
 		} else if (previewedOnPress.current) {

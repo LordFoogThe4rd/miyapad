@@ -77,10 +77,10 @@ describe('SessionsModal', () => {
 	const item = (key: string) => [...document.querySelectorAll<HTMLElement>('[data-key]')].find(el => el.dataset.key === key);
 	const paneName = () => document.querySelector('.sessions-pane-name')?.textContent;
 	/** What a real click does: the press focuses the item before the click lands. */
-	const click = (el: HTMLElement) => {
-		fireEvent.mouseDown(el);
+	const click = (el: HTMLElement, init: MouseEventInit = {}) => {
+		fireEvent.mouseDown(el, init);
 		fireEvent.focus(el);
-		fireEvent.click(el);
+		fireEvent.click(el, init);
 	};
 
 	it('shows a clicked session in the pane, and opens it on a second click', async () => {
@@ -115,7 +115,7 @@ describe('SessionsModal', () => {
 		await waitFor(() => expect(text()).toBe(en['sessions.previewFailed']));
 	});
 
-	it('remembers the icon view, where a folder opens on a second click and Backspace leaves it', () => {
+	it('remembers the icon view, where a second plain click opens a folder and Backspace leaves it', () => {
 		const storage = fakeStorage();
 		renderModal(storage);
 		fireEvent.click(screen.getByRole('button', { name: en['sessions.viewIcons'] }));
@@ -124,6 +124,8 @@ describe('SessionsModal', () => {
 		const folder = item('folder:Stories')!;
 		click(folder);
 		expect(paneName()).toBe('Stories');
+		click(folder, { ctrlKey: true });
+		expect(item('3')).toBeDefined();
 		click(folder);
 		expect(item('3')).toBeUndefined();
 		expect(document.activeElement).toBe(item('2'));
