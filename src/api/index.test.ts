@@ -19,7 +19,8 @@ vi.mock('./openai', () => openai);
 vi.mock('./aihorde', () => aihorde);
 vi.mock('./deepseek', () => deepseek);
 
-const { getModels, getTokens, serverDetokenize } = await import('./index');
+const { getModels, getTokens, getTokenCount, completion, chatCompletion, abortCompletion, serverTokenCount, serverTokenize, serverDetokenize, getServerTokenizers, loadServerTokenizer } = await import('./index');
+const { ok, notOk, collect, callOf } = await import('./testing');
 
 const fetchMock = vi.fn();
 
@@ -201,5 +202,133 @@ describe('serverDetokenize', () => {
 			signal: new AbortController().signal,
 			tokens: [1],
 		})).rejects.toThrow('aborted');
+	});
+});
+
+describe('server tokenizer', () => {
+	const sessionEndpoint = 'http://localhost:3000';
+	const signal = new AbortController().signal;
+
+	it('counts tokens with /api/v1/token-count', async () => {
+		fetchMock.mockResolvedValue(ok({ count: 12 }));
+
+		await expect(serverTokenCount({ sessionEndpoint, signal, content: 'abc' })).resolves.toBe(12);
+		expect(callOf(fetchMock).url).toBe(`${sessionEndpoint}/api/v1/token-count`);
+		expect(callOf(fetchMock).body).toEqual({ content: 'abc' });
+	});
+
+	it('throws the error the server reports with an OK status', async () => {
+		fetchMock.mockResolvedValue(ok({ error: 'No tokenizer loaded' }));
+
+		await expect(serverTokenCount({ sessionEndpoint, signal, content: '' })).rejects.toThrow('No tokenizer loaded');
+	});
+
+	it('tokenizes into ids and their strings', async () => {
+		fetchMock.mockResolvedValue(ok({ ids: [1, 2], strings: ['a', 'b'] }));
+
+		await expect(serverTokenize({ sessionEndpoint, signal, content: 'ab' })).resolves.toEqual({ ids: [1, 2], str: ['a', 'b'] });
+	});
+
+	it('lists the tokenizers and loads one', async () => {
+		fetchMock.mockResolvedValueOnce(ok({ available: ['llama3'], loaded: null }));
+		await expect(getServerTokenizers({ sessionEndpoint })).resolves.toEqual({ available: ['llama3'], loaded: null });
+		expect(callOf(fetchMock).url).toBe(`${sessionEndpoint}/api/v1/tokenizers`);
+
+		fetchMock.mockResolvedValueOnce(ok({ loaded: 'llama3' }));
+		await expect(loadServerTokenizer({ sessionEndpoint, model: 'llama3' })).resolves.toEqual({ loaded: 'llama3' });
+		expect(callOf(fetchMock).body).toEqual({ model: 'llama3' });
+	});
+
+	it('throws with the status when a request fails', async () => {
+		fetchMock.mockResolvedValue(notOk(500));
+
+		await expect(serverTokenCount({ sessionEndpoint, signal, content: '' })).rejects.toThrow('HTTP 500');
+		await expect(serverTokenize({ sessionEndpoint, signal, content: '' })).rejects.toThrow('HTTP 500');
+		await expect(getServerTokenizers({ sessionEndpoint })).rejects.toThrow('HTTP 500');
+		await expect(loadServerTokenizer({ sessionEndpoint, model: 'x' })).rejects.toThrow('HTTP 500');
+	});
+});
+
+describe('getTokenCount', () => {
+	const local = 'http://localhost:5000';
+
+	it('asks llama.cpp and koboldcpp directly', async () => {
+		llamacpp.llamaCppTokenCount.mockResolvedValue(5);
+		koboldcpp.koboldCppTokenCount.mockResolvedValue(6);
+
+		await expect(getTokenCount({ endpoint: local, endpointAPI: API_LLAMA_CPP, content: 'x' })).resolves.toBe(5);
+		await expect(getTokenCount({ endpoint: `${local}/api`, endpointAPI: API_KOBOLD_CPP, content: 'x' })).resolves.toBe(6);
+		expect(koboldcpp.koboldCppTokenCount).toHaveBeenCalledWith(expect.objectContaining({ endpoint: local }));
+	});
+
+	it('tries Aphrodite, then Ooba, then Tabby, stopping at the first that answers', async () => {
+		openai.openaiAphroditeTokenCount.mockResolvedValue(-1);
+		openai.openaiOobaTokenCount.mockResolvedValue(9);
+
+		await expect(getTokenCount({ endpoint: local, endpointAPI: API_OPENAI_COMPAT, content: 'x' })).resolves.toBe(9);
+		expect(openai.openaiTabbyTokenCount).not.toHaveBeenCalled();
+	});
+
+	it('counts zero when none of them can', async () => {
+		openai.openaiAphroditeTokenCount.mockResolvedValue(-1);
+		openai.openaiOobaTokenCount.mockResolvedValue(-1);
+		openai.openaiTabbyTokenCount.mockResolvedValue(-1);
+
+		await expect(getTokenCount({ endpoint: local, endpointAPI: API_DEEPSEEK, content: 'x' })).resolves.toBe(0);
+		expect(openai.openaiTabbyTokenCount).toHaveBeenCalledOnce();
+	});
+
+	it('does not ask hosted OpenAI or TogetherAI, which have no count endpoint', async () => {
+		await expect(getTokenCount({ endpoint: 'https://api.openai.com/v1', endpointAPI: API_OPENAI_COMPAT, content: 'x' })).resolves.toBe(0);
+		await expect(getTokenCount({ endpoint: 'https://api.together.xyz/v1', endpointAPI: API_OPENAI_COMPAT, content: 'x' })).resolves.toBe(0);
+		expect(openai.openaiAphroditeTokenCount).not.toHaveBeenCalled();
+	});
+
+	it('counts zero for AI Horde', async () => {
+		await expect(getTokenCount({ endpoint: local, endpointAPI: API_AI_HORDE, content: 'x' })).resolves.toBe(0);
+	});
+});
+
+describe('completion routing', () => {
+	async function* chunks(...contents: string[]) {
+		for (const content of contents) yield { content };
+	}
+
+	it.each([
+		[API_LLAMA_CPP, () => llamacpp.llamaCppCompletion],
+		[API_KOBOLD_CPP, () => koboldcpp.koboldCppCompletion],
+		[API_OPENAI_COMPAT, () => openai.openaiCompletion],
+		[API_DEEPSEEK, () => deepseek.deepseekCompletion],
+		[API_AI_HORDE, () => aihorde.aiHordeCompletion],
+	])('hands API %s to its own completion and passes its chunks on', async (endpointAPI, provider) => {
+		provider().mockImplementation(() => chunks('a', 'b'));
+
+		const out = await collect(completion({ endpoint: 'http://localhost:5000', endpointAPI, prompt: 'p' }));
+
+		expect(out).toEqual([{ content: 'a' }, { content: 'b' }]);
+		expect(provider()).toHaveBeenCalledWith(expect.objectContaining({ prompt: 'p' }));
+	});
+
+	it('sends chat to DeepSeek or the OpenAI one, and nowhere else', async () => {
+		deepseek.deepseekChatCompletion.mockImplementation(() => chunks('d'));
+		openai.openaiChatCompletion.mockImplementation(() => chunks('o'));
+
+		await expect(collect(chatCompletion({ endpoint: 'https://api.deepseek.com', endpointAPI: API_DEEPSEEK }))).resolves.toEqual([{ content: 'd' }]);
+		await expect(collect(chatCompletion({ endpoint: 'http://localhost:5000', endpointAPI: API_OPENAI_COMPAT }))).resolves.toEqual([{ content: 'o' }]);
+		await expect(collect(chatCompletion({ endpoint: 'http://localhost:8080', endpointAPI: API_LLAMA_CPP }))).resolves.toEqual([]);
+	});
+
+	it('aborts through the provider that can stop a generation', async () => {
+		await abortCompletion({ endpoint: 'http://localhost:5001/api', endpointAPI: API_KOBOLD_CPP });
+		expect(koboldcpp.koboldCppAbortCompletion).toHaveBeenCalledWith(expect.objectContaining({ endpoint: 'http://localhost:5001' }));
+
+		await abortCompletion({ endpoint: 'http://localhost:5000', endpointAPI: API_OPENAI_COMPAT });
+		expect(openai.openaiOobaAbortCompletion).toHaveBeenCalledOnce();
+
+		await abortCompletion({ endpoint: 'https://api.deepseek.com', endpointAPI: API_DEEPSEEK });
+		expect(deepseek.deepseekAbortCompletion).toHaveBeenCalledOnce();
+
+		await abortCompletion({ endpoint: 'http://ignored.local', endpointAPI: API_AI_HORDE, hordeTaskId: 't' } as ApiEndpointConfig);
+		expect(aihorde.aiHordeAbortCompletion).toHaveBeenCalledWith(expect.objectContaining({ hordeTaskId: 't' }));
 	});
 });

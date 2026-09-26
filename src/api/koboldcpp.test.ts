@@ -1,5 +1,6 @@
-import { describe, it, expect } from 'vitest';
-import { koboldCppConvertOptions } from './koboldcpp';
+import { describe, it, expect, vi, beforeEach, afterEach } from 'vitest';
+import { koboldCppConvertOptions, koboldCppTokenCount, koboldCppTokenize, koboldCppCompletion, koboldCppAbortCompletion } from './koboldcpp';
+import { ok, notOk, sse, collect, callOf } from './testing';
 
 const LOCAL = 'http://localhost:5001';
 const HORDE = 'https://aihorde.net/api';
@@ -84,5 +85,119 @@ describe('koboldCppConvertOptions', () => {
 		const out = koboldCppConvertOptions(options, LOCAL);
 		expect(out).toBe(options);
 		expect(Object.hasOwn(options, 'n_ctx')).toBe(false);
+	});
+});
+
+describe('koboldcpp requests', () => {
+	const fetchMock = vi.fn();
+
+	beforeEach(() => {
+		fetchMock.mockReset();
+		vi.stubGlobal('fetch', fetchMock);
+		vi.stubGlobal('reportError', vi.fn());
+	});
+
+	afterEach(() => {
+		vi.unstubAllGlobals();
+	});
+
+	it('counts tokens with /api/extra/tokencount', async () => {
+		fetchMock.mockResolvedValue(ok({ value: 7, ids: [] }));
+
+		await expect(koboldCppTokenCount({ endpoint: LOCAL, content: 'hello' })).resolves.toBe(7);
+		expect(callOf(fetchMock).url).toBe(`${LOCAL}/api/extra/tokencount`);
+		expect(callOf(fetchMock).body).toEqual({ prompt: 'hello' });
+	});
+
+	it('drops the token kobold adds in front when tokenizing', async () => {
+		fetchMock.mockResolvedValue(ok({ value: 3, ids: [1, 15, 16] }));
+
+		await expect(koboldCppTokenize({ endpoint: LOCAL, content: 'hi' })).resolves.toEqual({ ids: [15, 16], str: '' });
+	});
+
+	it('routes a token count through the proxy with X-Real-* headers', async () => {
+		fetchMock.mockResolvedValue(ok({ value: 0 }));
+
+		await koboldCppTokenCount({ endpoint: LOCAL, endpointAPIKey: 'k', proxyEndpoint: 'http://proxy.local', content: '' });
+
+		const { url, init } = callOf(fetchMock);
+		expect(url).toBe('http://proxy.local/api/extra/tokencount');
+		expect(init.headers['X-Real-Authorization']).toBe('Bearer k');
+		expect(init.headers['X-Real-URL']).toBe(LOCAL);
+	});
+
+	it('throws when a token count fails', async () => {
+		fetchMock.mockResolvedValue(notOk(500));
+
+		await expect(koboldCppTokenCount({ endpoint: LOCAL, content: '' })).rejects.toThrow('HTTP 500');
+		await expect(koboldCppTokenize({ endpoint: LOCAL, content: '' })).rejects.toThrow('HTTP 500');
+	});
+
+	it('generates with /api/v1/generate and the options renamed', async () => {
+		fetchMock.mockResolvedValue(ok({ results: [{ text: 'Once upon' }] }));
+
+		await expect(collect(koboldCppCompletion({ endpoint: LOCAL, prompt: 'Tell', n_predict: 32 })))
+			.resolves.toEqual([{ content: 'Once upon' }]);
+
+		const { url, body } = callOf(fetchMock);
+		expect(url).toBe(`${LOCAL}/api/v1/generate`);
+		expect(body).toEqual({ prompt: 'Tell', max_length: 32 });
+	});
+
+	it('splits a non-streamed result into tokens when it carries probabilities', async () => {
+		fetchMock.mockResolvedValue(ok({ results: [{ text: 'ab', logprobs: { content: [
+			{ token: 'a', top_logprobs: [{ token: 'a', logprob: Math.log(0.5) }] },
+			{ token: 'b', top_logprobs: [] },
+		] } }] }));
+
+		const chunks = await collect(koboldCppCompletion({ endpoint: LOCAL }));
+
+		expect(chunks.map(c => c.content)).toEqual(['a', 'b']);
+		expect(chunks[0].prob).toBeCloseTo(0.5);
+		expect(chunks[1]).toEqual({ content: 'b' });
+	});
+
+	it('yields nothing for an empty result', async () => {
+		fetchMock.mockResolvedValue(ok({ results: [{ text: '' }] }));
+
+		await expect(collect(koboldCppCompletion({ endpoint: LOCAL }))).resolves.toEqual([]);
+	});
+
+	it('streams tokens from /api/extra/generate/stream', async () => {
+		fetchMock.mockResolvedValue(sse(
+			{ token: 'He', top_logprobs: [{ token: 'He', logprob: 0 }] },
+			{ token: 'y' },
+		));
+
+		const chunks = await collect(koboldCppCompletion({ endpoint: LOCAL, stream: true }));
+
+		expect(callOf(fetchMock).url).toBe(`${LOCAL}/api/extra/generate/stream`);
+		expect(chunks.map(c => c.content)).toEqual(['He', 'y']);
+		expect(chunks[0].prob).toBe(1);
+	});
+
+	it('throws on a non-OK generate response', async () => {
+		fetchMock.mockResolvedValue(notOk(503));
+
+		await expect(collect(koboldCppCompletion({ endpoint: LOCAL }))).rejects.toThrow('HTTP 503');
+	});
+
+	it('aborts with /api/extra/abort, through the proxy when there is one', async () => {
+		fetchMock.mockResolvedValue(ok({}));
+
+		await koboldCppAbortCompletion({ endpoint: LOCAL, proxyEndpoint: 'http://proxy.local' });
+
+		const { url, init } = callOf(fetchMock);
+		expect(url).toBe('http://proxy.local/api/extra/abort');
+		expect(init.method).toBe('POST');
+		expect(init.headers['X-Real-URL']).toBe(LOCAL);
+	});
+
+	it('reports a failed abort instead of throwing', async () => {
+		const error = new TypeError('network down');
+		fetchMock.mockRejectedValue(error);
+
+		await expect(koboldCppAbortCompletion({ endpoint: LOCAL })).resolves.toBeUndefined();
+		expect(reportError).toHaveBeenCalledWith(error);
 	});
 });
