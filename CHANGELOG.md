@@ -18,6 +18,7 @@
 
 - The Compression Level and Samples Ratio boxes in Database Tools now show the values your database uses, instead of always starting at 3 and 100. Clicking Update without changing them no longer turns compression down on new databases, which start at level 9
 - AI Horde, and any other endpoint whose address has a path after the host (such as `https://openrouter.ai/api`), works again when you run the miyapad server. Every request to one of these failed with "Path traversal detected"
+- The server's login now accepts a password that contains a colon. Before, such a password was always refused
 
 ## [2.9.0] - 2026-09-24
 
