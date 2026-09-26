@@ -17,18 +17,23 @@
 	flex: 1;
 	min-width: 0;
 }
-/* The column headers sort the list. Below 600px Created is hidden (and Modified below 480px), so the box comes back. */
+/* The column headers only sort by name and date modified, and the icon view has none. */
 .sessions-modal-sort {
-	display: none;
+	display: flex;
 	flex: 1;
 	min-width: 0;
 	gap: 6px;
 	align-items: flex-end;
 }
+/* A select, an input and a button each make "normal" a different height, so they share this one. */
+.sessions-modal-toolbar-row .InputBox input,
+.sessions-modal-toolbar-row .SelectBox select,
+.sessions-modal-toolbar-row button {
+	line-height: 1.25rem;
+}
 .sessions-modal-sort-btn {
 	padding: 4px 10px;
 	font-size: 1.1rem;
-	line-height: 1;
 	min-width: 2rem;
 	align-self: flex-end;
 	transition: transform 0.2s ease-in-out;
@@ -72,8 +77,7 @@
 	text-align: center;
 }
 .sessions-col-name { width: auto; }
-.sessions-col-modified,
-.sessions-col-created { width: 10em; }
+.sessions-col-modified { width: 10em; }
 .sessions-col-actions {
 	width: 6.5em;
 	text-align: center;
@@ -102,6 +106,11 @@
 .sessions-modal-row:hover {
 	background-color: var(--color-bg-highlight-3);
 }
+/* What the pane shows. Before focus and drop target, so their outlines win. */
+.sessions-modal-row.previewed {
+	outline: 1px solid var(--color-bg-rule);
+	outline-offset: -1px;
+}
 .sessions-modal-row:focus-visible {
 	outline: 1px solid var(--color-base-0);
 	outline-offset: -1px;
@@ -121,10 +130,6 @@
 	padding: 16px 8px;
 	text-align: center;
 	color: var(--color-text-hint);
-}
-.sessions-modal-row-new {
-	cursor: default;
-	animation: fadeIn 0.2s ease-out;
 }
 .sessions-modal-trash-row {
 	cursor: default;
@@ -183,10 +188,6 @@
 	flex: 1;
 	min-width: 0;
 }
-.sessions-action-btn.sessions-more-btn {
-	line-height: 1;
-	font-size: 0.9rem;
-}
 /* The modal's overlay is above the menu's own layer, and its box would clip an absolute one. */
 .EditorContextMenu.sessions-row-menu {
 	position: fixed;
@@ -241,8 +242,7 @@
 	width: 14px;
 	height: 14px;
 }
-.sessions-col-modified,
-.sessions-col-created {
+.sessions-col-modified {
 	font-size: 0.8rem;
 	color: var(--color-text-hint);
 }
@@ -255,7 +255,6 @@
 .sessions-modal-tags {
 	font-size: 0.75rem;
 	color: var(--color-text-hint);
-	cursor: text;
 	overflow: hidden;
 	text-overflow: ellipsis;
 	white-space: nowrap;
@@ -281,6 +280,185 @@
 	margin-top: 1px;
 }
 
+.sessions-modal-view {
+	display: flex;
+	gap: 6px;
+}
+.sessions-modal-view button[aria-pressed="true"] {
+	background: var(--color-bg-active);
+}
+
+/* The list, and beside it the pane showing what was clicked or focused last. */
+.sessions-modal-body {
+	display: flex;
+}
+.sessions-modal-body > .sessions-modal-list {
+	flex: 1;
+	min-width: 0;
+}
+/* Drag it, or focus it and press Left or Right, to size the pane. */
+.sessions-pane-divider {
+	flex: 0 0 12px;
+	cursor: col-resize;
+	touch-action: none;
+	background: linear-gradient(var(--color-bg-rule), var(--color-bg-rule)) center / 1px 100% no-repeat;
+}
+.sessions-pane-divider:hover,
+.sessions-pane-divider:focus-visible {
+	outline: none;
+	background-size: 3px 100%;
+}
+/* The width dragged to is `--pane-width`, measured from the divider, so the box includes the padding. */
+.sessions-pane {
+	box-sizing: border-box;
+	flex: 0 0 var(--pane-width, 17em);
+	min-width: 12em;
+	max-width: calc(100% - 15em);
+	max-height: 50vh;
+	overflow-y: auto;
+	padding-left: 6px;
+	display: flex;
+	flex-direction: column;
+	gap: 10px;
+	font-size: 0.85rem;
+}
+.sessions-pane-name {
+	font-weight: bold;
+	font-size: 1rem;
+	overflow-wrap: anywhere;
+}
+.sessions-pane-rename {
+	display: flex;
+	align-items: center;
+	gap: 4px;
+}
+.sessions-pane-tags {
+	all: unset;
+	display: flex;
+	flex-wrap: wrap;
+	gap: 4px;
+	margin-top: 4px;
+	cursor: text;
+	font-size: 0.75rem;
+}
+.sessions-pane-tags:focus-visible {
+	outline: 1px solid var(--color-base-0);
+}
+.sessions-pane-tag {
+	padding: 0 6px;
+	border-radius: 3px;
+	background: var(--color-bg-ui-2);
+}
+.sessions-pane-text {
+	padding: 6px 8px;
+	border-radius: 4px;
+	background: var(--color-bg-ui-2);
+	color: var(--color-text-hint);
+	font-size: 0.8rem;
+	line-height: 1.5;
+	overflow-wrap: anywhere;
+}
+.sessions-pane-meta {
+	display: grid;
+	grid-template-columns: auto 1fr;
+	gap: 3px 10px;
+	margin: 0;
+	font-size: 0.8rem;
+}
+.sessions-pane-meta dt {
+	color: var(--color-text-hint);
+}
+.sessions-pane-meta dd {
+	margin: 0;
+}
+.sessions-pane-actions {
+	display: grid;
+	grid-template-columns: 1fr 1fr;
+	gap: 4px;
+}
+.sessions-pane-picked {
+	margin: 0;
+	padding-left: 1.2em;
+}
+
+/* Tiles take the row classes too, for the open, picked, dragged and drop target looks. */
+.sessions-grid {
+	display: grid;
+	grid-template-columns: repeat(auto-fill, minmax(7em, 1fr));
+	gap: 4px;
+	padding: 4px;
+	font-size: 0.8rem;
+}
+.sessions-tile {
+	position: relative;
+	display: flex;
+	flex-direction: column;
+	align-items: center;
+	gap: 4px;
+	min-width: 0;
+	padding: 10px 4px 8px;
+	border-radius: 4px;
+	text-align: center;
+}
+.sessions-modal-row.sessions-tile.picked {
+	box-shadow: inset 0 0 0 2px var(--color-light);
+}
+.sessions-tile-icon {
+	line-height: 0;
+	opacity: 0.7;
+}
+.sessions-tile-icon svg {
+	width: 32px;
+	height: 32px;
+}
+.sessions-tile-pin {
+	position: absolute;
+	top: 4px;
+	right: 6px;
+	line-height: 0;
+}
+.sessions-tile-pin svg {
+	width: 12px;
+	height: 12px;
+}
+.sessions-tile .sessions-modal-name {
+	display: -webkit-box;
+	-webkit-line-clamp: 2;
+	-webkit-box-orient: vertical;
+	max-width: 100%;
+	overflow-wrap: anywhere;
+}
+.sessions-tile .sessions-folder-count {
+	margin-left: 0;
+}
+.sessions-crumbs {
+	display: flex;
+	align-items: center;
+	gap: 6px;
+	padding: 4px 8px 8px;
+}
+
+/* Too narrow for the pane beside the list, so it goes under it. */
+@media (max-width: 800px) {
+	.sessions-modal-body {
+		flex-direction: column;
+	}
+	.sessions-modal-body > .sessions-modal-list {
+		max-height: 35vh;
+	}
+	.sessions-pane-divider {
+		display: none;
+	}
+	.sessions-pane {
+		flex-basis: auto;
+		min-width: 0;
+		max-width: none;
+		max-height: 30vh;
+		padding: 8px 0 0;
+		border-top: 1px solid var(--color-bg-rule);
+	}
+}
+
 .session-history-row {
 	cursor: default;
 }
@@ -300,12 +478,6 @@
 }
 
 @media (max-width: 600px) {
-	.sessions-modal-sort {
-		display: flex;
-	}
-	.sessions-col-created {
-		display: none;
-	}
 	.sessions-col-modified {
 		width: 9em;
 	}
