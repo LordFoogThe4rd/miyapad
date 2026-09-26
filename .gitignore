@@ -5,6 +5,9 @@ node_modules/
 dist/
 .parcel-cache/
 
+# Test coverage report
+coverage/
+
 # Generated version file
 src/version.ts
 
