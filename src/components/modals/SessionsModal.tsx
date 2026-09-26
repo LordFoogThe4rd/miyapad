@@ -1,9 +1,9 @@
 import { html } from 'htm/react';
-import { Fragment, useState, useEffect, useMemo, useRef, type ChangeEvent, type DragEvent, type KeyboardEvent, type MouseEvent } from 'react';
+import { Fragment, useState, useEffect, useMemo, useRef, type ChangeEvent, type DragEvent, type KeyboardEvent, type MouseEvent, type PointerEvent } from 'react';
 import { Modal } from '../Modal';
 import { InputBox } from '../controls/InputBox';
 import { SelectBox } from '../controls/SelectBox';
-import { SVG_ArrowDown, SVG_Close, SVG_Confirm, SVG_Cancel, SVG_Folder, SVG_Rename, SVG_Trash, SVG_Star, SVG_StarOutline, SVG_Undo } from '../icons/index';
+import { SVG_ArrowDown, SVG_Confirm, SVG_Cancel, SVG_Document, SVG_Folder, SVG_Trash, SVG_Star, SVG_StarOutline, SVG_Undo } from '../icons/index';
 import { exportText } from '../../api/common';
 import { formatRelativeTime } from '../../utils/time';
 import { useT } from '../../i18n';
@@ -22,13 +22,31 @@ interface SessionsModalProps {
 
 type TagGroup = Array<{ pattern: string; negate: boolean; regex: RegExp | null }>;
 type SessionEntry = [string, SessionData];
+type SessionsView = 'list' | 'icons';
 
 /** A top-level row of the list: a folder with its sessions, or a session in no folder. */
 interface ListItem { folder?: string; entries: SessionEntry[] }
 
 const COLLAPSED_KEY = 'miyapad-sessions-collapsedFolders';
+const VIEW_KEY = 'miyapad-sessions-view';
+const PANE_WIDTH_KEY = 'miyapad-sessions-paneWidth';
 /** Letters typed on the list less than this far apart are one type-ahead search. */
 const TYPE_AHEAD_MS = 500;
+/** A folder's key where a session's id would go: in the drop targets, the pane and the icon view. */
+const FOLDER_KEY = 'folder:';
+/** How much of the end of a session's text the pane shows. */
+const PREVIEW_CHARS = 300;
+/** Stepping through the list faster than this reads no text from the database on the way. */
+const PREVIEW_DELAY_MS = 150;
+
+const isFolderKey = (key: string) => key.startsWith(FOLDER_KEY);
+const folderOfKey = (key: string) => key.slice(FOLDER_KEY.length);
+
+/** The end of a session's text; the pane's CSS collapses its line breaks. */
+function promptTail(prompt: unknown) {
+	const text = Array.isArray(prompt) ? (prompt as PromptChunk[]).map(c => c.content).join('') : '';
+	return text.length > PREVIEW_CHARS ? `…${text.slice(-PREVIEW_CHARS)}` : text;
+}
 
 function loadCollapsed(): Set<string> {
 	try {
@@ -152,8 +170,52 @@ export function SessionsModal({ isOpen, closeModal, sessionStorage, cancel, open
 	const [folderEdit, setFolderEdit] = useState<{ ids: string[]; value: string } | null>(null);
 	const [rowMenu, setRowMenu] = useState<{ id: string; x: number; y: number } | null>(null);
 	const [showTrash, setShowTrash] = useState(false);
-	const listRef = useRef<HTMLTableSectionElement>(null);
+	const [view, setViewState] = useState<SessionsView>(() => localStorage.getItem(VIEW_KEY) === 'icons' ? 'icons' : 'list');
+	/** What the pane shows: a session's id or a folder's key. Unset, or gone, it shows the open session. */
+	const [previewKey, setPreviewKey] = useState<string | null>(null);
+	/** The folder the icon view is inside. */
+	const [openFolder, setOpenFolder] = useState<string | undefined>(undefined);
+	/** The text of a session that is not open, read from the database; null when that failed. */
+	const [loadedText, setLoadedText] = useState<{ id: string; text: string | null } | null>(null);
+	const listRef = useRef<HTMLDivElement>(null);
 	const typeAhead = useRef({ text: '', at: 0 });
+	/** Whether the item being clicked was already in the pane before the press focused it. */
+	const previewedOnPress = useRef(false);
+	/** An item to focus once the icon view has gone into or out of a folder. */
+	const focusAfterRender = useRef<string | null>(null);
+
+	/** In pixels; unset, the CSS default. */
+	const [paneWidth, setPaneWidthState] = useState(() => Number(localStorage.getItem(PANE_WIDTH_KEY)) || null);
+
+	const setView = (v: SessionsView) => { setViewState(v); localStorage.setItem(VIEW_KEY, v); };
+
+	/** The CSS keeps the pane and the list within bounds, so a width dragged past them is stored as it is. */
+	const setPaneWidth = (px: number) => {
+		const width = Math.round(px);
+		setPaneWidthState(width);
+		localStorage.setItem(PANE_WIDTH_KEY, String(width));
+	};
+
+	/** The pane runs from the divider to the right edge, so its width follows the pointer. */
+	const dragDivider = (e: PointerEvent<HTMLElement>) => {
+		e.preventDefault();
+		const divider = e.currentTarget;
+		// Measured from where the divider was grabbed, so it doesn't jump under the pointer.
+		const edge = divider.parentElement!.getBoundingClientRect().right - (divider.getBoundingClientRect().right - e.clientX);
+		const move = (ev: globalThis.PointerEvent) => setPaneWidth(edge - ev.clientX);
+		divider.setPointerCapture(e.pointerId);
+		divider.addEventListener('pointermove', move);
+		divider.addEventListener('lostpointercapture', () => divider.removeEventListener('pointermove', move), { once: true });
+	};
+
+	/** Left widens the pane, as it moves the divider left. Steps from the width shown, which the CSS may have clamped. */
+	const dividerKeyDown = (e: KeyboardEvent<HTMLElement>) => {
+		const step = e.key === 'ArrowLeft' ? 16 : e.key === 'ArrowRight' ? -16 : 0;
+		const pane = e.currentTarget.nextElementSibling;
+		if (!step || !(pane instanceof HTMLElement)) return;
+		e.preventDefault();
+		setPaneWidth(pane.offsetWidth + step);
+	};
 
 	const setSortBy = (v: string) => { setSortByState(v); localStorage.setItem('miyapad-sessions-sortBy', v); };
 	const setSortAsc = (v: boolean | ((prev: boolean) => boolean)) => {
@@ -197,6 +259,8 @@ export function SessionsModal({ isOpen, closeModal, sessionStorage, cancel, open
 			setFolderEdit(null);
 			setRowMenu(null);
 			setShowTrash(false);
+			setPreviewKey(null);
+			setOpenFolder(undefined);
 			typeAhead.current = { text: '', at: 0 };
 			setSortByState(localStorage.getItem('miyapad-sessions-sortBy') || 'modified');
 			setSortAscState(localStorage.getItem('miyapad-sessions-sortAsc') === 'true');
@@ -279,10 +343,50 @@ export function SessionsModal({ isOpen, closeModal, sessionStorage, cancel, open
 		return selectedIds.filter(id => !shown.has(id)).length;
 	}, [selectedIds, sortedSessions]);
 
-	/** Top to bottom as the list shows them, for shift-click ranges. */
-	const visibleIds = useMemo(() => listItems.flatMap(({ folder, entries }) =>
-		folder && !filtering && collapsed.has(folder) ? [] : entries.map(([id]) => id)),
-		[listItems, collapsed, filtering]);
+	/** A filter shows every match side by side, and a folder that has since emptied is left. */
+	const inFolder = view === 'icons' && !filtering && openFolder !== undefined && folderNames.includes(openFolder) ? openFolder : undefined;
+
+	/**
+	 * What the arrow keys step through, in the order shown: the list's rows, or the icon view's
+	 * tiles, where a folder is a tile of its own.
+	 */
+	const navKeys = useMemo(() => view === 'list'
+		? listItems.flatMap(({ folder, entries }) => folder && !filtering && collapsed.has(folder) ? [] : entries.map(([id]) => id))
+		: filtering ? sortedSessions.map(([id]) => id)
+		: inFolder !== undefined ? sortedSessions.filter(([, s]) => s.folder === inFolder).map(([id]) => id)
+		: listItems.map(({ folder, entries }) => folder ? FOLDER_KEY + folder : entries[0][0]),
+		[view, listItems, sortedSessions, collapsed, filtering, inFolder]);
+
+	/** The sessions on screen, for shift-click runs and Select all. */
+	const visibleIds = useMemo(() => navKeys.filter(key => !isFolderKey(key)), [navKeys]);
+
+	const openId = String(sessionStorage.selectedSession);
+	const previewId = previewKey !== null && (isFolderKey(previewKey) ? folderNames.includes(folderOfKey(previewKey)) : sessionStorage.sessions[previewKey])
+		? previewKey : openId;
+	const previewSession: SessionData | undefined = sessionStorage.sessions[previewId];
+
+	// The open session's text is in memory; any other's is read when it has been in the pane a moment.
+	useEffect(() => {
+		if (!isOpen || !previewSession || previewId === openId) return;
+		let stale = false;
+		const timer = setTimeout(() => loadRecord(previewId).then(
+			record => { if (!stale) setLoadedText({ id: previewId, text: promptTail(record?.prompt) }); },
+			(e: unknown) => {
+				console.error('Failed to read the session for the pane:', e);
+				if (!stale) setLoadedText({ id: previewId, text: null });
+			}), PREVIEW_DELAY_MS);
+		return () => { stale = true; clearTimeout(timer); };
+	}, [isOpen, previewId, openId]);
+
+	/** Undefined while it is being read. */
+	const previewText = previewId === openId ? promptTail(previewSession?.prompt)
+		: loadedText?.id === previewId ? loadedText.text : undefined;
+
+	useEffect(() => {
+		if (focusAfterRender.current === null) return;
+		focusItem(focusAfterRender.current);
+		focusAfterRender.current = null;
+	});
 
 	/** Adds the rows on screen to the selection: like shift-click, none from collapsed folders. */
 	const selectAll = () => setSelected(new Set([...selected, ...visibleIds]));
@@ -304,16 +408,21 @@ export function SessionsModal({ isOpen, closeModal, sessionStorage, cancel, open
 	const folderIds = (folder: string) =>
 		Object.keys(sessionStorage.sessions).filter(id => sessionStorage.sessions[id].folder === folder);
 
-	/** Puts sessions in a new folder and opens its name for editing. */
+	/** Puts sessions in a new folder and opens its name for editing in the pane. */
 	const createFolder = async (ids: string[]) => {
 		const taken = new Set(Object.values(sessionStorage.sessions).map(s => s.folder));
 		const base = t('sessions.newFolder');
 		let name = base;
 		for (let n = 2; taken.has(name); n++) name = `${base} ${n}`;
 		setFolderCollapsed(name, false);
-		setRenameFolderValue(name);
-		setRenamingFolder(name);
+		setPreviewKey(FOLDER_KEY + name);
+		startRenameFolder(name);
 		await sessionStorage.setFolder(ids, name);
+	};
+
+	const startRenameFolder = (folder: string) => {
+		setRenameFolderValue(folder);
+		setRenamingFolder(folder);
 	};
 
 	const renameFolder = async () => {
@@ -321,7 +430,10 @@ export function SessionsModal({ isOpen, closeModal, sessionStorage, cancel, open
 		const to = resolveFolder(renameFolderValue, from);
 		setRenamingFolder(undefined);
 		// Renaming onto another folder's name merges the two.
-		if (from !== undefined && to && to !== from) await sessionStorage.setFolder(folderIds(from), to);
+		if (from !== undefined && to && to !== from) {
+			setPreviewKey(key => key === FOLDER_KEY + from ? FOLDER_KEY + to : key);
+			await sessionStorage.setFolder(folderIds(from), to);
+		}
 	};
 
 	const removeFolder = async (folder: string) => {
@@ -399,71 +511,118 @@ ${t('sessions.removeFolderConfirm')}`)) return;
 		closeModal();
 	};
 
-	/** Picks out the rows on screen from one session to another, as shift-click and shift-arrows do. */
-	const pickRun = (fromId: string, toId: string) => {
-		const from = visibleIds.indexOf(fromId);
-		const to = visibleIds.indexOf(toId);
-		if (from >= 0 && to >= 0) setSelected(new Set(visibleIds.slice(Math.min(from, to), Math.max(from, to) + 1)));
+	/** Picks out the sessions on screen from one item to another, as shift-click and shift-arrows do. */
+	const pickRun = (fromKey: string, toKey: string) => {
+		const from = navKeys.indexOf(fromKey);
+		const to = navKeys.indexOf(toKey);
+		if (from >= 0 && to >= 0) setSelected(new Set(navKeys.slice(Math.min(from, to), Math.max(from, to) + 1).filter(key => !isFolderKey(key))));
 	};
 
-	const focusRow = (sessionId: string | undefined) => {
-		if (sessionId !== undefined) listRef.current?.querySelector<HTMLElement>(`[data-session-id="${sessionId}"]`)?.focus();
+	const focusItem = (key: string | undefined) => {
+		// Not a selector: a folder's name can hold anything.
+		if (key !== undefined) [...listRef.current?.querySelectorAll<HTMLElement>('[data-key]') ?? []].find(el => el.dataset.key === key)?.focus();
 	};
 
-	/** Ctrl-click picks rows out, shift-click extends the run; a plain click opens the session. */
-	const rowClick = (e: MouseEvent, sessionId: string) => {
-		if (e.ctrlKey || e.metaKey) {
-			const next = new Set(selected);
-			if (!next.delete(sessionId)) next.add(sessionId);
-			setSelected(next);
-			setAnchorId(sessionId);
+	const enterFolder = (folder: string) => {
+		focusAfterRender.current = sortedSessions.find(([, s]) => s.folder === folder)?.[0] ?? null;
+		setOpenFolder(folder);
+	};
+
+	const leaveFolder = () => {
+		if (inFolder !== undefined) focusAfterRender.current = FOLDER_KEY + inFolder;
+		setOpenFolder(undefined);
+	};
+
+	const openItem = (key: string) => isFolderKey(key) ? enterFolder(folderOfKey(key)) : switchSession(key);
+
+	/** Ctrl-click picks sessions out and shift-click extends the run. A plain click shows the item in the pane, and a second one opens it. */
+	const itemClick = (e: MouseEvent, key: string) => {
+		if ((e.ctrlKey || e.metaKey) && !isFolderKey(key)) {
+			toggleSelected(key);
 		} else if (e.shiftKey) {
-			pickRun(anchorId ?? sessionId, sessionId);
-		} else {
-			switchSession(sessionId);
+			pickRun(anchorId ?? key, key);
+		} else if (previewedOnPress.current) {
+			openItem(key);
 		}
 	};
 
 	/**
-	 * Keys on a focused row. Enter or Space opens it. Arrows, Home and End move between the rows
-	 * on screen, and with Shift pick out the run from the anchor, like shift-click. Typing the start
-	 * of a name jumps to the next session it matches. Keys pressed in the row's own inputs and
-	 * buttons are theirs.
+	 * Keys on a focused row or tile. Enter or Space opens it. Arrows, Home and End move between the
+	 * items on screen, a tile's row at a time for Up and Down, and with Shift pick out the run from
+	 * the anchor, like shift-click. Backspace leaves the folder the icon view is in. Typing the start
+	 * of a name jumps to the next item it matches. Keys pressed in the item's own buttons are theirs.
 	 */
-	const rowKeyDown = (e: KeyboardEvent, sessionId: string) => {
+	const itemKeyDown = (e: KeyboardEvent, key: string) => {
 		if (e.target !== e.currentTarget || e.ctrlKey || e.metaKey || e.altKey) return;
-		const at = visibleIds.indexOf(sessionId);
-		const moves: Record<string, number> = { ArrowDown: at + 1, ArrowUp: at - 1, Home: 0, End: visibleIds.length - 1 };
+		const at = navKeys.indexOf(key);
+		const grid = listRef.current?.querySelector('.sessions-grid');
+		const across = grid ? getComputedStyle(grid).gridTemplateColumns.split(' ').length : 1;
+		const moves: Record<string, number> = { ArrowDown: at + across, ArrowUp: at - across, Home: 0, End: navKeys.length - 1 };
+		if (grid) Object.assign(moves, { ArrowRight: at + 1, ArrowLeft: at - 1 });
 		const ahead = typeAhead.current;
 		const now = Date.now();
 		const recent = now - ahead.at < TYPE_AHEAD_MS;
-		// A space right after a letter is part of the name being typed; on its own it opens the row.
+		// A space right after a letter is part of the name being typed; on its own it opens the item.
 		const typed = e.key.length === 1 && (e.key !== ' ' || recent);
 		let to: string | undefined;
 		if (typed) {
 			ahead.text = (recent ? ahead.text : '') + e.key.toLowerCase();
 			ahead.at = now;
-			to = typeAheadMatch(visibleIds, id => sessionStorage.sessions[id]?.name ?? '', at, ahead.text);
+			to = typeAheadMatch(navKeys, k => isFolderKey(k) ? folderOfKey(k) : sessionStorage.sessions[k]?.name ?? '', at, ahead.text);
 		} else if (e.key === 'Enter' || e.key === ' ') {
 			e.preventDefault();
-			switchSession(sessionId);
+			openItem(key);
+			return;
+		} else if (e.key === 'Backspace' && inFolder !== undefined) {
+			e.preventDefault();
+			leaveFolder();
 			return;
 		} else if (Object.hasOwn(moves, e.key)) {
-			to = visibleIds[moves[e.key]];
+			to = navKeys[moves[e.key]];
 		} else {
 			return;
 		}
 		e.preventDefault();
 		if (to === undefined) return;
 		if (e.shiftKey && !typed) {
-			const anchor = anchorId !== null && visibleIds.includes(anchorId) ? anchorId : sessionId;
+			const anchor = anchorId !== null && navKeys.includes(anchorId) ? anchorId : key;
 			setAnchorId(anchor);
 			pickRun(anchor, to);
 		} else {
 			setAnchorId(to);
 		}
-		focusRow(to);
+		focusItem(to);
 	};
+
+	/** What a row and a tile share: focusing one shows it in the pane, and clicks and keys pick or open it. */
+	const itemProps = (key: string) => ({
+		tabIndex: 0,
+		'data-key': key,
+		onMouseDown: () => { previewedOnPress.current = previewId === key; },
+		onFocus: () => setPreviewKey(key),
+		onClick: (e: MouseEvent) => itemClick(e, key),
+		onKeyDown: (e: KeyboardEvent) => itemKeyDown(e, key),
+	});
+
+	/** A session's row or tile also drags, takes drops, has a menu, and says when it is the open one. */
+	const sessionProps = (sessionId: string, session: SessionData) => ({
+		...itemProps(sessionId),
+		draggable: true,
+		onDragStart: (e: DragEvent) => startDrag(e, sessionId),
+		onDragEnd: endDrag,
+		...(draggedIds.includes(sessionId) || (session.folder && session.folder === draggedFolder) ? {} : dropHandlers(sessionId, (ids) =>
+			session.folder ? sessionStorage.setFolder(ids, session.folder) : createFolder([...new Set([sessionId, ...ids])]))),
+		'aria-current': sessionId === openId || undefined,
+		onContextMenu: (e: MouseEvent) => { e.preventDefault(); setRowMenu({ id: sessionId, x: e.clientX, y: e.clientY }); },
+	});
+
+	const itemClasses = (key: string) => [
+		key === openId && 'selected',
+		key === previewId && 'previewed',
+		selected.has(key) && 'picked',
+		dropTarget === key && 'drop-target',
+		draggedIds.includes(key) && 'dragging',
+	].filter(Boolean).join(' ');
 
 	/** History and statistics read the open session, so the row's is opened first. */
 	const openForSession = async (sessionId: string, open: () => void) => {
@@ -493,10 +652,14 @@ ${t('sessions.removeFolderConfirm')}`)) return;
 		setIsCreating(true);
 	};
 
-	/** A new session rarely matches the filters, and it would vanish from the list as it's opened. */
+	/**
+	 * A new session rarely matches the filters, and it would vanish from the list as it's opened.
+	 * The pane goes back to showing the open session, which is the new one.
+	 */
 	const clearFilters = () => {
 		setSearchQuery('');
 		setTagFilterQuery('');
+		setPreviewKey(null);
 	};
 
 	const createSession = async () => {
@@ -580,11 +743,14 @@ ${t('sessions.removeFolderConfirm')}`)) return;
 		if (confirm(t('sessions.exportAllWarning'))) await exportSessions(Object.keys(sessionStorage.sessions));
 	};
 
-	/** Opens the last clone made. */
+	/** Opens the last clone made, and shows it in the pane. */
 	const cloneSessions = async (ids: string[]) => {
 		let newId: number | undefined;
 		for (const sessionId of ids) newId = await sessionStorage.createSessionFromObject(stringifyAll(await loadRecord(sessionId)), true);
-		if (newId !== undefined) await sessionStorage.switchSession(newId);
+		if (newId !== undefined) {
+			await sessionStorage.switchSession(newId);
+			setPreviewKey(null);
+		}
 	};
 
 	function handleKeyDown(sessionId: string | number | undefined, e: KeyboardEvent<HTMLInputElement>) {
@@ -611,21 +777,23 @@ ${t('sessions.removeFolderConfirm')}`)) return;
 	 */
 	const lastSession = Object.keys(sessionStorage.sessions).length <= 1;
 
-	/** What a row can do beyond its buttons: the actions that used to sit in the toolbar. */
+	const toggleSelected = (sessionId: string) => {
+		const next = new Set(selected);
+		if (!next.delete(sessionId)) next.add(sessionId);
+		setSelected(next);
+		setAnchorId(sessionId);
+	};
+
+	/** The right-click menu: some of the pane's actions, without going through the pane. */
 	const rowMenuItems = (sessionId: string): ContextMenuItem[] => {
-		// Like the row's buttons, these act on the whole selection when the row is part of it.
+		// Like the selection bar, these act on the whole selection when the row is part of it.
 		const ids = targetIds(sessionId);
 		const count = ids.length > 1 ? ` (${ids.length})` : '';
 		return [
 			{
 				label: selected.has(sessionId) ? t('sessions.deselect') : t('sessions.select'),
 				disabled: false,
-				action: () => {
-					const next = new Set(selected);
-					if (!next.delete(sessionId)) next.add(sessionId);
-					setSelected(next);
-					setAnchorId(sessionId);
-				},
+				action: () => toggleSelected(sessionId),
 			},
 			{ label: t('sessions.export') + count, disabled, action: () => exportSessions(ids) },
 			{ label: t('sessions.clone') + count, disabled, action: () => cloneSessions(ids) },
@@ -637,18 +805,8 @@ ${t('sessions.removeFolderConfirm')}`)) return;
 
 	const renderSession = ([sessionId, session]: SessionEntry) => html`
 		<tr key=${sessionId}
-			className="sessions-modal-row ${String(sessionStorage.selectedSession) === sessionId ? 'selected' : ''} ${selected.has(sessionId) ? 'picked' : ''} ${session.folder ? 'sessions-modal-row-in-folder' : ''} ${dropTarget === sessionId ? 'drop-target' : ''} ${draggedIds.includes(sessionId) ? 'dragging' : ''}"
-			draggable=${renamingId != sessionId && editingTagsId !== sessionId}
-			onDragStart=${(e: DragEvent) => startDrag(e, sessionId)}
-			onDragEnd=${endDrag}
-			...${draggedIds.includes(sessionId) || (session.folder && session.folder === draggedFolder) ? {} : dropHandlers(sessionId, (ids) =>
-				session.folder ? sessionStorage.setFolder(ids, session.folder) : createFolder([...new Set([sessionId, ...ids])]))}
-			tabIndex="0"
-			data-session-id=${sessionId}
-			aria-current=${String(sessionStorage.selectedSession) === sessionId || undefined}
-			onClick=${(e: MouseEvent) => rowClick(e, sessionId)}
-			onKeyDown=${(e: KeyboardEvent) => rowKeyDown(e, sessionId)}
-			onContextMenu=${(e: MouseEvent) => { e.preventDefault(); setRowMenu({ id: sessionId, x: e.clientX, y: e.clientY }); }}>
+			className="sessions-modal-row ${itemClasses(sessionId)} ${session.folder ? 'sessions-modal-row-in-folder' : ''}"
+			...${sessionProps(sessionId, session)}>
 			<td className="sessions-col-star" onClick=${(e: MouseEvent) => e.stopPropagation()}>
 				<button className="sessions-action-btn"
 					title=${session.pinned ? t('sessions.unpinSession') : t('sessions.pinSession')}
@@ -657,92 +815,12 @@ ${t('sessions.removeFolderConfirm')}`)) return;
 				</button>
 			</td>
 			<td className="sessions-col-name">
-				${renamingId == sessionId ? html`
-					<input
-						type="text"
-						className="sessions-modal-inline-input"
-						value=${renameSessionName}
-						onChange=${(e: ChangeEvent<HTMLInputElement>) => setRenameSessionName(e.target.value)}
-						onKeyDown=${(e: KeyboardEvent<HTMLInputElement>) => handleKeyDown(sessionId, e)}
-						onClick=${(e: MouseEvent) => e.stopPropagation()}
-						autoFocus
-					/>
-				` : html`
-					<div className="sessions-modal-name-wrapper">
-						<span className="sessions-modal-name" title=${session.name}>${session.name}</span>
-						${editingTagsId === sessionId ? html`<${Fragment}>
-							<input
-								type="text"
-								className="sessions-modal-tag-input"
-								value=${editTagsValue}
-								onChange=${(e: ChangeEvent<HTMLInputElement>) => setEditTagsValue(e.target.value)}
-								onKeyDown=${(e: KeyboardEvent<HTMLInputElement>) => {
-									if (e.key === 'Enter') {
-										sessionStorage.setTags(sessionId, editTagsValue);
-										setEditingTagsId(undefined);
-									} else if (e.key === 'Escape') {
-										setEditingTagsId(undefined);
-									}
-									e.stopPropagation();
-								}}
-								onBlur=${() => {
-									sessionStorage.setTags(sessionId, editTagsValue);
-									setEditingTagsId(undefined);
-								}}
-								onClick=${(e: MouseEvent) => e.stopPropagation()}
-								autoFocus
-								list="sessions-tag-names"
-								title=${t('sessions.tagsHint')}/>
-							<datalist id="sessions-tag-names">
-								${tagSuggestions(editTagsValue, tagNames).map(s => html`<option key=${s} value=${s}/>`)}
-							</datalist>
-						<//>` : html`
-							<span className="sessions-modal-tags ${session.tags && session.tags.length > 0 ? '' : 'sessions-modal-tags-empty'}"
-								title=${session.tags && session.tags.length > 0 ? session.tags.join(', ') : t('sessions.tagsHint')}
-								onClick=${(e: MouseEvent) => {
-									e.stopPropagation();
-									setEditTagsValue(session.tags ? session.tags.join(', ') : '');
-									setEditingTagsId(sessionId);
-								}}>
-								${session.tags && session.tags.length > 0 ? session.tags.join(', ') : t('sessions.addTags')}
-							</span>
-						`}
-					</div>
-				`}
-			</td>
-			<td className="sessions-col-modified" title=${formatDate(session.modified)}>${formatRelative(session.modified)}</td>
-			<td className="sessions-col-created" title=${formatDate(session.created)}>${formatRelative(session.created)}</td>
-			<td className="sessions-col-actions" onClick=${(e: MouseEvent) => e.stopPropagation()}>
-				<div className="sessions-col-actions-inner">
-					${renamingId == sessionId ? html`<${Fragment}>
-						<button className="sessions-action-btn" onClick=${() => renameSession(sessionId)}><${SVG_Confirm}/></button>
-						<button className="sessions-action-btn" onClick=${() => setRenamingId(undefined)}><${SVG_Cancel}/></button>
-					<//>` : html`<${Fragment}>
-						<button className="sessions-action-btn"
-							title=${t('sessions.moveToFolder')}
-							onClick=${() => setFolderEdit({ ids: targetIds(sessionId), value: session.folder ?? '' })}>
-							<${SVG_Folder}/>
-						</button>
-						<button className="sessions-action-btn" disabled=${disabled}
-							title=${t('sessions.renameSession')}
-							onClick=${() => startRenameSession(sessionId, session.name ?? '')}>
-							<${SVG_Rename}/>
-						</button>
-						<button className="sessions-action-btn" disabled=${disabled || lastSession}
-							title=${lastSession ? t('sessions.cantDeleteLast')
-								: targetIds(sessionId).length > 1 ? `${t('sessions.delete')}: ${t('sessions.selectedCount', { count: targetIds(sessionId).length })}`
-								: t('sessions.deleteSession')}
-							onClick=${() => trashSessions(targetIds(sessionId))}>
-							<${SVG_Trash}/>
-						</button>
-						<button className="sessions-action-btn sessions-more-btn"
-							title=${t('sessions.moreActions')}
-							onClick=${(e: MouseEvent) => setRowMenu({ id: sessionId, x: e.clientX, y: e.clientY })}>
-							⋯
-						</button>
-					<//>`}
+				<div className="sessions-modal-name-wrapper">
+					<span className="sessions-modal-name" title=${session.name}>${session.name}</span>
+					<span className="sessions-modal-tags" title=${session.tags?.join(', ')}>${session.tags?.join(', ') || ' '}</span>
 				</div>
 			</td>
+			<td className="sessions-col-modified" title=${formatDate(session.modified)}>${formatRelative(session.modified)}</td>
 		</tr>
 	`;
 
@@ -761,13 +839,17 @@ ${t('sessions.removeFolderConfirm')}`)) return;
 
 	const ariaSort = (key: string) => sortBy === key ? (sortAsc ? 'ascending' : 'descending') : undefined;
 
+	/** Clicking a folder row opens or closes it, and shows the folder in the pane. */
 	const renderFolder = (folder: string, entries: SessionEntry[]) => {
 		const open = filtering || !collapsed.has(folder);
-		const target = `folder:${folder}`;
+		const target = FOLDER_KEY + folder;
 		return html`<${Fragment} key=${target}>
-			<tr className="sessions-modal-row sessions-modal-folder-row ${dropTarget === target ? 'drop-target' : ''}"
+			<tr className="sessions-modal-row sessions-modal-folder-row ${itemClasses(target)}"
 				...${draggedFolder === folder ? {} : dropHandlers(target, (ids) => sessionStorage.setFolder(ids, folder))}
-				onClick=${() => filtering || setFolderCollapsed(folder, open)}>
+				onClick=${() => {
+					setPreviewKey(target);
+					if (!filtering) setFolderCollapsed(folder, open);
+				}}>
 				<td className="sessions-col-star">
 					<button className="sessions-action-btn sessions-folder-toggle ${open ? 'open' : ''}"
 						aria-expanded=${open}
@@ -777,53 +859,184 @@ ${t('sessions.removeFolderConfirm')}`)) return;
 					</button>
 				</td>
 				<td className="sessions-col-name">
-					${renamingFolder === folder ? html`
-						<input
-							type="text"
-							className="sessions-modal-inline-input"
-							value=${renameFolderValue}
-							onChange=${(e: ChangeEvent<HTMLInputElement>) => setRenameFolderValue(e.target.value)}
-							onKeyDown=${(e: KeyboardEvent<HTMLInputElement>) => {
-								if (e.key === 'Enter') {
-									renameFolder();
-								} else if (e.key === 'Escape') {
-									e.stopPropagation();
-									setRenamingFolder(undefined);
-								}
-							}}
-							onFocus=${(e: ChangeEvent<HTMLInputElement>) => e.target.select()}
-							onClick=${(e: MouseEvent) => e.stopPropagation()}
-							autoFocus
-						/>
-					` : html`
-						<span className="sessions-modal-name sessions-folder-name" title=${folder}>
-							${folder} <span className="sessions-folder-count">${entries.length}</span>
-						</span>
-					`}
+					<span className="sessions-modal-name sessions-folder-name" title=${folder}>
+						${folder} <span className="sessions-folder-count">${entries.length}</span>
+					</span>
 				</td>
 				<td className="sessions-col-modified"></td>
-				<td className="sessions-col-created"></td>
-				<td className="sessions-col-actions" onClick=${(e: MouseEvent) => e.stopPropagation()}>
-					<div className="sessions-col-actions-inner">
-						${renamingFolder === folder ? html`<${Fragment}>
-							<button className="sessions-action-btn" onClick=${renameFolder}><${SVG_Confirm}/></button>
-							<button className="sessions-action-btn" onClick=${() => setRenamingFolder(undefined)}><${SVG_Cancel}/></button>
-						<//>` : html`<${Fragment}>
-							<button className="sessions-action-btn" title=${t('sessions.renameFolder')}
-								onClick=${() => { setRenameFolderValue(folder); setRenamingFolder(folder); }}>
-								<${SVG_Rename}/>
-							</button>
-							<button className="sessions-action-btn" title=${t('sessions.removeFolder')}
-								onClick=${() => removeFolder(folder)}>
-								<${SVG_Close}/>
-							</button>
-						<//>`}
-					</div>
-				</td>
 			</tr>
 			${open && entries.map(renderSession)}
 		<//>`;
 	};
+
+	const renderTile = (key: string) => {
+		if (isFolderKey(key)) {
+			const folder = folderOfKey(key);
+			return html`
+				<div key=${key} className="sessions-modal-row sessions-tile ${itemClasses(key)}"
+					...${itemProps(key)}
+					...${draggedFolder === folder ? {} : dropHandlers(key, (ids) => sessionStorage.setFolder(ids, folder))}>
+					<span className="sessions-tile-icon"><${SVG_Folder}/></span>
+					<span className="sessions-modal-name sessions-folder-name" title=${folder}>${folder}</span>
+					<span className="sessions-folder-count">${folderIds(folder).length}</span>
+				</div>`;
+		}
+		const session = sessionStorage.sessions[key];
+		return html`
+			<div key=${key} className="sessions-modal-row sessions-tile ${itemClasses(key)}" ...${sessionProps(key, session)}>
+				<span className="sessions-tile-icon"><${SVG_Document}/></span>
+				${session.pinned && html`<span className="sessions-tile-pin" title=${t('sessions.pinned')}><${SVG_Star}/></span>`}
+				<span className="sessions-modal-name" title=${session.name}>${session.name}</span>
+			</div>`;
+	};
+
+	/** Folders are tiles of their own, gone into with a click on an open one; a filter shows every match side by side. */
+	const renderIcons = () => html`
+		${inFolder !== undefined && html`
+			<div className="sessions-crumbs">
+				<button className="sessions-sort-header" onClick=${leaveFolder}>${t('sessions.title')}</button>
+				<span aria-hidden="true">›</span>
+				<span className="sessions-folder-name">${inFolder}</span>
+			</div>
+		`}
+		<div className="sessions-grid">${navKeys.map(renderTile)}</div>
+		${navKeys.length === 0 && html`<p className="sessions-modal-empty">${t('sessions.noMatches')}</p>`}
+	`;
+
+	const renderTags = (sessionId: string, session: SessionData) => editingTagsId === sessionId ? html`<${Fragment}>
+		<input
+			type="text"
+			className="sessions-modal-tag-input"
+			value=${editTagsValue}
+			onChange=${(e: ChangeEvent<HTMLInputElement>) => setEditTagsValue(e.target.value)}
+			onKeyDown=${(e: KeyboardEvent<HTMLInputElement>) => {
+				if (e.key === 'Enter') {
+					sessionStorage.setTags(sessionId, editTagsValue);
+					setEditingTagsId(undefined);
+				} else if (e.key === 'Escape') {
+					setEditingTagsId(undefined);
+				}
+				e.stopPropagation();
+			}}
+			onBlur=${() => {
+				sessionStorage.setTags(sessionId, editTagsValue);
+				setEditingTagsId(undefined);
+			}}
+			autoFocus
+			list="sessions-tag-names"
+			aria-label=${t('sessions.tags')}
+			title=${t('sessions.tagsHint')}/>
+		<datalist id="sessions-tag-names">
+			${tagSuggestions(editTagsValue, tagNames).map(s => html`<option key=${s} value=${s}/>`)}
+		</datalist>
+	<//>` : html`
+		<button className="sessions-pane-tags" title=${t('sessions.tagsHint')}
+			onClick=${() => {
+				setEditTagsValue(session.tags ? session.tags.join(', ') : '');
+				setEditingTagsId(sessionId);
+			}}>
+			${session.tags?.length ? session.tags.map(tag => html`<span key=${tag} className="sessions-pane-tag">${tag}</span>`)
+				: html`<span className="sessions-modal-tags-empty">${t('sessions.addTags')}</span>`}
+		</button>
+	`;
+
+	const renderSessionPane = (sessionId: string, session: SessionData) => html`
+		<div>
+			${renamingId == sessionId ? html`
+				<div className="sessions-pane-rename">
+					<input
+						type="text"
+						className="sessions-modal-inline-input"
+						aria-label=${t('sessions.renameSession')}
+						value=${renameSessionName}
+						onChange=${(e: ChangeEvent<HTMLInputElement>) => setRenameSessionName(e.target.value)}
+						onKeyDown=${(e: KeyboardEvent<HTMLInputElement>) => handleKeyDown(sessionId, e)}
+						autoFocus/>
+					<button className="sessions-action-btn" onClick=${() => renameSession(sessionId)}><${SVG_Confirm}/></button>
+					<button className="sessions-action-btn" onClick=${() => setRenamingId(undefined)}><${SVG_Cancel}/></button>
+				</div>
+			` : html`<div className="sessions-pane-name">${session.name}</div>`}
+			${renderTags(sessionId, session)}
+		</div>
+		<div className="sessions-pane-text">
+			${previewText === undefined ? '…'
+				: previewText === null ? t('sessions.previewFailed')
+				: previewText || html`<i>${t('sessions.emptySession')}</i>`}
+		</div>
+		<dl className="sessions-pane-meta">
+			${session.folder && html`<dt>${t('sessions.folder')}</dt><dd>${session.folder}</dd>`}
+			<dt>${t('statistics.modified')}</dt>
+			<dd>${formatRelative(session.modified)}<br/><small>${formatDate(session.modified)}</small></dd>
+			<dt>${t('statistics.created')}</dt>
+			<dd>${formatDate(session.created)}</dd>
+			<dt>${t('statistics.generations')}</dt>
+			<dd>${(session.stats?.generations ?? 0).toLocaleString()}</dd>
+			<dt>${t('statistics.tokensGenerated')}</dt>
+			<dd>${(session.stats?.genTokens ?? 0).toLocaleString()}</dd>
+		</dl>
+		${sessionId !== openId && html`
+			<button className="sessions-pane-open" onClick=${() => switchSession(sessionId)}>${t('sessions.open')}</button>
+		`}
+		<div className="sessions-pane-actions">
+			<button onClick=${() => sessionStorage.togglePinSession(sessionId)}>${session.pinned ? t('sessions.unpin') : t('sessions.pin')}</button>
+			<button disabled=${disabled} onClick=${() => startRenameSession(sessionId, session.name ?? '')}>${t('sessions.rename')}</button>
+			<button onClick=${() => setFolderEdit({ ids: [sessionId], value: session.folder ?? '' })}>${t('sessions.moveToFolder')}</button>
+			<button onClick=${() => toggleSelected(sessionId)}>${selected.has(sessionId) ? t('sessions.deselect') : t('sessions.select')}</button>
+			<button disabled=${disabled} onClick=${() => openForSession(sessionId, openHistory)}>${t('sessions.history')}</button>
+			<button disabled=${disabled} onClick=${() => openForSession(sessionId, openStatistics)}>${t('sessions.statistics')}</button>
+			<button disabled=${disabled} onClick=${() => exportSessions([sessionId])}>${t('sessions.export')}</button>
+			<button disabled=${disabled} onClick=${() => cloneSessions([sessionId])}>${t('sessions.clone')}</button>
+			<button disabled=${disabled || lastSession}
+				title=${lastSession ? t('sessions.cantDeleteLast') : t('sessions.deleteSession')}
+				onClick=${() => trashSessions([sessionId])}>${t('sessions.delete')}</button>
+		</div>
+	`;
+
+	const renderFolderPane = (folder: string) => html`
+		${renamingFolder === folder ? html`
+			<div className="sessions-pane-rename">
+				<input
+					type="text"
+					className="sessions-modal-inline-input"
+					aria-label=${t('sessions.renameFolder')}
+					value=${renameFolderValue}
+					onChange=${(e: ChangeEvent<HTMLInputElement>) => setRenameFolderValue(e.target.value)}
+					onKeyDown=${(e: KeyboardEvent<HTMLInputElement>) => {
+						if (e.key === 'Enter') {
+							renameFolder();
+						} else if (e.key === 'Escape') {
+							e.stopPropagation();
+							setRenamingFolder(undefined);
+						}
+					}}
+					onFocus=${(e: ChangeEvent<HTMLInputElement>) => e.target.select()}
+					autoFocus/>
+				<button className="sessions-action-btn" onClick=${renameFolder}><${SVG_Confirm}/></button>
+				<button className="sessions-action-btn" onClick=${() => setRenamingFolder(undefined)}><${SVG_Cancel}/></button>
+			</div>
+		` : html`<div className="sessions-pane-name">${folder}</div>`}
+		${view === 'icons' && !filtering && html`
+			<button className="sessions-pane-open" onClick=${() => enterFolder(folder)}>${t('sessions.openFolder')}</button>
+		`}
+		<div className="sessions-pane-actions">
+			<button onClick=${() => startRenameFolder(folder)}>${t('sessions.rename')}</button>
+			<button onClick=${() => removeFolder(folder)}>${t('sessions.removeFolder')}</button>
+		</div>
+	`;
+
+	/** The selection bar above the list acts on them. */
+	const renderPickedPane = () => html`
+		<div className="sessions-pane-name">${t('sessions.selectedCount', { count: selectedIds.length })}</div>
+		<ul className="sessions-pane-picked">
+			${selectedIds.map(id => html`<li key=${id}>${sessionStorage.sessions[id].name}</li>`)}
+		</ul>
+	`;
+
+	/** The item clicked or focused last, or the selection when it is part of one. */
+	const renderPane = () => selected.has(previewId) && selectedIds.length > 1 ? renderPickedPane()
+		: isFolderKey(previewId) ? renderFolderPane(folderOfKey(previewId))
+		: previewSession ? renderSessionPane(previewId, previewSession)
+		: null;
 
 	// The same Modal as the list below, so React keeps it open instead of mounting a second one.
 	if (showTrash) return html`
@@ -889,9 +1102,9 @@ ${t('sessions.removeFolderConfirm')}`)) return;
 						placeholder=${t('sessions.searchPlaceholder')}
 						onKeyDown=${(e: KeyboardEvent<HTMLInputElement>) => {
 							// Down from the search box goes to the first match.
-							if (e.key === 'ArrowDown' && visibleIds.length) {
+							if (e.key === 'ArrowDown' && navKeys.length) {
 								e.preventDefault();
-								focusRow(visibleIds[0]);
+								focusItem(navKeys[0]);
 							}
 						}}
 						autoFocus/>
@@ -918,6 +1131,10 @@ ${t('sessions.removeFolderConfirm')}`)) return;
 							style=${{ transform: sortAsc ? 'rotate(0deg)' : 'rotate(180deg)' }}>
 							↑
 						</button>
+					</div>
+					<div className="sessions-modal-view" role="group" aria-label=${t('sessions.view')}>
+						<button aria-pressed=${view === 'list'} onClick=${() => setView('list')}>${t('sessions.viewList')}</button>
+						<button aria-pressed=${view === 'icons'} onClick=${() => setView('icons')}>${t('sessions.viewIcons')}</button>
 					</div>
 				</div>
 				<div className="sessions-modal-toolbar-row">
@@ -957,6 +1174,20 @@ ${t('sessions.removeFolderConfirm')}`)) return;
 					<button className="sessions-action-btn" onClick=${commitFolder}><${SVG_Confirm}/></button>
 					<button className="sessions-action-btn" onClick=${() => setFolderEdit(null)}><${SVG_Cancel}/></button>
 				</div>
+			` : isCreating ? html`
+				<div className="sessions-modal-bar">
+					<label htmlFor="sessions-new-name">${t('sessions.name')}</label>
+					<input
+						id="sessions-new-name"
+						type="text"
+						className="sessions-modal-inline-input"
+						value=${newSessionName}
+						onChange=${(e: ChangeEvent<HTMLInputElement>) => setNewSessionName(e.target.value)}
+						onKeyDown=${(e: KeyboardEvent<HTMLInputElement>) => handleKeyDown(undefined, e)}
+						autoFocus/>
+					<button className="sessions-action-btn" onClick=${createSession}><${SVG_Confirm}/></button>
+					<button className="sessions-action-btn" onClick=${() => setIsCreating(false)}><${SVG_Cancel}/></button>
+				</div>
 			` : selectedIds.length > 0 ? html`
 				<div className="sessions-modal-bar">
 					<span>${t('sessions.selectedCount', { count: selectedIds.length })}${hiddenPicked > 0 && ` ${t('sessions.hiddenByFilter', { count: hiddenPicked })}`}</span>
@@ -974,46 +1205,38 @@ ${t('sessions.removeFolderConfirm')}`)) return;
 				<div className="sessions-modal-bar sessions-modal-bar-hint">${t('sessions.pickHint')}</div>
 			`}
 			</div>
-			<div className="sessions-modal-list overflow-container">
-				<table className="sessions-modal-table">
-					<thead>
-						<tr>
-							<th className="sessions-col-star"></th>
-							<th className="sessions-col-name" aria-sort=${ariaSort('name')}>${sortHeader('name', t('sessions.name'))}</th>
-							<th className="sessions-col-modified" aria-sort=${ariaSort('modified')}>${sortHeader('modified', t('sessions.modified'))}</th>
-							<th className="sessions-col-created" aria-sort=${ariaSort('created')}>${sortHeader('created', t('sessions.created'))}</th>
-							<th className="sessions-col-actions">${t('sessions.actions')}</th>
-						</tr>
-					</thead>
-					<tbody ref=${listRef}>
-						${isCreating && html`
-							<tr key="new" className="sessions-modal-row sessions-modal-row-new">
-								<td></td>
-								<td colSpan="3">
-									<input
-										type="text"
-										className="sessions-modal-inline-input"
-										value=${newSessionName}
-onChange=${(e: ChangeEvent<HTMLInputElement>) => setNewSessionName(e.target.value)}
-onKeyDown=${(e: KeyboardEvent<HTMLInputElement>) => handleKeyDown(undefined, e)}
-onClick=${(e: MouseEvent) => e.stopPropagation()}
-													autoFocus
-												/>
-								</td>
-								<td className="sessions-col-actions">
-									<div className="sessions-col-actions-inner">
-										<button className="sessions-action-btn" onClick=${() => createSession()}><${SVG_Confirm}/></button>
-										<button className="sessions-action-btn" onClick=${() => setIsCreating(false)}><${SVG_Cancel}/></button>
-									</div>
-								</td>
-							</tr>
-						`}
-						${listItems.map(({ folder, entries }) => folder ? renderFolder(folder, entries) : renderSession(entries[0]))}
-						${listItems.length === 0 && html`
-							<tr key="empty"><td colSpan="5" className="sessions-modal-empty">${t('sessions.noMatches')}</td></tr>
-						`}
-					</tbody>
-				</table>
+			<div className="sessions-modal-body">
+				<div className="sessions-modal-list overflow-container" ref=${listRef}>
+					${view === 'icons' ? renderIcons() : html`
+						<table className="sessions-modal-table">
+							<thead>
+								<tr>
+									<th className="sessions-col-star"></th>
+									<th className="sessions-col-name" aria-sort=${ariaSort('name')}>${sortHeader('name', t('sessions.name'))}</th>
+									<th className="sessions-col-modified" aria-sort=${ariaSort('modified')}>${sortHeader('modified', t('sessions.modified'))}</th>
+								</tr>
+							</thead>
+							<tbody>
+								${listItems.map(({ folder, entries }) => folder ? renderFolder(folder, entries) : renderSession(entries[0]))}
+								${listItems.length === 0 && html`
+									<tr key="empty"><td colSpan="3" className="sessions-modal-empty">${t('sessions.noMatches')}</td></tr>
+								`}
+							</tbody>
+						</table>
+					`}
+				</div>
+				<div className="sessions-pane-divider"
+					role="separator"
+					aria-orientation="vertical"
+					aria-label=${t('sessions.resizePane')}
+					tabIndex="0"
+					onPointerDown=${dragDivider}
+					onKeyDown=${dividerKeyDown}></div>
+				<aside className="sessions-pane"
+					aria-label=${t('sessions.details')}
+					style=${paneWidth ? { '--pane-width': `${paneWidth}px` } : undefined}>
+					${renderPane()}
+				</aside>
 			</div>
 			${rowMenu && html`
 				<${EditorContextMenu}

@@ -209,6 +209,16 @@ export const SVG_Folder = ({...props}: SVGProps<SVGSVGElement>) => {
 		<path d="M10 4H4c-1.1 0-2 .9-2 2v12c0 1.1.9 2 2 2h16c1.1 0 2-.9 2-2V8c0-1.1-.9-2-2-2h-8l-2-2z"/>
 	</${SVG}>
 `};
+export const SVG_Document = ({...props}: SVGProps<SVGSVGElement>) => {
+	return html`
+	<${SVG}
+		...${props}
+		width="14"
+		height="14"
+		viewBox="0 0 24 24">
+		<path d="M14 2H6c-1.1 0-2 .9-2 2v16c0 1.1.9 2 2 2h12c1.1 0 2-.9 2-2V8l-6-6zm2 16H8v-2h8v2zm0-4H8v-2h8v2zm-3-5V3.5L18.5 9H13z"/>
+	</${SVG}>
+`};
 export const SVG_SearchAndReplace =({...props}: SVGProps<SVGSVGElement>) => {
 	return html`
 	<${SVG}
