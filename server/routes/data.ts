@@ -4,7 +4,7 @@ import { getColumnName, normalizeStoreName } from '../lib/utils.js';
 
 // better-sqlite3 binds every JS number as REAL, and the TEXT key column then stores or compares
 // it as "81.0" — so numeric session ids would miss their existing "81" rows. Bind strings only.
-const toKey = (key: unknown): string | null =>
+export const toKey = (key: unknown): string | null =>
     typeof key === 'string' || typeof key === 'number' ? String(key) : null;
 
 export default function(app: Express, db: Database): void {

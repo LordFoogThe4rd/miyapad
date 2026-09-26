@@ -188,4 +188,4 @@ const stopAutoBackup = () => {
     }
 };
 
-export { startAutoBackup, stopAutoBackup };
+export { startAutoBackup, stopAutoBackup, timestamp, rotateBackups };
