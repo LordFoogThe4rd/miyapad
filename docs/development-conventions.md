@@ -56,7 +56,7 @@ When you change session storage columns or tables, keep the adapter architecture
 
 ## Build After Editing
 
-Always run `npm run build` after editing any source file and before calling the work done. The build catches broken imports, missing exports and syntax errors in the frontend. Frontend changes also have `npm test` (Vitest unit tests) and `npm run typecheck`, so run whichever apply too. There is no linter. Server changes (`server/`) have no automated checks at all; its own `npm test` is a stub.
+Always run `npm run build` after editing any source file and before calling the work done. The build catches broken imports, missing exports and syntax errors in the frontend. Frontend changes also have `npm test` (Vitest unit tests) and `npm run typecheck`, so run whichever apply too. There is no linter. Server tests (`server/**/*.test.ts`) run in the same root `npm test`, and each starts with `// @vitest-environment node`; `server/`'s own `npm test` is a stub. Typecheck server changes with `npm run check` in `server/`.
 
 ## Changelog Maintenance
 

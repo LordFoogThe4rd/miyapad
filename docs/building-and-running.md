@@ -8,7 +8,7 @@ From the root directory:
 2. Start the development server: `npm start` (runs `parcel`; the entry point `miyapad.html` loads `src/main.tsx`)
 3. Build for production: `npm run build` (runs `parcel build miyapad.html --no-cache`)
 4. Type-check: `npm run typecheck` (runs `tsc --noEmit`, which only checks types; Parcel does the transpiling)
-5. Run the tests: `npm test` (Vitest), or `npm run bench` for the editor benchmarks
+5. Run the tests: `npm test` (Vitest, frontend and server), `npm run coverage` for a coverage report in `coverage/`, or `npm run bench` for the editor benchmarks
 
 Both the `prestart` and `prebuild` hooks run `scripts/write-version.mjs`, which reads the version out of the root `package.json` and writes `src/version.ts` (gitignored) exporting `APP_VERSION`. `prebuild` also cleans `dist/` first, and `postbuild` runs `scripts/inline-dist.mjs`, which folds the built JS and CSS back into the HTML so `dist/miyapad.html` is a single file that runs on its own.
 
