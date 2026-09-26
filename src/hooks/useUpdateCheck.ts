@@ -11,7 +11,7 @@ const REPO_URL = 'https://github.com/lordfoogthe4rd/miyapad';
 
 // ponytail: numeric semver only; non-semver tags parse as NaN.
 // Add proper semver parsing (or the `semver` package) alongside a pre-release checkbox in the future.
-function isNewer(latest: string, current: string): boolean {
+export function isNewer(latest: string, current: string): boolean {
 	const a = latest.split('.').map(Number);
 	const b = current.split('.').map(Number);
 	for (let i = 0; i < Math.max(a.length, b.length); i++) {
