@@ -6,7 +6,7 @@ import { headersToRemove } from '../lib/utils.js';
 
 // ponytail: SSRF checks removed — private IP blocking broke local LLM backends.
 // User considers hosting-on-unsecured-networks problems wontfix.
-function isValidProxyUrl(urlString: string): boolean {
+export function isValidProxyUrl(urlString: string): boolean {
     try {
         const parsed = new URL(urlString);
         return ['http:', 'https:'].includes(parsed.protocol);
@@ -15,19 +15,21 @@ function isValidProxyUrl(urlString: string): boolean {
     }
 }
 
-function safeFinalUrl(targetBaseUrl: string, path: string): string | null {
-    const finalUrl = path ? new URL(path, targetBaseUrl).href : targetBaseUrl;
+export function safeFinalUrl(targetBaseUrl: string, path: string): string | null {
     const baseParsed = new URL(targetBaseUrl);
+    const basePath = baseParsed.pathname;
+    const baseDir = basePath.endsWith('/') ? basePath : basePath + '/';
+    // Resolve against the base as a directory: against "https://aihorde.net/api", "v2/x"
+    // would replace the "api" segment instead of going under it.
+    const finalUrl = path ? new URL(path, new URL(baseDir, baseParsed)).href : targetBaseUrl;
     const finalParsed = new URL(finalUrl);
 
     if (finalParsed.origin !== baseParsed.origin) return null;
 
-    const basePath = baseParsed.pathname;
     const finalPath = finalParsed.pathname;
 
     if (finalPath === basePath) return finalUrl;
 
-    const baseDir = basePath.endsWith('/') ? basePath : basePath + '/';
     if (!finalPath.startsWith(baseDir)) return null;
 
     return finalUrl;
