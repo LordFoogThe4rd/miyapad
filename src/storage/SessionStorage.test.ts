@@ -1,5 +1,5 @@
-import { describe, expect, it } from 'vitest';
-import { SessionStorage } from './SessionStorage';
+import { afterEach, describe, expect, it, vi } from 'vitest';
+import { SessionStorage, folderName, sanitizeStats } from './SessionStorage';
 
 function storageWith(data: Record<string, unknown>) {
 	const storage = new SessionStorage({} as DatabaseAdapter);
@@ -248,5 +248,128 @@ describe('SessionStorage session keys', () => {
 			pinned: true,
 			stats: { typedChars: 9 },
 		});
+	});
+});
+
+describe('folderName', () => {
+	it('trims the name and collapses runs of whitespace', () => {
+		expect(folderName('  Old \t  drafts ')).toBe('Old drafts');
+	});
+
+	it('is no folder for a blank name or one that is not text', () => {
+		for (const raw of ['', '   ', undefined, null, 3, {}]) expect(folderName(raw)).toBeUndefined();
+	});
+});
+
+describe('sanitizeStats', () => {
+	it('fills in every counter as zero when there are none', () => {
+		expect(sanitizeStats(undefined)).toEqual({ generations: 0, genTokens: 0, genChars: 0, genMs: 0, typedChars: 0, deletedChars: 0 });
+	});
+
+	it('keeps only positive finite counts and drops unknown keys', () => {
+		expect(sanitizeStats({ generations: 3, genTokens: -1, genChars: NaN, genMs: Infinity, typedChars: '5', deletedChars: 2, extra: 9 }))
+			.toEqual({ generations: 3, genTokens: 0, genChars: 0, genMs: 0, typedChars: 0, deletedChars: 2 });
+	});
+});
+
+describe('SessionStorage loading', () => {
+	afterEach(() => {
+		vi.unstubAllGlobals();
+	});
+
+	async function open(adapter: DatabaseAdapter) {
+		const storage = new SessionStorage(adapter);
+		await storage.init();
+		clearInterval(storage.saveTimer);
+		return storage;
+	}
+
+	it('hands out consecutive ids and stores the next one', async () => {
+		const { adapter, store } = memoryAdapter();
+		const storage = await open(adapter);
+		const first = await storage.getNewId();
+
+		expect(await storage.getNewId()).toBe(first + 1);
+		expect(store('Sessions').get('nextSessionId')).toBe(first + 2);
+	});
+
+	it('starts an empty database with one session and opens it', async () => {
+		const { adapter } = memoryAdapter();
+		const storage = await open(adapter);
+
+		expect(Object.values(storage.sessions).map(s => s.name)).toEqual(['MiyaPad #1']);
+		expect(storage.getProperty('name')).toBe('MiyaPad #1');
+	});
+
+	it('puts trashed sessions in the trash and reopens the one last selected', async () => {
+		const { adapter, store } = memoryAdapter();
+		store('Names').set('0', { name: 'A' });
+		store('Names').set('1', { name: 'B', trashed: 123 });
+		store('Names').set('2', { name: 'C' });
+		store('Sessions').set('2', { prompt: [{ type: 'user', content: 'from C' }] });
+		store('Sessions').set('selectedSessionId', 2);
+		store('Sessions').set('nextSessionId', 3);
+
+		const storage = await open(adapter);
+
+		expect(Object.keys(storage.sessions)).toEqual(['0', '2']);
+		expect(Object.keys(storage.trash)).toEqual(['1']);
+		expect(storage.selectedSession).toBe(2);
+		expect(storage.getProperty('prompt')).toEqual([{ type: 'user', content: 'from C' }]);
+	});
+
+	it('opens the first session when the one last selected went to the trash', async () => {
+		const { adapter, store } = memoryAdapter();
+		store('Names').set('0', { name: 'A' });
+		store('Names').set('1', { name: 'B', trashed: 123 });
+		store('Sessions').set('selectedSessionId', 1);
+		store('Sessions').set('nextSessionId', 2);
+
+		const storage = await open(adapter);
+
+		expect(storage.selectedSession).toBe(0);
+	});
+
+	it('starts a new session, without migrating, when every session is in the trash', async () => {
+		const { adapter, store } = memoryAdapter();
+		store('Names').set('0', { name: 'A', trashed: 123 });
+		store('Sessions').set('nextSessionId', 1);
+		vi.stubGlobal('localStorage', legacyLocalStorage({ nextSessionId: '5', '4/name': '"Old"' }));
+
+		const storage = await open(adapter);
+
+		expect(Object.values(storage.sessions).map(s => s.name)).toEqual(['MiyaPad #1']);
+		expect(storage.selectedSession).toBe(1);
+	});
+
+	/** Stored keys are own enumerable properties, the way Object.keys sees a browser's localStorage. */
+	function legacyLocalStorage(items: Record<string, string>) {
+		const proto = { getItem(this: Record<string, string>, key: string) { return Object.hasOwn(this, key) ? this[key] : null; } };
+		return Object.assign(Object.create(proto), items);
+	}
+
+	it('moves sessions an older version kept in localStorage into an empty database', async () => {
+		const { adapter, store } = memoryAdapter();
+		vi.stubGlobal('localStorage', legacyLocalStorage({
+			nextSessionId: '2',
+			selectedSessionId: '1',
+			'0/name': '"Old"',
+			'0/prompt': '[{"type":"user","content":"kept"}]',
+			'1/name': '"Other"',
+			'1/temperature': '0.5',
+			'1/broken': '{not json',
+			'1/nothing': 'null',
+			unrelated: 'x',
+		}));
+
+		const storage = await open(adapter);
+
+		expect(Object.values(storage.sessions).map(s => s.name)).toEqual(['Old', 'Other']);
+		expect(storage.selectedSession).toBe(1);
+		expect(storage.getProperty('temperature')).toBe(0.5);
+		expect(storage.getProperty('broken')).toBeUndefined();
+		expect(store('Sessions').get('0')).toMatchObject({ prompt: [{ type: 'user', content: 'kept' }] });
+		expect(store('Names').get('0')).toMatchObject({ name: 'Old' });
+		expect(store('Sessions').get('nextSessionId')).toBe(2);
 	});
 });
