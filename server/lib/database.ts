@@ -221,7 +221,9 @@ const getMaintenanceConfig = (db: DB): MaintenanceConfig => {
 };
 
 const saveMaintenanceConfig = (db: DB, config: Partial<MaintenanceConfig>): { ok: boolean; message?: string; config?: MaintenanceConfig } => {
-    const merged = { ...DEFAULT_MAINTENANCE_CONFIG, ...config };
+    // Fields the caller left undefined keep their default instead of overwriting it.
+    const given = Object.fromEntries(Object.entries(config).filter(([, value]) => value !== undefined));
+    const merged: MaintenanceConfig = { ...DEFAULT_MAINTENANCE_CONFIG, ...given };
     try {
         db.prepare(`INSERT OR REPLACE INTO meta (key, value) VALUES ('maintenance_config', ?)`).run(JSON.stringify(merged));
         return { ok: true, config: merged };
