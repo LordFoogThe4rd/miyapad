@@ -16,7 +16,11 @@ export function useKeyboardShortcuts() {
 			return;
 		keyState.current[key] = true;
 		let preventDefaultAction = true;
-		switch (`${altKey}:${ctrlKey}:${metaKey}:${shiftKey}:${key}`) {
+		// Letters go by their lowercase form: Caps Lock flips a letter's case, and must not
+		// change which shortcut it is. Shift alone never makes a letter a shortcut, or it
+		// couldn't be typed as a capital.
+		const name = key.length === 1 ? key.toLowerCase() : key;
+		switch (`${altKey}:${ctrlKey}:${metaKey}:${shiftKey}:${name}`) {
 		case 'false:false:false:true:Enter':
 		case 'false:true:false:false:Enter':
 				predict();
@@ -31,26 +35,21 @@ export function useKeyboardShortcuts() {
 				break;
 			}
 			case 'false:true:false:false:r':
-			case 'false:false:false:true:r':
 				undoAndPredict();
 				break;
 		case 'false:true:false:false:z':
-		case 'false:false:false:true:z':
 			if (cancel) cancel();
 			if (!undo()) return;
 			break;
-		case 'false:true:false:true:Z':
+		case 'false:true:false:true:z':
 		case 'false:true:false:false:y':
-		case 'false:false:false:true:y':
 			if (cancel) cancel();
 			if (!redo()) return;
 			break;
 			case 'false:true:false:false:e':
-			case 'false:false:false:true:e':
 				ttsStop();
 				break;
 			case 'false:true:false:false:f':
-			case 'false:false:false:true:f':
 				toggleModal("searchAndReplace");
 				break;
 			case 'false:false:true:false:p':

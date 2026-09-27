@@ -102,6 +102,32 @@ describe('useKeyboardShortcuts', () => {
 		expect(gen.toggleModal.mock.calls).toEqual([['searchAndReplace'], ['quickSwitcher'], ['quickSwitcher']]);
 	});
 
+	it('lets Shift and a letter type the letter, with Caps Lock on or off', () => {
+		for (const letter of ['r', 'z', 'y', 'e', 'f', 'p']) {
+			// Without Caps Lock Shift gives the capital; with it, the lowercase letter.
+			expect(press(letter.toUpperCase(), { shiftKey: true })).toBe(true);
+			expect(press(letter, { shiftKey: true })).toBe(true);
+		}
+
+		expect(logic.undoAndPredict).not.toHaveBeenCalled();
+		expect(logic.undo).not.toHaveBeenCalled();
+		expect(logic.redo).not.toHaveBeenCalled();
+		expect(tts.ttsStop).not.toHaveBeenCalled();
+		expect(gen.toggleModal).not.toHaveBeenCalled();
+	});
+
+	it('keeps its Ctrl shortcuts with Caps Lock on, when the letters arrive as capitals', () => {
+		press('R', { ctrlKey: true });
+		press('Z', { ctrlKey: true });
+		press('z', { ctrlKey: true, shiftKey: true });
+		press('F', { ctrlKey: true });
+
+		expect(logic.undoAndPredict).toHaveBeenCalledOnce();
+		expect(logic.undo).toHaveBeenCalledOnce();
+		expect(logic.redo).toHaveBeenCalledOnce();
+		expect(gen.toggleModal).toHaveBeenCalledWith('searchAndReplace');
+	});
+
 	it('keeps the browser\'s own Ctrl+ArrowRight', () => {
 		expect(press('ArrowRight', { ctrlKey: true })).toBe(true);
 	});
