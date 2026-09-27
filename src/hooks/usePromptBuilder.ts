@@ -63,7 +63,7 @@ export function usePromptBuilder() {
 				foundPlaceholder = separators[0];
 
 				let left = sides[0];
-				if ((left.length >= 2 && (left[left.length - 2] != ' ' || left[left.length - 2] != '\t')) && left[left.length - 1] == ' ') {
+				if ((left.length >= 2 && (left[left.length - 2] != ' ' && left[left.length - 2] != '\t')) && left[left.length - 1] == ' ') {
 					// This is most likely an unintentional mistake by the user.
 					left = left.substring(0, left.length - 1);
 				}

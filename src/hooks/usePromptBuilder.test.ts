@@ -66,6 +66,11 @@ describe('{predict} and {fill}', () => {
 		});
 	});
 
+	it('keeps indentation and double spaces before a placeholder', () => {
+		expect(setup('code\n    {predict}').modifiedPromptText).toBe('code\n    ');
+		expect(setup('code\n\t {predict}').modifiedPromptText).toBe('code\n\t ');
+	});
+
 	it('leaves out empty sides', () => {
 		const out = setup('{predict}');
 		expect(out.fimPromptInfo).toEqual({ fimPlaceholder: '{predict}', fimLeftChunks: [], fimRightChunks: [] });
