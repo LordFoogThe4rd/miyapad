@@ -20,7 +20,7 @@ describe('QuickSwitcher', () => {
 
 		rerender(page(true));
 		expect(screen.getByRole('dialog').getAttribute('aria-modal')).toBe('true');
-		const input = screen.getByRole('textbox');
+		const input = screen.getByRole('combobox');
 		await waitFor(() => expect(document.activeElement).toBe(input));
 		// fireEvent returns false when the default action was prevented.
 		expect(fireEvent.keyDown(input, { key: 'Tab' })).toBe(false);
@@ -40,7 +40,7 @@ describe('QuickSwitcher', () => {
 		];
 		const sessions = { sessions: { 1: { name: 'Memory lane' } }, switchSession, addEventListener() {}, removeEventListener() {} };
 		render(html`<${QuickSwitcher} isOpen=${true} closeModal=${closeModal} sessionStorage=${sessions} cancel=${() => {}} commands=${commands}/>`);
-		const input = screen.getByRole('textbox');
+		const input = screen.getByRole('combobox');
 		const labels = () => [...document.querySelectorAll('.quick-switcher-item')].map(el => el.textContent);
 
 		fireEvent.change(input, { target: { value: 'mem' } });
@@ -60,6 +60,10 @@ describe('QuickSwitcher', () => {
 
 		fireEvent.change(input, { target: { value: '>mem' } });
 		fireEvent.keyDown(input, { key: 'ArrowDown' });
+		// Focus stays in the box, so screen readers learn the highlighted row through the combobox.
+		const [option] = screen.getAllByRole('option');
+		expect(option.getAttribute('aria-selected')).toBe('true');
+		expect(screen.getByRole('combobox').getAttribute('aria-activedescendant')).toBe(option.id);
 		fireEvent.keyDown(input, { key: 'Enter' });
 		expect(calls).toEqual(['close', 'memory']);
 

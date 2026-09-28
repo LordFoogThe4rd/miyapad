@@ -1,5 +1,5 @@
 import { html } from 'htm/react';
-import { useState, useEffect, useMemo, useRef } from 'react';
+import { useState, useEffect, useMemo, useRef, useId } from 'react';
 import { useT } from '../i18n';
 import { useReturnFocus } from '../hooks/useReturnFocus';
 import { SVG_Star } from './icons/index';
@@ -19,6 +19,7 @@ export function QuickSwitcher({ isOpen, closeModal, sessionStorage, cancel, comm
 	const [selectedIndex, setSelectedIndex] = useState(-1);
 	const inputRef = useRef<HTMLInputElement | null>(null);
 	const listRef = useRef<HTMLDivElement | null>(null);
+	const listId = useId();
 	const [version, setVersion] = useState(0);
 	useReturnFocus(!!isOpen, inputRef);
 
@@ -124,23 +125,31 @@ export function QuickSwitcher({ isOpen, closeModal, sessionStorage, cancel, comm
 					ref=${inputRef}
 					className="quick-switcher-input"
 					type="text"
+					role="combobox"
+					aria-autocomplete="list"
+					aria-expanded=${results.length > 0}
+					aria-controls=${listId}
+					aria-activedescendant=${results[selectedIndex] ? `${listId}-${selectedIndex}` : undefined}
 					placeholder=${t('quickSwitcher.searchPlaceholder')}
 					value=${query}
 					onChange=${(e: any) => { setQuery(e.target.value); setSelectedIndex(-1); }}
 					onKeyDown=${handleKeyDown}
 				/>
-				<div ref=${listRef} className="quick-switcher-list">
-					${results.length === 0 ? html`
-						<div className="quick-switcher-empty">${t(commandMode ? 'quickSwitcher.noCommands' : 'quickSwitcher.noSessions')}</div>
-					` : results.map((row, i) => html`
+				<div ref=${listRef} id=${listId} role="listbox" className="quick-switcher-list">
+					${results.map((row, i) => html`
 						<div
 							key=${row.key}
+							id=${`${listId}-${i}`}
+							role="option"
+							aria-selected=${i === selectedIndex}
 							className="quick-switcher-item ${i === selectedIndex ? 'selected' : ''} ${row.disabled ? 'disabled' : ''}"
 							aria-disabled=${row.disabled}
 							onMouseDown=${() => pick(row)}
 						>${row.pinned ? html`<span className="quick-switcher-star"><${SVG_Star}/></span>` : ''}${row.label}</div>
 					`)}
 				</div>
+				${results.length === 0 && html`
+					<div className="quick-switcher-empty">${t(commandMode ? 'quickSwitcher.noCommands' : 'quickSwitcher.noSessions')}</div>`}
 			</div>
 		</div>`;
 }

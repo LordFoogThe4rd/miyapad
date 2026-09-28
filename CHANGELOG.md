@@ -24,6 +24,7 @@
 - The server's login now accepts a password that contains a colon. Before, such a password was always refused
 - With Caps Lock on, typing a lowercase r, z, y, e or f with Shift no longer regenerates, undoes, redoes, stops speech or opens search instead of typing the letter
 - Ctrl+R, Ctrl+E, Ctrl+F and Ctrl+P now work with Caps Lock on
+- Screen readers now say which result is highlighted in the quick switcher as you move through it with the arrow keys, and whether it is greyed out
 
 ## [2.9.0] - 2026-09-24
 
