@@ -9,6 +9,7 @@ import { useGenerationLogic } from '../hooks/useGenerationLogic';
 import { useInsertTemplate } from '../hooks/useInsertTemplate';
 import { exportText } from '../api/common';
 import { defaultPresets } from '../defaults/presets';
+import { API_AI_HORDE, API_DEEPSEEK, API_OPENAI_COMPAT } from '../constants';
 import { useT } from '../i18n';
 import { PreferencesModal } from './modals/PreferencesModal';
 import { MemoryModal } from './modals/MemoryModal';
@@ -31,7 +32,7 @@ import { StatisticsModal } from './modals/StatisticsModal';
 import { AboutModal } from './modals/AboutModal';
 import { QuickSwitcher } from './QuickSwitcher';
 import { EditorContextMenu } from './EditorContextMenu';
-import type { ModalsProps } from '../types/components';
+import type { ContextMenuItem, ModalsProps } from '../types/components';
 
 export function Modals({ toggleModal, currentThemeName, setCurrentThemeName, allThemes, setAllThemes, applyChatTemplate }: ModalsProps) {
 	const t = useT();
@@ -51,15 +52,15 @@ export function Modals({ toggleModal, currentThemeName, setCurrentThemeName, all
 		screenshotModelAvatarUrl, setScreenshotModelAvatarUrl,
 		connections, setConnections, selectedConnectionId,
 		samplerPresets, setSamplerPresets, selectedSamplerPresetId,
-		stoppingStringsError, drySequenceBreakersError, bannedTokensError
+		stoppingStringsError, drySequenceBreakersError, bannedTokensError, openaiPresets
 	} = useSettings();
-	const { cancel, modalState, closeModal, instructModalState, setInstructModalState, promptEditorView, replaceEditorText, lastError, sessionEndpointConnecting, predictStartTokens, tokens, memoryTokenCount, worldInfoTokenCount, authorNoteTokenCount, contextMenuState, setContextMenuState, setTriggerPredict, sessionEndpointError, setRejectedAPIKey } = useGeneration();
+	const { cancel, modalState, closeModal, openModal, undoStack, redoStack, instructModalState, setInstructModalState, promptEditorView, replaceEditorText, lastError, sessionEndpointConnecting, predictStartTokens, tokens, memoryTokenCount, worldInfoTokenCount, authorNoteTokenCount, contextMenuState, setContextMenuState, setTriggerPredict, sessionEndpointError, setRejectedAPIKey } = useGeneration();
 
 	const { handleauthorNoteTokensChange, handleMemoryTokensChange } = usePersistentContextHandlers();
 	const { promptText, finalPromptText, convertChatToJSON } = usePromptBuilder();
 	const { listTTSVoices, ttsStop } = useTTS();
 	const { ttsAvailable } = useGeneration();
-	const { predict } = useGenerationLogic();
+	const { predict, undoAndPredict, undo, redo } = useGenerationLogic();
 
 
 
@@ -146,6 +147,122 @@ export function Modals({ toggleModal, currentThemeName, setCurrentThemeName, all
 		adapter.focus();
 		adapter.setSelection(newCursorPos, newCursorPos);
 	}, [instructModalState.result]);
+
+	// The editor's right-click menu. Its commands are in the quick switcher too.
+	const editorMenuItems: ContextMenuItem[] = [
+		{
+			label: t('modals.instructHere'),
+			action: () => {
+				const adapter = promptEditorView.current;
+				if (!adapter)
+					return;
+
+				const { from: startPos, to: endPos } = adapter.getSelection();
+				const currentText = adapter.getText();
+
+				setInstructModalState({
+					selectionStart: startPos,
+					selectionEnd: endPos,
+					instructContext: currentText.substring(0, startPos) || "",
+					selectedText: currentText.substring(startPos, endPos),
+				});
+				toggleModal("instruct");
+			},
+			disabled: false
+		},
+		{
+			label: t('modals.predictHere'),
+			action: () => {
+				const adapter = promptEditorView.current;
+				if (!adapter)
+					return;
+
+				const { from: startPos } = adapter.getSelection();
+				const currentText = adapter.getText();
+
+				if (startPos === currentText.length) {
+					predict();
+					return;
+				}
+
+				const textBefore = currentText.substring(0, startPos) || "";
+				const textAfter = currentText.substring(startPos);
+
+				const finalText = textBefore 
+								+ '{predict}'
+								+ textAfter;
+
+				replaceEditorText(finalText);
+				setTriggerPredict(true);
+			},
+			disabled: false
+		},
+		{
+			label: t('modals.fillInTheMiddleHere'),
+			action: () => {
+				const adapter = promptEditorView.current;
+				if (!adapter)
+					return;
+
+				const { from: startPos } = adapter.getSelection();
+				const currentText = adapter.getText();
+
+				const textBefore = currentText.substring(0, startPos) || "";
+				const textAfter = currentText.substring(startPos);
+
+				const finalText = textBefore 
+								+ '{fill}'
+								+ textAfter;
+
+				replaceEditorText(finalText);
+				setTriggerPredict(true);
+			},
+			disabled: templates[selectedTemplate]?.fimTemplate === undefined || templates[selectedTemplate]?.fimTemplate.length === 0
+		},
+		{
+			label: t('modals.insert'),
+			subItems: [
+				{ 'label': t('modals.systemTemplate'), action: () => insertTemplate("sys"), disabled: false },
+				{ 'label': t('modals.instructTemplate'), action: () => insertTemplate("inst"), disabled: false },
+			],
+			disabled: false
+		},
+	];
+
+	// The quick switcher's > commands. Disabled and hidden where the sidebar button is.
+	const openCommand = (modalKey: string, label: string, disabled = false): ContextMenuItem =>
+		({ label, action: () => openModal(modalKey), disabled });
+	const commands: ContextMenuItem[] = [
+		{ label: t('sidebar.runPrediction'), action: () => predict(), disabled: !!cancel || !!stoppingStringsError || !!drySequenceBreakersError || !!bannedTokensError },
+		{ label: t('sidebar.regenerate'), action: () => undoAndPredict(), disabled: !undoStack.current?.length },
+		{ label: t('sidebar.undo'), action: () => undo(), disabled: !!cancel || !undoStack.current?.length },
+		{ label: t('sidebar.redo'), action: () => redo(), disabled: !!cancel || !redoStack.current?.length },
+		// The menu doesn't open during a generation. Its Insert submenu is listed flat, under the sidebar's labels.
+		...editorMenuItems.filter(item => item.action).map(item => ({ ...item, disabled: item.disabled || !!cancel })),
+		{ label: t('sidebar.insertSystemPromptTemplate'), action: () => insertTemplate("sys"), disabled: !!cancel },
+		{ label: t('sidebar.insertInstructTemplate'), action: () => insertTemplate("inst"), disabled: !!cancel },
+		...(ttsEnabled ? [{ label: t('preferences.stopTTSCtrlE'), action: ttsStop, disabled: false }] : []),
+		openCommand('searchAndReplace', t('prompt.searchAndReplace')),
+		openCommand('preferences', t('prompt.preferences')),
+		openCommand('sessions', t('sidebar.manageSessions'), !!cancel),
+		openCommand('connections', t('sidebar.manageConnections')),
+		...(endpointAPI == API_AI_HORDE ? [openCommand('horde', t('sidebar.configureAiHorde'))] : []),
+		openCommand('samplerPresets', t('sidebar.manageSamplerPresets')),
+		openCommand('instructTemplates', t('sidebar.editInstructTemplates'), !!cancel),
+		...(!openaiPresets || (endpointAPI != API_OPENAI_COMPAT && endpointAPI != API_DEEPSEEK) ? [openCommand('grammar', t('sidebar.grammar'), !!cancel)] : []),
+		openCommand('bias', t('sidebar.logitBias'), !!cancel),
+		openCommand('memory', t('sidebar.memory'), !!cancel),
+		openCommand('an', t('sidebar.authorsNote'), !!cancel),
+		openCommand('wi', t('sidebar.showWorldInfo'), !!cancel),
+		openCommand('context', t('sidebar.showContext'), !!cancel),
+		openCommand('themes', t('sidebar.manageThemes'), !!cancel),
+		openCommand('about', t('sidebar.about')),
+		{ label: t('preferences.exportPromptToPlaintext'), action: exportPrompt, disabled: false },
+		...(!isMiyapadEndpoint ? [
+			{ label: t('preferences.exportFullDB'), action: handleExportDB, disabled: false },
+			{ label: t('preferences.importFullDB'), action: handleImportDB, disabled: false },
+		] : []),
+	];
 
 	return html`<${Fragment}>
 		<${PreferencesModal}
@@ -354,92 +471,15 @@ export function Modals({ toggleModal, currentThemeName, setCurrentThemeName, all
 			isOpen=${modalState.quickSwitcher}
 			closeModal=${() => closeModal("quickSwitcher")}
 			sessionStorage=${sessionStorage}
-			cancel=${cancel}/>
+			cancel=${cancel}
+			commands=${commands}/>
 
 		<${EditorContextMenu}
 			isOpen=${contextMenuState.visible}
 			closeMenu=${() => setContextMenuState({ visible: false, x: 0, y: 0 })}
 			x=${contextMenuState.x}
 			y=${contextMenuState.y}
-			menuItems=${[
-				{
-					label: t('modals.instructHere'),
-					action: () => {
-						const adapter = promptEditorView.current;
-						if (!adapter)
-							return;
-
-						const { from: startPos, to: endPos } = adapter.getSelection();
-						const currentText = adapter.getText();
-
-						setInstructModalState({
-							selectionStart: startPos,
-							selectionEnd: endPos,
-							instructContext: currentText.substring(0, startPos) || "",
-							selectedText: currentText.substring(startPos, endPos),
-						});
-						toggleModal("instruct");
-					},
-					disabled: false
-				},
-				{
-					label: t('modals.predictHere'),
-					action: () => {
-						const adapter = promptEditorView.current;
-						if (!adapter)
-							return;
-
-						const { from: startPos } = adapter.getSelection();
-						const currentText = adapter.getText();
-
-						if (startPos === currentText.length) {
-							predict();
-							return;
-						}
-
-						const textBefore = currentText.substring(0, startPos) || "";
-						const textAfter = currentText.substring(startPos);
-
-						const finalText = textBefore 
-										+ '{predict}'
-										+ textAfter;
-
-						replaceEditorText(finalText);
-						setTriggerPredict(true);
-					},
-					disabled: false
-				},
-				{
-					label: t('modals.fillInTheMiddleHere'),
-					action: () => {
-						const adapter = promptEditorView.current;
-						if (!adapter)
-							return;
-
-						const { from: startPos } = adapter.getSelection();
-						const currentText = adapter.getText();
-
-						const textBefore = currentText.substring(0, startPos) || "";
-						const textAfter = currentText.substring(startPos);
-
-						const finalText = textBefore 
-										+ '{fill}'
-										+ textAfter;
-
-						replaceEditorText(finalText);
-						setTriggerPredict(true);
-					},
-					disabled: templates[selectedTemplate]?.fimTemplate === undefined || templates[selectedTemplate]?.fimTemplate.length === 0
-				},
-				{
-					label: t('modals.insert'),
-					subItems: [
-						{ 'label': t('modals.systemTemplate'), action: () => insertTemplate("sys"), disabled: false },
-						{ 'label': t('modals.instructTemplate'), action: () => insertTemplate("inst"), disabled: false },
-					],
-					disabled: false
-				},
-			]}/>
+			menuItems=${editorMenuItems}/>
 
 		${sessionEndpointError && html`
 			<div className="modal-overlay">

@@ -1,14 +1,25 @@
 import { html } from 'htm/react';
-import { useState, useEffect, useMemo, useRef } from 'react';
+import { useState, useEffect, useMemo, useRef, useId } from 'react';
 import { useT } from '../i18n';
 import { useReturnFocus } from '../hooks/useReturnFocus';
 import { SVG_Star } from './icons/index';
+import type { QuickSwitcherProps } from '../types/components';
 
-export function QuickSwitcher({ isOpen, closeModal, sessionStorage, cancel }: any) {
+interface Row {
+	key: string;
+	label: string;
+	pinned?: boolean;
+	disabled: boolean;
+	run: () => void;
+}
+
+export function QuickSwitcher({ isOpen, closeModal, sessionStorage, cancel, commands }: QuickSwitcherProps) {
 	const t = useT();
 	const [query, setQuery] = useState('');
 	const [selectedIndex, setSelectedIndex] = useState(-1);
 	const inputRef = useRef<HTMLInputElement | null>(null);
+	const listRef = useRef<HTMLDivElement | null>(null);
+	const listId = useId();
 	const [version, setVersion] = useState(0);
 	useReturnFocus(!!isOpen, inputRef);
 
@@ -26,7 +37,25 @@ export function QuickSwitcher({ isOpen, closeModal, sessionStorage, cancel }: an
 		}
 	}, [isOpen]);
 
-	const results = useMemo(() => {
+	useEffect(() => {
+		listRef.current?.children[selectedIndex]?.scrollIntoView?.({ block: 'nearest' });
+	}, [selectedIndex]);
+
+	const commandMode = query.trimStart().startsWith('>');
+
+	const results = useMemo((): Row[] => {
+		if (commandMode) {
+			const q = query.trimStart().slice(1).trim().toLowerCase();
+			return commands
+				.filter(c => c.label.toLowerCase().includes(q))
+				.map(c => ({
+					key: c.label,
+					label: c.label,
+					disabled: c.disabled,
+					// Closed first: a command may open another modal or run a whole generation.
+					run: () => { closeModal(); c.action?.(); },
+				}));
+		}
 		const q = query.trim().toLowerCase();
 		if (!q) return [];
 		return (Object.entries(sessionStorage.sessions) as [string, SessionData][])
@@ -35,13 +64,21 @@ export function QuickSwitcher({ isOpen, closeModal, sessionStorage, cancel }: an
 			.sort((a, b) => {
 				if (a.pinned !== b.pinned) return a.pinned ? -1 : 1;
 				return (a.name || '').localeCompare(b.name || '');
-			});
-	}, [query, version, sessionStorage.sessions]);
+			})
+			.map(s => ({
+				key: String(s.id),
+				label: s.name || '',
+				pinned: s.pinned,
+				disabled: !!cancel,
+				run: () => { sessionStorage.switchSession(s.id).then(() => closeModal()); },
+			}));
+	}, [query, version, sessionStorage.sessions, commands, cancel]);
 
-	const disabled = !!cancel;
+	function pick(row: Row | undefined) {
+		if (row && !row.disabled) row.run();
+	}
 
 	function handleKeyDown(e: any) {
-		if (disabled) return;
 		e.stopPropagation();
 
 		switch (e.key) {
@@ -62,10 +99,7 @@ export function QuickSwitcher({ isOpen, closeModal, sessionStorage, cancel }: an
 				break;
 			case 'Enter':
 				e.preventDefault();
-				if (selectedIndex >= 0 && selectedIndex < results.length) {
-					const sessionId = results[selectedIndex].id;
-					sessionStorage.switchSession(sessionId).then(() => closeModal());
-				}
+				pick(results[selectedIndex]);
 				break;
 			case 'Escape':
 				e.preventDefault();
@@ -91,27 +125,32 @@ export function QuickSwitcher({ isOpen, closeModal, sessionStorage, cancel }: an
 					ref=${inputRef}
 					className="quick-switcher-input"
 					type="text"
+					role="combobox"
+					aria-label=${t('quickSwitcher.title')}
+					aria-autocomplete="list"
+					aria-expanded=${results.length > 0}
+					aria-controls=${listId}
+					aria-activedescendant=${results[selectedIndex] ? `${listId}-${selectedIndex}` : undefined}
 					placeholder=${t('quickSwitcher.searchPlaceholder')}
 					value=${query}
 					onChange=${(e: any) => { setQuery(e.target.value); setSelectedIndex(-1); }}
 					onKeyDown=${handleKeyDown}
-					disabled=${disabled}
 				/>
-				<div className="quick-switcher-list">
-					${results.length === 0 ? html`
-						<div className="quick-switcher-empty">${t('quickSwitcher.noSessions')}</div>
-					` : results.map((session, i) => html`
+				<div ref=${listRef} id=${listId} role="listbox" className="quick-switcher-list">
+					${results.map((row, i) => html`
 						<div
-							key=${session.id}
-							className="quick-switcher-item ${i === selectedIndex ? 'selected' : ''}"
-							onMouseDown=${() => {
-								if (!disabled) {
-									sessionStorage.switchSession(session.id).then(() => closeModal());
-								}
-							}}
-						>${session.pinned ? html`<span className="quick-switcher-star"><${SVG_Star}/></span>` : ''}${session.name}</div>
+							key=${row.key}
+							id=${`${listId}-${i}`}
+							role="option"
+							aria-selected=${i === selectedIndex}
+							className="quick-switcher-item ${i === selectedIndex ? 'selected' : ''} ${row.disabled ? 'disabled' : ''}"
+							aria-disabled=${row.disabled}
+							onMouseDown=${() => pick(row)}
+						>${row.pinned ? html`<span className="quick-switcher-star"><${SVG_Star}/></span>` : ''}${row.label}</div>
 					`)}
 				</div>
+				${results.length === 0 && html`
+					<div className="quick-switcher-empty">${t(commandMode ? 'quickSwitcher.noCommands' : 'quickSwitcher.noSessions')}</div>`}
 			</div>
 		</div>`;
 }

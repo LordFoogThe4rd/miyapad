@@ -73,6 +73,11 @@
 	background: var(--color-bg-active);
 }
 
+.quick-switcher-item.disabled {
+	opacity: 0.5;
+	cursor: default;
+}
+
 .quick-switcher-empty {
 	padding: 16px;
 	color: var(--color-text-hint);
