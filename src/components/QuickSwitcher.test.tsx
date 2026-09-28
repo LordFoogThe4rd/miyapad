@@ -20,7 +20,7 @@ describe('QuickSwitcher', () => {
 
 		rerender(page(true));
 		expect(screen.getByRole('dialog').getAttribute('aria-modal')).toBe('true');
-		const input = screen.getByRole('combobox');
+		const input = screen.getByRole('combobox', { name: 'Switch session or run a command' });
 		await waitFor(() => expect(document.activeElement).toBe(input));
 		// fireEvent returns false when the default action was prevented.
 		expect(fireEvent.keyDown(input, { key: 'Tab' })).toBe(false);

@@ -126,6 +126,7 @@ export function QuickSwitcher({ isOpen, closeModal, sessionStorage, cancel, comm
 					className="quick-switcher-input"
 					type="text"
 					role="combobox"
+					aria-label=${t('quickSwitcher.title')}
 					aria-autocomplete="list"
 					aria-expanded=${results.length > 0}
 					aria-controls=${listId}
