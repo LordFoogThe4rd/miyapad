@@ -6,6 +6,7 @@
 
 - A details pane beside the Sessions list shows the session you clicked: its tags, the end of its text, its folder, when it was modified and created, and how many generations and tokens it has. Its buttons pin, rename, move, select, export, clone or delete the session, or open its history or statistics. Clicking a folder shows it in the pane, where you can rename or remove it. Drag the line between the list and the pane to make the pane wider or narrower
 - An icon view for the Sessions list, next to the list view in the toolbar. Sessions show as tiles, and folders as folder tiles you open to see what is inside. The arrow keys move across and down the tiles, and Backspace goes back out of a folder. The Sessions list opens in whichever view you used last
+- Commands in the quick switcher (Ctrl+P). Type `>` to list them, and keep typing to narrow the list down. They run Predict, Regenerate, Undo, Redo and Stop TTS, run the editor's right-click commands (Instruct Here, Predict Here and Fill-In-The-Middle Here at the cursor, and inserting the system or instruct template), open Search & Replace, Preferences, Sessions, Memory, World Info, Context and the other dialogs, and export the prompt or the database. A command you can't use right now, such as Undo with nothing to undo, is greyed out
 
 ### Changed
 
@@ -13,6 +14,7 @@
 - The buttons on each session row (folder, rename, delete and ⋯) have moved into the details pane, and tags are edited there too. Right-click still opens the menu with Export, Clone, History and Statistics
 - The Created column is gone from the Sessions list; the details pane shows the date instead. The Sort By box is always in the toolbar again, for sorting by creation date and for the icon view
 - Create asks for the new session's name in the bar above the list instead of in a new row
+- The quick switcher no longer locks up while text is being generated. You can search and run commands, and Escape closes it. Sessions are greyed out until the generation ends
 
 ### Fixed
 

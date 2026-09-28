@@ -68,6 +68,8 @@ export interface QuickSwitcherProps {
   closeModal: () => void;
   sessionStorage: SessionStorage;
   cancel: (() => void) | null;
+  /** Listed when the query starts with `>`. */
+  commands: ContextMenuItem[];
 }
 
 export interface ModalsProps {
