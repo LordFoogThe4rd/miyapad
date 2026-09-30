@@ -39,9 +39,8 @@ export function useGenerationLogic() {
 			return false;
 
 		const { fimLeftChunks, fimRightChunks } = fimPromptInfo!;
-		const myId = activeGenId.current;
+		// No generation-id check here: predict() takes a new id itself and stops once a newer generation replaces it.
 		predict(finalPromptText, fimLeftChunks!.length, (chunk: CompletionChunk) => {
-			if (myId !== activeGenId.current) return false;
 			fimLeftChunks!.push(chunk);
 			setPromptChunks((p: PromptChunk[]) => [
 				...fimLeftChunks!,

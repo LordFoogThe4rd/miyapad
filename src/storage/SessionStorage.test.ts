@@ -373,3 +373,79 @@ describe('SessionStorage loading', () => {
 		expect(store('Sessions').get('nextSessionId')).toBe(2);
 	});
 });
+
+describe('SessionStorage legacy names', () => {
+	it('loads names an older version stored as plain text, and names a broken one after its id', async () => {
+		const { adapter, store } = memoryAdapter();
+		store('Names').set('0', 'Old name');
+		store('Names').set('1', '[object Object]');
+		store('Sessions').set('0', { prompt: [{ type: 'user', content: 'from 0' }] });
+		store('Sessions').set('1', { prompt: [{ type: 'user', content: 'from 1' }] });
+		store('Sessions').set('selectedSessionId', 1);
+		store('Sessions').set('nextSessionId', 2);
+
+		const storage = new SessionStorage(adapter);
+		await storage.init();
+		clearInterval(storage.saveTimer);
+
+		expect(storage.sessions[0]).toMatchObject({ name: 'Old name', pinned: false, tags: [] });
+		expect(storage.getProperty('name')).toBe('Session #1');
+		expect(storage.getProperty('prompt')).toEqual([{ type: 'user', content: 'from 1' }]);
+
+		await storage.switchSession(0);
+
+		expect(storage.getProperty('name')).toBe('Old name');
+		expect(storage.getProperty('prompt')).toEqual([{ type: 'user', content: 'from 0' }]);
+		expect(store('Names').get('0')).toMatchObject({ name: 'Old name' });
+	});
+});
+
+describe('SessionStorage trash when saving fails', () => {
+	afterEach(() => {
+		vi.restoreAllMocks();
+		vi.unstubAllGlobals();
+	});
+
+	async function withTwo() {
+		vi.spyOn(console, 'error').mockImplementation(() => {});
+		vi.stubGlobal('fetch', vi.fn(() => Promise.resolve()));
+		const { adapter, store } = memoryAdapter();
+		const storage = new SessionStorage(adapter);
+		await storage.init();
+		clearInterval(storage.saveTimer);
+		await storage.createSession('Two');
+		const save = adapter.saveToDatabase;
+		const failOn = (storeName: string, key: string) => {
+			adapter.saveToDatabase = async (db, name, k, data) => {
+				if (name === storeName && String(k) === key) throw new Error('disk full');
+				return save(db, name, k, data);
+			};
+		};
+		return { storage, store, failOn };
+	}
+
+	it('puts a session back in the list, out of the trash, and rethrows when its save fails', async () => {
+		const { storage, store, failOn } = await withTwo();
+		failOn('Names', '1');
+
+		await expect(storage.trashSessions(['1'])).rejects.toThrow('disk full');
+
+		expect(storage.sessions[1]).toMatchObject({ name: 'Two', trashed: undefined });
+		expect(storage.trash[1]).toBeUndefined();
+		expect(store('Names').get('1')).not.toMatchObject({ trashed: expect.anything() });
+	});
+
+	it('leaves the open session open and untrashed when its edits cannot be saved before switching away', async () => {
+		const { storage, store, failOn } = await withTwo();
+		storage.setProperty('prompt', [{ type: 'user', content: 'unsaved' }]);
+		failOn('Sessions', '0');
+
+		await storage.trashSessions(['0']);
+
+		expect(storage.selectedSession).toBe(0);
+		expect(storage.sessions[0]).toMatchObject({ prompt: [{ type: 'user', content: 'unsaved' }] });
+		expect(storage.sessions[0].trashed).toBeUndefined();
+		expect(storage.trash).toEqual({});
+		expect(store('Names').get('0')).not.toMatchObject({ trashed: expect.anything() });
+	});
+});

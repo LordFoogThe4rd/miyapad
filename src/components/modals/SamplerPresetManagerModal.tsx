@@ -37,7 +37,7 @@ interface SamplerPresetManagerModalProps {
   activePresetId: string;
 }
 
-function importPreset(json: Record<string, unknown>, existingNames: string[]): Omit<SamplerPresetData, 'id'> | null {
+export function importPreset(json: Record<string, unknown>, existingNames: string[]): Omit<SamplerPresetData, 'id'> | null {
   if (typeof json.presetVersion === 'number') {
     return importNaiPreset(json, existingNames);
   }

@@ -105,7 +105,7 @@ function compileTagRegex(pattern: string) {
 	return new RegExp('^' + escaped + '$', 'i');
 }
 
-function parseTagFilter(input: string): TagGroup[] | null {
+export function parseTagFilter(input: string): TagGroup[] | null {
 	if (!input.trim()) return null;
 	const tokens = input.trim().split(/\s+/);
 	const groups: TagGroup[] = [[]];
@@ -137,7 +137,7 @@ function tagMatches(tag: string, pattern: string, regex: RegExp | null) {
 	return tag.toLowerCase() === pattern.toLowerCase();
 }
 
-function sessionMatches(session: SessionData, groups: TagGroup[] | null) {
+export function sessionMatches(session: SessionData, groups: TagGroup[] | null) {
 	if (!groups) return true;
 	if (groups.length === 0) return true;
 	return groups.some((group: TagGroup) =>
