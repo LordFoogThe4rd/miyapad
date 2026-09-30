@@ -2,7 +2,7 @@ import { afterEach, describe, expect, it, vi } from 'vitest';
 import { cleanup, fireEvent, render, screen, waitFor } from '@testing-library/react';
 import { html } from 'htm/react';
 import en from '../../i18n/en.json';
-import { SessionsModal, tagSuggestions, typeAheadMatch } from './SessionsModal';
+import { SessionsModal, parseTagFilter, sessionMatches, tagSuggestions, typeAheadMatch } from './SessionsModal';
 
 describe('tagSuggestions', () => {
 	const tags = ['wip', 'archived', 'draft'];
@@ -44,6 +44,46 @@ describe('typeAheadMatch', () => {
 
 	it('finds nothing when no name starts with the text', () => {
 		expect(typeAheadMatch(ids, nameOf, 1, 'z')).toBeUndefined();
+	});
+});
+
+describe('tag filter', () => {
+	const matches = (tags: string[], filter: string) =>
+		sessionMatches({ name: 's', created: null, modified: null, pinned: false, tags } as SessionData, parseTagFilter(filter));
+
+	it('lets every session through an empty filter, tagged or not', () => {
+		expect(parseTagFilter('   ')).toBeNull();
+		expect(matches([], '')).toBe(true);
+	});
+
+	it('needs every tag in a group, whether or not AND is written, ignoring case', () => {
+		expect(matches(['wip', 'Draft'], 'wip draft')).toBe(true);
+		expect(matches(['wip', 'draft'], 'WIP AND draft')).toBe(true);
+		expect(matches(['wip'], 'wip draft')).toBe(false);
+	});
+
+	it('matches whole tags only, unless the pattern has a *', () => {
+		expect(matches(['archived'], 'arch')).toBe(false);
+		expect(matches(['archived'], 'arch*')).toBe(true);
+		expect(matches(['Old-Archive'], '*arch*')).toBe(true);
+	});
+
+	it('treats every other character in a wildcard pattern literally', () => {
+		expect(matches(['c++ notes'], 'c++*')).toBe(true);
+		expect(matches(['cxx notes'], 'c.*')).toBe(false);
+	});
+
+	it('lets a session through when any OR group matches', () => {
+		expect(matches(['b'], 'a OR b')).toBe(true);
+		expect(matches(['c'], 'a OR b')).toBe(false);
+		expect(parseTagFilter('OR a OR OR b')).toHaveLength(2);
+	});
+
+	it('NOT excludes sessions with the tag, and a trailing NOT is ignored', () => {
+		expect(matches(['wip'], 'NOT wip')).toBe(false);
+		expect(matches([], 'NOT wip')).toBe(true);
+		expect(matches(['story', 'wip'], 'story NOT w*')).toBe(false);
+		expect(matches(['story'], 'story NOT')).toBe(true);
 	});
 });
 
