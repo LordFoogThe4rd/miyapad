@@ -57,7 +57,10 @@ function loadCollapsed(): Set<string> {
 	}
 }
 
-/** Puts each folder where its first session sorts to, with its sessions in their sorted order. */
+/**
+ * Folders first, ordered by where their first session sorts to, then the sessions in no folder.
+ * Each keeps its sessions in their sorted order.
+ */
 function groupByFolder(entries: SessionEntry[]): ListItem[] {
 	const items: ListItem[] = [];
 	const folders = new Map<string, ListItem>();
@@ -70,7 +73,7 @@ function groupByFolder(entries: SessionEntry[]): ListItem[] {
 		}
 		item.entries.push(entry);
 	}
-	return items;
+	return [...items.filter(item => item.folder), ...items.filter(item => !item.folder)];
 }
 
 /**

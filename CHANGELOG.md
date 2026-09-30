@@ -15,6 +15,7 @@
 - The Created column is gone from the Sessions list; the details pane shows the date instead. The Sort By box is always in the toolbar again, for sorting by creation date and for the icon view
 - Create asks for the new session's name in the bar above the list instead of in a new row
 - The quick switcher no longer locks up while text is being generated. You can search and run commands, and Escape closes it. Sessions are greyed out until the generation ends
+- Folders are always at the top of the Sessions list, above the sessions that are in no folder, pinned ones included
 
 ### Fixed
 

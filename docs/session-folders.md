@@ -40,7 +40,7 @@ The folder box (`folderEdit`) is one input in the slot above the list, used by t
 
 ## Listing
 
-Sessions are filtered and sorted as before (pinned first, then the chosen sort), then `groupByFolder()` walks that order and places each folder where its first session falls, with its sessions in their sorted order beneath it. So a folder with a pinned session floats with the pinned ones, and under *Last Modified* the folder you worked in last is on top.
+Sessions are filtered and sorted as before (pinned first, then the chosen sort), then `groupByFolder()` walks that order and gathers each folder's sessions beneath it in their sorted order. Folders always come before the sessions in no folder, pinned ones included, in both views. Among themselves, folders are ordered by where their first session falls, so a folder with a pinned session comes first, and under *Last Modified* the folder you worked in last is on top.
 
 Clicking the Name or Modified header sorts by that column, and clicking it again reverses the order. A newly clicked column starts at A for names and at the newest date for dates, and the sorted header has `aria-sort`. The sort is kept in `localStorage` (`miyapad-sessions-sortBy`, `miyapad-sessions-sortAsc`). The creation date is in the details pane, and the icon view has no headers, so the toolbar always has the *Sort By* box and its direction button too. Picking a column there starts it in the same direction as clicking its header. Below 480px the Modified column is hidden.
 
