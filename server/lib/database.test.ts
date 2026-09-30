@@ -9,6 +9,9 @@ import { initDatabase, clearMaintenanceScheduler } from './database.js';
 import { getColumnName } from './utils.js';
 import { hasZstd } from './testing.js';
 
+const loadTokenizer = vi.hoisted(() => vi.fn());
+vi.mock('../tokenizer.js', () => ({ loadTokenizer }));
+
 const compressedTables = ['sessions', 'templates', 'themes', 'connections', 'samplerpresets', 'sessionhistory'];
 
 describe.skipIf(!hasZstd)('initDatabase', () => {
@@ -21,6 +24,7 @@ describe.skipIf(!hasZstd)('initDatabase', () => {
         dir = fs.mkdtempSync(path.join(os.tmpdir(), 'miyapad-db-'));
         dbPath = path.join(dir, 'web-session-storage.db');
         log = vi.spyOn(console, 'log').mockImplementation(() => {});
+        loadTokenizer.mockReset();
     });
 
     afterEach(() => {
@@ -134,5 +138,46 @@ describe.skipIf(!hasZstd)('initDatabase', () => {
         expect(log).not.toHaveBeenCalledWith(expect.stringContaining('Migrating'));
         expect(version(again)).toBe('4');
         expect({ sessions: rows(again, 'sessions'), names: rows(again, 'names') }).toEqual(before);
+    });
+
+    /** Opens a fresh database, saves these meta values in it, and opens it again. */
+    async function restartWith(meta: Record<string, string>) {
+        const first = await init();
+        for (const [key, value] of Object.entries(meta)) first.prepare('INSERT OR REPLACE INTO meta (key, value) VALUES (?, ?)').run(key, value);
+        first.close();
+        open.splice(0);
+        log.mockClear();
+        return init();
+    }
+
+    it('reloads the tokenizer saved in meta at startup', async () => {
+        await restartWith({ tokenizer_model: 'llama3' });
+        expect(loadTokenizer).toHaveBeenCalledWith('llama3');
+        expect(log).toHaveBeenCalledWith('Auto-restored saved tokenizer: llama3');
+    });
+
+    it('logs a saved tokenizer that fails to load and starts anyway', async () => {
+        const error = vi.spyOn(console, 'error').mockImplementation(() => {});
+        loadTokenizer.mockRejectedValue(new Error('missing file'));
+
+        expect(version(await restartWith({ tokenizer_model: 'gone' }))).toBe('4');
+        expect(error).toHaveBeenCalledWith('Failed to auto-restore tokenizer "gone":', 'missing file');
+    });
+
+    it('loads no tokenizer when none is saved', async () => {
+        await restartWith({});
+        expect(loadTokenizer).not.toHaveBeenCalled();
+    });
+
+    it('turns on WAL and runs zstd maintenance at startup when the saved config asks for it', async () => {
+        const db = await restartWith({ maintenance_config: JSON.stringify({ walEnabled: true, mode: 'startup', duration: 7, dbLoad: 0.3 }) });
+        expect(db.pragma('journal_mode', { simple: true })).toBe('wal');
+        expect(log).toHaveBeenCalledWith('zstd maintenance completed (duration=7, db_load=0.3).');
+    });
+
+    it('leaves WAL off and skips startup maintenance with the default config', async () => {
+        const db = await restartWith({});
+        expect(db.pragma('journal_mode', { simple: true })).not.toBe('wal');
+        expect(log).not.toHaveBeenCalledWith(expect.stringContaining('zstd maintenance completed'));
     });
 });
