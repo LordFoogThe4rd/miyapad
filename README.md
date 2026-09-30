@@ -48,9 +48,11 @@ For the full server + frontend, download the standalone distribution archive fro
 
 #### From Source
 
-From the `server/` directory:
+The server serves the frontend from the root `dist/` folder, so build it first. From the repository root:
 
 ```shell
+npm install && npm run build
+cd server
 npm install
 npm start
 ```

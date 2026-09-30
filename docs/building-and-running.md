@@ -14,6 +14,8 @@ Both the `prestart` and `prebuild` hooks run `scripts/write-version.mjs`, which 
 
 ## Backend Server
 
+The server serves the frontend from the root `dist/` folder, so run `npm run build` in the root first. Without it the server logs `Warning: frontend dist not found` and the page won't load.
+
 From the `server/` directory:
 
 1. Install dependencies: `npm install`
