@@ -30,8 +30,10 @@ describe('importPreset', () => {
 		expect(importPreset({ presetVersion: '3', samplers: [] }, [])).toMatchObject({ name: 'Imported Preset' });
 	});
 
-	it('keeps a native preset as it is, name included, when the name is free', () => {
-		expect(importPreset(native(), ['Other'])).toEqual(native());
+	it('keeps a native preset as it is, name included, when the name is free, minus its id', () => {
+		const { id: _id, ...rest } = native();
+
+		expect(importPreset(native(), ['Other'])).toEqual(rest);
 	});
 
 	it('renames a native preset whose name is taken to "(Imported)", then "(Imported 2)" and on', () => {

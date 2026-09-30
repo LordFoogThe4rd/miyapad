@@ -45,12 +45,13 @@ export function importPreset(json: Record<string, unknown>, existingNames: strin
     return importSillyTavernPreset(json, existingNames);
   }
   if (isSamplerPresetData(json)) {
-    const nameBase = json.name;
+    const { id: _id, ...preset } = json;
+    const nameBase = preset.name;
     let name = nameBase;
     for (let i = 1; existingNames.includes(name); i++) {
       name = nameBase + (i === 1 ? ' (Imported)' : ` (Imported ${i})`);
     }
-    return { ...json, name };
+    return { ...preset, name };
   }
   return null;
 }
