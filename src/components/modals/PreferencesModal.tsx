@@ -26,9 +26,16 @@ const tabStyle = (active: any) => ({
 	color: 'var(--color-light)',
 	cursor: 'pointer',
 	fontSize: 'inherit',
+	whiteSpace: 'nowrap',
 	fontWeight: active ? '600' : '400',
 	transition: 'color 0.15s, border-color 0.2s'
 });
+
+// On a phone the tabs are wider than the dialog, so the row scrolls sideways. The wrapper's `contain`
+// stops their text from counting toward the dialog's width, which otherwise pushed it and every field
+// past the screen. It sits on a wrapper because `.vbox` rows are `0fr`, which squashes a scrolling
+// row itself to no height at all.
+const tabRowStyle = { gap: 0, overflowX: 'auto' } as const;
 
 export function PreferencesModal({ isOpen, closeModal, settings }: any) {
 	const t = useT();
@@ -153,7 +160,7 @@ export function PreferencesModal({ isOpen, closeModal, settings }: any) {
 			title=${t('preferences.title')}
 			style=${{ maxWidth: '35em' }}>
 			<div className="vbox">
-				<div className="hbox" style=${{ gap: 0 }}>
+				<div style=${{ contain: 'inline-size' }}><div className="hbox" style=${tabRowStyle}>
 					<button style=${tabStyle(activeTab === 'general')}
 						onClick=${() => switchTab('general')}>
 						${t('preferences.tabGeneral')}
@@ -176,7 +183,7 @@ export function PreferencesModal({ isOpen, closeModal, settings }: any) {
 							${t('preferences.tabServer')}
 						</button>
 					`}
-				</div>
+				</div></div>
 
 				<div ref=${contentRef} style=${{ display: 'flex', flexDirection: 'column', gap: '2px', marginTop: '8px', transition: 'height 0.2s ease-in-out', minWidth: 0 }}>
 					${activeTab === 'general' && html`
