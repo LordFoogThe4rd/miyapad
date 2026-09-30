@@ -22,6 +22,7 @@
 - The Compression Level and Samples Ratio boxes in Database Tools now show the values your database uses, instead of always starting at 3 and 100. Clicking Update without changing them no longer turns compression down on new databases, which start at level 9
 - AI Horde, and any other endpoint whose address has a path after the host (such as `https://openrouter.ai/api`), works again when you run the miyapad server. Every request to one of these failed with "Path traversal detected"
 - Indentation or a double space right before `{predict}` or `{fill}` no longer loses its last space. Only a single space after a word is still dropped, as in `word {predict}`
+- `{fill}` fills in the text again. It stopped at the first token and left the placeholder empty
 - On a phone, the Preferences tabs scroll sideways instead of pushing the dialog and its fields off the screen
 - The server's login now accepts a password that contains a colon. Before, such a password was always refused
 - With Caps Lock on, typing a lowercase r, z, y, e or f with Shift no longer regenerates, undoes, redoes, stops speech or opens search instead of typing the letter
