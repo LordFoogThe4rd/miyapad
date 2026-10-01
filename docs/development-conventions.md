@@ -48,7 +48,7 @@ export function Widget() {
 }
 ```
 
-Build dynamic text in the component (e.g. `` `${t('sidebar.depth')}: ${n}` ``), since `useT` returns plain strings with no interpolation. See [Localization](architecture.md#6-localization-i18n) for how locales are loaded and added.
+For dynamic text, put a `{{name}}` placeholder in the string and pass the value: with `"sessions.selectedCount": "{{count}} selected"`, `t('sessions.selectedCount', { count: 3 })` gives `3 selected`. Values can be strings or numbers. There is no pluralization, so when the wording changes with the count, use a separate key (e.g. `sessions.purgeConfirm` and `sessions.purgeConfirmMany`). See [Localization](architecture.md#6-localization-i18n) for how locales are loaded and added.
 
 ## Storage Modifications
 

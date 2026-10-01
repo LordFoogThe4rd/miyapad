@@ -97,10 +97,10 @@ UI strings are localized through a small context in `src/i18n/`:
 
 - `locales.ts`: the `AVAILABLE_LOCALES` registry (e.g. `['en']`) and the `LocaleCode` type derived from it. This is the one place that says which languages exist.
 - `{code}.json`: a flat `key → string` table per locale (`en.json` is the reference). Keys are dot-namespaced (e.g. `preferences.language`) and kept in alphabetical order.
-- `context.tsx`: `I18nProvider` and the `useT()` hook. `en.json` is imported statically as the default and fallback. Any other locale in `AVAILABLE_LOCALES` is loaded lazily with a dynamic `import()`. If loading fails or a locale isn't registered, it falls back to `en`. `useT()` returns `strings[key] ?? key`, so a missing key shows up as the raw key.
+- `context.tsx`: `I18nProvider` and the `useT()` hook. `en.json` is imported statically as the default and fallback. Any other locale in `AVAILABLE_LOCALES` is loaded lazily with a dynamic `import()`. If loading fails or a locale isn't registered, it falls back to `en`. `useT()` returns `strings[key] ?? key`, so a missing key shows up as the raw key. It also takes an optional `params` object: `t(key, { name: value })` replaces every `{{name}}` in the string with `value`. A placeholder with no matching param is left as is.
 
 The active locale lives in `SettingsContext` as `locale`, saved to `localStorage` via `usePersistentState`. On the first visit, `detectLocale()` takes the browser language (the primary subtag of `navigator.language`) if it's in `AVAILABLE_LOCALES`, and `en` otherwise. Once you pick a language in Preferences → General, that choice wins. `App.tsx` reads `locale` from settings and passes it to `I18nProvider`, so switching languages re-renders the whole tree.
 
 To add a language, drop a `{code}.json` next to `en.json` and add its code to `AVAILABLE_LOCALES`. No other code changes are needed. The language selector in Preferences (which shows each language's name in that language, via `Intl.DisplayNames`) and the lazy loader pick it up.
 
-Not supported: RTL layout, pluralization and interpolation (callers build template strings themselves), and server-side strings.
+Not supported: RTL layout, pluralization, and server-side strings.
