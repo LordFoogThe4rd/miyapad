@@ -60,6 +60,29 @@ export function memoize<T extends (...args: any[]) => any>(fn: T): T {
 	return memoized as T;
 }
 
+/**
+ * What `str.replace(regex, pattern)` puts in place of one of its matches: expands `$$`, `$&`,
+ * `` $` ``, `$'`, `$n`, `$nn` and `$<name>` the same way.
+ */
+export function expandReplacement(pattern: string, match: RegExpExecArray, str: string): string {
+	const captures = match.length - 1;
+	return pattern.replace(/\$(?:([$&`'])|(\d\d?)|<([^>]*)>)/g, (ref, symbol, digits, name) => {
+		if (symbol === '$') return '$';
+		if (symbol === '&') return match[0];
+		if (symbol === '`') return str.slice(0, match.index);
+		if (symbol === "'") return str.slice(match.index + match[0].length);
+		if (digits === undefined) return match.groups ? match.groups[name] ?? '' : ref;
+		// $nn reads as $n followed by a digit when there is no nn-th group
+		let n = Number(digits);
+		let rest = '';
+		if (n > captures && digits.length === 2) {
+			n = Number(digits[0]);
+			rest = digits[1];
+		}
+		return n >= 1 && n <= captures ? (match[n] ?? '') + rest : ref;
+	});
+}
+
 export function escapeRegExp(string: string) {
 	return string.replace(/[.*+?^${}()|[\]\\]/g, '\\$&');
 };

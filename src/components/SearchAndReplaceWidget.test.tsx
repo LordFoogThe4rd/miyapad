@@ -12,12 +12,9 @@ function makeAdapter(text: string) {
 		setSelection: vi.fn(),
 		scrollIntoView: vi.fn(),
 		replaceRanges: vi.fn((changes: { from: number; to: number; insert: string }[]) => {
-			for (const c of changes) {
+			for (const c of [...changes].sort((a, b) => b.from - a.from)) {
 				adapter.text = adapter.text.slice(0, c.from) + c.insert + adapter.text.slice(c.to);
 			}
-		}),
-		replaceText: vi.fn((newText: string) => {
-			adapter.text = newText;
 		}),
 	};
 	return { current: adapter };

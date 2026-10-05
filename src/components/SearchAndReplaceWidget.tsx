@@ -6,6 +6,7 @@ import { InputBox } from './controls/InputBox';
 import { SelectBox } from './controls/SelectBox';
 import { SVG_ArrowUp, SVG_ArrowDown } from './icons/index';
 import { useT } from '../i18n';
+import { expandReplacement } from '../utils/regex';
 
 export function SearchAndReplaceWidget({ isOpen, closeWidget, id, children, editorView, promptText, cancel, ...props }: any) {
 	const t = useT();
@@ -132,13 +133,12 @@ export function SearchAndReplaceWidget({ isOpen, closeWidget, id, children, edit
 		} else if (mode === 1) {
 			const gFlags = flags && !flags.includes('g') ? flags + 'g' : flags || 'g';
 			try {
-				let re = new RegExp(String.raw`${search}`, String.raw`${gFlags}`);
-				const newVal = text.replace(re, replace.replace(/\\n/g, '\n'));
-				if (newVal !== text) {
-					adapter.replaceText(newVal);
-					adapter.focus();
-					return;
-				}
+				const re = new RegExp(search, gFlags);
+				const pattern = replace.replace(/\\n/g, '\n');
+				// One change per match, not a rebuilt text, so only the matches become user text
+				const parts = [...text.matchAll(re)].map(m => ({ from: m.index, to: m.index + m[0].length, insert: expandReplacement(pattern, m, text) }));
+				adapter.replaceRanges(parts.reverse());
+				adapter.focus();
 			} catch (e: unknown) {
 				reportError(e);
 				setSearchAndReplaceError(String(e));

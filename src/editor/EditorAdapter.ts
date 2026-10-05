@@ -29,6 +29,13 @@ export interface EditorAdapter {
  */
 export const PROGRAMMATIC_EDIT = 'programmaticEdit';
 
+/**
+ * Meta on a replaceRanges transaction: its changes as offsets into the text before it,
+ * ascending. Lets the chunk sync turn only the replaced spans into user text instead of
+ * everything from the first change to the last.
+ */
+export const TEXT_CHANGES = 'textChanges';
+
 export class ProseMirrorAdapter implements EditorAdapter {
   constructor(private view: PMEditorView, private scroller?: HTMLElement | null) {}
 
@@ -71,25 +78,29 @@ export class ProseMirrorAdapter implements EditorAdapter {
   }
 
   replaceRanges(changes: { from: number; to: number; insert: string }[]): void {
-    const sorted = [...changes].sort((a, b) => b.from - a.from);
+    const original = this.getText();
+    const sorted = changes
+      .filter((c) => original.slice(c.from, c.to) !== c.insert)
+      .sort((a, b) => b.from - a.from);
+    if (sorted.length === 0) return;
+    let tr = this.view.state.tr;
     if (sorted.some((c) => c.insert.includes('\n'))) {
       // Same rebuild as replaceRange: apply every change in flat-text space
       // against the ORIGINAL text, then reconstruct the whole doc. Positions
       // map against the ORIGINAL doc, not tr.doc, for non-overlapping edits.
-      let text = this.getText();
+      let text = original;
       for (const change of sorted) {
         text = text.slice(0, change.from) + change.insert + text.slice(change.to);
       }
-      this.replaceText(text);
-      return;
+      tr = tr.replaceWith(0, tr.doc.content.size, textToDoc(this.view.state.schema, text).content);
+    } else {
+      for (const change of sorted) {
+        const pmFrom = textOffsetToPMPos(this.view.state.doc, change.from);
+        const pmTo = textOffsetToPMPos(this.view.state.doc, change.to);
+        tr = tr.insertText(change.insert, pmFrom, pmTo);
+      }
     }
-    let tr = this.view.state.tr;
-    for (const change of sorted) {
-      const pmFrom = textOffsetToPMPos(this.view.state.doc, change.from);
-      const pmTo = textOffsetToPMPos(this.view.state.doc, change.to);
-      tr = tr.insertText(change.insert, pmFrom, pmTo);
-    }
-    this.dispatchEdit(tr);
+    this.dispatchEdit(tr.setMeta(TEXT_CHANGES, sorted.reverse()));
   }
 
   focus(): void {

@@ -16,9 +16,9 @@ import { ScreenshotPreviewModal } from './modals/ScreenshotPreviewModal';
 import { chunkDecorationPlugin, chunkDecorationKey, chunkHoverPlugin, chunkHoverKey, type ChunkDecorationState, type ChunkHoverState } from '../editor/chunkDecorations';
 import { markdownDecorationPlugin, markdownDecorationKey } from '../editor/markdownDecorations';
 import { markdownCaretPlugin } from '../editor/markdownCaret';
-import { diffPromptChunksWithMeta, applyChunksToPM, textToDoc } from '../editor/syncReactToPM';
+import { diffPromptChunksWithMeta, spliceChunks, applyChunksToPM, textToDoc } from '../editor/syncReactToPM';
 import { docText, flatTextLength } from '../editor/docText';
-import { ProseMirrorAdapter, PROGRAMMATIC_EDIT } from '../editor/EditorAdapter';
+import { ProseMirrorAdapter, PROGRAMMATIC_EDIT, TEXT_CHANGES } from '../editor/EditorAdapter';
 import { schema } from '../editor/schema';
 import { DEFAULT_HISTORY_DELETION_THRESHOLD, positiveCount } from '../storage/SessionHistory';
 import type { PromptContainerProps } from '../types/components';
@@ -144,7 +144,12 @@ export function PromptContainer({ sidebarHeight }: PromptContainerProps) {
 					if (deleted >= threshold && replacedSpanLength(docText(tr.before), newDoc) >= threshold) {
 						sessionStorage.snapshot('deletion', { prompt: prevChunks });
 					}
-					const { chunks: newChunks } = diffPromptChunksWithMeta(prevChunks, newDoc);
+					const changes = tr.getMeta(TEXT_CHANGES);
+					let newChunks = changes && spliceChunks(prevChunks, changes);
+					// The splice trusts prevChunks to spell the text before the edit; if they ever
+					// don't, its result would overwrite the prompt on the next sync, so diff instead.
+					if (!newChunks || newChunks.map((c: PromptChunk) => c.content).join('') !== newDoc)
+						newChunks = diffPromptChunksWithMeta(prevChunks, newDoc).chunks;
 					// Snapshot the pre-edit chunks as an undo checkpoint so the user's edit is
 					// itself undoable, and invalidate any redo history. Consecutive edits within
 					// UNDO_COALESCE_MS share one checkpoint, so a burst of typing is one undo step.

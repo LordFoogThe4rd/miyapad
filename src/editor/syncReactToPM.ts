@@ -69,6 +69,40 @@ export function diffPromptChunksWithMeta(prev: PromptChunk[], nv: string): { chu
 	return { chunks: newPrompt, startLen: start.length, endLen: end.length };
 }
 
+/**
+ * Applies several changes at once, given as offsets into the old text, ascending and
+ * non-overlapping. Only the chunks a change touches become user text, so tokens between
+ * two changes keep their type; diffPromptChunks would turn everything from the first
+ * change to the last into user text. Untouched chunks are reused, and adjacent user
+ * chunks merge.
+ */
+export function spliceChunks(prev: PromptChunk[], changes: readonly { from: number; to: number; insert: string }[]): PromptChunk[] {
+	const out: PromptChunk[] = [];
+	const push = (chunk: PromptChunk) => {
+		const last = out[out.length - 1];
+		if (chunk.type === 'user' && last?.type === 'user') out[out.length - 1] = { ...last, content: last.content + chunk.content };
+		else out.push(chunk);
+	};
+	let i = 0;
+	let pos = 0; // where prev[i] starts in the old text
+	for (const { from, to, insert } of changes) {
+		while (i < prev.length && pos + prev[i].content.length <= from) {
+			push(prev[i]);
+			pos += prev[i++].content.length;
+		}
+		const start = pos;
+		let old = '';
+		while (i < prev.length && pos < to) {
+			old += prev[i].content;
+			pos += prev[i++].content.length;
+		}
+		const text = old.slice(0, from - start) + insert + old.slice(to - start);
+		if (text) push({ type: 'user', content: text });
+	}
+	while (i < prev.length) push(prev[i++]);
+	return out;
+}
+
 export function applyChunksToPM(
 	view: EditorView,
 	newChunks: PromptChunk[],

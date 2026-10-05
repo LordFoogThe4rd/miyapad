@@ -28,6 +28,7 @@
 - With Caps Lock on, typing a lowercase r, z, y, e or f with Shift no longer regenerates, undoes, redoes, stops speech or opens search instead of typing the letter
 - Ctrl+R, Ctrl+E, Ctrl+F and Ctrl+P now work with Caps Lock on
 - Screen readers now name the quick switcher's search box. As you move through its results with the arrow keys, they say which one is highlighted and whether it is greyed out
+- Replace All in Search & Replace now turns only the replaced text into your own text. Before, everything from the first match to the last became your text, so replacing the `'` around `'token'` with `"` lost the model's tokens in between, along with their probabilities
 
 ## [2.9.0] - 2026-09-24
 

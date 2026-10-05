@@ -1,6 +1,7 @@
 import { describe, it, expect, vi } from 'vitest';
 import {
 	escapeRegExp,
+	expandReplacement,
 	makeWhiteSpaceLenient,
 	createLenientPrefixRegex,
 	createLenientRegex,
@@ -150,6 +151,25 @@ describe('memoize', () => {
 		expect(memoized(5, 2)).toBe(3);
 		expect(memoized(2, 5)).toBe(-3);
 		expect(fn).toHaveBeenCalledTimes(2);
+	});
+});
+
+describe('expandReplacement', () => {
+	it('expands each match the way String.replace does', () => {
+		const str = 'Miku sings, Rin sings';
+		const regexes = [/(\w+) (sings)/g, /(?<who>\w+) sings/g, /(a)?(\w)/g, /x*/g];
+		const patterns = ['$2 $1', '$$ $& [$`] [$\']', '$<who>!', '$<nope>', '$0 $00 $01 $10 $9 $99', 'plain', '$<who'];
+		for (const re of regexes) {
+			for (const pattern of patterns) {
+				let rebuilt = '';
+				let last = 0;
+				for (const match of str.matchAll(re)) {
+					rebuilt += str.slice(last, match.index) + expandReplacement(pattern, match, str);
+					last = match.index + match[0].length;
+				}
+				expect(rebuilt + str.slice(last), `${re} ${pattern}`).toBe(str.replace(re, pattern));
+			}
+		}
 	});
 });
 

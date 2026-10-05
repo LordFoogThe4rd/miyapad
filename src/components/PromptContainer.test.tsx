@@ -181,6 +181,19 @@ describe('PromptContainer transaction synchronization', () => {
 		expect(setPromptChunksCalls[0]).toEqual([u('aX'), m('bc')]);
 	});
 
+	it('keeps the tokens between two replaced spans as model text', () => {
+		const { view } = renderEditor([u('say '), m("'"), m('token'), m("'")]);
+		const adapter = genState.promptEditorView.current!;
+
+		act(() => adapter.replaceRanges([{ from: 4, to: 5, insert: '"' }, { from: 10, to: 11, insert: '"' }]));
+		expect(setPromptChunksCalls.at(-1)).toEqual([u('say "'), m('token'), u('"')]);
+
+		// a newline in the replacement rebuilds the whole doc, which must not change that
+		act(() => adapter.replaceRanges([{ from: 4, to: 5, insert: '\n' }, { from: 10, to: 11, insert: '\n' }]));
+		expect(setPromptChunksCalls.at(-1)).toEqual([u('say \n'), m('token'), u('\n')]);
+		expect(view.state.doc.textBetween(0, view.state.doc.content.size, '\n')).toBe('say \ntoken\n');
+	});
+
 	it('creates one exact undo checkpoint per edit and clears redo', () => {
 		const { view } = renderEditor();
 		genState.redoStack.current = [[u('old')]];

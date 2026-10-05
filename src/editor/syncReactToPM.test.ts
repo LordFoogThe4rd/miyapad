@@ -5,7 +5,7 @@ import { TextSelection } from 'prosemirror-state';
 import { schema } from './schema';
 import { docText } from './docText';
 import { pmPosToTextOffset } from './chunkDecorations';
-import { applyChunksToPM, diffPromptChunks, diffPromptChunksWithMeta, textToDoc } from './syncReactToPM';
+import { applyChunksToPM, diffPromptChunks, diffPromptChunksWithMeta, spliceChunks, textToDoc } from './syncReactToPM';
 
 function u(content: string): PromptChunk {
 	return { type: 'user', content };
@@ -233,6 +233,26 @@ describe('diffPromptChunksWithMeta', () => {
 		expect(chunks).toEqual([u('XYZ')]);
 		expect(startLen).toBe(0);
 		expect(endLen).toBe(0);
+	});
+});
+
+describe('spliceChunks', () => {
+	it('turns only the chunks each change touches into user text', () => {
+		const token = m('token');
+		const result = spliceChunks([m('say '), m("'"), token, m("'"), m('!')], [
+			{ from: 4, to: 5, insert: '"' },
+			{ from: 10, to: 11, insert: '"' },
+		]);
+		expect(result).toEqual([m('say '), u('"'), m('token'), u('"'), m('!')]);
+		expect(result[2]).toBe(token);
+	});
+
+	it('handles inserts inside and between chunks, deletions across chunks, and merges user neighbours', () => {
+		const prev = [u('ab'), m('cd'), m('ef'), u('gh')];
+		expect(spliceChunks(prev, [{ from: 3, to: 3, insert: 'X' }])).toEqual([u('abcXd'), m('ef'), u('gh')]);
+		expect(spliceChunks(prev, [{ from: 4, to: 4, insert: 'X' }])).toEqual([u('ab'), m('cd'), u('X'), m('ef'), u('gh')]);
+		expect(spliceChunks(prev, [{ from: 3, to: 5, insert: '' }])).toEqual([u('abcfgh')]);
+		expect(spliceChunks(prev, [{ from: 0, to: 8, insert: 'Z' }])).toEqual([u('Z')]);
 	});
 });
 
