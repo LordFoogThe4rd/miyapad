@@ -20,7 +20,7 @@ afterEach(() => {
 describe('IndexedDBAdapter', () => {
 	it('creates every store on a fresh database', () => {
 		expect([...db.objectStoreNames].sort()).toEqual(
-			['Connections', 'Names', 'SamplerPresets', 'SessionHistory', 'Sessions', 'Templates', 'Themes']);
+			['Connections', 'Names', 'PluginData', 'Plugins', 'SamplerPresets', 'SessionHistory', 'Sessions', 'Templates', 'Themes']);
 	});
 
 	it('saves, loads and lists records', async () => {

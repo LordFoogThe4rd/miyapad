@@ -11,6 +11,8 @@ describe('getColumnName', () => {
         expect(getColumnName('connections')).toBe('connection_data');
         expect(getColumnName('samplerpresets')).toBe('sampler_preset_data');
         expect(getColumnName('sessionhistory')).toBe('history_data');
+        expect(getColumnName('plugins')).toBe('plugin_data');
+        expect(getColumnName('plugindata')).toBe('plugin_storage_data');
     });
 
     it('falls back to "data" for a store without its own column', () => {
@@ -23,6 +25,8 @@ describe('normalizeStoreName', () => {
         expect(normalizeStoreName('Sessions')).toBe('sessions');
         expect(normalizeStoreName('SamplerPresets')).toBe('samplerpresets');
         expect(normalizeStoreName('SessionHistory')).toBe('sessionhistory');
+        expect(normalizeStoreName('Plugins')).toBe('plugins');
+        expect(normalizeStoreName('PluginData')).toBe('plugindata');
     });
 
     it('keeps only the first word', () => {

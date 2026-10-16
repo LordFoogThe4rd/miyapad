@@ -21,3 +21,4 @@ Web-based AI text generation interface. React 19/TypeScript frontend with option
 - [Session Tags](docs/session-tags.md)
 - [Session Folders](docs/session-folders.md)
 - [Session Trash](docs/session-trash.md)
+- [Plugins](docs/plugins.md)

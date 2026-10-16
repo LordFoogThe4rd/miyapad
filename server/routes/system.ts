@@ -3,6 +3,7 @@ import type { Database } from 'better-sqlite3';
 import * as tokenizer from '../tokenizer.js';
 import { runZstdMaintenance, configureWAL, getMaintenanceConfig, saveMaintenanceConfig, clearMaintenanceScheduler, scheduleZstdMaintenance } from '../lib/database.js';
 import { getUpdateInfo } from '../lib/update.js';
+import { getBackupStatus } from '../lib/backup.js';
 
 const SERVER_VERSION = 4;
 
@@ -14,7 +15,8 @@ export default function(app: Express, db: Database): void {
             features: { zstd_compression: true, server_tokenizer: true },
             tokenizers: tokenizer.getAvailableTokenizers(),
             latestVersion: update.latestVersion,
-            downloadUrl: update.downloadUrl
+            downloadUrl: update.downloadUrl,
+            backup: getBackupStatus()
         });
     });
 

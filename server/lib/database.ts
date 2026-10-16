@@ -275,6 +275,8 @@ const initDatabase = async (storagePath: string): Promise<DB> => {
         CREATE TABLE IF NOT EXISTS samplerpresets (key TEXT PRIMARY KEY, ${getColumnName('samplerpresets')} BLOB);
         -- Created on every start rather than in a versioned migration, so existing databases pick it up too.
         CREATE TABLE IF NOT EXISTS sessionhistory (key TEXT PRIMARY KEY, ${getColumnName('sessionhistory')} BLOB);
+        CREATE TABLE IF NOT EXISTS plugins (key TEXT PRIMARY KEY, ${getColumnName('plugins')} BLOB);
+        CREATE TABLE IF NOT EXISTS plugindata (key TEXT PRIMARY KEY, ${getColumnName('plugindata')} BLOB);
         CREATE TABLE IF NOT EXISTS meta (key TEXT PRIMARY KEY, value TEXT);
     `);
 
@@ -295,7 +297,7 @@ const initDatabase = async (storagePath: string): Promise<DB> => {
         console.log('Initializing brand new database at version 4 schema...');
     }
 
-    for (const table of ['sessions', 'templates', 'themes', 'connections', 'samplerpresets', 'sessionhistory']) {
+    for (const table of ['sessions', 'templates', 'themes', 'connections', 'samplerpresets', 'sessionhistory', 'plugins', 'plugindata']) {
         enableTransparentCompressionIfMissing(db, table);
     }
 

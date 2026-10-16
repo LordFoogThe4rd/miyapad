@@ -9,6 +9,7 @@ import { API_LLAMA_CPP, API_KOBOLD_CPP, API_OPENAI_COMPAT, API_AI_HORDE, API_DEE
 import { replaceNewlines } from '../utils/strings';
 import { regexLastIndexOf, createLenientRegex } from '../utils/regex';
 import { isAbortError } from '../utils/errors';
+import { runOutputHooks, runPromptHooks } from '../plugins';
 
 type PredictionCallback = (chunk: CompletionChunk) => boolean;
 
@@ -121,6 +122,9 @@ export function useGenerationLogic() {
 		// Session counters, flushed once in the finally rather than per token.
 		let predictTokens = 0;
 		let predictChars = 0;
+		// Everything this generation produced, for the plugins' output hooks.
+		let predictText = '';
+		let streamEnded = false;
 		// Separate from the tok/s startTime below, which is nudged backwards to compensate
 		// for the first token and so no longer marks when streaming actually began.
 		let streamStartMs = 0;
@@ -207,6 +211,11 @@ export function useGenerationLogic() {
 				setTriggerPredict(true);
 				return;
 			}
+
+			// After the token count and the instruct suffix, so plugins see exactly what goes out.
+			// The token counter keeps showing the count from before they changed it.
+			prompt = await runPromptHooks(prompt);
+			if (myId !== activeGenId.current) return;
 
 			let startTime = 0;
 			setTokensPerSec(0.0);
@@ -333,9 +342,11 @@ export function useGenerationLogic() {
 				predictCount += 1;
 				predictTokens += compChunk?.completion_probabilities?.length ?? estimateTokens(compChunk.content);
 				predictChars += compChunk.content.length;
+				predictText += compChunk.content;
 				if (streamStartMs === 0) streamStartMs = performance.now();
 				ttsAddChunk(compChunk.content);
 			}
+			streamEnded = true;
 		} catch (e: unknown) {
 			if (!isAbortError(e)) {
 				reportError(e);
@@ -362,6 +373,7 @@ export function useGenerationLogic() {
 					genChars: predictChars,
 					genMs: Math.round(performance.now() - streamStartMs),
 				});
+				runOutputHooks(predictText, { complete: streamEnded && myId === activeGenId.current });
 			}
 			if (myId === activeGenId.current) {
 				setCancel((c: (() => void) | null) => c === cancelThis ? null : c);

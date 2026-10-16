@@ -1,5 +1,7 @@
 import type { Dispatch, RefObject, SetStateAction } from 'react';
 import type { EditorAdapter } from '../editor/EditorAdapter';
+import type { PluginStorage } from '../storage/PluginStorage';
+import type { PluginStartInfo } from '../plugins';
 
 declare global {
   interface PromptChunk {
@@ -18,6 +20,8 @@ export interface SettingsState {
   themeStorage: ThemeStorage;
   connectionStorage: ConnectionStorage;
   samplerPresetStorage: SamplerPresetStorage;
+  pluginStorage: PluginStorage;
+  pluginStart: PluginStartInfo;
   useSessionState: <T>(name: string, initialState: T) => [T, Dispatch<SetStateAction<T>>];
   useDBTemplates: (initialState: Record<string, InstructTemplate>) => [Record<string, InstructTemplate>, Dispatch<SetStateAction<Record<string, InstructTemplate>>>];
   useDBThemes: (initialState: Record<string, ThemeData>) => [Record<string, ThemeData>, Dispatch<SetStateAction<Record<string, ThemeData>>>];

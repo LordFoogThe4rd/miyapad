@@ -10,6 +10,8 @@ import type { TemplateStorage } from '../storage/TemplateStorage';
 import type { ThemeStorage } from '../storage/ThemeStorage';
 import type { ConnectionStorage } from '../storage/ConnectionStorage';
 import type { SamplerPresetStorage } from '../storage/SamplerPresetStorage';
+import type { PluginStorage } from '../storage/PluginStorage';
+import type { PluginStartInfo } from '../plugins';
 import type { SettingsState } from '../types/contexts';
 
 export const SettingsContext = createContext<SettingsState | null>(null);
@@ -26,6 +28,8 @@ interface ProviderProps {
 	themeStorage: ThemeStorage;
 	connectionStorage: ConnectionStorage;
 	samplerPresetStorage: SamplerPresetStorage;
+	pluginStorage: PluginStorage;
+	pluginStart: PluginStartInfo;
 	useSessionState: <T>(name: string, initialState: T) => [T, Dispatch<SetStateAction<T>>];
 	useDBTemplates: (initialState: Record<string, InstructTemplate>) => [Record<string, InstructTemplate>, Dispatch<SetStateAction<Record<string, InstructTemplate>>>];
 	useDBThemes: (initialState: Record<string, ThemeData>) => [Record<string, ThemeData>, Dispatch<SetStateAction<Record<string, ThemeData>>>];
@@ -34,7 +38,7 @@ interface ProviderProps {
 	isMiyapadEndpoint: boolean;
 }
 
-export function SettingsProvider({ children, sessionStorage, templateStorage, themeStorage, connectionStorage, samplerPresetStorage, useSessionState, useDBTemplates, useDBThemes, useDBConnections, useDBSamplerPresets, isMiyapadEndpoint }: ProviderProps) {
+export function SettingsProvider({ children, sessionStorage, templateStorage, themeStorage, connectionStorage, samplerPresetStorage, pluginStorage, pluginStart, useSessionState, useDBTemplates, useDBThemes, useDBConnections, useDBSamplerPresets, isMiyapadEndpoint }: ProviderProps) {
 	const [templates, setTemplates] = useDBTemplates(defaultPresets.instructTemplates);
 	const [locale, setLocale] = usePersistentState('locale', detectLocale());
 	const [templatesImport, setTemplatesImport] = useState(false);
@@ -181,7 +185,7 @@ export function SettingsProvider({ children, sessionStorage, templateStorage, th
 	const [screenshotModelAvatarUrl, setScreenshotModelAvatarUrl] = usePersistentState('screenshotModelAvatarUrl', '');
 
 	const state = {
-		sessionStorage, templateStorage, themeStorage, connectionStorage, samplerPresetStorage, useSessionState, useDBTemplates, useDBThemes, useDBConnections, useDBSamplerPresets, isMiyapadEndpoint,
+		sessionStorage, templateStorage, themeStorage, connectionStorage, samplerPresetStorage, pluginStorage, pluginStart, useSessionState, useDBTemplates, useDBThemes, useDBConnections, useDBSamplerPresets, isMiyapadEndpoint,
 		locale, setLocale,
 		connections, setConnections, selectedConnectionId, setSelectedConnectionId,
 		samplerPresets, setSamplerPresets, selectedSamplerPresetId, setSelectedSamplerPresetId,

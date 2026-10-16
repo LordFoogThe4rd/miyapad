@@ -1,0 +1,106 @@
+/* Preferences → Plugins tab */
+.plugins-tab {
+	display: flex;
+	flex-direction: column;
+	align-items: flex-start;
+	gap: 8px;
+}
+.plugins-tab > * {
+	max-width: 100%;
+}
+.plugins-warning,
+.plugins-notice {
+	align-self: stretch;
+	padding: 0.5em 0.75em;
+	border-radius: 4px;
+}
+.plugins-warning {
+	color: var(--color-error);
+	background: var(--color-error-bg);
+	border: 1px solid var(--color-error);
+}
+.plugins-notice {
+	background: var(--color-bg-input-2);
+	border: 1px solid var(--color-bg-rule);
+}
+.plugins-notice p {
+	margin: 0;
+}
+.plugins-notice p + p {
+	margin-top: 0.25em;
+}
+.plugins-backup {
+	color: var(--color-text-hint);
+	font-size: 0.9em;
+}
+.plugins-backup:empty {
+	display: none;
+}
+.plugins-empty {
+	margin: 0;
+	color: var(--color-text-hint);
+}
+.plugins-list {
+	align-self: stretch;
+	list-style: none;
+	margin: 0;
+	padding: 0;
+}
+.plugins-row {
+	padding: 6px 0;
+	border-bottom: 1px solid var(--color-bg-rule);
+}
+.plugins-row-main {
+	display: flex;
+	flex-wrap: wrap;
+	align-items: center;
+	gap: 8px;
+}
+.plugins-name {
+	font-weight: 600;
+	overflow-wrap: anywhere;
+}
+.plugins-range {
+	flex: 1;
+	color: var(--color-text-hint);
+	font-size: 0.85em;
+}
+.plugins-mark {
+	margin-left: 0.4em;
+	color: var(--color-warning, #f5a623);
+	cursor: help;
+}
+.plugins-error {
+	margin-top: 4px;
+	color: var(--color-error);
+	font-size: 0.85em;
+	overflow-wrap: anywhere;
+}
+.plugins-footer {
+	align-self: stretch;
+	display: flex;
+	flex-wrap: wrap;
+	align-items: center;
+	justify-content: space-between;
+	gap: 8px;
+	color: var(--color-text-hint);
+	font-size: 0.9em;
+}
+
+/* Loading screen, drawn before the app when startup takes more than a moment */
+#plugins-loading {
+	display: flex;
+	flex-direction: column;
+	align-items: center;
+	justify-content: center;
+	gap: 12px;
+	height: 100vh;
+	padding: 16px;
+	box-sizing: border-box;
+	color: var(--color-text-hint);
+	text-align: center;
+}
+#plugins-loading p {
+	margin: 0;
+	overflow-wrap: anywhere;
+}

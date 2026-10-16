@@ -2,7 +2,7 @@
 
 | Route | Method | Description |
 | :--- | :--- | :--- |
-| `/version` | GET | Returns the backend API version (`4`), features, available tokenizers, and update info (`latestVersion`, `downloadUrl`) from a cached check of the latest GitHub release. |
+| `/version` | GET | Returns the backend API version (`4`), features, available tokenizers, and update info (`latestVersion`, `downloadUrl`) from a cached check of the latest GitHub release. `backup` is `{ enabled, intervalMinutes, lastBackupAt }`: `enabled` is false when the server runs with `--noBackup`, and `lastBackupAt` is the time (ms since the epoch) of the last backup written since the server started, or `null`. |
 | `/vacuum` | GET | Runs a full SQLite `VACUUM` to compact the database. |
 | `/zstd_maintenance` | POST | Starts zstd dictionary maintenance by hand. Runs `SELECT zstd_incremental_maintenance(duration, db_load)` with the optional `duration` (seconds, ≥0 or null) and `dbLoad` (0.0 to 1.0) from the body, after checking both. |
 | `/maintenance_config` | GET | Returns the current scheduler and WAL config `{ duration, dbLoad, mode, interval, walEnabled }`. |

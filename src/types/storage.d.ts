@@ -53,6 +53,21 @@ interface ThemeData {
   css: string;
 }
 
+/** A plugin in the `Plugins` store, under its name (the file name without `.js`). */
+interface PluginRecord {
+  code: string;
+  enabled: boolean;
+  /** The `@miyapad-min` / `@miyapad-max` header lines, read at import. */
+  min?: string;
+  max?: string;
+  /** The Miyapad version you switched this plugin on for although it isn't declared for it. */
+  allowedVersion?: string;
+  /** Whole seconds before startup stops waiting for this plugin; defaults to 5. */
+  startTimeout?: number;
+  /** Whole seconds before one of this plugin's hooks is skipped; defaults to 10. */
+  hookTimeout?: number;
+}
+
 interface ConnectionData {
   id: string;
   name: string;

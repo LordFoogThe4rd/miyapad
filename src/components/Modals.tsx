@@ -31,6 +31,7 @@ import { SessionHistoryModal } from './modals/SessionHistoryModal';
 import { StatisticsModal } from './modals/StatisticsModal';
 import { AboutModal } from './modals/AboutModal';
 import { QuickSwitcher } from './QuickSwitcher';
+import { hooks, runPromptHooks } from '../plugins';
 import { EditorContextMenu } from './EditorContextMenu';
 import type { ContextMenuItem, ModalsProps } from '../types/components';
 
@@ -52,7 +53,8 @@ export function Modals({ toggleModal, currentThemeName, setCurrentThemeName, all
 		screenshotModelAvatarUrl, setScreenshotModelAvatarUrl,
 		connections, setConnections, selectedConnectionId,
 		samplerPresets, setSamplerPresets, selectedSamplerPresetId,
-		stoppingStringsError, drySequenceBreakersError, bannedTokensError, openaiPresets
+		stoppingStringsError, drySequenceBreakersError, bannedTokensError, openaiPresets,
+		pluginStorage, pluginStart
 	} = useSettings();
 	const { cancel, modalState, closeModal, openModal, undoStack, redoStack, instructModalState, setInstructModalState, promptEditorView, replaceEditorText, lastError, sessionEndpointConnecting, predictStartTokens, tokens, memoryTokenCount, worldInfoTokenCount, authorNoteTokenCount, contextMenuState, setContextMenuState, setTriggerPredict, sessionEndpointError, setRejectedAPIKey } = useGeneration();
 
@@ -111,6 +113,12 @@ export function Modals({ toggleModal, currentThemeName, setCurrentThemeName, all
 	};
 
 	const { insertTemplate } = useInsertTemplate();
+
+	// Plugins switched off at startup: open Preferences on the Plugins tab, with the notice until it's closed.
+	const [showPluginNotice, setShowPluginNotice] = useState(pluginStart.switchedOff.length > 0);
+	useEffect(() => {
+		if (showPluginNotice) openModal('preferences');
+	}, []);
 
 	// handle instruct modal result
 	useEffect(() => {
@@ -262,12 +270,18 @@ export function Modals({ toggleModal, currentThemeName, setCurrentThemeName, all
 			{ label: t('preferences.exportFullDB'), action: handleExportDB, disabled: false },
 			{ label: t('preferences.importFullDB'), action: handleImportDB, disabled: false },
 		] : []),
+		// Plugins push onto this whenever they like, so it's read on every render. A malformed entry is left out.
+		...hooks.commands
+			.filter(c => typeof c?.label === 'string' && typeof c.action === 'function')
+			.map(c => ({ label: c.label, action: c.action, disabled: false })),
 	];
 
 	return html`<${Fragment}>
 		<${PreferencesModal}
 			isOpen=${modalState.preferences}
-			closeModal=${() => closeModal("preferences")}
+			closeModal=${() => { closeModal("preferences"); setShowPluginNotice(false); }}
+			initialTab=${showPluginNotice ? 'plugins' : 'general'}
+			showPluginNotice=${showPluginNotice}
 			settings=${{
 				locale, setLocale,
 				fontSizeMultiplier, setFontSizeMultiplier,
@@ -285,7 +299,7 @@ export function Modals({ toggleModal, currentThemeName, setCurrentThemeName, all
 				ttsSpeakInputs, setTTSSpeakInputs,
 				ttsMaxUserInput, setTTSMaxUserInput,
 				historyKeep, setHistoryKeep, historyDeletionThreshold, setHistoryDeletionThreshold, historyBeforeGenerate, setHistoryBeforeGenerate,
-				isMiyapadEndpoint, sessionStorage, cancel, listTTSVoices, ttsStop, ttsAvailable, handleExportDB, handleImportDB, exportPrompt,
+				isMiyapadEndpoint, sessionStorage, pluginStorage, pluginStart, cancel, listTTSVoices, ttsStop, ttsAvailable, handleExportDB, handleImportDB, exportPrompt,
 				useServerTokenization, setUseServerTokenization, tokenizerModel, setTokenizerModel,
 				screenshotIncludeSessionName, setScreenshotIncludeSessionName,
 				screenshotIncludeDate, setScreenshotIncludeDate,
@@ -329,6 +343,10 @@ export function Modals({ toggleModal, currentThemeName, setCurrentThemeName, all
 			authorNoteTokenCount=${authorNoteTokenCount}
 			handleMemoryTokensChange=${handleMemoryTokensChange}
 			finalPromptText=${useChatAPI ? JSON.stringify(convertChatToJSON(finalPromptText, templates[selectedTemplate]), null, 4) : finalPromptText}
+			previewWithPlugins=${async () => {
+				const hooked = await runPromptHooks(finalPromptText);
+				return useChatAPI ? JSON.stringify(convertChatToJSON(hooked, templates[selectedTemplate]), null, 4) : hooked;
+			}}
 			defaultPresets=${defaultPresets}
 			cancel=${cancel}
 			apiConfig=${{ sessionStorage, endpoint, endpointAPI, endpointAPIKey, isMiyapadEndpoint, useServerTokenization }}/>

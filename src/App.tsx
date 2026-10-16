@@ -8,6 +8,8 @@ import type { TemplateStorage } from './storage/TemplateStorage';
 import type { ThemeStorage } from './storage/ThemeStorage';
 import type { ConnectionStorage } from './storage/ConnectionStorage';
 import type { SamplerPresetStorage } from './storage/SamplerPresetStorage';
+import type { PluginStorage } from './storage/PluginStorage';
+import type { PluginStartInfo } from './plugins';
 
 interface AppProps {
   sessionStorage: SessionStorage;
@@ -15,6 +17,8 @@ interface AppProps {
   themeStorage: ThemeStorage;
   connectionStorage: ConnectionStorage;
   samplerPresetStorage: SamplerPresetStorage;
+  pluginStorage: PluginStorage;
+  pluginStart: PluginStartInfo;
   useSessionState: <T>(name: string, initialState: T) => [T, React.Dispatch<React.SetStateAction<T>>];
   useDBTemplates: (initialState: Record<string, InstructTemplate>) => [Record<string, InstructTemplate>, React.Dispatch<React.SetStateAction<Record<string, InstructTemplate>>>];
   useDBThemes: (initialState: Record<string, ThemeData>) => [Record<string, ThemeData>, React.Dispatch<React.SetStateAction<Record<string, ThemeData>>>];
@@ -23,7 +27,7 @@ interface AppProps {
   isMiyapadEndpoint: boolean;
 }
 
-export function App({ sessionStorage, templateStorage, themeStorage, connectionStorage, samplerPresetStorage, useSessionState, useDBTemplates, useDBThemes, useDBConnections, useDBSamplerPresets, isMiyapadEndpoint }: AppProps) {
+export function App({ sessionStorage, templateStorage, themeStorage, connectionStorage, samplerPresetStorage, pluginStorage, pluginStart, useSessionState, useDBTemplates, useDBThemes, useDBConnections, useDBSamplerPresets, isMiyapadEndpoint }: AppProps) {
 	return html`
 		<${SettingsProvider}
 			sessionStorage=${sessionStorage}
@@ -31,6 +35,8 @@ export function App({ sessionStorage, templateStorage, themeStorage, connectionS
 			themeStorage=${themeStorage}
 			connectionStorage=${connectionStorage}
 			samplerPresetStorage=${samplerPresetStorage}
+			pluginStorage=${pluginStorage}
+			pluginStart=${pluginStart}
 			useSessionState=${useSessionState}
 			useDBTemplates=${useDBTemplates}
 			useDBThemes=${useDBThemes}

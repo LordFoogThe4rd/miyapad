@@ -18,6 +18,8 @@ interface ContextModalProps {
 	authorNoteTokenCount: number;
 	handleMemoryTokensChange: <K extends keyof MemoryTokensData>(key: K, value: MemoryTokensData[K]) => void;
 	finalPromptText: string;
+	/** The prompt as it would be sent, with the prompt hooks run, chat conversion included. */
+	previewWithPlugins: () => Promise<string>;
 	defaultPresets: DefaultPresets;
 	cancel: (() => void) | null;
 	apiConfig: {
@@ -30,12 +32,19 @@ interface ContextModalProps {
 	};
 }
 
-export function ContextModal({ isOpen, closeModal, tokens, memoryTokens, memoryTokenCount, worldInfoTokenCount, authorNoteTokenCount, handleMemoryTokensChange, finalPromptText, defaultPresets, cancel, apiConfig }: ContextModalProps) {
+export function ContextModal({ isOpen, closeModal, tokens, memoryTokens, memoryTokenCount, worldInfoTokenCount, authorNoteTokenCount, handleMemoryTokensChange, finalPromptText, previewWithPlugins, defaultPresets, cancel, apiConfig }: ContextModalProps) {
 	const t = useT();
 	const { sessionStorage, endpoint, endpointAPI, endpointAPIKey, isMiyapadEndpoint, useServerTokenization } = apiConfig;
 	const [contextPlayground, setContextPlayground] = useState(finalPromptText);
 	const [playgroundTokens, setPlaygroundTokens] = useState(tokens);
+	const [previewing, setPreviewing] = useState(false);
 	const prevIsOpen = useRef(isOpen);
+	/** The text the preview produced, so Reset returns to it instead of silently undoing it. */
+	const previewed = useRef<string | null>(null);
+	/** Set when the user types, so a preview that lands later doesn't overwrite what they wrote. */
+	const edited = useRef(false);
+	/** Bumped on every open and every close, so a preview that lands later is dropped. */
+	const openId = useRef(0);
 	useEffect(() => {
 		if (isOpen && !prevIsOpen.current) {
 			setContextPlayground(finalPromptText);
@@ -43,6 +52,27 @@ export function ContextModal({ isOpen, closeModal, tokens, memoryTokens, memoryT
 		}
 		prevIsOpen.current = isOpen;
 	}, [isOpen, finalPromptText, tokens]);
+	useEffect(() => {
+		if (!isOpen) return;
+		const id = ++openId.current;
+		edited.current = false;
+		previewed.current = null;
+		setPreviewing(true);
+		previewWithPlugins().then(
+			text => {
+				if (openId.current !== id || edited.current) return;
+				previewed.current = text;
+				setContextPlayground(text);
+				setPreviewing(false);
+			},
+			e => {
+				if (openId.current !== id) return;
+				console.error('[plugins] The prompt hook preview failed:', e);
+				setPreviewing(false);
+			}
+		);
+		return () => { openId.current++; };
+	}, [isOpen]);
 	useEffect(() => {
 		if (!isOpen) return;
 		const ac = new AbortController();
@@ -148,13 +178,16 @@ export function ContextModal({ isOpen, closeModal, tokens, memoryTokens, memoryT
 			</${CollapsibleGroup}>
 			<textarea
 				value=${contextPlayground}
-				onInput=${(e: InputEvent) => setContextPlayground((e.target as HTMLTextAreaElement).value)}
+				onInput=${(e: InputEvent) => { edited.current = true; setContextPlayground((e.target as HTMLTextAreaElement).value); }}
 				className="expanded-text-area-settings"
 				id="context-area-settings" />
 			<div className="hbox" style=${{ justifyContent: 'flex-end', marginTop: '8px' }}>
-				<button onClick=${() => setContextPlayground(finalPromptText)}>
-					${t('context.resetContext')}
-				</button>
+				<div style=${{ display: 'flex', alignItems: 'center', gap: '8px' }}>
+					${previewing && html`<small className="context-previewing">${t('context.previewing')}</small>`}
+					<button onClick=${() => setContextPlayground(previewed.current ?? finalPromptText)}>
+						${t('context.resetContext')}
+					</button>
+				</div>
 			</div>
 		</${Modal}>`;
 }

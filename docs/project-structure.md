@@ -44,14 +44,15 @@ miyapad/
     ├── App.tsx                    # Root component orchestrating providers
     ├── AppLayout.tsx              # Core app shell and layout setup
     ├── constants.ts               # Application-wide constants and enum definitions
-    ├── main.tsx                   # Entry point; detects database adapter and renders
+    ├── main.tsx                   # Entry point; detects database adapter, starts plugins and renders
+    ├── plugins.ts                 # Plugin hooks, header parsing, version check and startup loader
     ├── polyfills.ts               # Browser polyfills
     ├── version.ts                 # Generated (gitignored) — exports APP_VERSION from package.json
     ├── worldinfo.ts               # World info / lorebook data structures
     ├── api/                       # API modules for backends (.ts)
     ├── components/                # React components (Modals, Sidebar, controls, icons — .tsx)
     ├── contexts/                  # SettingsContext.tsx and GenerationContext.tsx
-    ├── css/                       # CSS partials (22 files, imported by styles.css)
+    ├── css/                       # CSS partials (23 files, imported by styles.css)
     ├── defaults/                  # Hardcoded defaults (.ts) — presets.ts, prompt.ts, templates.ts, themes.ts
     ├── editor/                    # ProseMirror prompt editor (.ts) — schema, React<->PM sync, adapter, decoration plugins
     ├── hooks/                     # Custom hooks (.ts)

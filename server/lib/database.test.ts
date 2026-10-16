@@ -12,7 +12,7 @@ import { hasZstd } from './testing.js';
 const loadTokenizer = vi.hoisted(() => vi.fn());
 vi.mock('../tokenizer.js', () => ({ loadTokenizer }));
 
-const compressedTables = ['sessions', 'templates', 'themes', 'connections', 'samplerpresets', 'sessionhistory'];
+const compressedTables = ['sessions', 'templates', 'themes', 'connections', 'samplerpresets', 'sessionhistory', 'plugins', 'plugindata'];
 
 describe.skipIf(!hasZstd)('initDatabase', () => {
     let dir: string;

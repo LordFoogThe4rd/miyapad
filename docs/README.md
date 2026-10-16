@@ -16,9 +16,10 @@ Your sessions are saved in the browser's IndexedDB, or in SQLite when the option
 - [Tokenization](tokenization.md): optional server-side tokenization with HuggingFace tokenizers
 - [Building & Running](building-and-running.md): dev server, production build, server CLI
 - [Docker](docker.md): docker-compose setup with a named volume for storage
-- [CSS Architecture](css.md): 22 partial files, import order, theming, conventions
+- [CSS Architecture](css.md): 23 partial files, import order, theming, conventions
 - [Development Conventions](development-conventions.md): JSX-less components, TypeScript and CSS conventions, storage patterns
 - [Screenshot Capture](screenshot-capture.md): turning selected text into a styled quote PNG
 - [Session Tags](session-tags.md): freeform tags on sessions, with inline editing and filtering
 - [Session Folders](session-folders.md): grouping sessions into folders by drag or by name
 - [Session Trash](session-trash.md): deleted sessions, and restoring or deleting them for good
+- [Plugins](plugins.md): the plugin file format, the `miyapad` object, hooks, plugin storage and safe mode

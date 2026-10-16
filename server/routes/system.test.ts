@@ -46,6 +46,7 @@ describe('/version', () => {
             tokenizers: ['tiny'],
             latestVersion: '9.9.9',
             downloadUrl: 'https://example.com/release',
+            backup: { enabled: false, intervalMinutes: null, lastBackupAt: null },
         });
     });
 });

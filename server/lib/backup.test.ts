@@ -6,7 +6,7 @@ import path from 'path';
 import { spawnSync } from 'child_process';
 import Database from 'better-sqlite3';
 import { path7za } from '7zip-bin';
-import { rotateBackups, timestamp, startAutoBackup, stopAutoBackup } from './backup.js';
+import { rotateBackups, timestamp, startAutoBackup, stopAutoBackup, getBackupStatus } from './backup.js';
 
 const dirs: string[] = [];
 
@@ -111,6 +111,29 @@ describe('startAutoBackup', () => {
         const copy = new Database(path.join(restored, fs.readdirSync(restored)[0]), { readonly: true });
         open.push(copy);
         expect(copy.prepare('SELECT * FROM sessions').all()).toEqual([{ key: '1', session_data: '{"prompt":"hello"}' }]);
+    });
+
+    it('reports backups as off before auto-backup starts', async () => {
+        vi.resetModules();
+        const backup = await import('./backup.js');
+        expect(backup.getBackupStatus()).toEqual({ enabled: false, intervalMinutes: null, lastBackupAt: null });
+    });
+
+    it('reports the time of the last written backup, and keeps it when a later run fails', async () => {
+        const { log } = quiet();
+        const { dbPath, db, backups } = liveDatabase();
+        startAutoBackup(db, dbPath, { dir: backups, interval: 15 });
+        await vi.waitFor(() => expect(created(log)).toBe(1), { timeout: 10_000 });
+        const status = getBackupStatus();
+        expect(status).toEqual({ enabled: true, intervalMinutes: 15, lastBackupAt: expect.any(Number) });
+        stopAutoBackup();
+        expect(getBackupStatus().enabled).toBe(false);
+
+        vi.spyOn(console, 'error').mockImplementation(() => {});
+        const failing = { pragma: vi.fn(() => { throw new Error('disk I/O error'); }), prepare: vi.fn() };
+        startAutoBackup(failing as unknown as Database.Database, dbPath, { dir: backups });
+        expect(failing.pragma).toHaveBeenCalled();
+        expect(getBackupStatus().lastBackupAt).toBe(status.lastBackupAt);
     });
 
     it('skips a run when the database has not changed since the last backup', async () => {

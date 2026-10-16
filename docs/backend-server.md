@@ -6,7 +6,7 @@ Record keys are always bound as strings (`toKey` in `routes/data.ts`). better-sq
 
 ## Database Schema (v4)
 
-Eight tables:
+Ten tables:
 
 1. `meta`: metadata, including the database schema `version = 4`.
 2. `sessions`: the session data blobs. Column `session_data`.
@@ -15,7 +15,9 @@ Eight tables:
 5. `connections`: connection presets (endpoint, API type, API key, model, per-API options). Column `connection_data`.
 6. `samplerpresets`: sampler presets, meaning all generation parameters. Column `sampler_preset_data`.
 7. `sessionhistory`: saved session versions and each session's version index. Column `history_data`. It's created on every start with `CREATE TABLE IF NOT EXISTS`, so adding it didn't need a schema version bump.
-8. `names`: the lightweight key-to-metadata mapping `{name, created, modified, pinned, tags, folder, stats, trashed}`, stored as JSON. Used for listing, searching, sorting, pinning, folders and the trash.
+8. `plugins`: each [plugin](plugins.md)'s code, on/off state and declared version range. Column `plugin_data`.
+9. `plugindata`: the data plugins save, under `<name>` (the key list) and `<name>/<key>`. Column `plugin_storage_data`. Both plugin tables are created on every start, like `sessionhistory`.
+10. `names`: the lightweight key-to-metadata mapping `{name, created, modified, pinned, tags, folder, stats, trashed}`, stored as JSON. Used for listing, searching, sorting, pinning, folders and the trash.
 
 ### Schema Column Constraints
 
@@ -27,6 +29,8 @@ Eight tables:
 - `connections` → `connection_data`
 - `samplerpresets` → `sampler_preset_data`
 - `sessionhistory` → `history_data`
+- `plugins` → `plugin_data`
+- `plugindata` → `plugin_storage_data`
 
 ## Database Compaction & Compression Settings
 
@@ -54,6 +58,8 @@ Eight tables:
 - `--backupKeep` / `MIYAPAD_BACKUP_KEEP`: how many backups to keep (default: `10`).
 - `MIYAPAD_7Z_PATH`: path to a 7-Zip executable to compress backups with, instead of the bundled one.
 
+[Plugins](plugins.md) are stored in the database, so anyone who can write to the server can add one, and it then runs in every browser that opens Miyapad. With the default `127.0.0.1` binding that's only you. If you bind `--host` to a LAN address, set `--password` too.
+
 ## Automatic Database Backups
 
 The server can back up the database on a timer with SQLite's `VACUUM INTO`, which writes a clean, compacted copy without taking the database offline.
@@ -62,3 +68,4 @@ The server can back up the database on a timer with SQLite's `VACUUM INTO`, whic
 - Backup files are named `web-session-storage.db.<YYYYMMDDHHmmss>.backup.7z` and are LZMA-compressed 7-Zip archives. Any tool that reads `.7z` will open them (7-Zip, Ark and so on).
 - The 7-Zip binary ships with the server in the `7zip-bin` package, so you don't need to install anything on the host. Set `MIYAPAD_7Z_PATH` to use a different executable, for example on a platform the bundled binary doesn't cover.
 - Backups beyond the configured keep count are deleted.
+- `getBackupStatus()` reports whether backups are on, the interval, and the time of the last backup that was written (a skipped or failed run leaves it alone). `/version` returns it as `backup`, and the Plugins tab shows it.

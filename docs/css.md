@@ -1,6 +1,6 @@
 # CSS Architecture
 
-Styles are split into 22 partial files under `src/css/`, imported by `src/styles.css`. Each partial covers one component or one logical group.
+Styles are split into 23 partial files under `src/css/`, imported by `src/styles.css`. Each partial covers one component or one logical group.
 
 ## Import Order
 
@@ -28,6 +28,7 @@ The order in `src/styles.css` matters. Variables and the base reset load first, 
 @import './css/_connections.css';       # Connection Manager presets UI
 @import './css/_sampler-presets.css';   # Sampler Preset Manager UI
 @import './css/_markdown-decorations.css'; # Markdown decorations in the prompt editor
+@import './css/_plugins.css';          # Preferences → Plugins tab
 @import './css/_responsive.css';        # Global media queries
 ```
 
@@ -46,6 +47,7 @@ The order in `src/styles.css` matters. Variables and the base reset load first, 
 | `_horde.css` | AI Horde integration panel: queue status, worker info, settings. |
 | `_connections.css` | Connection Manager modal: sidebar/detail layout, model list, error messages, mobile-responsive toggle. |
 | `_sampler-presets.css` | Sampler Preset Manager modal: sidebar/detail layout, import/export actions, mobile-responsive toggle. |
+| `_plugins.css` | Preferences → Plugins tab: the warning and notice boxes, the backup status line, the plugin rows with their version range, ⚠ mark and errors, and the Reload footer. |
 | `_markdown-decorations.css` | Markdown decoration classes (`.pm-md-*`) rendered inside the ProseMirror prompt editor in wysiwyg mode. |
 | `_sidebar.css` | Main sidebar layout: width, collapse states, drag resize, scroll. |
 | `_sessions.css` | Sessions modal: the session table and its folder rows, the toolbar, the slot above the list for the selection bar, folder box and drop zone, and the row action buttons. |

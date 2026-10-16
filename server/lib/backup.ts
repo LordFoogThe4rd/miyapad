@@ -6,6 +6,9 @@ import { pipeline } from 'stream';
 import type { Database } from 'better-sqlite3';
 
 let backupIntervalId: ReturnType<typeof setInterval> | null = null;
+let backupIntervalMinutes: number | null = null;
+// Only a backup that was written moves this; a skipped or failed run leaves the older time.
+let lastBackupAt: number | null = null;
 
 // path7za is the 7-Zip binary bundled by 7zip-bin, so no host install is needed. It is
 // resolved through require() at runtime (esbuild keeps 7zip-bin external), because the
@@ -156,6 +159,7 @@ const runBackup = (db: Database, dbPath: string, dir: string, keep: number, last
             return;
         }
         lastMtimeRef.current = currentMtime;
+        lastBackupAt = Date.now();
         console.log(`Backup created: ${backupName}.7z`);
         rotateBackups(dir, keep);
     });
@@ -168,6 +172,7 @@ const startAutoBackup = (db: Database, dbPath: string, { interval = 30, dir = '.
     }
 
     const dirAbsolute = path.resolve(dir);
+    backupIntervalMinutes = interval;
 
     const lastMtimeRef: { current: number | null } = { current: null };
 
@@ -188,4 +193,11 @@ const stopAutoBackup = () => {
     }
 };
 
-export { startAutoBackup, stopAutoBackup, timestamp, rotateBackups };
+/** For the Plugins tab, so you can see how old the newest backup is before running a plugin. */
+const getBackupStatus = () => ({
+    enabled: backupIntervalId !== null,
+    intervalMinutes: backupIntervalMinutes,
+    lastBackupAt,
+});
+
+export { startAutoBackup, stopAutoBackup, getBackupStatus, timestamp, rotateBackups };

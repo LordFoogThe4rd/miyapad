@@ -85,3 +85,18 @@ export function coerceThemeData(value: unknown): ThemeData | null {
     css: value.css,
   };
 }
+
+export function coercePluginRecord(value: unknown): PluginRecord | null {
+  if (!isRecord(value)) return null;
+  if (typeof value.code !== 'string' || typeof value.enabled !== 'boolean') return null;
+  const record: PluginRecord = { code: value.code, enabled: value.enabled };
+  for (const key of ['min', 'max', 'allowedVersion'] as const) {
+    const field = value[key];
+    if (typeof field === 'string') record[key] = field;
+  }
+  for (const key of ['startTimeout', 'hookTimeout'] as const) {
+    const field = value[key];
+    if (typeof field === 'number' && Number.isFinite(field) && field > 0) record[key] = field;
+  }
+  return record;
+}

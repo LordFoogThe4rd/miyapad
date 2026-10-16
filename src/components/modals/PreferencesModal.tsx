@@ -5,6 +5,7 @@ import { Checkbox } from '../controls/Checkbox';
 import { InputBox } from '../controls/InputBox';
 import { InputSlider } from '../controls/InputSlider';
 import { SelectBox } from '../controls/SelectBox';
+import { PluginsTab } from './PluginsTab';
 import { getServerTokenizers, loadServerTokenizer } from '../../api/index';
 import { useT } from '../../i18n';
 import { AVAILABLE_LOCALES } from '../../i18n/locales';
@@ -37,9 +38,9 @@ const tabStyle = (active: any) => ({
 // row itself to no height at all.
 const tabRowStyle = { gap: 0, overflowX: 'auto' } as const;
 
-export function PreferencesModal({ isOpen, closeModal, settings }: any) {
+export function PreferencesModal({ isOpen, closeModal, settings, initialTab = 'general', showPluginNotice = false }: any) {
 	const t = useT();
-	const [activeTab, setActiveTab] = useState('general');
+	const [activeTab, setActiveTab] = useState(initialTab);
 	const contentRef = useRef<HTMLDivElement | null>(null);
 	const prevHeightRef = useRef<number | null>(null);
 
@@ -102,7 +103,7 @@ export function PreferencesModal({ isOpen, closeModal, settings }: any) {
 		historyKeep, setHistoryKeep, historyDeletionThreshold, setHistoryDeletionThreshold, historyBeforeGenerate, setHistoryBeforeGenerate,
 		isMiyapadEndpoint, cancel, listTTSVoices, ttsStop, ttsAvailable, handleExportDB, handleImportDB, exportPrompt,
 		useServerTokenization, setUseServerTokenization, tokenizerModel, setTokenizerModel,
-		sessionStorage,
+		sessionStorage, pluginStorage, pluginStart,
 		screenshotIncludeSessionName, setScreenshotIncludeSessionName,
 		screenshotIncludeDate, setScreenshotIncludeDate,
 		screenshotBackgroundUrl, setScreenshotBackgroundUrl,
@@ -176,6 +177,10 @@ export function PreferencesModal({ isOpen, closeModal, settings }: any) {
 					<button style=${tabStyle(activeTab === 'history')}
 						onClick=${() => switchTab('history')}>
 						${t('preferences.tabVersionHistory')}
+					</button>
+					<button style=${tabStyle(activeTab === 'plugins')}
+						onClick=${() => switchTab('plugins')}>
+						${t('preferences.tabPlugins')}
 					</button>
 					${isMiyapadEndpoint && html`
 						<button style=${tabStyle(activeTab === 'server')}
@@ -348,6 +353,17 @@ export function PreferencesModal({ isOpen, closeModal, settings }: any) {
 							<${InputBox} label=${t('preferences.modelAvatarUrl')}
 								value=${screenshotModelAvatarUrl}
 								onValueChange=${setScreenshotModelAvatarUrl}/>
+						</div>
+					`}
+
+					${activeTab === 'plugins' && html`
+						<div style=${{ animation: 'fadeIn 0.2s ease-out', minWidth: 0, width: '100%' }}>
+							<${PluginsTab}
+								pluginStorage=${pluginStorage}
+								pluginStart=${pluginStart}
+								showStartupNotice=${showPluginNotice}
+								isMiyapadEndpoint=${isMiyapadEndpoint}
+								handleExportDB=${handleExportDB}/>
 						</div>
 					`}
 

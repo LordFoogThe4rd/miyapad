@@ -3,6 +3,7 @@ import { describe, it, expect, vi, beforeEach, afterEach } from 'vitest';
 import { renderHook, act, cleanup } from '@testing-library/react';
 import { useGenerationLogic } from './useGenerationLogic';
 import { API_AI_HORDE, API_DEEPSEEK, API_KOBOLD_CPP, API_LLAMA_CPP, API_OPENAI_COMPAT } from '../constants';
+import { hooks } from '../plugins';
 
 function u(content: string): PromptChunk {
 	return { type: 'user', content };
@@ -506,5 +507,69 @@ describe('useGenerationLogic requests and responses', () => {
 			expect(genState.undoStack.current).toEqual([1]);
 			expect(genState.setTriggerPredict).not.toHaveBeenCalledWith(true);
 		});
+	});
+});
+
+describe('useGenerationLogic plugin hooks', () => {
+	beforeEach(() => {
+		vi.spyOn(console, 'error').mockImplementation(() => {});
+	});
+
+	afterEach(() => {
+		hooks.prompt.length = 0;
+		hooks.output.length = 0;
+		vi.restoreAllMocks();
+	});
+
+	it('sends the prompt as the prompt hooks changed it, skipping one that throws', async () => {
+		hooks.prompt.push(
+			() => { throw new Error('broken'); },
+			async p => p.replaceAll('{{date}}', 'today'),
+		);
+		const { result } = renderLogic([u('It is {{date}}.')]);
+		api.completion.mockImplementation(zeroTokenCompletion);
+
+		await act(async () => { await result.current.predict('It is {{date}}.'); });
+
+		expect(api.completion).toHaveBeenCalledTimes(1);
+		expect(api.completion.mock.calls[0][0].prompt).toBe('It is today.');
+	});
+
+	it('gives the output hooks the generated text, complete when the stream ended normally', async () => {
+		const output = vi.fn();
+		hooks.output.push(output);
+		const { result } = renderLogic([u('a')]);
+		api.completion.mockImplementation(() => (async function* () { yield m('one '); yield m('two'); })());
+
+		await act(async () => { await result.current.predict(); });
+
+		await vi.waitFor(() => expect(output).toHaveBeenCalledWith('one two', { complete: true }));
+	});
+
+	it('marks the text incomplete when the generation is cancelled partway', async () => {
+		const output = vi.fn();
+		hooks.output.push(output);
+		const { result } = renderLogic([u('a')]);
+		api.completion.mockImplementation(() => (async function* () {
+			yield m('one');
+			genState.abortControllerRef.current.abort();
+			yield m('two');
+		})());
+
+		await act(async () => { await result.current.predict(); });
+
+		await vi.waitFor(() => expect(output).toHaveBeenCalledWith('one', { complete: false }));
+	});
+
+	it('does not call the output hooks when nothing was generated', async () => {
+		const output = vi.fn();
+		hooks.output.push(output);
+		const { result } = renderLogic([u('a')]);
+		api.completion.mockImplementation(zeroTokenCompletion);
+
+		await act(async () => { await result.current.predict(); });
+		await new Promise(resolve => setTimeout(resolve, 0));
+
+		expect(output).not.toHaveBeenCalled();
 	});
 });
