@@ -20,6 +20,7 @@
 
 ### Fixed
 
+- The miyapad server only answers names that point at it: `localhost`, the loopback addresses, the host you bound with `--host`, and anything in the new `--allowedHosts`. It also stopped sending CORS headers. Before, a page on another site could aim its own domain at `127.0.0.1` and read your sessions, or add a plugin that then ran in your browser. If you reach Miyapad through a name it doesn't know, such as a reverse proxy or a mesh hostname, list it with `--allowedHosts`
 - The Compression Level and Samples Ratio boxes in Database Tools now show the values your database uses, instead of always starting at 3 and 100. Clicking Update without changing them no longer turns compression down on new databases, which start at level 9
 - AI Horde, and any other endpoint whose address has a path after the host (such as `https://openrouter.ai/api`), works again when you run the miyapad server. Every request to one of these failed with "Path traversal detected"
 - Indentation or a double space right before `{predict}` or `{fill}` no longer loses its last space. Only a single space after a word is still dropped, as in `word {predict}`

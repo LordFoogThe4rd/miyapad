@@ -8,7 +8,7 @@ Plugins get Miyapad's real internal objects, not a stable API. Any release can c
 
 Plugin code runs in the same page as Miyapad. It can read your API keys and every session, write to any store, open the `MiyaPad` IndexedDB database directly, and call the server with your saved login. Nothing inside the page can stop it, so Miyapad doesn't try. The Plugins tab and the import dialog say this plainly. Only install plugins you trust.
 
-In server mode, plugins are stored in the server's database, so anyone who can write to the server can add a plugin, and that plugin then runs in every browser that opens Miyapad. With the default `127.0.0.1` binding that's only you. If you expose the server on a LAN, set a password (`--password`).
+In server mode, plugins are stored in the server's database, so anyone who can write to the server can add a plugin, and that plugin then runs in every browser that opens Miyapad. With no `--password` set, anyone who can reach the port can write to the server, a page you have open in your browser included; the [Host check and missing CORS headers](backend-server.md#request-hardening) close that page off, but they don't stand in for a password. With the default `127.0.0.1` binding that's only you. If you expose the server on a LAN, set a password (`--password`).
 
 ## File format
 

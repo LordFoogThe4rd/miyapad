@@ -1,5 +1,4 @@
 import express from 'express';
-import cors from 'cors';
 
 import fs from 'fs';
 import path from 'path';
@@ -9,6 +8,7 @@ import readline from 'readline';
 
 import { initDatabase, getMaintenanceConfig, runZstdMaintenance, clearMaintenanceScheduler } from './lib/database.js';
 import { createAuthMiddleware } from './lib/auth.js';
+import { createHostCheckMiddleware } from './lib/hostcheck.js';
 import { startAutoBackup, stopAutoBackup } from './lib/backup.js';
 import { basedir, resolveExeRelative } from './lib/paths.js';
 import systemRoutes from './routes/system.js';
@@ -24,6 +24,13 @@ const noOpen = (args.open !== undefined && !args.open) || process.env.MIYAPAD_NO
 const login = args.login || process.env.MIYAPAD_LOGIN || 'anon';
 const password = args.password || process.env.MIYAPAD_PASSWORD || undefined;
 const storagePath = args.storagePath || process.env.MIYAPAD_STORAGE_PATH || './web-session-storage.db';
+
+// Hosts to answer besides localhost and whatever --host binds. Needed when Miyapad is
+// reached through a name it doesn't know, such as a reverse proxy in front of it.
+const allowedHosts = `${args.allowedHosts || process.env.MIYAPAD_ALLOWED_HOSTS || ''},${host || ''}`
+    .split(',')
+    .map((entry) => entry.trim())
+    .filter(Boolean);
 
 const parseEnvBool = (val: string | undefined | null) => val && val !== 'false' && val !== '0';
 
@@ -44,7 +51,7 @@ const backupKeep = rawKeep !== undefined ? parseInt(rawKeep, 10) : 10;
 
 const app = express();
 
-app.use(cors(), express.json({limit: "100mb"}));
+app.use(createHostCheckMiddleware(allowedHosts), express.json({limit: "100mb"}));
 
 app.use(createAuthMiddleware(login, password));
 

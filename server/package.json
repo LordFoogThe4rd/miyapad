@@ -14,14 +14,12 @@
     "7zip-bin": "^5.2.0",
     "axios": "^1.18.0",
     "better-sqlite3": "^13.0.3",
-    "cors": "^2.8.5",
     "express": "^5.2.1",
     "minimist": "^1.2.8",
     "open": "8.4.2"
   },
   "devDependencies": {
     "@types/better-sqlite3": "^9.6.0",
-    "@types/cors": "^2.8.19",
     "@types/express": "^5.0.6",
     "@types/minimist": "^1.2.5",
     "esbuild": "^0.25.3",

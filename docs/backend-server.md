@@ -49,6 +49,7 @@ Ten tables:
 
 - `--port` or `MIYAPAD_PORT`: port to bind (default: `3000`).
 - `--host` or `MIYAPAD_HOST`: host to bind (default: `127.0.0.1`).
+- `--allowedHosts` or `MIYAPAD_ALLOWED_HOSTS`: comma-separated host names to answer besides `localhost`, the loopback addresses and the `--host` value. See [Request Hardening](#request-hardening).
 - `--login` / `--password`: login and password for HTTP Basic Auth. If a password is set, requests get the standard Basic Auth prompt.
 - `--storagePath`: path to the SQLite file (default: `./web-session-storage.db`).
 - `--open` / `MIYAPAD_NO_OPEN`: whether your default browser opens the UI when the server starts.
@@ -58,7 +59,13 @@ Ten tables:
 - `--backupKeep` / `MIYAPAD_BACKUP_KEEP`: how many backups to keep (default: `10`).
 - `MIYAPAD_7Z_PATH`: path to a 7-Zip executable to compress backups with, instead of the bundled one.
 
-[Plugins](plugins.md) are stored in the database, so anyone who can write to the server can add one, and it then runs in every browser that opens Miyapad. With the default `127.0.0.1` binding that's only you. If you bind `--host` to a LAN address, set `--password` too.
+## Request Hardening
+
+The server answers a request only when its `Host` is `localhost`, a loopback address, the `--host` value, or a name listed in `--allowedHosts`. Everything else gets a 403. A page on another site can aim its own domain at `127.0.0.1`, so the `Host` it sends is the one thing that gives it away. List the name you reach Miyapad by when something in front of it (a reverse proxy, a mesh hostname) passes a different one.
+
+It sends no CORS headers either, so another site can neither read answers from your Miyapad nor use it as a proxy for another API from your browser.
+
+Neither is a password. [Plugins](plugins.md) are stored in the database, so with no `--password`, anyone who can reach the port can add one, and it then runs in every browser that opens Miyapad, including yours. With the default `127.0.0.1` binding that's only you; if you bind `--host` to a LAN address, set `--password` too.
 
 ## Automatic Database Backups
 

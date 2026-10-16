@@ -16,6 +16,6 @@
 ## Backend (Optional)
 
 - **Runtime**: Node.js and Express, run through `tsx` rather than `node`.
-- **Type Definitions**: `@types/express`, `@types/cors`, `@types/minimist`.
+- **Type Definitions**: `@types/express`, `@types/minimist`.
 - **Database**: SQLite (better-sqlite3) with the `sqlite-zstd` extension, which compresses rows transparently.
 - **HTTP Client**: Axios, for the server-side proxy requests.
