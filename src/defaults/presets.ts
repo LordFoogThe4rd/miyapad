@@ -6,7 +6,7 @@ export const defaultPresets = {
 	endpointAPI: 0,
 	endpointAPIKey: '',
 	endpointModel: '',
-	prompt: [{ type: 'user', content: defaultPrompt }],
+	prompt: [{ type: 'user' as const, content: defaultPrompt }],
 	seed: -1,
 	maxPredictTokens: -1,
 	temperature: 0.7,

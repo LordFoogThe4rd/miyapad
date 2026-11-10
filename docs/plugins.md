@@ -51,8 +51,21 @@ Each plugin either **fits** this Miyapad version, is **mismatched** (outside its
 | `React`, `html` | React and `htm`'s `html`, so a plugin can build UI the way Miyapad does. |
 | `hooks` | This plugin's view of the shared hooks: `prompt` and `output` push entries wrapped with the plugin's hook timeout, and `commands` is the shared array. |
 | `storage` | This plugin's own storage. |
+| `settings`, `generation` | Views of the objects `useSettings` and `useGeneration` return inside Miyapad. Reads give the current value, and `set*` calls are checked. |
 
 There's no `window.miyapad`. Each plugin gets its own object, because `storage` is different for each.
+
+## Miyapad's state
+
+`miyapad.settings` and `miyapad.generation` give you what `useSettings` and `useGeneration` return inside Miyapad's components, setters included. They are plain properties, not hooks, so a plugin can read them at the top level.
+
+- Reads give the value from the last render, and the object you keep stays usable: read it again later and you get the newer value.
+- Before Miyapad has drawn, which is after the plugins finish starting, every field reads `undefined`.
+- A `set*` call is checked before it runs. The value has to have the type the field holds, a number has to be finite, and a sampler has to be inside the range its sidebar input uses. A call that fails throws a `TypeError` or a `RangeError` and writes nothing. An update function is refused: pass a value.
+- Only the samplers and a few other numeric fields have a range. Fields without one only get the type check.
+- Calling a setter changes the app the same way a click does, and values backed by settings or session state are saved.
+- The check is a guard against mistakes, not a boundary: a plugin can still write anything through `sessionStorage` or `api`.
+- `settings` holds the endpoint, the API key and the sampler values.
 
 ## Hooks
 

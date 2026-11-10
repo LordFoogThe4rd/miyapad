@@ -1,5 +1,5 @@
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
-import { checkVersion, DEFAULT_PLUGIN_START_TIMEOUT_S, hooks, parseHeader, pluginHooksFor, runOutputHooks, runPlugins, runPromptHooks, startPlugins, switchOffMismatched } from './plugins';
+import { checkVersion, DEFAULT_PLUGIN_START_TIMEOUT_S, hooks, parseHeader, pluginHooksFor, pluginStateView, runOutputHooks, runPlugins, runPromptHooks, startPlugins, switchOffMismatched } from './plugins';
 import { APP_VERSION } from './version';
 import type { PluginStorage } from './storage/PluginStorage';
 
@@ -245,5 +245,87 @@ describe('pluginHooksFor', () => {
 
 	it('hands over the shared commands array', () => {
 		expect(pluginHooksFor({ code: '', enabled: true }).commands).toBe(hooks.commands);
+	});
+});
+
+describe('pluginStateView', () => {
+	function makeState() {
+		return {
+			temperature: 0.7,
+			label: 'x',
+			list: [1],
+			stop: null as (() => void) | null,
+			setTemperature: vi.fn(),
+			setLabel: vi.fn(),
+			setList: vi.fn(),
+			setStop: vi.fn(),
+		};
+	}
+
+	it('reads the latest state and passes a valid value to the real setter', () => {
+		let state = makeState();
+		const view = pluginStateView(() => state);
+		state = { ...makeState(), temperature: 1.2 };
+
+		expect(view.temperature).toBe(1.2);
+		expect(Object.keys(view)).toContain('setTemperature');
+		expect('temperature' in view).toBe(true);
+		expect('missing' in view).toBe(false);
+		view.setTemperature(0.5);
+		expect(state.setTemperature).toHaveBeenCalledWith(0.5);
+	});
+
+	it('reads nothing before the app has drawn', () => {
+		expect(pluginStateView<Record<string, unknown>>(() => null).temperature).toBeUndefined();
+	});
+
+	it('rejects a value of the wrong type and writes nothing', () => {
+		const state = makeState();
+		const view = pluginStateView(() => state);
+
+		expect(() => view.setTemperature('1')).toThrow(TypeError);
+		expect(() => view.setList({})).toThrow(TypeError);
+		expect(state.setTemperature).not.toHaveBeenCalled();
+		expect(state.setList).not.toHaveBeenCalled();
+	});
+
+	it('rejects null for a field that holds a number, but allows it for a nullable one', () => {
+		const state = makeState();
+		const view = pluginStateView(() => state);
+
+		expect(() => view.setTemperature(null)).toThrow(TypeError);
+		view.setStop(null);
+		view.setStop(() => {});
+		expect(state.setStop).toHaveBeenNthCalledWith(1, null);
+		expect(state.setStop).toHaveBeenNthCalledWith(2, expect.any(Function));
+	});
+
+	it('rejects NaN and infinity', () => {
+		const view = pluginStateView(() => makeState());
+
+		expect(() => view.setTemperature(NaN)).toThrow(TypeError);
+		expect(() => view.setTemperature(Infinity)).toThrow(TypeError);
+	});
+
+	it('rejects a number outside the range the sidebar uses', () => {
+		const view = pluginStateView(() => makeState());
+
+		expect(() => view.setTemperature(6)).toThrow(RangeError);
+		expect(() => view.setTemperature(-1)).toThrow(RangeError);
+	});
+
+	it('rejects an update function', () => {
+		const view = pluginStateView(() => makeState());
+
+		expect(() => view.setTemperature(() => 1)).toThrow(TypeError);
+	});
+
+	it('lets a plugin keep the view and still see the current values', () => {
+		let state = makeState();
+		const view = pluginStateView(() => state);
+		const kept = view;
+
+		state = { ...makeState(), label: 'changed' };
+		expect(kept.label).toBe('changed');
 	});
 });

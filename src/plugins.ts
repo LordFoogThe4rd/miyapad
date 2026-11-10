@@ -200,6 +200,95 @@ export function pluginHooksFor(record: PluginRecord) {
 	};
 }
 
+/**
+ * Ranges from the sampler inputs in the sidebar. A setter not listed gets only the type check.
+ * shortcut: copied from Sidebar.tsx rather than shared, so the two can drift; make one table
+ * when a range changes in the UI.
+ */
+const RANGES: Record<string, { min?: number; max?: number }> = {
+	setTemperature: { min: 0, max: 5 },
+	setRepeatPenalty: { min: 1, max: 3 },
+	setRepeatLastN: { min: 0 },
+	setPresencePenalty: { min: -2, max: 2 },
+	setFrequencyPenalty: { min: -2, max: 2 },
+	setMirostat: { min: 0, max: 2 },
+	setMirostatTau: { min: 0, max: 20 },
+	setMirostatEta: { min: 0, max: 1 },
+	setXtcThreshold: { min: 0, max: 0.5 },
+	setXtcProbability: { min: 0, max: 1 },
+	setDryMultiplier: { min: 0, max: 5 },
+	setDryBase: { min: 1, max: 4 },
+	setDryAllowedLength: { min: 0, max: 20 },
+	setDryPenaltyRange: { min: 0 },
+	setTopK: { min: 0, max: 200 },
+	setTopP: { min: 0, max: 1 },
+	setMinP: { min: 0, max: 1 },
+	setTypicalP: { min: 0, max: 1 },
+	setTfsZ: { min: 0, max: 1 },
+	setMaxPredictTokens: { min: -1 },
+	setSeed: { min: -1 },
+	setMemoryTokens: { min: 0 },
+	setAuthorNoteTokens: { min: 0 },
+	setAuthorNoteDepth: { min: 0 },
+	setHistoryKeep: { min: 1 },
+	setHistoryDeletionThreshold: { min: 1 },
+};
+
+/** The field a `set*` key writes to, found the way React names them: `setTTSEnabled` writes `ttsEnabled`. */
+function fieldOf(state: Record<string, unknown>, setter: string): string | undefined {
+	return Object.keys(state).find(key => key !== setter && `set${key}`.toLowerCase() === setter.toLowerCase());
+}
+
+/**
+ * A plugin's view of an app state object. Reads go to the latest value. A `set*` call is checked
+ * against what the field holds now, and against its range if it has one; a rejected call throws
+ * and writes nothing. Only a plugin's calls are checked, so Miyapad's own code keeps its
+ * half-typed input values.
+ */
+export function pluginStateView<T extends object>(current: () => T | null): T {
+	const read = (key: string) => {
+		const state = current() as Record<string, unknown> | null;
+		if (!state) return undefined;
+		const value = state[key];
+		if (typeof value !== 'function' || !key.startsWith('set')) return value;
+		return (next: unknown) => {
+			const live = current() as Record<string, unknown> | null;
+			const field = live ? fieldOf(live, key) : undefined;
+			checkSetter(key, field ? live![field] : undefined, next);
+			return (value as (arg: unknown) => unknown)(next);
+		};
+	};
+	return new Proxy({} as T, {
+		get: (_, key) => typeof key === 'string' ? read(key) : undefined,
+		has: (_, key) => typeof key === 'string' && key in (current() ?? {}),
+		ownKeys: () => Object.keys(current() ?? {}),
+		getOwnPropertyDescriptor: (_, key) => typeof key === 'string' && current()
+			? { value: read(key), enumerable: true, configurable: true }
+			: undefined,
+	});
+}
+
+/** Throws a `TypeError` for a value the field can't take, so the plugin author sees it. */
+function checkSetter(setter: string, currentValue: unknown, next: unknown) {
+	// A null or undefined field says nothing about the type it takes.
+	const known = currentValue !== null && currentValue !== undefined;
+	if (next === null) {
+		if (known && typeof currentValue !== 'object' && typeof currentValue !== 'function') {
+			throw new TypeError(`miyapad: ${setter}() doesn't take null`);
+		}
+	} else if (known && typeof next !== typeof currentValue) {
+		throw new TypeError(`miyapad: ${setter}() takes a ${typeof currentValue}`);
+	} else if (known && Array.isArray(next) !== Array.isArray(currentValue)) {
+		throw new TypeError(`miyapad: ${setter}() takes ${Array.isArray(currentValue) ? 'an array' : 'no array'}`);
+	}
+	if (typeof next === 'number') {
+		if (!Number.isFinite(next)) throw new TypeError(`miyapad: ${setter}() takes a finite number`);
+		const range = RANGES[setter];
+		if (range?.min !== undefined && next < range.min) throw new RangeError(`miyapad: ${setter}() takes ${range.min} or more`);
+		if (range?.max !== undefined && next > range.max) throw new RangeError(`miyapad: ${setter}() takes ${range.max} or less`);
+	}
+}
+
 let outputChain: Promise<void> = Promise.resolve();
 
 /** Queues the output hooks on their own chain, so the caller doesn't wait and generations reach them in order. */

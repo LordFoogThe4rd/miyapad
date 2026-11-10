@@ -1,10 +1,14 @@
 import { html } from 'htm/react';
-import { createContext, useContext, useState, useRef, useCallback, type ReactNode, type Dispatch, type SetStateAction } from 'react';
+import { createContext, useContext, useState, useRef, useCallback, useEffect, type ReactNode, type Dispatch, type SetStateAction } from 'react';
 import { defaultPresets } from '../defaults/presets';
 import type { GenerationState, InstructModalState, ProbsDelayTimerValue } from '../types/contexts';
 import type { EditorAdapter } from '../editor/EditorAdapter';
 
 export const GenerationContext = createContext<GenerationState | null>(null);
+
+/** The value the provider rendered last, for plugins. Null until the provider mounts. */
+let current: GenerationState | null = null;
+export const currentGeneration = () => current;
 
 export function GenerationProvider({ children, useSessionState }: { children: ReactNode; useSessionState: <T>(name: string, initialState: T) => [T, Dispatch<SetStateAction<T>>] }) {
 	const promptEditorView = useRef<EditorAdapter>(null);
@@ -18,26 +22,26 @@ export function GenerationProvider({ children, useSessionState }: { children: Re
 	const hordeTaskId = useRef<string | undefined>(undefined);
 	const lastEditMsRef = useRef(0);
 
-	const [promptChunks, setPromptChunks] = useSessionState('prompt', defaultPresets.prompt);
-	const [currentPromptChunk, setCurrentPromptChunk] = useState(undefined);
+	const [promptChunks, setPromptChunks] = useSessionState<PromptChunk[]>('prompt', defaultPresets.prompt);
+	const [currentPromptChunk, setCurrentPromptChunk] = useState<{ index: number; top: number; left: number } | undefined>(undefined);
 	const [undoHovered, setUndoHovered] = useState(false);
 	const [showProbs, setShowProbs] = useState(true);
-	const [cancel, setCancel] = useState(null);
+	const [cancel, setCancel] = useState<(() => void) | null>(null);
 	const [sessionEndpointConnecting, setSessionEndpointConnecting] = useState(false);
-	const [sessionEndpointError, setSessionEndpointError] = useState(undefined);
+	const [sessionEndpointError, setSessionEndpointError] = useState<string | undefined>(undefined);
 	const [rejectedAPIKey, setRejectedAPIKey] = useState(false);
-	const [openaiModels, setOpenaiModels] = useState([]);
+	const [openaiModels, setOpenaiModels] = useState<string[]>([]);
 	const [tokens, setTokens] = useState(0);
 	const [memoryTokenCount, setMemoryTokenCount] = useState(0);
 	const [worldInfoTokenCount, setWorldInfoTokenCount] = useState(0);
 	const [authorNoteTokenCount, setAuthorNoteTokenCount] = useState(0);
 	const [tokensPerSec, setTokensPerSec] = useState(0.0);
 	const [predictStartTokens, setPredictStartTokens] = useState(0);
-	const [lastError, setLastError] = useState(undefined);
+	const [lastError, setLastError] = useState<string | undefined>(undefined);
 	const [modalState, setModalState] = useState<Record<string, boolean>>({});
 	const [contextMenuState, setContextMenuState] = useState({ visible: false, x: 0, y: 0 });
 	const [instructModalState, setInstructModalState] = useState<InstructModalState>({});
-	const [hordeQueuePos, setHordeQueuePos] = useState(undefined);
+	const [hordeQueuePos, setHordeQueuePos] = useState<number | undefined>(undefined);
 	const [hordeProcessing, setHordeProcessing] = useState(false);
 	const [ttsAvailable, setTTSAvailable] = useState(true);
 	
@@ -97,6 +101,8 @@ export function GenerationProvider({ children, useSessionState }: { children: Re
 		ttsNewText, ttsLastChunk, ttsQueue, ttsVoices, ttsPaused, activeGenId, abortControllerRef, triggerPredict, setTriggerPredict, restartedPredict, setRestartedPredict,
 		toggleModal, closeModal
 	};
+
+	useEffect(() => { current = state; });
 
 	return html`
 		<${GenerationContext.Provider} value=${state}>

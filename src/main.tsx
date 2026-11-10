@@ -13,7 +13,9 @@ import { ConnectionStorage } from './storage/ConnectionStorage';
 import { SamplerPresetStorage } from './storage/SamplerPresetStorage';
 import { PluginStorage } from './storage/PluginStorage';
 import { PluginData } from './storage/PluginData';
-import { pluginHooksFor, startPlugins } from './plugins';
+import { pluginHooksFor, pluginStateView, startPlugins } from './plugins';
+import { currentSettings } from './contexts/SettingsContext';
+import { currentGeneration } from './contexts/GenerationContext';
 import * as api from './api/index';
 import { APP_VERSION } from './version';
 import { useSessionState } from './hooks/useSessionState';
@@ -89,6 +91,9 @@ async function main() {
 		api, React, html,
 		hooks: pluginHooksFor(pluginStorage.plugins[name]),
 		storage: pluginData.storageFor(name),
+		// Views: the contexts have no value until the app draws, which is after plugins start.
+		settings: pluginStateView(currentSettings),
+		generation: pluginStateView(currentGeneration),
 	}), {
 		skip,
 		onProgress: (name, index, total) => {

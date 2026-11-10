@@ -16,6 +16,10 @@ import type { SettingsState } from '../types/contexts';
 
 export const SettingsContext = createContext<SettingsState | null>(null);
 
+/** The value the provider rendered last, for plugins. Null until the provider mounts. */
+let current: SettingsState | null = null;
+export const currentSettings = () => current;
+
 function detectLocale(): string {
 	const browserLang = navigator.language.split('-')[0];
 	return AVAILABLE_LOCALES.includes(browserLang as LocaleCode) ? browserLang : 'en';
@@ -99,13 +103,13 @@ export function SettingsProvider({ children, sessionStorage, templateStorage, th
 	const [dryAllowedLength, setDryAllowedLength] = useSessionState('dryAllowedLength', defaultPresets.dryAllowedLength);
 	const [dryPenaltyRange, setDryPenaltyRange] = useSessionState('dryPenaltyRange', defaultPresets.dryPenaltyRange);
 	const [drySequenceBreakers, setDrySequenceBreakers] = useSessionState('drySequenceBreakers', defaultPresets.drySequenceBreakers);
-	const [drySequenceBreakersError, setDrySequenceBreakersError] = useState(undefined);
+	const [drySequenceBreakersError, setDrySequenceBreakersError] = useState<string | undefined>(undefined);
 	const [bannedTokens, setBannedTokens] = useSessionState('bannedTokens', defaultPresets.bannedTokens);
-	const [bannedTokensError, setBannedTokensError] = useState(undefined);
+	const [bannedTokensError, setBannedTokensError] = useState<string | undefined>(undefined);
 	const [ignoreEos, setIgnoreEos] = useSessionState('ignoreEos', defaultPresets.ignoreEos);
 	const [openaiPresets, setOpenaiPresets] = useSessionState('openaiPresets', defaultPresets.openaiPresets);
 	const [stoppingStrings, setStoppingStrings] = useSessionState('stoppingStrings', defaultPresets.stoppingStrings);
-	const [stoppingStringsError, setStoppingStringsError] = useState(undefined);
+	const [stoppingStringsError, setStoppingStringsError] = useState<string | undefined>(undefined);
 	const [useBasicStoppingMode, setUseBasicStoppingMode] = useSessionState('useBasicStoppingMode', stoppingStrings != '[]' ? false : defaultPresets.useBasicStoppingMode);
 	const [basicStoppingModeType, setBasicStoppingModeType] = useSessionState('basicStoppingModeType', defaultPresets.basicStoppingModeType);
 	const [rawLogitBias, setLogitBias] = useSessionState('logitBias', defaultPresets.logitBias);
@@ -125,8 +129,8 @@ export function SettingsProvider({ children, sessionStorage, templateStorage, th
 	const [memoryTokens, setMemoryTokens] = useSessionState('memoryTokens', defaultPresets.memoryTokens);
 	const [authorNoteTokens, setAuthorNoteTokens] = useSessionState('authorNoteTokens', defaultPresets.authorNoteTokens);
 	const [authorNoteDepth, setAuthorNoteDepth] = useSessionState('authorNoteDepth', defaultPresets.authorNoteDepth);
-	const [worldInfo, setWorldInfo] = useSessionState('worldInfo', defaultPresets.worldInfo);
-	const [sillyTarvernWorldInfoJSON, setSillyTarvernWorldInfoJSON] = useState(null);
+	const [worldInfo, setWorldInfo] = useSessionState<WorldInfoData>('worldInfo', defaultPresets.worldInfo);
+	const [sillyTarvernWorldInfoJSON, setSillyTarvernWorldInfoJSON] = useState<SillyTavernWorldInfo | null>(null);
 	const [enabledSamplers, setEnabledSamplers] = useSessionState('enabledSamplers', defaultPresets.enabledSamplers);
 	const [grammar, setGrammar] = useSessionState('grammar', defaultPresets.grammar);
 	const [useChatAPI, setUseChatAPI] = useSessionState('chatAPI', defaultPresets.chatAPI);
@@ -221,6 +225,8 @@ export function SettingsProvider({ children, sessionStorage, templateStorage, th
 		screenshotLineHeight, setScreenshotLineHeight, screenshotFontColor, setScreenshotFontColor,
 		screenshotAiTextColor, setScreenshotAiTextColor, screenshotModelAvatarUrl, setScreenshotModelAvatarUrl
 	};
+
+	useEffect(() => { current = state; });
 
 	return html`
 		<${SettingsContext.Provider} value=${state}>

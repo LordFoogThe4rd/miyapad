@@ -2,7 +2,7 @@ import { html } from 'htm/react';
 import { useState, type ReactNode } from 'react';
 import { afterEach, describe, expect, it, vi } from 'vitest';
 import { renderHook, cleanup } from '@testing-library/react';
-import { SettingsProvider, useSettings } from './SettingsContext';
+import { SettingsProvider, useSettings, currentSettings } from './SettingsContext';
 
 /** Values a session saved before this version, handed back by the stub session state. */
 let saved: Record<string, unknown> = {};
@@ -97,5 +97,13 @@ describe('useSettings', () => {
 		vi.spyOn(console, 'error').mockImplementation(() => {});
 		expect(() => renderHook(() => useSettings())).toThrow('useSettings must be used within a SettingsProvider');
 		vi.restoreAllMocks();
+	});
+});
+
+describe('currentSettings', () => {
+	it('is the value the provider rendered last', () => {
+		const settings = load({ temperature: 0.5 });
+
+		expect(currentSettings()).toBe(settings);
 	});
 });
