@@ -1,5 +1,5 @@
 import { describe, it, expect } from 'vitest';
-import { isConnectionData, isInstructTemplate, isSamplerPresetData, coerceThemeData } from './validators';
+import { isConnectionData, isInstructTemplate, isSamplerPresetData, coerceThemeData, coercePluginRecord } from './validators';
 
 function makeValid(): SamplerPresetData {
   return {
@@ -257,5 +257,40 @@ describe('isInstructTemplate', () => {
     expect(isInstructTemplate(undefined)).toBe(false);
     expect(isInstructTemplate('[INST]')).toBe(false);
     expect(isInstructTemplate([makeTemplate()])).toBe(false);
+  });
+});
+
+describe('coercePluginRecord', () => {
+  it('converts a legacy flat record into a synthetic manifest', () => {
+    expect(coercePluginRecord({ code: '1;', enabled: true, min: '2.9.0', hookTimeout: 15 }, 'legacy'))
+      .toEqual({
+        code: '1;',
+        enabled: true,
+        manifest: { id: 'legacy', name: 'legacy', order: 0, api: 1, minMiyapad: '2.9.0', hookTimeout: 15 },
+      });
+  });
+
+  it('preserves a manifest-shaped record and defaults invalid optional manifest numbers', () => {
+    expect(coercePluginRecord({
+      code: '1;',
+      enabled: false,
+      url: 'https://example.com/p.miyaplugin',
+      source: 'https://github.com/o/r',
+      changelog: '## [1.0.0]\n- Init',
+      manifest: { id: 'p', name: 'Plugin P', version: '1.0.0', order: 'bad', api: 0, requires: ['server', 'unknown'] },
+    }, 'p')).toEqual({
+      code: '1;',
+      enabled: false,
+      url: 'https://example.com/p.miyaplugin',
+      source: 'https://github.com/o/r',
+      changelog: '## [1.0.0]\n- Init',
+      manifest: { id: 'p', name: 'Plugin P', version: '1.0.0', order: 0, api: 1, requires: ['server'] },
+    });
+  });
+
+  it('returns null for missing code, enabled, or key on legacy records', () => {
+    expect(coercePluginRecord({ code: '1;', enabled: true })).toBeNull();
+    expect(coercePluginRecord({ code: 1, enabled: true }, 'p')).toBeNull();
+    expect(coercePluginRecord({ code: '1;', enabled: true, manifest: { id: 'p', name: '' } }, 'p')).toBeNull();
   });
 });

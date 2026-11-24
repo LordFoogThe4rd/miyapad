@@ -84,23 +84,27 @@ async function main() {
 		</${ErrorBoundary}>`);
 
 	// No stable API: plugins get the real objects, and any release can change them.
-	const started = startPlugins(pluginStorage, new URLSearchParams(window.location.search).has('safe'), name => ({
-		name,
-		version: APP_VERSION,
-		sessionStorage, templateStorage, themeStorage, connectionStorage, samplerPresetStorage,
-		api, React, html,
-		hooks: pluginHooksFor(pluginStorage.plugins[name]),
-		storage: pluginData.storageFor(name),
-		// Views: the contexts have no value until the app draws, which is after plugins start.
-		settings: pluginStateView(currentSettings),
-		generation: pluginStateView(currentGeneration),
-	}), {
+	const started = startPlugins(pluginStorage, new URLSearchParams(window.location.search).has('safe'), id => {
+		const record = pluginStorage.plugins[id];
+		return {
+			id,
+			name: record.manifest.name,
+			version: APP_VERSION,
+			sessionStorage, templateStorage, themeStorage, connectionStorage, samplerPresetStorage,
+			api, React, html,
+			hooks: pluginHooksFor(id, record),
+			storage: pluginData.storageFor(id),
+			// Views: the contexts have no value until the app draws, which is after plugins start.
+			settings: pluginStateView(currentSettings),
+			generation: pluginStateView(currentGeneration),
+		};
+	}, {
 		skip,
 		onProgress: (name, index, total) => {
 			progress = { name, index, total };
 			if (splashShown) renderSplash();
 		},
-	});
+	}, { server: isMiyapadEndpoint });
 
 	const settled = await Promise.race([
 		started.then(pluginStart => ({ done: true as const, pluginStart })),

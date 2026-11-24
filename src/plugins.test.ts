@@ -1,7 +1,44 @@
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
-import { checkVersion, DEFAULT_PLUGIN_START_TIMEOUT_S, hooks, parseHeader, pluginHooksFor, pluginStateView, runOutputHooks, runPlugins, runPromptHooks, startPlugins, switchOffMismatched } from './plugins';
+import { strToU8, zipSync } from 'fflate';
+import {
+	checkRequirements,
+	checkVersion,
+	clearPluginRuntimeError,
+	DEFAULT_PLUGIN_START_TIMEOUT_S,
+	fetchPluginCode,
+	fetchPluginFromUrl,
+	getPluginRuntimeErrors,
+	hooks,
+	parseHeader,
+	pluginHooksFor,
+	pluginNameFromUrl,
+	pluginStateView,
+	runOutputHooks,
+	runPlugins,
+	runPromptHooks,
+	startPlugins,
+	switchOffMismatched,
+} from './plugins';
+import { legacyManifest } from './plugins/manifest';
 import { APP_VERSION } from './version';
 import type { PluginStorage } from './storage/PluginStorage';
+
+function makeRecord(
+	id: string,
+	overrides: Partial<Omit<PluginRecord, 'manifest'>> & { manifest?: Partial<PluginManifest> } = {},
+): PluginRecord {
+	const { manifest, ...rest } = overrides;
+	return {
+		code: '',
+		enabled: true,
+		...rest,
+		manifest: {
+			...legacyManifest(id),
+			...manifest,
+			id,
+		},
+	};
+}
 
 beforeEach(() => {
 	vi.spyOn(console, 'warn').mockImplementation(() => {});
@@ -12,6 +49,7 @@ afterEach(() => {
 	hooks.prompt.length = 0;
 	hooks.output.length = 0;
 	hooks.commands.length = 0;
+	clearPluginRuntimeError();
 	vi.useRealTimers();
 	vi.restoreAllMocks();
 });
@@ -50,81 +88,157 @@ describe('parseHeader', () => {
 	});
 });
 
-describe('checkVersion', () => {
-	it('is mismatched below min', () => {
-		expect(checkVersion({ min: '2.10.0' }, '2.9.5')).toBe('mismatched');
+describe('pluginNameFromUrl', () => {
+	it('takes the last part of the path without .js', () => {
+		expect(pluginNameFromUrl('https://raw.githubusercontent.com/a/b/main/plugins/foo.js')).toBe('foo');
+		expect(pluginNameFromUrl('https://cdn.jsdelivr.net/gh/a/b@1/Foo.JS?raw=1')).toBe('Foo');
 	});
 
-	it('covers every release of a short max, and nothing after it', () => {
-		expect(checkVersion({ max: '2.10' }, '2.10.3')).toBe('fits');
-		expect(checkVersion({ max: '2.10' }, '2.11.0')).toBe('mismatched');
-		expect(checkVersion({ max: '2.10.0' }, '2.10')).toBe('fits');
+	it('refuses an address with no file name, or not http(s)', () => {
+		expect(pluginNameFromUrl('https://example.com/')).toBeUndefined();
+		expect(pluginNameFromUrl('https://example.com/plugins/')).toBe('plugins');
+		expect(pluginNameFromUrl('https://example.com/.js')).toBeUndefined();
+		expect(pluginNameFromUrl('file:///plugins/foo.js')).toBeUndefined();
+		expect(pluginNameFromUrl('not a url')).toBeUndefined();
+	});
+});
+
+describe('fetchPluginCode & fetchPluginFromUrl', () => {
+	const answer = (body: BodyInit, init?: ResponseInit) => vi.fn(async () => new Response(body, init));
+
+	afterEach(() => vi.unstubAllGlobals());
+
+	it('reads legacy code from the address', async () => {
+		vi.stubGlobal('fetch', answer('const x = 1;'));
+		expect(await fetchPluginCode('https://example.com/p.js', false)).toBe('const x = 1;');
+		expect(await fetchPluginFromUrl('https://example.com/p.js', false)).toEqual({ kind: 'legacy', code: 'const x = 1;' });
+	});
+
+	it('parses a .miyaplugin zip archive from the address even with octet-stream content-type', async () => {
+		const zip = zipSync({
+			'manifest.json': strToU8(JSON.stringify({ id: 'date', name: 'Date', version: '1.0.0' })),
+			'main.js': strToU8('const x = 1;'),
+		});
+		vi.stubGlobal('fetch', answer(zip, { headers: { 'content-type': 'application/octet-stream' } }));
+		const result = await fetchPluginFromUrl('https://example.com/date.miyaplugin', false);
+		expect(result.kind).toBe('archive');
+		if (result.kind === 'archive') {
+			expect(result.archive.manifest).toMatchObject({ id: 'date', name: 'Date', version: '1.0.0' });
+		}
+	});
+
+	it('goes through the server when asked', async () => {
+		const fetchMock = answer('const x = 1;');
+		vi.stubGlobal('fetch', fetchMock);
+		await fetchPluginCode('https://example.com/p.js', true);
+		expect(fetchMock).toHaveBeenCalledWith('/proxy-url?url=https%3A%2F%2Fexample.com%2Fp.js', { cache: 'no-store' });
+	});
+
+	it('refuses a failed reply and a web page', async () => {
+		vi.stubGlobal('fetch', answer('', { status: 404, statusText: 'Not Found' }));
+		await expect(fetchPluginCode('https://example.com/p.js', false)).rejects.toThrow('404 Not Found');
+
+		vi.stubGlobal('fetch', answer('<html></html>', { headers: { 'content-type': 'text/html; charset=utf-8' } }));
+		await expect(fetchPluginCode('https://example.com/p.js', false)).rejects.toThrow('web page');
+		vi.stubGlobal('fetch', answer('<html></html>', { headers: { 'content-type': 'text/html; charset=utf-8' } }));
+		await expect(fetchPluginFromUrl('https://example.com/p.miyaplugin', false)).rejects.toThrow('web page');
+	});
+});
+
+describe('checkVersion', () => {
+	it('is mismatched below minMiyapad', () => {
+		expect(checkVersion({ minMiyapad: '2.10.0' }, '2.9.5')).toBe('mismatched');
+	});
+
+	it('covers every release of a short maxMiyapad, and nothing after it', () => {
+		expect(checkVersion({ maxMiyapad: '2.10' }, '2.10.3')).toBe('fits');
+		expect(checkVersion({ maxMiyapad: '2.10' }, '2.11.0')).toBe('mismatched');
+		expect(checkVersion({ maxMiyapad: '2.10.0' }, '2.10')).toBe('fits');
 	});
 
 	it('fits inside the range', () => {
-		expect(checkVersion({ min: '2.9.0', max: '2.10' }, '2.9.0')).toBe('fits');
-		expect(checkVersion({ min: '2.9.0', max: '2.10' }, '2.10.7')).toBe('fits');
+		expect(checkVersion({ minMiyapad: '2.9.0', maxMiyapad: '2.10' }, '2.9.0')).toBe('fits');
+		expect(checkVersion({ minMiyapad: '2.9.0', maxMiyapad: '2.10' }, '2.10.7')).toBe('fits');
 	});
 
-	it('treats a min on its own as that version and every later one', () => {
-		expect(checkVersion({ min: '2.0.0' }, '9.0.0')).toBe('fits');
+	it('treats a minMiyapad on its own as that version and every later one', () => {
+		expect(checkVersion({ minMiyapad: '2.0.0' }, '9.0.0')).toBe('fits');
 	});
 
-	it('is undeclared without either line', () => {
+	it('is undeclared without either bound', () => {
 		expect(checkVersion({})).toBe('undeclared');
 	});
 });
 
-describe('switchOffMismatched', () => {
+describe('checkRequirements & switchOffMismatched', () => {
 	function storageWith(plugins: Record<string, PluginRecord>) {
 		const storage = {
 			plugins: { ...plugins },
-			setEnabled: vi.fn(async (name: string, enabled: boolean) => { storage.plugins[name] = { ...storage.plugins[name], enabled }; }),
+			setEnabled: vi.fn(async (id: string, enabled: boolean) => { storage.plugins[id] = { ...storage.plugins[id], enabled }; }),
 		};
 		return storage;
 	}
 
-	it('switches off and saves mismatched and undeclared plugins, and leaves the rest on', async () => {
+	it('switches off mismatched, undeclared, and server-requiring plugins in standalone', async () => {
 		const storage = storageWith({
-			old: { code: '', enabled: true, max: '0.1' },
-			bare: { code: '', enabled: true },
-			allowed: { code: '', enabled: true, max: '0.1', allowedVersion: APP_VERSION },
-			allowedEarlier: { code: '', enabled: true, allowedVersion: '0.0.1' },
-			fits: { code: '', enabled: true, min: '0.1' },
-			off: { code: '', enabled: false, max: '0.1' },
+			old: makeRecord('old', { manifest: { maxMiyapad: '0.1' } }),
+			bare: makeRecord('bare'),
+			allowed: makeRecord('allowed', { allowedVersion: APP_VERSION, manifest: { maxMiyapad: '0.1' } }),
+			allowedEarlier: makeRecord('allowedEarlier', { allowedVersion: '0.0.1' }),
+			needsServer: makeRecord('needsServer', { allowedVersion: APP_VERSION, manifest: { minMiyapad: '0.1', requires: ['server'] } }),
+			fits: makeRecord('fits', { manifest: { minMiyapad: '0.1' } }),
+			off: makeRecord('off', { enabled: false, manifest: { maxMiyapad: '0.1' } }),
 		});
 
-		expect(await switchOffMismatched(storage as unknown as PluginStorage)).toEqual(['allowedEarlier', 'bare', 'old']);
-		expect(storage.setEnabled.mock.calls).toEqual([['allowedEarlier', false], ['bare', false], ['old', false]]);
+		expect(checkRequirements({ requires: ['server'] }, { server: false })).toEqual(['server']);
+		expect(checkRequirements({ requires: ['server'] }, { server: true })).toEqual([]);
+
+		expect(await switchOffMismatched(storage as unknown as PluginStorage, { server: false }))
+			.toEqual(['allowedEarlier', 'bare', 'needsServer', 'old']);
+		expect(storage.setEnabled.mock.calls).toEqual([
+			['allowedEarlier', false],
+			['bare', false],
+			['needsServer', false],
+			['old', false],
+		]);
 		expect(storage.plugins.allowed.enabled).toBe(true);
 		expect(storage.plugins.fits.enabled).toBe(true);
 	});
 
+	it('keeps server-requiring plugins enabled when running with the server', async () => {
+		const storage = storageWith({
+			needsServer: makeRecord('needsServer', { manifest: { minMiyapad: '0.1', requires: ['server'] } }),
+		});
+		expect(await switchOffMismatched(storage as unknown as PluginStorage, { server: true })).toEqual([]);
+		expect(storage.plugins.needsServer.enabled).toBe(true);
+	});
+
 	it('still lists a plugin whose save failed, so it is not run', async () => {
-		const storage = storageWith({ old: { code: '', enabled: true, max: '0.1' } });
+		const storage = storageWith({ old: makeRecord('old', { manifest: { maxMiyapad: '0.1' } }) });
 		storage.setEnabled.mockRejectedValueOnce(new Error('offline'));
 		expect(await switchOffMismatched(storage as unknown as PluginStorage)).toEqual(['old']);
 	});
 });
 
 describe('startPlugins', () => {
-	it('runs the switched-on plugins that fit, and none of the ones it switched off', async () => {
+	it('runs switched-on plugins that fit and meet host requirements, and skips switched-off ones', async () => {
 		const storage = {
 			plugins: {
-				fits: { code: 'miyapad.ran.push("fits")', enabled: true, min: '0.1' },
-				old: { code: 'miyapad.ran.push("old")', enabled: true, max: '0.1' },
-				off: { code: 'miyapad.ran.push("off")', enabled: false, min: '0.1' },
+				fits: makeRecord('fits', { code: 'miyapad.ran.push("fits")', manifest: { minMiyapad: '0.1' } }),
+				old: makeRecord('old', { code: 'miyapad.ran.push("old")', manifest: { maxMiyapad: '0.1' } }),
+				serverOnly: makeRecord('serverOnly', { code: 'miyapad.ran.push("serverOnly")', manifest: { minMiyapad: '0.1', requires: ['server'] } }),
+				off: makeRecord('off', { code: 'miyapad.ran.push("off")', enabled: false, manifest: { minMiyapad: '0.1' } }),
 			} as Record<string, PluginRecord>,
 			setEnabled: vi.fn(async () => {}),
 		};
 		const ran: string[] = [];
-		const result = await startPlugins(storage as unknown as PluginStorage, false, () => ({ ran }));
-		expect(result).toEqual({ safeMode: false, switchedOff: ['old'], errors: {}, timedOut: [], skipped: [] });
+		const result = await startPlugins(storage as unknown as PluginStorage, false, () => ({ ran }), undefined, { server: false });
+		expect(result).toEqual({ safeMode: false, switchedOff: ['old', 'serverOnly'], errors: {}, timedOut: [], skipped: [] });
 		expect(ran).toEqual(['fits']);
 	});
 
 	it('runs nothing and writes nothing in safe mode', async () => {
-		const storage = { plugins: { old: { code: 'miyapad.ran = true', enabled: true, max: '0.1' } }, setEnabled: vi.fn() };
+		const storage = { plugins: { old: makeRecord('old', { code: 'miyapad.ran = true', manifest: { maxMiyapad: '0.1' } }) }, setEnabled: vi.fn() };
 		const miyapad = { ran: false };
 		expect(await startPlugins(storage as unknown as PluginStorage, true, () => miyapad))
 			.toEqual({ safeMode: true, switchedOff: [], errors: {}, timedOut: [], skipped: [] });
@@ -134,21 +248,43 @@ describe('startPlugins', () => {
 });
 
 describe('runPlugins', () => {
-	const record = (code: string): PluginRecord => ({ code, enabled: true });
-
-	it('runs plugins in name order with their own miyapad object', async () => {
+	it('sorts plugins by manifest.order ascending, then id ascending', async () => {
 		const seen: string[] = [];
 		(globalThis as Record<string, unknown>).seen = seen;
-		const plugins = { b: record('seen.push(miyapad.name)'), a: record('await null; seen.push(miyapad.name)') };
-		await runPlugins(plugins, ['b', 'a'], name => ({ name }));
+		const plugins = {
+			b: makeRecord('b', { code: 'seen.push(miyapad.id)', manifest: { order: 0 } }),
+			a: makeRecord('a', { code: 'await null; seen.push(miyapad.id)', manifest: { order: 0 } }),
+			early: makeRecord('early', { code: 'seen.push(miyapad.id)', manifest: { order: -10 } }),
+			late: makeRecord('late', { code: 'seen.push(miyapad.id)', manifest: { order: 5 } }),
+		};
+		await runPlugins(plugins, ['late', 'b', 'a', 'early'], id => ({ id }));
 		delete (globalThis as Record<string, unknown>).seen;
-		expect(seen).toEqual(['a', 'b']);
+		expect(seen).toEqual(['early', 'a', 'b', 'late']);
+	});
+
+	it('skips plugins requiring server when host.server is false', async () => {
+		const seen: string[] = [];
+		(globalThis as Record<string, unknown>).seen = seen;
+		const plugins = {
+			srv: makeRecord('srv', { code: 'seen.push("srv")', manifest: { requires: ['server'] } }),
+			plain: makeRecord('plain', { code: 'seen.push("plain")' }),
+		};
+		await runPlugins(plugins, ['srv', 'plain'], () => ({}), undefined, { server: false });
+		expect(seen).toEqual(['plain']);
+
+		await runPlugins(plugins, ['srv', 'plain'], () => ({}), undefined, { server: true });
+		delete (globalThis as Record<string, unknown>).seen;
+		expect(seen).toEqual(['plain', 'plain', 'srv']);
 	});
 
 	it('records a plugin that throws or does not parse, and still runs the next', async () => {
-		const plugins = { a: record('throw new Error("boom")'), b: record('this is not js'), c: record('miyapad.ran = true') };
+		const plugins = {
+			a: makeRecord('a', { code: 'throw new Error("boom")' }),
+			b: makeRecord('b', { code: 'this is not js' }),
+			c: makeRecord('c', { code: 'miyapad.ran = true' }),
+		};
 		const c = { ran: false };
-		const result = await runPlugins(plugins, ['a', 'b', 'c'], name => (name === 'c' ? c : {}));
+		const result = await runPlugins(plugins, ['a', 'b', 'c'], id => (id === 'c' ? c : {}));
 		expect(result.errors).toEqual({ a: 'Error: boom', b: expect.stringMatching(/^SyntaxError/) });
 		expect(result.timedOut).toEqual([]);
 		expect(c.ran).toBe(true);
@@ -156,9 +292,12 @@ describe('runPlugins', () => {
 
 	it('moves on from a plugin that is still starting after the timeout', async () => {
 		vi.useFakeTimers();
-		const plugins = { slow: record('await new Promise(() => {})'), next: record('miyapad.ran = true') };
+		const plugins = {
+			slow: makeRecord('slow', { code: 'await new Promise(() => {})' }),
+			next: makeRecord('next', { code: 'miyapad.ran = true' }),
+		};
 		const next = { ran: false };
-		const done = runPlugins(plugins, ['slow', 'next'], name => (name === 'next' ? next : {}));
+		const done = runPlugins(plugins, ['slow', 'next'], id => (id === 'next' ? next : {}));
 		await vi.advanceTimersByTimeAsync(DEFAULT_PLUGIN_START_TIMEOUT_S * 1000);
 		expect(await done).toEqual({ errors: {}, timedOut: ['slow'], skipped: [] });
 		expect(next.ran).toBe(true);
@@ -166,9 +305,12 @@ describe('runPlugins', () => {
 
 	it('gives up on a plugin after its own declared start timeout', async () => {
 		vi.useFakeTimers();
-		const plugins = { a: { code: 'await new Promise(() => {})', enabled: true, startTimeout: 2 }, b: record('miyapad.ran = true') };
+		const plugins = {
+			a: makeRecord('a', { code: 'await new Promise(() => {})', manifest: { startTimeout: 2 } }),
+			b: makeRecord('b', { code: 'miyapad.ran = true' }),
+		};
 		const b = { ran: false };
-		const done = runPlugins(plugins, ['a', 'b'], name => (name === 'b' ? b : {}));
+		const done = runPlugins(plugins, ['a', 'b'], id => (id === 'b' ? b : {}));
 		await vi.advanceTimersByTimeAsync(1000);
 		expect(b.ran).toBe(false);
 		await vi.advanceTimersByTimeAsync(1000);
@@ -180,10 +322,14 @@ describe('runPlugins', () => {
 		vi.useFakeTimers();
 		let skip!: () => void;
 		const skipPromise = new Promise<void>(resolve => { skip = resolve; });
-		const plugins = { a: record('await new Promise(() => {})'), b: record('miyapad.ran = true'), c: record('miyapad.ran = true') };
+		const plugins = {
+			a: makeRecord('a', { code: 'await new Promise(() => {})' }),
+			b: makeRecord('b', { code: 'miyapad.ran = true' }),
+			c: makeRecord('c', { code: 'miyapad.ran = true' }),
+		};
 		const b = { ran: false };
 		const c = { ran: false };
-		const done = runPlugins(plugins, ['a', 'b', 'c'], name => (name === 'b' ? b : name === 'c' ? c : {}), { skip: skipPromise });
+		const done = runPlugins(plugins, ['a', 'b', 'c'], id => (id === 'b' ? b : id === 'c' ? c : {}), { skip: skipPromise });
 		await vi.advanceTimersByTimeAsync(1);
 		skip();
 		expect(await done).toEqual({ errors: {}, timedOut: [], skipped: ['a', 'b', 'c'] });
@@ -191,15 +337,18 @@ describe('runPlugins', () => {
 		expect(c.ran).toBe(false);
 	});
 
-	it('reports each plugin as it starts', async () => {
+	it('reports each plugin display name as it starts', async () => {
 		const seen: [string, number, number][] = [];
-		const plugins = { a: record(''), b: record('') };
+		const plugins = {
+			a: makeRecord('a', { manifest: { name: 'Alpha' } }),
+			b: makeRecord('b', { manifest: { name: 'Beta' } }),
+		};
 		await runPlugins(plugins, ['b', 'a'], () => ({}), { skip: new Promise(() => {}), onProgress: (name, index, total) => seen.push([name, index, total]) });
-		expect(seen).toEqual([['a', 1, 2], ['b', 2, 2]]);
+		expect(seen).toEqual([['Alpha', 1, 2], ['Beta', 2, 2]]);
 	});
 });
 
-describe('runPromptHooks', () => {
+describe('runPromptHooks & runOutputHooks', () => {
 	it('passes the prompt through each hook, skipping one that throws or returns a non-string', async () => {
 		hooks.prompt.push(
 			p => p + ' one',
@@ -209,10 +358,8 @@ describe('runPromptHooks', () => {
 		);
 		expect(await runPromptHooks('start')).toBe('start one two');
 	});
-});
 
-describe('runOutputHooks', () => {
-	it('calls every hook, even after one fails', async () => {
+	it('calls every output hook, even after one fails', async () => {
 		const seen = vi.fn();
 		hooks.output.push(() => { throw new Error('broken'); }, seen);
 		await runOutputHooks('text', { complete: true });
@@ -220,31 +367,56 @@ describe('runOutputHooks', () => {
 	});
 });
 
-describe('pluginHooksFor', () => {
-	it('skips a prompt hook that outlives its timeout and runs the next one', async () => {
+describe('pluginHooksFor & hook attribution', () => {
+	it('attributes prompt hook throws, wrong return types and timeouts to the plugin id', async () => {
 		vi.useFakeTimers();
-		const view = pluginHooksFor({ code: '', enabled: true, hookTimeout: 1 });
-		view.prompt.push(() => new Promise(() => {}));
-		view.prompt.push(p => p + ' done');
-		const result = runPromptHooks('start');
+		const alpha = pluginHooksFor('alpha', makeRecord('alpha', { manifest: { hookTimeout: 1 } }));
+		const beta = pluginHooksFor('beta', makeRecord('beta'));
+		const gamma = pluginHooksFor('gamma', makeRecord('gamma'));
+
+		alpha.prompt.push(() => new Promise(() => {}));
+		beta.prompt.push(() => { throw new Error('boom'); });
+		gamma.prompt.push((() => 123) as unknown as (p: string) => string);
+
+		const run = runPromptHooks('hello');
 		await vi.advanceTimersByTimeAsync(1000);
-		expect(await result).toBe('start done');
+		expect(await run).toBe('hello');
+
+		expect(getPluginRuntimeErrors()).toEqual({
+			alpha: 'Error: timed out after 1s',
+			beta: 'Error: boom',
+			gamma: 'prompt hook returned number instead of a string',
+		});
+		expect(console.error).toHaveBeenCalledWith(expect.stringContaining('[plugins] "alpha":'), expect.any(Error));
+		expect(console.error).toHaveBeenCalledWith(expect.stringContaining('[plugins] "beta":'), expect.any(Error));
+		expect(console.error).toHaveBeenCalledWith(expect.stringContaining('[plugins] "gamma":'), 123);
 	});
 
-	it('keeps the output chain going after a hook times out', async () => {
+	it('attributes output hook throws and timeouts to the plugin id and keeps the chain going', async () => {
 		vi.useFakeTimers();
-		const view = pluginHooksFor({ code: '', enabled: true, hookTimeout: 1 });
+		const slow = pluginHooksFor('slow-out', makeRecord('slow-out', { manifest: { hookTimeout: 1 } }));
+		const broken = pluginHooksFor('broken-out', makeRecord('broken-out'));
+		const ok = pluginHooksFor('ok-out', makeRecord('ok-out'));
 		const seen = vi.fn();
-		view.output.push(() => new Promise(() => {}));
-		view.output.push(seen);
+
+		slow.output.push(() => new Promise(() => {}));
+		broken.output.push(() => { throw new Error('bad output'); });
+		ok.output.push(seen);
+
 		const result = runOutputHooks('text', { complete: true });
 		await vi.advanceTimersByTimeAsync(1000);
 		await result;
+
 		expect(seen).toHaveBeenCalledWith('text', { complete: true });
+		expect(getPluginRuntimeErrors()).toEqual({
+			'slow-out': 'Error: timed out after 1s',
+			'broken-out': 'Error: bad output',
+		});
+		expect(console.error).toHaveBeenCalledWith(expect.stringContaining('[plugins] "broken-out":'), expect.any(Error));
 	});
 
 	it('hands over the shared commands array', () => {
-		expect(pluginHooksFor({ code: '', enabled: true }).commands).toBe(hooks.commands);
+		expect(pluginHooksFor('p', makeRecord('p')).commands).toBe(hooks.commands);
 	});
 });
 

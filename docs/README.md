@@ -22,4 +22,4 @@ Your sessions are saved in the browser's IndexedDB, or in SQLite when the option
 - [Session Tags](session-tags.md): freeform tags on sessions, with inline editing and filtering
 - [Session Folders](session-folders.md): grouping sessions into folders by drag or by name
 - [Session Trash](session-trash.md): deleted sessions, and restoring or deleting them for good
-- [Plugins](plugins.md): the plugin file format, the `miyapad` object, hooks, plugin storage and safe mode
+- [Plugins](plugins.md): the plugin file format, importing from a file or a URL, the `miyapad` object, hooks, plugin storage and safe mode

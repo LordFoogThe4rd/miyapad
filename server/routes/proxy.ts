@@ -36,7 +36,8 @@ export function safeFinalUrl(targetBaseUrl: string, path: string): string | null
 }
 
 export default function(app: Express): void {
-    app.get('/proxy-image', async (req: Request, res: Response) => {
+    // Named for what it does rather than for images alone: the plugins tab fetches plugin code through it too.
+    app.get('/proxy-url', async (req: Request, res: Response) => {
         const imageUrl = req.query.url as string | undefined;
         if (!imageUrl) {
             return res.status(400).send('Missing url query parameter');

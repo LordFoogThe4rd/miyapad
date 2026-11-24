@@ -1,3 +1,5 @@
+import { isHttpUrl, isValidPluginVersion, legacyManifest } from '../plugins/manifest';
+
 function isOptionalString(value: unknown): value is string | undefined {
   return value === undefined || typeof value === 'string';
 }
@@ -86,17 +88,65 @@ export function coerceThemeData(value: unknown): ThemeData | null {
   };
 }
 
-export function coercePluginRecord(value: unknown): PluginRecord | null {
+function coerceStoredManifest(value: unknown, fallbackId?: string): PluginManifest | null {
   if (!isRecord(value)) return null;
-  if (typeof value.code !== 'string' || typeof value.enabled !== 'boolean') return null;
-  const record: PluginRecord = { code: value.code, enabled: value.enabled };
-  for (const key of ['min', 'max', 'allowedVersion'] as const) {
-    const field = value[key];
-    if (typeof field === 'string') record[key] = field;
-  }
+  const id = typeof value.id === 'string' && value.id.length > 0 ? value.id : fallbackId;
+  if (!id) return null;
+  if (typeof value.name !== 'string' || value.name.trim().length === 0) return null;
+
+  const manifest: PluginManifest = {
+    id,
+    name: value.name,
+    order: typeof value.order === 'number' && Number.isSafeInteger(value.order) ? value.order : 0,
+    api: typeof value.api === 'number' && Number.isSafeInteger(value.api) && value.api >= 1 ? value.api : 1,
+  };
+  if (isValidPluginVersion(value.version)) manifest.version = value.version;
+  if (typeof value.description === 'string') manifest.description = value.description;
+  if (typeof value.author === 'string') manifest.author = value.author;
+  if (typeof value.homepage === 'string' && isHttpUrl(value.homepage)) manifest.homepage = value.homepage;
+  if (isValidPluginVersion(value.minMiyapad)) manifest.minMiyapad = value.minMiyapad;
+  if (isValidPluginVersion(value.maxMiyapad)) manifest.maxMiyapad = value.maxMiyapad;
   for (const key of ['startTimeout', 'hookTimeout'] as const) {
     const field = value[key];
-    if (typeof field === 'number' && Number.isFinite(field) && field > 0) record[key] = field;
+    if (typeof field === 'number' && Number.isFinite(field) && field > 0) manifest[key] = field;
+  }
+  if (Array.isArray(value.requires)) {
+    const reqs = Array.from(new Set(value.requires.filter((r): r is PluginCapability => r === 'server')));
+    if (reqs.length > 0) manifest.requires = reqs;
+  }
+  return manifest;
+}
+
+export function coercePluginRecord(value: unknown, key?: string): PluginRecord | null {
+  if (!isRecord(value)) return null;
+  if (typeof value.code !== 'string' || typeof value.enabled !== 'boolean') return null;
+
+  let manifest: PluginManifest | null;
+  if (value.manifest !== undefined) {
+    manifest = coerceStoredManifest(value.manifest, key);
+  } else {
+    if (typeof key !== 'string' || key.length === 0) return null;
+    manifest = legacyManifest(key, {
+      ...(isValidPluginVersion(value.min) ? { min: value.min } : {}),
+      ...(isValidPluginVersion(value.max) ? { max: value.max } : {}),
+      ...(typeof value.startTimeout === 'number' && Number.isFinite(value.startTimeout) && value.startTimeout > 0
+        ? { startTimeout: value.startTimeout }
+        : {}),
+      ...(typeof value.hookTimeout === 'number' && Number.isFinite(value.hookTimeout) && value.hookTimeout > 0
+        ? { hookTimeout: value.hookTimeout }
+        : {}),
+    });
+  }
+  if (!manifest) return null;
+
+  const record: PluginRecord = {
+    code: value.code,
+    enabled: value.enabled,
+    manifest,
+  };
+  for (const fieldKey of ['allowedVersion', 'url', 'source', 'changelog'] as const) {
+    const field = value[fieldKey];
+    if (typeof field === 'string') record[fieldKey] = field;
   }
   return record;
 }

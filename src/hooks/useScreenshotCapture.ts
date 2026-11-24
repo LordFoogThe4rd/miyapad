@@ -32,7 +32,7 @@ export function useScreenshotCapture() {
 		try {
 			let fetchUrl = url;
 			if (sessionStorage?.sessionEndpoint) {
-				fetchUrl = `${sessionStorage.sessionEndpoint}/proxy-image?url=${encodeURIComponent(url)}`;
+				fetchUrl = `${sessionStorage.sessionEndpoint}/proxy-url?url=${encodeURIComponent(url)}`;
 			}
 			const response = await fetch(fetchUrl);
 			const blob = await response.blob();

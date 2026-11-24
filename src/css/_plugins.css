@@ -40,6 +40,11 @@
 	margin: 0;
 	color: var(--color-text-hint);
 }
+.plugins-import {
+	display: flex;
+	flex-wrap: wrap;
+	gap: 8px;
+}
 .plugins-list {
 	align-self: stretch;
 	list-style: none;
@@ -60,10 +65,34 @@
 	font-weight: 600;
 	overflow-wrap: anywhere;
 }
+.plugins-version {
+	color: var(--color-text-hint);
+	font-size: 0.85em;
+}
 .plugins-range {
 	flex: 1;
 	color: var(--color-text-hint);
 	font-size: 0.85em;
+}
+.plugins-description,
+.plugins-meta {
+	margin-top: 2px;
+	color: var(--color-text-hint);
+	font-size: 0.85em;
+	overflow-wrap: anywhere;
+}
+.plugins-meta {
+	display: flex;
+	flex-wrap: wrap;
+	gap: 8px;
+}
+.plugins-url {
+	margin-top: 2px;
+	color: var(--color-text-hint);
+	font-size: 0.85em;
+	overflow: hidden;
+	text-overflow: ellipsis;
+	white-space: nowrap;
 }
 .plugins-mark {
 	margin-left: 0.4em;

@@ -53,19 +53,38 @@ interface ThemeData {
   css: string;
 }
 
-/** A plugin in the `Plugins` store, under its name (the file name without `.js`). */
-interface PluginRecord {
-  code: string;
-  enabled: boolean;
-  /** The `@miyapad-min` / `@miyapad-max` header lines, read at import. */
-  min?: string;
-  max?: string;
-  /** The Miyapad version you switched this plugin on for although it isn't declared for it. */
-  allowedVersion?: string;
+type PluginCapability = 'server';
+
+interface PluginManifest {
+  id: string;
+  name: string;
+  version?: string;
+  description?: string;
+  author?: string;
+  homepage?: string;
+  minMiyapad?: string;
+  maxMiyapad?: string;
+  order: number;
   /** Whole seconds before startup stops waiting for this plugin; defaults to 5. */
   startTimeout?: number;
   /** Whole seconds before one of this plugin's hooks is skipped; defaults to 10. */
   hookTimeout?: number;
+  api: number;
+  requires?: PluginCapability[];
+}
+
+/** A plugin in the `Plugins` store, keyed by `manifest.id`. */
+interface PluginRecord {
+  code: string;
+  enabled: boolean;
+  /** The Miyapad version you switched this plugin on for although it isn't declared for it. */
+  allowedVersion?: string;
+  /** The resolved address its Update button fetches from again. */
+  url?: string;
+  /** The original address pasted at import, for display. */
+  source?: string;
+  manifest: PluginManifest;
+  changelog?: string;
 }
 
 interface ConnectionData {

@@ -1,8 +1,6 @@
 # Plugins
 
-A plugin is a single `.js` file that you import through Preferences → Plugins. When Miyapad starts, it runs each switched-on plugin's code and hands it an object with Miyapad's internals, a few hooks, and storage that belongs only to that plugin.
-
-Plugins get Miyapad's real internal objects, not a stable API. Any release can change those objects and break a plugin, and fixing the plugin is its author's job. That's why a plugin declares which Miyapad versions it works with.
+A plugin is a `.miyaplugin` archive (or a legacy single `.js` file) that you import through Preferences → Plugins, from your computer or from a web address. When Miyapad starts, it runs each switched-on plugin's code in `(manifest.order, id)` order and hands it a `miyapad` object with hooks, plugin storage, and checked views of Miyapad's state.
 
 ## Trust
 
@@ -10,7 +8,54 @@ Plugin code runs in the same page as Miyapad. It can read your API keys and ever
 
 In server mode, plugins are stored in the server's database, so anyone who can write to the server can add a plugin, and that plugin then runs in every browser that opens Miyapad. With the default `127.0.0.1` binding that's only you. If you expose the server on a LAN, set a password (`--password`).
 
-## File format
+## Archive format (`.miyaplugin`)
+
+A `.miyaplugin` file is a plain zip archive with up to three top-level files:
+
+```
+manifest.json
+main.js
+CHANGELOG.md      (optional)
+```
+
+- Caps: 10 MB compressed archive, 20 MB total decompressed size, 2 MB per entry. Only `manifest.json`, `main.js`, and `CHANGELOG.md` are read; any other entries in the zip are ignored.
+- `main.js` must be bundled into a single file. Miyapad runs it as the body of an async function with one argument, `miyapad`, so top-level `await` works. Static `import` or `export` statements are rejected at import time with a reminder to bundle the plugin into `main.js`.
+- `CHANGELOG.md` is optional. Missing or invalid UTF-8 bytes in `CHANGELOG.md` never reject the archive.
+
+### `manifest.json`
+
+```json
+{
+  "id": "date",
+  "name": "Date in prompts",
+  "version": "1.4.0",
+  "description": "Replaces {{date}} in the prompt.",
+  "author": "Miyapad",
+  "homepage": "https://github.com/LordFoogThe4rd/miyapad-plugin-example",
+  "minMiyapad": "2.9.0",
+  "maxMiyapad": "2.11",
+  "order": 0,
+  "startTimeout": 5,
+  "hookTimeout": 10,
+  "api": 1,
+  "requires": ["server"]
+}
+```
+
+- `id` (required): `^[a-z0-9][a-z0-9_-]{0,63}$`. Identifies the plugin in storage, data keys, and hook error attribution, so renaming `name` never orphans saved data.
+- `name` (required): non-empty display name shown in Preferences → Plugins and on the startup loading screen.
+- `version` (required): plain dot-separated numbers (`1.4.0`, `2.10`).
+- `description`, `author`, `homepage` (optional): metadata shown on the plugin's row (`homepage` must be an `http://` or `https://` URL).
+- `minMiyapad`, `maxMiyapad` (optional): compatible Miyapad version bounds. `minMiyapad` alone means that version and every later one; a short `maxMiyapad` such as `2.10` covers every `2.10.x` release.
+- `order` (optional, default `0`): safe integer controlling startup execution order (`order` ascending, then `id` ascending). Hooks registered at startup run in the same order.
+- `startTimeout`, `hookTimeout` (optional, defaults `5` and `10`): whole positive seconds before startup stops waiting for top-level code or skips a slow hook.
+- `api` (optional, default `1`): target plugin API generation. Values higher than Miyapad supports show a warning.
+- `requires` (optional): host capabilities required by the plugin. Only `"server"` is recognized; plugins declaring `"requires": ["server"]` are switched off in standalone mode with a notice and cannot be switched on without the server.
+- Unknown fields are ignored so newer archives still import on older Miyapad builds.
+
+## Legacy `.js` files
+
+Single `.js` files remain supported for existing plugins and quick scripts:
 
 ```js
 // Replaces {{date}} in the prompt.
@@ -25,109 +70,92 @@ await storage.set('count', count + 1);
 hooks.prompt.push(async prompt => prompt.replaceAll('{{date}}', new Date().toDateString()));
 ```
 
-- The plugin's name is its file name without `.js`. Importing a file whose name is already in use asks before replacing it; the replacement keeps the old plugin's saved data and is switched off. Names that differ only in case are the same plugin, so importing `Foo.js` when `foo` exists replaces `foo`. A file called `.js` is rejected.
-- The file is the body of an async function with one argument, `miyapad`, so `await` works at the top level.
-- The `@miyapad` lines are optional, and only read from the comment lines at the top of the file, before the first line of code. A version must be plain numbers (`2.9.0`, `2.10`), or the import is rejected.
-- `@miyapad-min 2.0.0` on its own means 2.0.0 and every later version. A short max covers every release under it: `@miyapad-max 2.10` includes 2.10.3.
-- `@miyapad-start-timeout` is how many seconds Miyapad waits for your top-level code before carrying on without you, and `@miyapad-hook-timeout` is how many seconds one of your hooks may run before it's skipped. Both are whole seconds and default to 5 and 10. A value that isn't a plain positive number rejects the import.
-- Only `//` lines count. A header written in a `/* */` block isn't read at all, so the plugin imports as undeclared and is switched off at startup like any other undeclared plugin.
+- A `.js` plugin gets a synthetic manifest with `id` and `name` taken from the file name (or the last URL path segment) without `.js`, `order: 0`, and no `version`. Its row shows `no manifest` next to the version range.
+- Optional `@miyapad-*` lines are read only from `//` comments at the top of the file, before the first line of code.
+- Names that differ only in case resolve to the same existing key (`Foo.js` replaces `foo`), keeping saved data. Updating a legacy `.js` plugin from its URL keeps its legacy shape.
 
-## Version checks
+## Version and capability checks
 
-Each plugin either **fits** this Miyapad version, is **mismatched** (outside its range), or is **undeclared** (neither line). The tab marks the last two with ⚠.
+Each plugin either **fits** this Miyapad version, is **mismatched** (outside its declared range), or is **undeclared** (neither `minMiyapad` nor `maxMiyapad`). Plugins can also require `"server"`. The tab marks incompatible rows with ⚠.
 
-- Importing never switches a plugin on. The import dialog mentions a mismatch or a missing declaration.
-- Switching on a mismatched or undeclared plugin asks first. If you say yes, it stays on until Miyapad's version changes.
-- After a Miyapad update, plugins that don't fit the new version and that you haven't allowed for it are switched off before anything runs. Once the app has loaded, Preferences opens on the Plugins tab with a notice listing them. Switch them back on to run them.
+- Importing never switches a plugin on. The import confirmation mentions version mismatches, missing version bounds, or missing server support.
+- Switching on a mismatched or undeclared plugin asks first; if confirmed, it stays on until Miyapad's version changes. A plugin requiring `"server"` cannot be switched on in standalone mode.
+- At startup, enabled plugins that don't fit the current Miyapad version (unless allowed for it) or that require `"server"` in standalone mode are switched off before any plugin runs, and Preferences opens on the Plugins tab listing them.
+
+## Importing from a URL and updating
+
+Import from URL… accepts an `http://` or `https://` address pointing to a `.miyaplugin` archive or a `.js` file. Web pages (`text/html`) are refused. In server mode the server fetches the address via `/proxy-url`; in standalone mode the browser fetches it directly.
+
+The address is saved with the plugin, and an Update button appears on its row:
+
+- Update compares both `manifest.version` and `main.js`. If neither changed, it reports that the plugin is already up to date.
+- For `.miyaplugin` archives, an archive whose `manifest.id` does not match the installed plugin is refused (`This archive is for a different plugin.`).
+- When an archive update is available, the confirmation dialog shows either `<old> → <new>` or `changed, version still <version>`, together with the matching `## [<version>]` (or `## <version>`) section from `CHANGELOG.md` capped at 1,000 characters (`No notes for this version.` when absent).
+- Confirming replaces the code and manifest, keeps the plugin's saved data and on/off state, and clears `allowedVersion`. Changes take effect after a reload.
 
 ## The `miyapad` object
 
+### Stable vs unstable surface
+
+| Surface | Fields |
+| :--- | :--- |
+| **Stable** (changes only with a `manifest.api` bump) | `id`, `name`, `version`, `hooks`, `storage`, `settings`, `generation`, `React`, `html` |
+| **Unstable** (internal objects; may change in any release) | `sessionStorage`, `templateStorage`, `themeStorage`, `connectionStorage`, `samplerPresetStorage`, `api` |
+
+Each plugin receives its own `miyapad` object (there is no `window.miyapad`):
+
 | Field | What it is |
 | :--- | :--- |
-| `name` | The plugin's own name. |
+| `id` | The plugin's immutable identifier (`manifest.id`). |
+| `name` | The plugin's display name (`manifest.name`). |
 | `version` | Miyapad's version (`APP_VERSION` from `src/version.ts`). |
-| `sessionStorage`, `templateStorage`, `themeStorage`, `connectionStorage`, `samplerPresetStorage` | The real storage objects created in `main()`. |
-| `api` | The `src/api` module. |
-| `React`, `html` | React and `htm`'s `html`, so a plugin can build UI the way Miyapad does. |
-| `hooks` | This plugin's view of the shared hooks: `prompt` and `output` push entries wrapped with the plugin's hook timeout, and `commands` is the shared array. |
-| `storage` | This plugin's own storage. |
-| `settings`, `generation` | Views of the objects `useSettings` and `useGeneration` return inside Miyapad. Reads give the current value, and `set*` calls are checked. |
-
-There's no `window.miyapad`. Each plugin gets its own object, because `storage` is different for each.
+| `hooks` | Per-plugin view of shared hooks (`prompt`, `output`, `commands`) tagged with `id` and `hookTimeout`. |
+| `storage` | Key-value storage isolated under `id`. |
+| `settings`, `generation` | Checked live views of `useSettings` and `useGeneration`. |
+| `React`, `html` | React and `htm`'s `html` tagged template helper. |
+| `sessionStorage`, `templateStorage`, `themeStorage`, `connectionStorage`, `samplerPresetStorage`, `api` | Unstable internal storage instances and API router. |
 
 ## Miyapad's state
 
-`miyapad.settings` and `miyapad.generation` give you what `useSettings` and `useGeneration` return inside Miyapad's components, setters included. They are plain properties, not hooks, so a plugin can read them at the top level.
+`miyapad.settings` and `miyapad.generation` expose the current values and setters from `useSettings` and `useGeneration` as plain properties via a proxy.
 
-- Reads give the value from the last render, and the object you keep stays usable: read it again later and you get the newer value.
-- Before Miyapad has drawn, which is after the plugins finish starting, every field reads `undefined`.
-- A `set*` call is checked before it runs. The value has to have the type the field holds, a number has to be finite, and a sampler has to be inside the range its sidebar input uses. A call that fails throws a `TypeError` or a `RangeError` and writes nothing. An update function is refused: pass a value.
-- Only the samplers and a few other numeric fields have a range. Fields without one only get the type check.
-- Calling a setter changes the app the same way a click does, and values backed by settings or session state are saved.
-- The check is a guard against mistakes, not a boundary: a plugin can still write anything through `sessionStorage` or `api`.
-- `settings` holds the endpoint, the API key and the sampler values.
+- Reads return the value from the latest render (`undefined` before Miyapad's first render).
+- `set*` calls check the value's type, finiteness, and sidebar numeric range before calling the real setter, throwing `TypeError` or `RangeError` on invalid input. Update functions are refused; pass a concrete value.
 
-## Hooks
+## Hooks and error attribution
 
-`hooks.prompt` and `hooks.output` are push-only views of the hooks Miyapad runs: each has `push` and nothing else. Miyapad reads the hooks each time it uses them, so an entry pushed late, for example after startup stopped waiting for your plugin, still works. Plugins start in name order, so their entries run in name order. `hooks.commands` is the shared array, because commands are synchronous.
+`hooks.prompt` and `hooks.output` are push-only views (`{ push(fn) }`). Entries pushed through `miyapad.hooks` carry both the plugin's `id` and its `hookTimeout` (10 seconds by default). `hooks.commands` is the shared command array.
 
-- **`prompt`**: `(prompt: string) => string | Promise<string>`. Runs right before the request is sent, after the token count and after chat mode adds the instruct suffix, so it sees exactly the text that would go out. It runs before the text is turned into chat messages, so it works for both the text-completion and chat APIs, and for `{fill}` requests too. The token counter keeps showing the count from before the hooks. A hook that throws or returns something that isn't a string is logged to the console and skipped: the next hook gets the prompt as it was, and the generation goes ahead. It also runs once each time you open Show Context, so the modal shows the prompt that would actually be sent; opening the modal and sending a request are two separate runs, so keep the hook cheap and repeatable, with no call counting and no non-idempotent side effects.
-- **`output`**: `(text: string, info: { complete: boolean }) => void | Promise<void>`. Called once for each generation that produced any text, including ones that were cancelled, failed partway or were replaced by a newer one, and each `{fill}`. `text` is everything that generation produced. `complete` is true only when the stream ended normally and it's still the current generation. Output hooks run on their own queue, so a slow one doesn't hold up the Stop button. They can't change the text. Errors are logged.
-- **`commands`**: `{ label: string, action: () => void }` entries, added to the end of the Quick Switcher's `>` commands. The list is rebuilt each time the switcher draws. An entry without a string label and a function action is left out.
+- **`prompt`**: `(prompt: string) => string | Promise<string>`. Runs right before completion/chat requests and when Show Context previews the prompt.
+- **`output`**: `(text: string, info: { complete: boolean }) => void | Promise<void>`. Runs on its own async queue after any generation that produced text.
+- **`commands`**: `{ label: string, action: () => void }` entries appended to the Quick Switcher's `>` command list.
 
-An entry you push onto `prompt` or `output` carries your plugin's `@miyapad-hook-timeout` (10 seconds by default). A hook that runs longer is skipped like one that threw, and the next hook or the rest of the output chain carries on. A timeout stops Miyapad waiting for the hook; it doesn't cancel it.
+If a `prompt` or `output` hook throws, exceeds `hookTimeout`, or (for `prompt`) returns a non-string, Miyapad logs `[plugins] "<id>": …`, records the latest runtime failure under `id` in memory so Preferences → Plugins shows `Hook error: …` on that plugin's row, and skips the failed hook without aborting generation.
 
 ## Storage
 
-`miyapad.storage` saves data that belongs to your plugin. It works the same in the browser and on the server.
+`miyapad.storage` stores JSON values under the plugin's `id`:
 
-- `get(key)` returns the value, or `undefined`.
-- `set(key, value)` saves the value. It's converted to JSON and back first, so a `Date` comes back as a string and a `Map` as `{}`. A value JSON can't hold (`undefined`, a `BigInt`) is refused with a `TypeError`.
-- `delete(key)`.
-- `keys()` returns your keys in the order you first set them.
+- `get(key)` returns the saved value or `undefined`.
+- `set(key, value)` JSON-clones and saves `value` (rejecting `undefined` and `BigInt` with `TypeError`).
+- `delete(key)` deletes one key.
+- `keys()` returns saved keys in insertion order.
 
-Every call is a promise, and calls run one at a time in the order you make them. Miyapad keeps your keys under your plugin's name (`<name>/<key>`), with the key list under `<name>`, in the `PluginData` store; a value and the key list are saved together or not at all. Deleting the plugin deletes all of it. Plugin data is part of server backups and of the standalone database export.
+Operations are serialized on an internal queue and committed atomically with the plugin's key list. Deleting a plugin removes its saved data and registry entry.
 
-## Rules for plugin authors
+## Rules and recommended behaviour for plugin authors
 
-Nothing enforces these, but breaking them can break Miyapad or other plugins.
+- Bundle your code and dependencies into a single `main.js` inside `.miyaplugin`.
+- Prefix any `localStorage` keys with `<id>:`.
+- Never open the `MiyaPad` IndexedDB database directly; if you use IndexedDB yourself, open `miyapad-plugin-<id>`.
+- Only pass JSON-serializable values to `storage.set`, and version your own schema with a `schemaVersion` key when evolving formats.
+- Keep top-level startup code fast (within `startTimeout`, default 5s) and keep `prompt` hooks pure, cheap, and repeatable (they run on Show Context as well as real generations).
 
-- Prefix your `localStorage` keys with `<name>:`.
-- Never open the `MiyaPad` IndexedDB database. Adding a store means raising the database version, and after that Miyapad either refuses to open it or skips its own next upgrade. If you need IndexedDB, create your own database called `miyapad-plugin-<name>`.
-- Only pass JSON to `storage.set`.
-- To change the format of your saved data, keep a `schemaVersion` key and update your data when the plugin starts.
-- Keep top-level code fast. Startup waits up to your `@miyapad-start-timeout` (5 seconds by default) for each plugin, then starts Miyapad without it while your code keeps running. The Plugins tab then says it took too long to start.
+## Loading, safe mode, and backups
 
-## Recommended behaviour
+At startup (`startPlugins` in `src/plugins.ts`):
 
-Nothing enforces these either. They keep a plugin well-behaved next to others, and to the person using Miyapad.
-
-- **Keep prompt hooks cheap and repeatable.** They run before every request and each time Show Context opens, so the same input has to give the same output. Don't count calls or write storage in one; the preview and the real send are two separate runs.
-- **Do slow setup inside hooks, not at the top level.** Top-level code delays Miyapad's first draw and is cut off by your start timeout; a slow hook is bounded by the hook timeout and is skipped without holding up the app.
-- **Declare timeouts you'll actually meet.** A hook slower than its timeout is skipped. A plugin slower to start than its start timeout is left running while Miyapad carries on without it.
-- **Treat every hook as best-effort.** A prompt hook that throws, returns something that isn't a string or times out is skipped, and the generation goes ahead. Errors reach the console, not the user, so don't rely on a hook having run.
-- **Keep output hooks short.** They run one after another on their own queue, so a slow one delays the later output hooks, though not the UI. Move heavy work to your own promise chain.
-
-## Loading
-
-In `main()` (`src/main.tsx`), after the other stores are ready and before the app is drawn, `startPlugins` (`src/plugins.ts`):
-
-1. Switches off and saves every switched-on plugin that doesn't fit this version, unless it was allowed for this version.
-2. Runs each remaining switched-on plugin in name order, one at a time. A plugin that throws is logged and skipped, and the error shows next to it in the Plugins tab. One still running after its `@miyapad-start-timeout` (5 seconds by default) is left running.
-
-What happened on this start (plugins switched off, errors, timeouts, skipped plugins) is kept in memory for the Plugins tab and not saved. Switching a plugin on or off takes effect after a reload, because there's no clean way to undo what a script already changed.
-
-A start that takes longer than a moment shows a loading screen naming the plugin being started, with a Skip button. Skip stops the wait for the plugin that is starting and every one after it: they're left running-or-not for this session, are tried again after the next reload, and the Plugins tab says so on each row. Skip can't help a plugin stuck in a synchronous infinite loop, because the page is frozen and the button never gets the click; `?safe` is the way out of that. A plugin skipped before it starts registers no hooks this session.
-
-## Safe mode
-
-Add `?safe` to the address. No plugins run, and nothing is switched off or saved at startup. It works in both modes, without restarting the server. The Plugins tab says safe mode is on, and the switches still work, so you can switch off the plugin that broke things. The tab's Reload button removes `?safe`.
-
-The crash screen has a "Reload without plugins" button that reloads with `?safe`. A plugin that breaks the page before React draws anything, or loops forever, never reaches the crash screen; type `?safe` yourself for those.
-
-## Backups
-
-Switching a plugin on doesn't make a backup. The Plugins tab shows how recent the newest one is instead:
-
-- Server mode: the time of the last server backup and the backup interval, from the `backup` field of `/version`, or that automatic backups are off (`--noBackup`).
-- Standalone: a "Download backup" button, the same export as Preferences → Editor → Export Full DB.
+1. Incompatible plugins (version mismatch without `allowedVersion === APP_VERSION`, or `requires: ["server"]` in standalone mode) are switched off and saved.
+2. Remaining enabled plugins run sequentially in `(manifest.order, id)` order. If startup takes longer than 300 ms, a loading screen names the current plugin with a **Skip** button.
+3. Add `?safe` to the URL (or click **Reload without plugins** on the crash screen) to skip running and modifying plugins so a broken plugin can be switched off. The Plugins tab's **Reload** button strips `?safe`.
+4. The Plugins tab shows the latest server backup status in server mode, or a **Download backup** button in standalone mode.

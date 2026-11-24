@@ -1,5 +1,7 @@
 import { APP_VERSION } from './version';
 import { isNewer } from './hooks/useUpdateCheck';
+import { isZipBytes, parsePluginArchive, type ParsedPluginArchive } from './plugins/archive';
+import { PLUGIN_VERSION_REGEX, SUPPORTED_PLUGIN_API } from './plugins/manifest';
 import type { PluginStorage } from './storage/PluginStorage';
 
 export type PromptHook = (prompt: string) => string | Promise<string>;
@@ -8,6 +10,9 @@ export interface PluginCommand {
 	label: string;
 	action: () => void;
 }
+
+const HOOK_PLUGIN_ID = Symbol('pluginId');
+type TaggedHook<F> = F & { [HOOK_PLUGIN_ID]?: string };
 
 /**
  * Shared by every plugin. Plugins push onto these, and Miyapad reads them each time it uses
@@ -19,10 +24,45 @@ export const hooks = {
 	commands: [] as PluginCommand[],
 };
 
+let runtimeErrors: Record<string, string> = {};
+const runtimeErrorListeners = new Set<() => void>();
+
+function notifyRuntimeErrors() {
+	for (const listener of runtimeErrorListeners) listener();
+}
+
+export function recordPluginRuntimeError(id: string, error: string): void {
+	if (runtimeErrors[id] === error) return;
+	runtimeErrors = { ...runtimeErrors, [id]: error };
+	notifyRuntimeErrors();
+}
+
+export function clearPluginRuntimeError(id?: string): void {
+	if (id === undefined) {
+		if (Object.keys(runtimeErrors).length === 0) return;
+		runtimeErrors = {};
+		notifyRuntimeErrors();
+		return;
+	}
+	if (!Object.hasOwn(runtimeErrors, id)) return;
+	const { [id]: _, ...rest } = runtimeErrors;
+	runtimeErrors = rest;
+	notifyRuntimeErrors();
+}
+
+export function getPluginRuntimeErrors(): Readonly<Record<string, string>> {
+	return runtimeErrors;
+}
+
+export function subscribePluginRuntimeErrors(listener: () => void): () => void {
+	runtimeErrorListeners.add(listener);
+	return () => { runtimeErrorListeners.delete(listener); };
+}
+
 /** What happened to the plugins on this start. Kept in memory only, for the Plugins tab. */
 export interface PluginStartInfo {
 	safeMode: boolean;
-	/** Switched off because they aren't declared for this version. */
+	/** Switched off because they aren't declared for this version or require an unavailable host capability. */
 	switchedOff: string[];
 	/** Plugins that threw while starting, with the error. */
 	errors: Record<string, string>;
@@ -39,10 +79,13 @@ export interface PluginStartControl {
 	onProgress?: (name: string, index: number, total: number) => void;
 }
 
+export interface HostCapabilities {
+	server: boolean;
+}
+
 export const DEFAULT_PLUGIN_START_TIMEOUT_S = 5;
 export const DEFAULT_PLUGIN_HOOK_TIMEOUT_S = 10;
 
-const VERSION = /^\d+(\.\d+)*$/;
 const SECONDS = /^[1-9]\d*$/;
 
 export interface PluginHeader {
@@ -56,7 +99,7 @@ export interface PluginHeader {
 	bad?: { kind: 'version' | 'timeout'; value: string };
 }
 
-/** Reads `// @miyapad-min`, `// @miyapad-max` and the two timeout lines from the comment lines at the top of the file. A header in a block comment isn't read, so the plugin imports as undeclared. */
+/** Reads `// @miyapad-min`, `// @miyapad-max` and the two timeout lines from the comment lines at the top of a legacy `.js` file. */
 export function parseHeader(code: string): PluginHeader {
 	const header: PluginHeader = {};
 	for (const line of code.split('\n').map(l => l.trim())) {
@@ -65,7 +108,7 @@ export function parseHeader(code: string): PluginHeader {
 		const match = /^\/\/\s*@miyapad-(min|max|start-timeout|hook-timeout)\b\s*(.*)$/.exec(line);
 		if (!match) continue;
 		if (match[1] === 'min' || match[1] === 'max') {
-			if (!VERSION.test(match[2])) return { bad: { kind: 'version', value: match[2] } };
+			if (!PLUGIN_VERSION_REGEX.test(match[2])) return { bad: { kind: 'version', value: match[2] } };
 			header[match[1]] = match[2];
 		} else {
 			if (!SECONDS.test(match[2])) return { bad: { kind: 'timeout', value: match[2] } };
@@ -75,9 +118,73 @@ export function parseHeader(code: string): PluginHeader {
 	return header;
 }
 
+/**
+ * The name a legacy `.js` plugin imported from an address gets: the last part of its path, without `.js`.
+ * Undefined when the address isn't http(s) or has no file name, so the import is refused.
+ */
+export function pluginNameFromUrl(url: string): string | undefined {
+	let parsed: URL;
+	try {
+		parsed = new URL(url);
+	} catch {
+		return undefined;
+	}
+	if (parsed.protocol !== 'http:' && parsed.protocol !== 'https:') return undefined;
+	const segment = parsed.pathname.split('/').filter(Boolean).pop();
+	return segment?.replace(/\.js$/i, '') || undefined;
+}
+
+export function isArchiveUrl(url: string): boolean {
+	try {
+		const parsed = new URL(url);
+		if (parsed.protocol !== 'http:' && parsed.protocol !== 'https:') return false;
+		return /\.(miyaplugin|zip)$/i.test(parsed.pathname);
+	} catch {
+		return false;
+	}
+}
+
+/**
+ * Reads a legacy `.js` plugin's code from an address. Kept for callers expecting text.
+ */
+export async function fetchPluginCode(url: string, viaServer: boolean): Promise<string> {
+	const res = await fetch(viaServer ? `/proxy-url?url=${encodeURIComponent(url)}` : url, { cache: 'no-store' });
+	if (!res.ok) throw new Error(`${res.status} ${res.statusText}`);
+	if ((res.headers.get('content-type') ?? '').includes('text/html')) throw new Error('That address is a web page, not a .js file');
+	return res.text();
+}
+
+export type FetchedPlugin =
+	| { kind: 'archive'; archive: ParsedPluginArchive }
+	| { kind: 'legacy'; code: string };
+
+/**
+ * Fetches either a `.miyaplugin` zip archive or a legacy `.js` file from an address.
+ * Checks zip magic bytes (and archive extensions) rather than trusting `Content-Type`.
+ */
+export async function fetchPluginFromUrl(url: string, viaServer: boolean): Promise<FetchedPlugin> {
+	const res = await fetch(viaServer ? `/proxy-url?url=${encodeURIComponent(url)}` : url, { cache: 'no-store' });
+	if (!res.ok) throw new Error(`${res.status} ${res.statusText}`);
+	if ((res.headers.get('content-type') ?? '').includes('text/html')) {
+		throw new Error('That address is a web page, not a plugin file');
+	}
+	const archiveUrl = isArchiveUrl(url);
+	if (typeof res.arrayBuffer === 'function') {
+		const bytes = new Uint8Array(await res.arrayBuffer());
+		if (isZipBytes(bytes) || archiveUrl) {
+			return { kind: 'archive', archive: parsePluginArchive(bytes) };
+		}
+		return { kind: 'legacy', code: new TextDecoder().decode(bytes) };
+	}
+	return { kind: 'legacy', code: await res.text() };
+}
+
 export type PluginFit = 'fits' | 'mismatched' | 'undeclared';
 
-export function checkVersion({ min, max }: { min?: string; max?: string }, version = APP_VERSION): PluginFit {
+export function checkVersion(
+	{ minMiyapad: min, maxMiyapad: max }: Pick<PluginManifest, 'minMiyapad' | 'maxMiyapad'>,
+	version = APP_VERSION,
+): PluginFit {
 	if (min === undefined && max === undefined) return 'undeclared';
 	if (min !== undefined && isNewer(min, version)) return 'mismatched';
 	// Cut to as many parts as max has, so a max of 2.10 covers every 2.10.x release.
@@ -85,21 +192,45 @@ export function checkVersion({ min, max }: { min?: string; max?: string }, versi
 	return 'fits';
 }
 
+export function checkRequirements(
+	manifest: Pick<PluginManifest, 'requires'>,
+	host: HostCapabilities = { server: false },
+): PluginCapability[] {
+	return (manifest.requires ?? []).filter(req => req === 'server' && !host.server);
+}
+
+/** Sorts plugin ids by `manifest.order` ascending, then `id` ascending. */
+export function comparePlugins(plugins: Record<string, PluginRecord>, a: string, b: string): number {
+	const orderDiff = (plugins[a]?.manifest.order ?? 0) - (plugins[b]?.manifest.order ?? 0);
+	if (orderDiff !== 0) return orderDiff;
+	return a < b ? -1 : a > b ? 1 : 0;
+}
+
 /**
- * Switches off every switched-on plugin that isn't declared for this version, unless you
- * already switched it on for this version, and returns their names. A plugin whose save
- * fails is still in the list, so it doesn't run this time either.
+ * Switches off every switched-on plugin that isn't declared for this version (unless allowed
+ * for this version) or requires a missing host capability, and returns their ids.
  */
-export async function switchOffMismatched(pluginStorage: PluginStorage): Promise<string[]> {
-	const names = Object.keys(pluginStorage.plugins).sort().filter(name => {
-		const plugin = pluginStorage.plugins[name];
-		return plugin.enabled && checkVersion(plugin) !== 'fits' && plugin.allowedVersion !== APP_VERSION;
+export async function switchOffMismatched(
+	pluginStorage: PluginStorage,
+	host: HostCapabilities = { server: false },
+): Promise<string[]> {
+	const ids = Object.keys(pluginStorage.plugins).sort().filter(id => {
+		const plugin = pluginStorage.plugins[id];
+		if (!plugin.enabled) return false;
+		if (checkRequirements(plugin.manifest, host).length > 0) return true;
+		return checkVersion(plugin.manifest) !== 'fits' && plugin.allowedVersion !== APP_VERSION;
 	});
-	for (const name of names) {
-		console.warn(`[plugins] Switched off "${name}": it isn't declared for Miyapad ${APP_VERSION}.`);
-		await pluginStorage.setEnabled(name, false).catch(e => console.error(`[plugins] Couldn't save "${name}" as switched off:`, e));
+	for (const id of ids) {
+		const plugin = pluginStorage.plugins[id];
+		const missing = checkRequirements(plugin.manifest, host);
+		if (missing.length > 0) {
+			console.warn(`[plugins] Switched off "${id}": it requires ${missing.join(', ')}.`);
+		} else {
+			console.warn(`[plugins] Switched off "${id}": it isn't declared for Miyapad ${APP_VERSION}.`);
+		}
+		await pluginStorage.setEnabled(id, false).catch(e => console.error(`[plugins] Couldn't save "${id}" as switched off:`, e));
 	}
-	return names;
+	return ids;
 }
 
 const AsyncFunction = (async () => {}).constructor as new (...args: string[]) => (...args: unknown[]) => Promise<unknown>;
@@ -107,43 +238,55 @@ const TIMED_OUT = Symbol('timed out');
 const SKIPPED = Symbol('skipped');
 
 /**
- * Runs each named plugin in name order. A plugin that throws is recorded and skipped. One that
- * is still running after its start timeout is left running and recorded; nothing can stop a
- * synchronous infinite loop, which is what `?safe` is for. When `control.skip` resolves, the
- * plugin starting and every one after it are recorded as skipped and the loop stops.
+ * Runs each plugin in `(manifest.order, id)` order. A plugin missing required host capabilities
+ * is skipped. A plugin that throws is recorded and skipped; one still running after its start
+ * timeout is left running and recorded.
  */
 export async function runPlugins(
 	plugins: Record<string, PluginRecord>,
-	names: string[],
-	miyapadFor: (name: string) => unknown,
+	ids: string[],
+	miyapadFor: (id: string) => unknown,
 	control?: PluginStartControl,
+	host: HostCapabilities = { server: false },
 ): Promise<Pick<PluginStartInfo, 'errors' | 'timedOut' | 'skipped'>> {
 	const errors: Record<string, string> = {};
 	const timedOut: string[] = [];
 	const skipped: string[] = [];
-	const ordered = [...names].sort();
+	const ordered = ids
+		.filter(id => checkRequirements(plugins[id].manifest, host).length === 0)
+		.sort((a, b) => comparePlugins(plugins, a, b));
 	// One sentinel for the whole run: once the user skips, it keeps winning the race.
 	const skipPromise = control?.skip.then(() => SKIPPED);
-	for (const [index, name] of ordered.entries()) {
-		control?.onProgress?.(name, index + 1, ordered.length);
-		const seconds = plugins[name].startTimeout ?? DEFAULT_PLUGIN_START_TIMEOUT_S;
+	for (const [index, id] of ordered.entries()) {
+		const record = plugins[id];
+		control?.onProgress?.(record.manifest.name, index + 1, ordered.length);
+		if (record.manifest.api > SUPPORTED_PLUGIN_API) {
+			console.warn(`[plugins] "${id}" declares API ${record.manifest.api}, which is newer than supported API ${SUPPORTED_PLUGIN_API}.`);
+		}
+		const seconds = record.manifest.startTimeout ?? DEFAULT_PLUGIN_START_TIMEOUT_S;
 		let timer: ReturnType<typeof setTimeout> | undefined;
 		try {
-			const run = new AsyncFunction('miyapad', plugins[name].code)(miyapadFor(name));
+			const run = new AsyncFunction('miyapad', record.code)(miyapadFor(id));
 			const timeout = new Promise(resolve => { timer = setTimeout(resolve, seconds * 1000, TIMED_OUT); });
 			const outcome = await Promise.race([run, timeout, ...(skipPromise ? [skipPromise] : [])]);
 			if (outcome === TIMED_OUT) {
-				timedOut.push(name);
-				console.warn(`[plugins] "${name}" took more than ${seconds} seconds to start; Miyapad didn't wait for it.`);
-				run.catch(e => console.error(`[plugins] "${name}" failed to start:`, e));
+				timedOut.push(id);
+				console.warn(`[plugins] "${id}" took more than ${seconds} seconds to start; Miyapad didn't wait for it.`);
+				run.catch(e => {
+					recordPluginRuntimeError(id, String(e));
+					console.error(`[plugins] "${id}" failed to start:`, e);
+				});
 			} else if (outcome === SKIPPED) {
 				skipped.push(...ordered.slice(index));
-				run.catch(e => console.error(`[plugins] "${name}" failed to start:`, e));
+				run.catch(e => {
+					recordPluginRuntimeError(id, String(e));
+					console.error(`[plugins] "${id}" failed to start:`, e);
+				});
 				break;
 			}
 		} catch (e) {
-			errors[name] = String(e);
-			console.error(`[plugins] "${name}" failed to start:`, e);
+			errors[id] = String(e);
+			console.error(`[plugins] "${id}" failed to start:`, e);
 		} finally {
 			clearTimeout(timer);
 		}
@@ -155,22 +298,43 @@ export async function runPlugins(
  * Startup, after the stores are ready and before the app is drawn. In safe mode nothing runs and
  * nothing is written, so a plugin that breaks Miyapad can still be switched off.
  */
-export async function startPlugins(pluginStorage: PluginStorage, safeMode: boolean, miyapadFor: (name: string) => unknown, control?: PluginStartControl): Promise<PluginStartInfo> {
+export async function startPlugins(
+	pluginStorage: PluginStorage,
+	safeMode: boolean,
+	miyapadFor: (id: string) => unknown,
+	control?: PluginStartControl,
+	host: HostCapabilities = { server: false },
+): Promise<PluginStartInfo> {
 	if (safeMode) return { safeMode, switchedOff: [], errors: {}, timedOut: [], skipped: [] };
-	const switchedOff = await switchOffMismatched(pluginStorage);
-	const names = Object.keys(pluginStorage.plugins).filter(name => pluginStorage.plugins[name].enabled && !switchedOff.includes(name));
-	return { safeMode, switchedOff, ...await runPlugins(pluginStorage.plugins, names, miyapadFor, control) };
+	const switchedOff = await switchOffMismatched(pluginStorage, host);
+	const ids = Object.keys(pluginStorage.plugins).filter(id => pluginStorage.plugins[id].enabled && !switchedOff.includes(id));
+	return { safeMode, switchedOff, ...await runPlugins(pluginStorage.plugins, ids, miyapadFor, control, host) };
 }
 
-/** Passes the prompt through each prompt hook. A hook that throws or returns a non-string is skipped. */
+/** Passes the prompt through each prompt hook. A hook that throws or returns a non-string is logged and skipped. */
 export async function runPromptHooks(prompt: string): Promise<string> {
 	for (const hook of [...hooks.prompt]) {
+		const id = (hook as TaggedHook<PromptHook>)[HOOK_PLUGIN_ID];
 		try {
 			const result = await hook(prompt);
-			if (typeof result === 'string') prompt = result;
-			else console.error('[plugins] A prompt hook returned something that isn\'t a string, so it was skipped:', result);
+			if (typeof result === 'string') {
+				prompt = result;
+			} else {
+				const detail = `prompt hook returned ${result === null ? 'null' : typeof result} instead of a string`;
+				if (id !== undefined) {
+					recordPluginRuntimeError(id, detail);
+					console.error(`[plugins] "${id}": ${detail}, so it was skipped:`, result);
+				} else {
+					console.error('[plugins] A prompt hook returned something that isn\'t a string, so it was skipped:', result);
+				}
+			}
 		} catch (e) {
-			console.error('[plugins] A prompt hook failed, so it was skipped:', e);
+			if (id !== undefined) {
+				recordPluginRuntimeError(id, String(e));
+				console.error(`[plugins] "${id}": prompt hook failed, so it was skipped:`, e);
+			} else {
+				console.error('[plugins] A prompt hook failed, so it was skipped:', e);
+			}
 		}
 	}
 	return prompt;
@@ -178,20 +342,23 @@ export async function runPromptHooks(prompt: string): Promise<string> {
 
 /**
  * A plugin's own view of the shared hook arrays. `prompt` and `output` entries are wrapped with
- * the plugin's hook timeout, because the shared array loses the plugin's identity by the time a
- * hook runs. `commands` is the shared array: actions are synchronous, so no timeout applies.
+ * the plugin's `id` and `hookTimeout`, so runtime failures and timeouts are attributed to `id`.
  */
-export function pluginHooksFor(record: PluginRecord) {
-	const timeoutMs = (record.hookTimeout ?? DEFAULT_PLUGIN_HOOK_TIMEOUT_S) * 1000;
-	const wrap = <A extends unknown[], R>(hook: (...args: A) => R | Promise<R>) => (...args: A): Promise<R> => {
-		const call = Promise.resolve().then(() => hook(...args));
-		// A timeout means stop waiting, not cancel, so a late failure from the abandoned call is swallowed.
-		call.catch(() => {});
-		let timer: ReturnType<typeof setTimeout> | undefined;
-		const timeout = new Promise<never>((_, reject) => {
-			timer = setTimeout(() => reject(new Error(`timed out after ${timeoutMs / 1000}s`)), timeoutMs);
-		});
-		return Promise.race([call, timeout]).finally(() => clearTimeout(timer)) as Promise<R>;
+export function pluginHooksFor(id: string, record: PluginRecord) {
+	const timeoutMs = (record.manifest.hookTimeout ?? DEFAULT_PLUGIN_HOOK_TIMEOUT_S) * 1000;
+	const wrap = <A extends unknown[], R>(hook: (...args: A) => R | Promise<R>): TaggedHook<(...args: A) => Promise<R>> => {
+		const wrapped: TaggedHook<(...args: A) => Promise<R>> = (...args: A): Promise<R> => {
+			const call = Promise.resolve().then(() => hook(...args));
+			// A timeout means stop waiting, not cancel, so a late failure from the abandoned call is swallowed.
+			call.catch(() => {});
+			let timer: ReturnType<typeof setTimeout> | undefined;
+			const timeout = new Promise<never>((_, reject) => {
+				timer = setTimeout(() => reject(new Error(`timed out after ${timeoutMs / 1000}s`)), timeoutMs);
+			});
+			return Promise.race([call, timeout]).finally(() => clearTimeout(timer)) as Promise<R>;
+		};
+		wrapped[HOOK_PLUGIN_ID] = id;
+		return wrapped;
 	};
 	return {
 		prompt: { push: (hook: PromptHook) => { hooks.prompt.push(wrap(hook)); } },
@@ -295,10 +462,16 @@ let outputChain: Promise<void> = Promise.resolve();
 export function runOutputHooks(text: string, info: { complete: boolean }): Promise<void> {
 	outputChain = outputChain.then(async () => {
 		for (const hook of [...hooks.output]) {
+			const id = (hook as TaggedHook<OutputHook>)[HOOK_PLUGIN_ID];
 			try {
 				await hook(text, info);
 			} catch (e) {
-				console.error('[plugins] An output hook failed:', e);
+				if (id !== undefined) {
+					recordPluginRuntimeError(id, String(e));
+					console.error(`[plugins] "${id}": output hook failed:`, e);
+				} else {
+					console.error('[plugins] An output hook failed:', e);
+				}
 			}
 		}
 	});

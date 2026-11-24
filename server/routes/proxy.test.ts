@@ -216,8 +216,8 @@ describe('proxy handlers', () => {
         expect(await res.json()).toEqual({ cancelled: true });
     });
 
-    describe('/proxy-image', () => {
-        const image = (url: string) => fetch(`${proxy.url}/proxy-image?url=${encodeURIComponent(url)}`, { redirect: 'manual' });
+    describe('/proxy-url', () => {
+        const image = (url: string) => fetch(`${proxy.url}/proxy-url?url=${encodeURIComponent(url)}`, { redirect: 'manual' });
 
         it('fetches an image and lets any page cache it for a day', async () => {
             answer = (req, res) => { res.type('png').end(Buffer.from([1, 2, 3])); };
@@ -230,7 +230,7 @@ describe('proxy handlers', () => {
         });
 
         it('refuses a missing or non-http url', async () => {
-            expect((await fetch(`${proxy.url}/proxy-image`)).status).toBe(400);
+            expect((await fetch(`${proxy.url}/proxy-url`)).status).toBe(400);
             expect((await image('file:///etc/passwd')).status).toBe(403);
         });
 

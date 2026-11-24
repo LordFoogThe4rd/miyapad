@@ -1,5 +1,6 @@
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
-import { PluginStorage } from './PluginStorage';
+import { legacyManifest } from '../plugins/manifest';
+import { PluginIdMismatchError, PluginStorage } from './PluginStorage';
 import { PluginData } from './PluginData';
 
 const DB = 'db' as unknown as DbConnection;
@@ -39,15 +40,43 @@ afterEach(() => {
 });
 
 describe('PluginStorage', () => {
-	it('drops invalid records on load', async () => {
+	it('converts legacy flat records into synthetic manifests and drops invalid records on load', async () => {
 		const storage = await storageWith({
 			good: { code: 'x', enabled: true, min: '2.9.0', extra: 1 },
 			noCode: { enabled: true },
 			notRecord: 'x',
 		});
 
-		expect(storage.plugins).toEqual({ good: { code: 'x', enabled: true, min: '2.9.0' } });
+		expect(storage.plugins).toEqual({
+			good: {
+				code: 'x',
+				enabled: true,
+				manifest: { id: 'good', name: 'good', order: 0, api: 1, minMiyapad: '2.9.0' },
+			},
+		});
 		expect(adapter.deleteFromDatabase.mock.calls.map(([, , key]) => key).sort()).toEqual(['noCode', 'notRecord']);
+	});
+
+	it('loads manifest-based records with changelog and source', async () => {
+		const storage = await storageWith({
+			date: {
+				code: 'x',
+				enabled: true,
+				url: 'https://example.com/date.miyaplugin',
+				source: 'https://github.com/o/r',
+				changelog: '## [1.0.0]\n- Init',
+				manifest: { id: 'date', name: 'Date Plugin', version: '1.0.0', order: -5, api: 1, requires: ['server'] },
+			},
+		});
+
+		expect(storage.plugins.date).toEqual({
+			code: 'x',
+			enabled: true,
+			url: 'https://example.com/date.miyaplugin',
+			source: 'https://github.com/o/r',
+			changelog: '## [1.0.0]\n- Init',
+			manifest: { id: 'date', name: 'Date Plugin', version: '1.0.0', order: -5, api: 1, requires: ['server'] },
+		});
 	});
 
 	it('keeps timeout fields only when they are finite and positive', async () => {
@@ -59,9 +88,9 @@ describe('PluginStorage', () => {
 			infinite: { code: 'x', enabled: true, hookTimeout: Infinity },
 		});
 
-		expect(storage.plugins.good).toEqual({ code: 'x', enabled: true, startTimeout: 12, hookTimeout: 30 });
+		expect(storage.plugins.good.manifest).toEqual({ id: 'good', name: 'good', order: 0, api: 1, startTimeout: 12, hookTimeout: 30 });
 		for (const name of ['zero', 'negative', 'notNumber', 'infinite']) {
-			expect(storage.plugins[name]).toEqual({ code: 'x', enabled: true });
+			expect(storage.plugins[name].manifest).toEqual({ id: name, name, order: 0, api: 1 });
 		}
 	});
 
@@ -74,7 +103,11 @@ describe('PluginStorage', () => {
 		let settled = false;
 		storage.pending.then(() => { settled = true; });
 		await new Promise(resolve => setTimeout(resolve, 0));
-		expect(adapter.saveToDatabase).toHaveBeenCalledWith(DB, 'Plugins', 'p', { code: 'x', enabled: true });
+		expect(adapter.saveToDatabase).toHaveBeenCalledWith(DB, 'Plugins', 'p', {
+			code: 'x',
+			enabled: true,
+			manifest: { id: 'p', name: 'p', order: 0, api: 1 },
+		});
 		expect(settled).toBe(false);
 		expect(storage.plugins.p.enabled).toBe(false);
 
@@ -91,37 +124,98 @@ describe('PluginStorage', () => {
 
 		await expect(storage.setEnabled('p', true)).rejects.toThrow('disk full');
 		await storage.pending;
-		expect(storage.plugins.p).toEqual({ code: 'x', enabled: false });
+		expect(storage.plugins.p.enabled).toBe(false);
 	});
 
 	it('records the version a mismatched plugin was switched on for', async () => {
 		const storage = await storageWith({ p: { code: 'x', enabled: false, max: '1.0' } });
 		await storage.setEnabled('p', true, '2.9.0');
-		expect(storage.plugins.p).toEqual({ code: 'x', enabled: true, max: '1.0', allowedVersion: '2.9.0' });
+		expect(storage.plugins.p.allowedVersion).toBe('2.9.0');
+		expect(storage.plugins.p.enabled).toBe(true);
 	});
 
-	it('imports switched off, and replacing drops allowedVersion but not the data', async () => {
+	it('imports with manifest, changelog and source switched off, dropping allowedVersion', async () => {
 		const storage = await storageWith({ p: { code: 'old', enabled: true, min: '1.0', allowedVersion: '2.9.0' } });
-		await storage.importPlugin('p', 'new', { max: '3.0' });
-		expect(storage.plugins.p).toEqual({ code: 'new', enabled: false, max: '3.0' });
+		const manifest: PluginManifest = { id: 'p', name: 'Pretty P', version: '1.2.0', order: 2, api: 1, maxMiyapad: '3.0' };
+		await storage.importPlugin({
+			code: 'new',
+			manifest,
+			changelog: '## [1.2.0]\n- Fresh',
+			url: 'https://example.com/p.miyaplugin',
+			source: 'https://github.com/o/p',
+		});
+
+		expect(storage.plugins.p).toEqual({
+			code: 'new',
+			enabled: false,
+			manifest,
+			changelog: '## [1.2.0]\n- Fresh',
+			url: 'https://example.com/p.miyaplugin',
+			source: 'https://github.com/o/p',
+		});
 		expect(adapter.batchMutation).not.toHaveBeenCalled();
 	});
 
-	it('replaces a plugin whose imported name differs only in case, leaving its data alone', async () => {
+	it('replaces a legacy plugin whose imported id differs only in case, leaving its data alone', async () => {
 		const storage = await storageWith({ foo: { code: 'old', enabled: true } });
-		expect(storage.resolveName('Foo')).toBe('foo');
-		expect(storage.resolveName('bar')).toBe('bar');
+		expect(storage.resolveId('Foo')).toBe('foo');
+		expect(storage.resolveId('bar')).toBe('bar');
 
-		await storage.importPlugin('Foo', 'new', {});
+		await storage.importPlugin({ code: 'new', manifest: legacyManifest('Foo') });
 
-		expect(storage.plugins).toEqual({ foo: { code: 'new', enabled: false } });
+		expect(storage.plugins).toEqual({
+			foo: {
+				code: 'new',
+				enabled: false,
+				manifest: { id: 'foo', name: 'Foo', order: 0, api: 1 },
+			},
+		});
 		expect(adapter.batchMutation).not.toHaveBeenCalled();
 	});
 
-	it('stores the declared timeout lines', async () => {
-		const storage = await storageWith({});
-		await storage.importPlugin('p', 'x', { min: '1.0', startTimeout: 5, hookTimeout: 30 });
-		expect(storage.plugins.p).toEqual({ code: 'x', enabled: false, min: '1.0', startTimeout: 5, hookTimeout: 30 });
+	it('updates from the address, keeping enabled, url, source and data, and clearing allowedVersion', async () => {
+		const storage = await storageWith({
+			p: {
+				code: 'old',
+				enabled: true,
+				allowedVersion: '2.9.0',
+				url: 'https://example.com/p.miyaplugin',
+				source: 'https://github.com/o/p',
+				manifest: { id: 'p', name: 'Old Name', version: '1.0.0', order: 0, api: 1, minMiyapad: '2.8.0' },
+			},
+		});
+
+		const nextManifest: PluginManifest = { id: 'p', name: 'Renamed P', version: '1.1.0', order: 3, api: 1, maxMiyapad: '3.0' };
+		await storage.updatePlugin('p', { code: 'new', manifest: nextManifest, changelog: '## [1.1.0]\n- Renamed' });
+
+		expect(storage.plugins.p).toEqual({
+			code: 'new',
+			enabled: true,
+			url: 'https://example.com/p.miyaplugin',
+			source: 'https://github.com/o/p',
+			changelog: '## [1.1.0]\n- Renamed',
+			manifest: nextManifest,
+		});
+		expect(adapter.batchMutation).not.toHaveBeenCalled();
+	});
+
+	it('refuses an update whose manifest.id is for a different plugin', async () => {
+		const storage = await storageWith({
+			p: {
+				code: 'old',
+				enabled: true,
+				url: 'https://example.com/p.miyaplugin',
+				manifest: { id: 'p', name: 'P', version: '1.0.0', order: 0, api: 1 },
+			},
+		});
+
+		await expect(
+			storage.updatePlugin('p', {
+				code: 'evil',
+				manifest: { id: 'other', name: 'Other', version: '1.0.0', order: 0, api: 1 },
+			}),
+		).rejects.toThrow(PluginIdMismatchError);
+		expect(storage.plugins.p.code).toBe('old');
 	});
 
 	it('removes the plugin\'s data first, then the plugin', async () => {

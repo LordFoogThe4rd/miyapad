@@ -24,7 +24,7 @@ miyapad/
 │   │   └── utils.ts               # Helpers (column names, store-name normalization, header filters)
 │   ├── routes/                    # Express route handlers by concern
 │   │   ├── data.ts                # /load, /save, /rename, /all, /sessions, /delete
-│   │   ├── proxy.ts               # /proxy, /proxy/* (GET/POST/DELETE), /proxy-image
+│   │   ├── proxy.ts               # /proxy, /proxy/* (GET/POST/DELETE), /proxy-url
 │   │   ├── system.ts              # /version, /vacuum, /log
 │   │   ├── tokenizer.ts           # /api/v1/tokenizer/* endpoints
 │   │   └── zstd.ts                # /zstd_* management endpoints
@@ -58,6 +58,7 @@ miyapad/
     ├── hooks/                     # Custom hooks (.ts)
     ├── i18n/                      # UI localization — context.tsx (provider + useT), locales.ts (registry), {code}.json string tables
     ├── importer/                  # Preset importers (.ts) — SillyTavern, NovelAI
+    ├── plugins/                   # Plugin manifest, .miyaplugin zip archive, and changelog parsers (.ts)
     ├── storage/                   # Storage adapters (.ts) — IndexedDB, Server REST API, etc.
     ├── types/                     # Ambient type declarations (.d.ts) — api, components, contexts, storage, defaults, global
     ├── utils/                     # Helpers (.ts) — regex, strings, errors
