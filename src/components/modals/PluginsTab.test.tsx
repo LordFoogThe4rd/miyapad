@@ -207,7 +207,7 @@ describe('PluginsTab', () => {
 		expect(screen.getByText('requires server')).toBeTruthy();
 		expect(screen.getByLabelText('Requires the Miyapad server')).toBeTruthy();
 
-		fireEvent.click(screen.getByRole('button', { name: 'Run SQL Notes' }));
+		fireEvent.click(screen.getByRole('switch', { name: 'Run SQL Notes' }));
 		expect(alert).toHaveBeenCalledWith(expect.stringContaining('requires the Miyapad server'));
 		expect(storage.setEnabled).not.toHaveBeenCalled();
 	});

@@ -20,6 +20,7 @@ import { parsePluginArchive, PluginArchiveError } from '../../plugins/archive';
 import { extractChangelogSection } from '../../plugins/changelog';
 import { isHttpUrl, legacyManifest, SUPPORTED_PLUGIN_API } from '../../plugins/manifest';
 import { PluginIdMismatchError, type PluginImportInput, type PluginStorage } from '../../storage/PluginStorage';
+import { Switch } from '../controls/Switch';
 
 interface PluginsTabProps {
 	pluginStorage: PluginStorage;
@@ -414,12 +415,12 @@ export function PluginsTab({ pluginStorage, pluginStart, showStartupNotice, isMi
 											title=${t('plugins.markRequiresServer')}
 											aria-label=${t('plugins.markRequiresServer')}>⚠</span>`}
 									</span>
-									<button aria-pressed=${plugin.enabled} aria-label=${t('plugins.run', { name: manifest.name })}
-										className=${busy[id] === 'toggle' ? 'processing' : ''}
+									<${Switch}
+										checked=${plugin.enabled}
+										ariaLabel=${t('plugins.run', { name: manifest.name })}
+										className=${busy[id] === 'toggle' ? 'processing' : undefined}
 										disabled=${busy[id] === 'delete' || busy[id] === 'update'}
-										onClick=${() => toggle(id)}>
-										${plugin.enabled ? t('plugins.on') : t('plugins.off')}
-									</button>
+										onChange=${() => toggle(id)}/>
 									${plugin.url && html`<button aria-label=${t('plugins.updateRun', { name: manifest.name })}
 										className=${busy[id] === 'update' ? 'processing' : ''}
 										disabled=${busy[id] === 'toggle' || busy[id] === 'delete'}

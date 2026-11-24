@@ -104,6 +104,16 @@ export interface CheckboxProps {
   disabled?: boolean;
 }
 
+export interface SwitchProps {
+  checked: boolean;
+  onChange: (checked: boolean) => void;
+  label?: string;
+  ariaLabel?: string;
+  disabled?: boolean;
+  className?: string;
+  title?: string;
+}
+
 export interface InputBoxProps {
   label: string;
   className?: string;

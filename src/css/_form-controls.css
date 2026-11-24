@@ -51,6 +51,70 @@
 	white-space: nowrap;
 }
 
+.switch-field {
+	display: inline-flex;
+	align-items: center;
+	gap: 8px;
+	cursor: pointer;
+	user-select: none;
+}
+.switch-field-disabled {
+	cursor: default;
+	opacity: 0.6;
+}
+button.switch {
+	position: relative;
+	display: inline-flex;
+	align-items: center;
+	flex-shrink: 0;
+	box-sizing: border-box;
+	width: 36px;
+	height: 20px;
+	padding: 2px;
+	border-radius: 999px;
+	background: var(--color-bg-input-2);
+	transition: background-color 0.15s ease-in-out, opacity 0.15s ease-in-out;
+}
+button.switch:hover {
+	background: var(--color-bg-highlight-1);
+}
+button.switch:active {
+	background: var(--color-bg-highlight-2);
+	transform: none;
+}
+button.switch[aria-checked="true"] {
+	background: var(--color-miku);
+}
+button.switch[aria-checked="true"]:hover {
+	background: color-mix(in oklch, var(--color-miku) 85%, var(--color-light));
+}
+button.switch[aria-checked="true"]:active {
+	background: color-mix(in oklch, var(--color-miku) 75%, var(--color-dark));
+}
+button.switch:disabled {
+	background: var(--color-bg-input-2);
+	opacity: 0.5;
+	cursor: default;
+}
+button.switch[aria-checked="true"]:disabled {
+	background: var(--color-miku);
+}
+button.switch:focus-visible {
+	outline: 1px solid var(--color-light);
+	outline-offset: 2px;
+}
+.switch-thumb {
+	width: 16px;
+	height: 16px;
+	border-radius: 50%;
+	background: var(--color-light);
+	transition: transform 0.15s ease-in-out;
+	pointer-events: none;
+}
+button.switch[aria-checked="true"] .switch-thumb {
+	transform: translateX(16px);
+}
+
 .InputBox > div > input.mixed-content {
 	outline: 1px solid yellow;
 }

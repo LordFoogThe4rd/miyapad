@@ -260,8 +260,6 @@
   "plugins.markRequiresServer": "Requires the Miyapad server",
   "plugins.markUndeclared": "Doesn't say which Miyapad versions it works with",
   "plugins.noManifest": "no manifest",
-  "plugins.off": "Off",
-  "plugins.on": "On",
   "plugins.rangeBoth": "{{min}} to {{max}}",
   "plugins.rangeMax": "up to {{max}}",
   "plugins.rangeMin": "{{min}} and later",
