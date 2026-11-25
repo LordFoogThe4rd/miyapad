@@ -48,12 +48,19 @@
 .plugins-list {
 	align-self: stretch;
 	list-style: none;
-	margin: 0;
+	margin: 4px 0 0;
 	padding: 0;
+	display: flex;
+	flex-direction: column;
+	gap: 10px;
 }
 .plugins-row {
-	padding: 8px 0;
-	border-bottom: 1px solid var(--color-bg-rule);
+	display: flex;
+	flex-direction: column;
+	gap: 6px;
+	padding: 12px 14px;
+	background: var(--color-bg-ui-2);
+	border-radius: 8px;
 }
 .plugins-row-main {
 	display: flex;
@@ -71,17 +78,10 @@
 }
 .plugins-row-actions {
 	display: flex;
-	flex-wrap: wrap;
+	flex-wrap: nowrap;
 	align-items: center;
 	gap: 6px;
 	margin-left: auto;
-}
-.plugins-row-status {
-	display: flex;
-	flex-wrap: wrap;
-	align-items: center;
-	gap: 4px 10px;
-	margin-top: 3px;
 }
 .plugins-name {
 	font-weight: 600;
@@ -91,33 +91,114 @@
 	color: var(--color-text-hint);
 	font-size: 0.85em;
 }
-.plugins-range {
-	color: var(--color-text-hint);
-	font-size: 0.85em;
+.plugins-compat-mismatch {
+	display: inline-flex;
+	align-items: baseline;
+	gap: 4px;
+	color: var(--color-warning, #f5a623);
+	font-size: 0.82em;
+	cursor: help;
 }
-.plugins-description,
-.plugins-meta {
-	margin-top: 2px;
+.plugins-icon-btn {
+	display: inline-flex;
+	align-items: center;
+	justify-content: center;
+	width: 28px;
+	height: 28px;
+	padding: 0;
+	border-radius: 6px;
+	background: var(--color-bg-input-1);
+	color: var(--color-text-ui);
+}
+.plugins-icon-btn.is-active {
+	background: var(--color-bg-highlight-2);
+}
+.plugins-menu-wrap {
+	position: relative;
+	display: inline-flex;
+}
+.plugins-menu {
+	position: absolute;
+	top: calc(100% + 4px);
+	right: 0;
+	z-index: 20;
+	min-width: 196px;
+	padding: 4px;
+	background: var(--color-bg-input-2);
+	border: 1px solid var(--color-bg-rule);
+	border-radius: 8px;
+	box-shadow: 0 6px 18px rgba(0, 0, 0, 0.35);
+	display: flex;
+	flex-direction: column;
+	gap: 2px;
+}
+.plugins-menu-item {
+	display: flex;
+	align-items: center;
+	gap: 9px;
+	width: 100%;
+	padding: 7px 10px;
+	border-radius: 5px;
+	background: transparent;
+	color: var(--color-text-ui);
+	font-size: 0.9em;
+	text-align: left;
+	white-space: nowrap;
+}
+.plugins-menu-item:hover:not(:disabled) {
+	background: var(--color-bg-highlight-1);
+}
+.plugins-menu-item.is-danger {
+	color: var(--color-error);
+}
+.plugins-menu-separator {
+	height: 1px;
+	margin: 3px 4px;
+	background: var(--color-bg-rule);
+}
+.plugins-menu-compat {
+	display: flex;
+	flex-direction: column;
+	gap: 2px;
+	padding: 6px 10px;
+	font-size: 0.8em;
 	color: var(--color-text-hint);
-	font-size: 0.85em;
+}
+.plugins-menu-compat-label {
+	opacity: 0.75;
+}
+.plugins-menu-compat-value {
+	overflow-wrap: anywhere;
+}
+.plugins-menu-compat.is-warning .plugins-menu-compat-value {
+	color: var(--color-warning, #f5a623);
+}
+.plugins-description {
+	color: var(--color-text-ui);
+	font-size: 0.9em;
+	line-height: 1.4;
 	overflow-wrap: anywhere;
 }
 .plugins-meta {
 	display: flex;
 	flex-wrap: wrap;
-	gap: 8px;
-}
-.plugins-url {
-	margin-top: 2px;
+	align-items: baseline;
+	gap: 4px 6px;
 	color: var(--color-text-hint);
-	font-size: 0.85em;
+	font-size: 0.82em;
+	overflow-wrap: anywhere;
+}
+.plugins-meta-sep {
+	opacity: 0.6;
+}
+.plugins-source {
+	max-width: 100%;
 	overflow: hidden;
 	text-overflow: ellipsis;
 	white-space: nowrap;
 }
 .plugins-update-state {
 	color: var(--color-text-hint);
-	font-size: 0.85em;
 }
 .plugins-update-state.is-available {
 	color: var(--color-miku);
@@ -127,23 +208,21 @@
 	color: var(--color-warning, #f5a623);
 	cursor: help;
 }
-.plugins-mark {
-	margin-left: 0.4em;
-	color: var(--color-warning, #f5a623);
-	cursor: help;
-}
 .plugins-error {
-	margin-top: 4px;
 	color: var(--color-error);
 	font-size: 0.85em;
 	overflow-wrap: anywhere;
 }
+.plugins-settings-section {
+	margin-top: 4px;
+	padding-top: 10px;
+	border-top: 1px solid var(--color-bg-rule);
+}
 .plugins-settings-drawer {
-	margin-top: 8px;
-	padding: 8px 10px;
+	padding: 10px 12px;
 	background: var(--color-bg-input-2);
 	border: 1px solid var(--color-bg-rule);
-	border-radius: 4px;
+	border-radius: 6px;
 	display: flex;
 	flex-direction: column;
 	gap: 6px;

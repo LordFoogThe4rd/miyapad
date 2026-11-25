@@ -15,6 +15,7 @@
 
 ### Changed
 
+- Redesigned each plugin entry in Preferences → Plugins as a card with icon buttons for settings and an overflow menu (`⋮`) holding update checks, Clear data, Delete, and compatibility details; compatibility only appears beside the version number on the card when there is a mismatch or missing requirement
 - Redesigned the editor action buttons (Preferences, Search & Replace, Markdown Mode, Take Screenshot) into a grouped toolbar: a vertical gutter rail outside the right edge of the prompt on desktop (keeping the width-resize edge clear) that switches to a fixed-height top bar with the session title on narrow and mobile screens, with separate button groups for plugins
 - Clicking a session in the Sessions list now shows it in the details pane instead of opening it. Click it again, double-click it, press Enter or use Open in the pane to open it
 - The buttons on each session row (folder, rename, delete and ⋯) have moved into the details pane, and tags are edited there too. Right-click still opens the menu with Export, Clone, History and Statistics

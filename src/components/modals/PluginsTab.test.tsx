@@ -61,6 +61,10 @@ function storageWith(records: Record<string, PluginRecord>, registryError: strin
 	return storage as unknown as PluginStorage & typeof storage;
 }
 
+const openMenu = (name: string) => {
+	fireEvent.click(screen.getByRole('button', { name: `More actions for ${name}` }));
+};
+
 const renderTab = (
 	pluginStorage: PluginStorage,
 	isMiyapadEndpoint = false,
@@ -145,7 +149,8 @@ describe('PluginsTab', () => {
 		}));
 		renderTab(storage);
 
-		fireEvent.click(screen.getByRole('button', { name: 'Update Date Helper' }));
+		openMenu('Date Helper');
+		fireEvent.click(screen.getByRole('menuitem', { name: 'Update Date Helper' }));
 		await waitFor(() => expect(storage.updatePlugin).toHaveBeenCalledTimes(1));
 		expect(confirm).toHaveBeenLastCalledWith(expect.stringContaining('1.3.0 → 1.4.0'));
 		expect(confirm).toHaveBeenLastCalledWith(expect.stringContaining('- Added ISO format'));
@@ -155,7 +160,8 @@ describe('PluginsTab', () => {
 			'manifest.json': JSON.stringify({ id: 'date', name: 'Date Helper', version: '1.4.0', minMiyapad: '2.0.0' }),
 			'main.js': 'v2-hotfix',
 		}));
-		fireEvent.click(screen.getByRole('button', { name: 'Update Date Helper' }));
+		openMenu('Date Helper');
+		fireEvent.click(screen.getByRole('menuitem', { name: 'Update Date Helper' }));
 		await waitFor(() => expect(storage.updatePlugin).toHaveBeenCalledTimes(2));
 		expect(confirm).toHaveBeenLastCalledWith(expect.stringContaining('changed, version still 1.4.0'));
 		expect(confirm).toHaveBeenLastCalledWith(expect.stringContaining('No notes for this version.'));
@@ -176,7 +182,8 @@ describe('PluginsTab', () => {
 		}));
 		renderTab(storage);
 
-		fireEvent.click(screen.getByRole('button', { name: 'Update Date Helper' }));
+		openMenu('Date Helper');
+		fireEvent.click(screen.getByRole('menuitem', { name: 'Update Date Helper' }));
 		await waitFor(() => expect(screen.getByRole('alert').textContent).toContain('This archive is for a different plugin.'));
 		expect(storage.updatePlugin).not.toHaveBeenCalled();
 	});
@@ -223,7 +230,8 @@ describe('PluginsTab', () => {
 			},
 		}));
 
-		expect(screen.queryByRole('button', { name: 'Update Date Helper' })).toBeNull();
+		openMenu('Date Helper');
+		expect(screen.queryByRole('menuitem', { name: 'Update Date Helper' })).toBeNull();
 		expect(screen.queryByRole('button', { name: 'Check updates' })).toBeNull();
 		expect(fetch).not.toHaveBeenCalled();
 	});
@@ -445,14 +453,16 @@ describe('PluginsTab', () => {
 		expect(screen.getByText('Changes take effect after a reload.')).toBeTruthy();
 
 		// Clearing data on a disabled plugin clears its container and startup error without marking reload required
-		fireEvent.click(screen.getByRole('button', { name: 'Clear data for Broken Off' }));
+		openMenu('Broken Off');
+		fireEvent.click(screen.getByRole('menuitem', { name: 'Clear data for Broken Off' }));
 		await waitFor(() => expect(storage.clearData).toHaveBeenCalledWith('off'));
 		expect(confirm).toHaveBeenLastCalledWith(expect.stringContaining('Broken Off'));
 		expect(screen.queryByText('Failed to start: PluginContainerError: file is not a database')).toBeNull();
 		expect(screen.getByText('Changes take effect after a reload.')).toBeTruthy();
 
 		// Clearing data on an enabled plugin marks reload required and clears runtime errors
-		fireEvent.click(screen.getByRole('button', { name: 'Clear data for Active Counter' }));
+		openMenu('Active Counter');
+		fireEvent.click(screen.getByRole('menuitem', { name: 'Clear data for Active Counter' }));
 		await waitFor(() => expect(storage.clearData).toHaveBeenCalledWith('active'));
 		expect(screen.queryByText('Hook error: stale hook error')).toBeNull();
 		expect(screen.getByText('Reload required for changes to take effect.')).toBeTruthy();
@@ -474,7 +484,8 @@ describe('PluginsTab', () => {
 		renderTab(storage);
 
 		// Default: checkbox is checked -> keepData: false
-		fireEvent.click(screen.getByRole('button', { name: 'Delete Alpha Plugin' }));
+		openMenu('Alpha Plugin');
+		fireEvent.click(screen.getByRole('menuitem', { name: 'Delete Alpha Plugin' }));
 		const dialog1 = screen.getByRole('dialog', { name: 'Delete Alpha Plugin' });
 		expect(dialog1).toBeTruthy();
 		const checkbox1 = screen.getByLabelText('Also delete saved plugin data') as HTMLInputElement;
@@ -485,7 +496,8 @@ describe('PluginsTab', () => {
 		expect(screen.queryByText('Alpha Plugin')).toBeNull();
 
 		// Unchecked -> keepData: true
-		fireEvent.click(screen.getByRole('button', { name: 'Delete Beta Plugin' }));
+		openMenu('Beta Plugin');
+		fireEvent.click(screen.getByRole('menuitem', { name: 'Delete Beta Plugin' }));
 		const checkbox2 = screen.getByLabelText('Also delete saved plugin data') as HTMLInputElement;
 		expect(checkbox2.checked).toBe(true);
 		fireEvent.click(checkbox2);
@@ -494,6 +506,35 @@ describe('PluginsTab', () => {
 		fireEvent.click(screen.getByRole('button', { name: 'Delete' }));
 		await waitFor(() => expect(storage.remove).toHaveBeenCalledWith('beta', { keepData: true }));
 		expect(screen.queryByText('Beta Plugin')).toBeNull();
+	});
+
+	it('places compatibility in the overflow menu and only shows it beside the version on mismatch', () => {
+		const storage = storageWith({
+			ok: {
+				code: '',
+				enabled: true,
+				manifest: { id: 'ok', name: 'Compatible Plugin', version: '1.0.0', order: 0, api: 1, minMiyapad: '2.0.0' },
+			},
+			old: {
+				code: '',
+				enabled: false,
+				manifest: { id: 'old', name: 'Old Plugin', version: '0.9.0', order: 1, api: 1, maxMiyapad: '1.0.0' },
+			},
+		});
+		renderTab(storage);
+
+		// Compatible plugin hides its range on the card and reveals it inside the overflow menu
+		expect(screen.queryByText('2.0.0 and later')).toBeNull();
+		// Mismatched plugin shows its range beside the version number
+		expect(screen.getByText('up to 1.0.0')).toBeTruthy();
+
+		openMenu('Compatible Plugin');
+		expect(screen.getByText('Compatibility')).toBeTruthy();
+		expect(screen.getByText('2.0.0 and later')).toBeTruthy();
+
+		// Escape closes the overflow menu
+		fireEvent.keyDown(document, { key: 'Escape' });
+		expect(screen.queryByRole('menu')).toBeNull();
 	});
 
 	it('displays an error alert when the plugin registry itself is unreadable', () => {

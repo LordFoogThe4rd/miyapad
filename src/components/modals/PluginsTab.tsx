@@ -1,5 +1,5 @@
 import { html } from 'htm/react';
-import { useCallback, useEffect, useRef, useState, useSyncExternalStore } from 'react';
+import { Fragment, useCallback, useEffect, useRef, useState, useSyncExternalStore } from 'react';
 import { useT } from '../../i18n';
 import { APP_VERSION } from '../../version';
 import {
@@ -52,6 +52,40 @@ type RowUpdateCheck =
 
 const UPDATE_CHECK_CONCURRENCY = 4;
 
+const IconGear = () => html`
+	<svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true">
+		<circle cx="12" cy="12" r="3"/>
+		<path d="M19.4 15a1.65 1.65 0 0 0 .33 1.82l.06.06a2 2 0 1 1-2.83 2.83l-.06-.06a1.65 1.65 0 0 0-1.82-.33 1.65 1.65 0 0 0-1 1.51V21a2 2 0 0 1-4 0v-.09A1.65 1.65 0 0 0 9 19.4a1.65 1.65 0 0 0-1.82.33l-.06.06a2 2 0 1 1-2.83-2.83l.06-.06a1.65 1.65 0 0 0 .33-1.82 1.65 1.65 0 0 0-1.51-1H3a2 2 0 0 1 0-4h.09A1.65 1.65 0 0 0 4.6 9a1.65 1.65 0 0 0-.33-1.82l-.06-.06a2 2 0 1 1 2.83-2.83l.06.06a1.65 1.65 0 0 0 1.82.33H9a1.65 1.65 0 0 0 1-1.51V3a2 2 0 0 1 4 0v.09a1.65 1.65 0 0 0 1 1.51 1.65 1.65 0 0 0 1.82-.33l.06-.06a2 2 0 1 1 2.83 2.83l-.06.06a1.65 1.65 0 0 0-.33 1.82V9a1.65 1.65 0 0 0 1.51 1H21a2 2 0 0 1 0 4h-.09a1.65 1.65 0 0 0-1.51 1z"/>
+	</svg>`;
+
+const IconMore = () => html`
+	<svg width="15" height="15" viewBox="0 0 24 24" fill="currentColor" aria-hidden="true">
+		<circle cx="12" cy="5" r="2"/>
+		<circle cx="12" cy="12" r="2"/>
+		<circle cx="12" cy="19" r="2"/>
+	</svg>`;
+
+const IconRefresh = () => html`
+	<svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.9" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true">
+		<path d="M21 12a9 9 0 1 1-2.64-6.36"/>
+		<polyline points="21 3 21 9 15 9"/>
+	</svg>`;
+
+const IconTrash = () => html`
+	<svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.9" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true">
+		<polyline points="3 6 5 6 21 6"/>
+		<path d="M19 6l-1 14a2 2 0 0 1-2 2H8a2 2 0 0 1-2-2L5 6"/>
+		<path d="M10 11v6"/>
+		<path d="M14 11v6"/>
+		<path d="M9 6V4a1 1 0 0 1 1-1h4a1 1 0 0 1 1 1v2"/>
+	</svg>`;
+
+const IconDelete = () => html`
+	<svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true">
+		<line x1="18" y1="6" x2="6" y2="18"/>
+		<line x1="6" y1="6" x2="18" y2="18"/>
+	</svg>`;
+
 const formatTime = (ms: number) => {
 	const date = new Date(ms);
 	return date.toDateString() === new Date().toDateString()
@@ -93,6 +127,7 @@ export function PluginsTab({ pluginStorage, pluginStart, showStartupNotice, isMi
 	const [reloadRequired, setReloadRequired] = useState(false);
 	const [deleteTargetId, setDeleteTargetId] = useState<string | null>(null);
 	const [deleteAlsoData, setDeleteAlsoData] = useState(true);
+	const [openMenuId, setOpenMenuId] = useState<string | null>(null);
 	const runtimeErrors = useSyncExternalStore(subscribePluginRuntimeErrors, getPluginRuntimeErrors);
 	const { settings: pluginSettings } = useSyncExternalStore(subscribePluginUi, getPluginUiSnapshot);
 
@@ -100,6 +135,28 @@ export function PluginsTab({ pluginStorage, pluginStart, showStartupNotice, isMi
 	const batchRunRef = useRef(0);
 	const rowMutationRef = useRef<Record<string, number>>({});
 	const inflightRef = useRef(new Map<string, { url: string; promise: Promise<ParsedPluginArchive> }>());
+	const openMenuRef = useRef<HTMLDivElement | null>(null);
+
+	useEffect(() => {
+		if (!openMenuId) return;
+		const onMouseDown = (e: MouseEvent) => {
+			if (openMenuRef.current && !openMenuRef.current.contains(e.target as Node)) {
+				setOpenMenuId(null);
+			}
+		};
+		const onKeyDown = (e: KeyboardEvent) => {
+			if (e.key === 'Escape') {
+				e.stopPropagation();
+				setOpenMenuId(null);
+			}
+		};
+		document.addEventListener('mousedown', onMouseDown);
+		document.addEventListener('keydown', onKeyDown, true);
+		return () => {
+			document.removeEventListener('mousedown', onMouseDown);
+			document.removeEventListener('keydown', onKeyDown, true);
+		};
+	}, [openMenuId]);
 
 	useEffect(() => {
 		unmountedRef.current = false;
@@ -580,100 +637,143 @@ export function PluginsTab({ pluginStorage, pluginStart, showStartupNotice, isMi
 							? pluginSettings[id]
 							: undefined;
 						const isInlineOpen = Boolean(settingsEntry?.mode === 'inline' && openInlineSettings[id]);
+						const isMenuOpen = openMenuId === id;
+						const metaItems = [
+							manifest.author && html`<span key="author">${t('plugins.byAuthor', { author: manifest.author })}</span>`,
+							manifest.homepage && html`<a key="homepage" href=${manifest.homepage} target="_blank" rel="noopener noreferrer">${t('plugins.homepage')}</a>`,
+							displayUrl && html`<span key="source" className="plugins-source" title=${displayUrl}>${formatSourceLabel(displayUrl)}</span>`,
+							check && html`
+								<span key="update" className=${`plugins-update-state is-${check.state}`}
+									title=${check.state === 'error' ? check.detail : undefined}>
+									${check.state === 'checking' ? t('plugins.statusChecking')
+										: check.state === 'up-to-date' ? t('plugins.statusUpToDate')
+										: check.state === 'available' ? t('plugins.statusUpdateAvailable', { change: check.change })
+										: t('plugins.statusCheckFailed')}
+								</span>`,
+						].filter(Boolean);
 						return html`
 							<li className="plugins-row" key=${id}>
 								<div className="plugins-row-main">
 									<div className="plugins-row-title">
 										<span className="plugins-name">${manifest.name}</span>
 										<span className="plugins-version">${manifest.version}</span>
-										${fit !== 'fits' && html`<span className="plugins-mark" role="img"
+										${fit !== 'fits' && html`<span className="plugins-compat-mismatch" role="img"
 											title=${fit === 'mismatched' ? t('plugins.markMismatched', { version: APP_VERSION }) : t('plugins.markUndeclared')}
-											aria-label=${fit === 'mismatched' ? t('plugins.markMismatched', { version: APP_VERSION }) : t('plugins.markUndeclared')}>⚠</span>`}
-										${missingServer && html`<span className="plugins-mark" role="img"
+											aria-label=${fit === 'mismatched' ? t('plugins.markMismatched', { version: APP_VERSION }) : t('plugins.markUndeclared')}>
+											<span aria-hidden="true">⚠</span><span>${range(manifest)}</span>
+										</span>`}
+										${missingServer && html`<span className="plugins-compat-mismatch" role="img"
 											title=${t('plugins.markRequiresServer')}
-											aria-label=${t('plugins.markRequiresServer')}>⚠</span>`}
+											aria-label=${t('plugins.markRequiresServer')}>
+											<span aria-hidden="true">⚠</span><span>${t('plugins.requiresServer')}</span>
+										</span>`}
 									</div>
 									<div className="plugins-row-actions">
-										<${Switch}
-											checked=${plugin.enabled}
-											ariaLabel=${t('plugins.run', { name: manifest.name })}
-											className=${busy[id] === 'toggle' ? 'processing' : undefined}
-											disabled=${rowBusy && busy[id] !== 'toggle'}
-											onChange=${() => toggle(id)}/>
 										${settingsEntry && html`<button
 											type="button"
+											className=${`plugins-icon-btn${isInlineOpen ? ' is-active' : ''}`}
+											title=${t('plugins.configure')}
 											aria-label=${t('plugins.configurePlugin', { name: manifest.name })}
 											aria-expanded=${settingsEntry.mode === 'inline' ? isInlineOpen : undefined}
 											disabled=${rowBusy}
 											onClick=${() => {
+												setOpenMenuId(null);
 												if (settingsEntry.mode === 'modal') {
 													setModalSettingsId(id);
 												} else {
 													setOpenInlineSettings(prev => ({ ...prev, [id]: !prev[id] }));
 												}
 											}}>
-											${t('plugins.configure')}
+											<${IconGear}/>
 										</button>`}
-										${plugin.url && html`<button aria-label=${t('plugins.updateRun', { name: manifest.name })}
-											className=${busy[id] === 'update' ? 'processing' : ''}
-											disabled=${rowBusy && busy[id] !== 'update'}
-											onClick=${() => update(id)}>
-											${t('plugins.update')}
-										</button>`}
-										<button
-											type="button"
-											aria-label=${t('plugins.clearDataPlugin', { name: manifest.name })}
-											className=${busy[id] === 'clear' ? 'processing' : ''}
-											disabled=${rowBusy && busy[id] !== 'clear'}
-											onClick=${() => clearData(id)}>
-											${t('plugins.clearData')}
-										</button>
-										<button
-											type="button"
-											aria-label=${t('plugins.deletePlugin', { name: manifest.name })}
-											className=${busy[id] === 'delete' ? 'processing' : ''}
-											disabled=${rowBusy && busy[id] !== 'delete'}
-											onClick=${() => openDeleteModal(id)}>
-											${t('plugins.delete')}
-										</button>
+										<div className="plugins-menu-wrap" ref=${isMenuOpen ? openMenuRef : null}>
+											<button
+												type="button"
+												className=${`plugins-icon-btn${isMenuOpen ? ' is-active' : ''}${busy[id] && busy[id] !== 'toggle' ? ' processing' : ''}`}
+												aria-label=${t('plugins.moreActions', { name: manifest.name })}
+												aria-haspopup="menu"
+												aria-expanded=${isMenuOpen}
+												disabled=${rowBusy && busy[id] === 'toggle'}
+												onClick=${() => setOpenMenuId(prev => prev === id ? null : id)}>
+												<${IconMore}/>
+											</button>
+											${isMenuOpen && html`
+												<div className="plugins-menu" role="menu">
+													${plugin.url && html`<button
+														type="button"
+														role="menuitem"
+														className=${`plugins-menu-item${busy[id] === 'update' ? ' processing' : ''}`}
+														aria-label=${t('plugins.updateRun', { name: manifest.name })}
+														disabled=${rowBusy && busy[id] !== 'update'}
+														onClick=${() => { setOpenMenuId(null); update(id); }}>
+														<${IconRefresh}/>
+														<span>${check?.state === 'available' ? t('plugins.update') : t('plugins.checkForUpdates')}</span>
+													</button>`}
+													<button
+														type="button"
+														role="menuitem"
+														className=${`plugins-menu-item${busy[id] === 'clear' ? ' processing' : ''}`}
+														aria-label=${t('plugins.clearDataPlugin', { name: manifest.name })}
+														disabled=${rowBusy && busy[id] !== 'clear'}
+														onClick=${() => { setOpenMenuId(null); clearData(id); }}>
+														<${IconTrash}/>
+														<span>${t('plugins.clearData')}</span>
+													</button>
+													<div className="plugins-menu-separator" role="separator"/>
+													<button
+														type="button"
+														role="menuitem"
+														className=${`plugins-menu-item is-danger${busy[id] === 'delete' ? ' processing' : ''}`}
+														aria-label=${t('plugins.deletePlugin', { name: manifest.name })}
+														disabled=${rowBusy && busy[id] !== 'delete'}
+														onClick=${() => { setOpenMenuId(null); openDeleteModal(id); }}>
+														<${IconDelete}/>
+														<span>${t('plugins.delete')}</span>
+													</button>
+													<div className="plugins-menu-separator" role="separator"/>
+													<div className=${`plugins-menu-compat${fit !== 'fits' || missingServer ? ' is-warning' : ''}`}>
+														<span className="plugins-menu-compat-label">${t('plugins.compatibility')}</span>
+														<span className="plugins-menu-compat-value">
+															${range(manifest)}${manifest.requires?.includes('server') ? ` · ${t('plugins.requiresServer')}` : ''}
+														</span>
+													</div>
+												</div>
+											`}
+										</div>
+										<${Switch}
+											checked=${plugin.enabled}
+											ariaLabel=${t('plugins.run', { name: manifest.name })}
+											className=${busy[id] === 'toggle' ? 'processing' : undefined}
+											disabled=${rowBusy && busy[id] !== 'toggle'}
+											onChange=${() => toggle(id)}/>
 									</div>
 								</div>
-								<div className="plugins-row-status">
-									<span className="plugins-range">
-										${range(manifest)}
-										${manifest.requires?.includes('server') && html` · <span className="plugins-requires">${t('plugins.requiresServer')}</span>`}
-									</span>
-									${check && html`
-										<span className=${`plugins-update-state is-${check.state}`}
-											title=${check.state === 'error' ? check.detail : undefined}>
-											${check.state === 'checking' ? t('plugins.statusChecking')
-												: check.state === 'up-to-date' ? t('plugins.statusUpToDate')
-												: check.state === 'available' ? t('plugins.statusUpdateAvailable', { change: check.change })
-												: t('plugins.statusCheckFailed')}
-										</span>
-									`}
-								</div>
-								${isInlineOpen && settingsEntry && html`
-									<div className="plugins-settings-drawer">
-										<${PluginErrorBoundary} id=${id}>
-											<${settingsEntry.Component}/>
-										</${PluginErrorBoundary}>
-									</div>
-								`}
 								${manifest.description && html`<div className="plugins-description">${manifest.description}</div>`}
-								${(manifest.author || manifest.homepage) && html`
+								${metaItems.length > 0 && html`
 									<div className="plugins-meta">
-										${manifest.author && html`<span>${t('plugins.byAuthor', { author: manifest.author })}</span>`}
-										${manifest.homepage && html`<a href=${manifest.homepage} target="_blank" rel="noopener noreferrer">${t('plugins.homepage')}</a>`}
+										${metaItems.map((item, idx) => html`
+											<${Fragment} key=${idx}>
+												${idx > 0 && html`<span className="plugins-meta-sep" aria-hidden="true">·</span>`}
+												${item}
+											</${Fragment}>
+										`)}
 									</div>
 								`}
-								${displayUrl && html`<div className="plugins-url" title=${displayUrl}>${formatSourceLabel(displayUrl)}</div>`}
 								${manifest.api > SUPPORTED_PLUGIN_API && html`<div className="plugins-error">${t('plugins.apiNewer', { api: manifest.api, supported: SUPPORTED_PLUGIN_API })}</div>`}
 								${loadError && html`<div className="plugins-error">${t('plugins.loadError', { error: loadError })}</div>`}
 								${runtimeError && html`<div className="plugins-error">${t('plugins.hookError', { error: runtimeError })}</div>`}
 								${pluginStart.timedOut.includes(id) && html`<div className="plugins-error">${t('plugins.timedOut')}</div>`}
 								${pluginStart.skipped.includes(id) && html`<div className="plugins-error">${t('plugins.skipped')}</div>`}
 								${errors[id] && html`<div className="plugins-error" role="alert">${errors[id]}</div>`}
+								${isInlineOpen && settingsEntry && html`
+									<div className="plugins-settings-section">
+										<div className="plugins-settings-drawer">
+											<${PluginErrorBoundary} id=${id}>
+												<${settingsEntry.Component}/>
+											</${PluginErrorBoundary}>
+										</div>
+									</div>
+								`}
 							</li>`;
 					})}
 				</ul>`}
