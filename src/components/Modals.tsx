@@ -1,5 +1,5 @@
 import { html } from 'htm/react';
-import { Fragment, useEffect, useState } from 'react';
+import { Fragment, useEffect, useState, useSyncExternalStore } from 'react';
 import { useSettings } from '../contexts/SettingsContext';
 import { useGeneration } from '../contexts/GenerationContext';
 import { usePersistentContextHandlers } from '../hooks/useTokenCounters';
@@ -31,8 +31,9 @@ import { SessionHistoryModal } from './modals/SessionHistoryModal';
 import { StatisticsModal } from './modals/StatisticsModal';
 import { AboutModal } from './modals/AboutModal';
 import { QuickSwitcher } from './QuickSwitcher';
-import { createHookRunState, hooks, runMessagesHooks, runPromptHooks } from '../plugins';
+import { createHookRunState, getPluginUiSnapshot, hooks, runMessagesHooks, runPromptHooks, subscribePluginUi } from '../plugins';
 import type { GenerationMode } from '../plugins/events';
+import { PluginErrorBoundary } from './PluginErrorBoundary';
 import { EditorContextMenu } from './EditorContextMenu';
 import type { ContextMenuItem, ModalsProps } from '../types/components';
 
@@ -64,6 +65,7 @@ export function Modals({ toggleModal, currentThemeName, setCurrentThemeName, all
 	const { listTTSVoices, ttsStop } = useTTS();
 	const { ttsAvailable } = useGeneration();
 	const { predict, undoAndPredict, undo, redo } = useGenerationLogic();
+	const { modals: pluginModals } = useSyncExternalStore(subscribePluginUi, getPluginUiSnapshot);
 
 
 
@@ -505,6 +507,11 @@ export function Modals({ toggleModal, currentThemeName, setCurrentThemeName, all
 			x=${contextMenuState.x}
 			y=${contextMenuState.y}
 			menuItems=${editorMenuItems}/>
+
+		${pluginModals.map((entry, idx) => html`
+			<${PluginErrorBoundary} key=${`${entry.id}:${idx}`} id=${entry.id}>
+				<${entry.Component}/>
+			</${PluginErrorBoundary}>`)}
 
 		${sessionEndpointError && html`
 			<div className="modal-overlay">

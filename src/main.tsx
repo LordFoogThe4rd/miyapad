@@ -13,13 +13,19 @@ import { ConnectionStorage } from './storage/ConnectionStorage';
 import { SamplerPresetStorage } from './storage/SamplerPresetStorage';
 import { PluginStorage } from './storage/PluginStorage';
 import { PluginData } from './storage/PluginData';
-import { pluginHooksFor, pluginStateView, startPlugins } from './plugins';
+import { pluginEditorFor, pluginHooksFor, pluginStateView, startPlugins } from './plugins';
 import { pluginEvents } from './plugins/events';
 import { pluginContext } from './plugins/context';
 import { sessionDataFor } from './plugins/sessionData';
 import { createPluginGenerate } from './plugins/generate';
 import { currentSettings } from './contexts/SettingsContext';
 import { currentGeneration } from './contexts/GenerationContext';
+import { Modal } from './components/Modal';
+import { InputBox } from './components/controls/InputBox';
+import { InputSlider } from './components/controls/InputSlider';
+import { SelectBox } from './components/controls/SelectBox';
+import { Checkbox } from './components/controls/Checkbox';
+import { CollapsibleGroup } from './components/controls/CollapsibleGroup';
 import * as api from './api/index';
 import { APP_VERSION } from './version';
 import { useSessionState } from './hooks/useSessionState';
@@ -99,6 +105,15 @@ async function main() {
 		isMiyapadEndpoint,
 	});
 
+	const pluginUi = Object.freeze({
+		Modal,
+		InputBox,
+		InputSlider,
+		SelectBox,
+		Checkbox,
+		CollapsibleGroup,
+	});
+
 	const started = startPlugins(pluginStorage, new URLSearchParams(window.location.search).has('safe'), id => {
 		const record = pluginStorage.plugins[id];
 		return {
@@ -107,6 +122,10 @@ async function main() {
 			version: APP_VERSION,
 			sessionStorage, templateStorage, themeStorage, connectionStorage, samplerPresetStorage,
 			api, React, html,
+			ui: pluginUi,
+			get editor() {
+				return pluginEditorFor(currentGeneration);
+			},
 			hooks: pluginHooksFor(id, record),
 			events: pluginEvents.forPlugin(id),
 			context: pluginContext.forPlugin(id, record.manifest.order),

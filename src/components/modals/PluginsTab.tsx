@@ -9,7 +9,9 @@ import {
 	comparePlugins,
 	fetchPluginFromUrl,
 	getPluginRuntimeErrors,
+	getPluginUiSnapshot,
 	subscribePluginRuntimeErrors,
+	subscribePluginUi,
 	type PluginStartInfo,
 } from '../../plugins';
 import { parsePluginArchive, PluginArchiveError, type ParsedPluginArchive } from '../../plugins/archive';
@@ -18,6 +20,8 @@ import { isHttpUrl, SUPPORTED_PLUGIN_API } from '../../plugins/manifest';
 import { describePluginSource, PluginSourceError, resolvePluginSource } from '../../plugins/sources';
 import { usePersistentState } from '../../hooks/usePersistentState';
 import { PluginIdMismatchError, type PluginImportInput, type PluginStorage } from '../../storage/PluginStorage';
+import { Modal } from '../Modal';
+import { PluginErrorBoundary } from '../PluginErrorBoundary';
 import { InputBox } from '../controls/InputBox';
 import { Switch } from '../controls/Switch';
 import { SVG_HideKey, SVG_ShowKey } from '../icons/index';
@@ -82,7 +86,10 @@ export function PluginsTab({ pluginStorage, pluginStart, showStartupNotice, isMi
 	const [backup, setBackup] = useState<BackupStatus | 'error' | null>(null);
 	const [githubToken, setGithubToken] = usePersistentState('githubToken', '');
 	const [showToken, setShowToken] = useState(false);
+	const [openInlineSettings, setOpenInlineSettings] = useState<Record<string, boolean>>({});
+	const [modalSettingsId, setModalSettingsId] = useState<string | null>(null);
 	const runtimeErrors = useSyncExternalStore(subscribePluginRuntimeErrors, getPluginRuntimeErrors);
+	const { settings: pluginSettings } = useSyncExternalStore(subscribePluginUi, getPluginUiSnapshot);
 
 	const unmountedRef = useRef(false);
 	const batchRunRef = useRef(0);
@@ -283,6 +290,8 @@ export function PluginsTab({ pluginStorage, pluginStart, showStartupNotice, isMi
 		const plugin = plugins[id];
 		const name = plugin.manifest.name;
 		if (plugin.enabled) {
+			setOpenInlineSettings(({ [id]: _, ...rest }) => rest);
+			if (modalSettingsId === id) setModalSettingsId(null);
 			run(id, 'toggle', () => pluginStorage.setEnabled(id, false), { ...plugin, enabled: false });
 			return;
 		}
@@ -308,6 +317,8 @@ export function PluginsTab({ pluginStorage, pluginStart, showStartupNotice, isMi
 		run(id, 'delete', async () => {
 			await pluginStorage.remove(id);
 			clearPluginRuntimeError(id);
+			setOpenInlineSettings(({ [id]: _, ...rest }) => rest);
+			if (modalSettingsId === id) setModalSettingsId(null);
 			setUpdateChecks(({ [id]: _, ...rest }) => rest);
 		});
 	};
@@ -527,20 +538,61 @@ export function PluginsTab({ pluginStorage, pluginStart, showStartupNotice, isMi
 						const runtimeError = runtimeErrors[id];
 						const displayUrl = plugin.source ?? plugin.url;
 						const check = plugin.url ? updateChecks[id] : undefined;
+						const settingsEntry = plugin.enabled && !pluginStart.safeMode && !loadError && !pluginStart.skipped.includes(id)
+							? pluginSettings[id]
+							: undefined;
+						const isInlineOpen = Boolean(settingsEntry?.mode === 'inline' && openInlineSettings[id]);
 						return html`
 							<li className="plugins-row" key=${id}>
 								<div className="plugins-row-main">
-									<span className="plugins-name">${manifest.name}</span>
-									<span className="plugins-version">${manifest.version}</span>
-									<span className="plugins-range">
-										${range(manifest)}
-										${manifest.requires?.includes('server') && html` · <span className="plugins-requires">${t('plugins.requiresServer')}</span>`}
+									<div className="plugins-row-title">
+										<span className="plugins-name">${manifest.name}</span>
+										<span className="plugins-version">${manifest.version}</span>
 										${fit !== 'fits' && html`<span className="plugins-mark" role="img"
 											title=${fit === 'mismatched' ? t('plugins.markMismatched', { version: APP_VERSION }) : t('plugins.markUndeclared')}
 											aria-label=${fit === 'mismatched' ? t('plugins.markMismatched', { version: APP_VERSION }) : t('plugins.markUndeclared')}>⚠</span>`}
 										${missingServer && html`<span className="plugins-mark" role="img"
 											title=${t('plugins.markRequiresServer')}
 											aria-label=${t('plugins.markRequiresServer')}>⚠</span>`}
+									</div>
+									<div className="plugins-row-actions">
+										<${Switch}
+											checked=${plugin.enabled}
+											ariaLabel=${t('plugins.run', { name: manifest.name })}
+											className=${busy[id] === 'toggle' ? 'processing' : undefined}
+											disabled=${busy[id] === 'delete' || busy[id] === 'update'}
+											onChange=${() => toggle(id)}/>
+										${settingsEntry && html`<button
+											type="button"
+											aria-label=${t('plugins.configurePlugin', { name: manifest.name })}
+											aria-expanded=${settingsEntry.mode === 'inline' ? isInlineOpen : undefined}
+											disabled=${busy[id] === 'delete' || busy[id] === 'toggle'}
+											onClick=${() => {
+												if (settingsEntry.mode === 'modal') {
+													setModalSettingsId(id);
+												} else {
+													setOpenInlineSettings(prev => ({ ...prev, [id]: !prev[id] }));
+												}
+											}}>
+											${t('plugins.configure')}
+										</button>`}
+										${plugin.url && html`<button aria-label=${t('plugins.updateRun', { name: manifest.name })}
+											className=${busy[id] === 'update' ? 'processing' : ''}
+											disabled=${busy[id] === 'toggle' || busy[id] === 'delete'}
+											onClick=${() => update(id)}>
+											${t('plugins.update')}
+										</button>`}
+										<button className=${busy[id] === 'delete' ? 'processing' : ''}
+											disabled=${busy[id] === 'toggle' || busy[id] === 'update'}
+											onClick=${() => remove(id)}>
+											${t('plugins.delete')}
+										</button>
+									</div>
+								</div>
+								<div className="plugins-row-status">
+									<span className="plugins-range">
+										${range(manifest)}
+										${manifest.requires?.includes('server') && html` · <span className="plugins-requires">${t('plugins.requiresServer')}</span>`}
 									</span>
 									${check && html`
 										<span className=${`plugins-update-state is-${check.state}`}
@@ -551,24 +603,14 @@ export function PluginsTab({ pluginStorage, pluginStart, showStartupNotice, isMi
 												: t('plugins.statusCheckFailed')}
 										</span>
 									`}
-									<${Switch}
-										checked=${plugin.enabled}
-										ariaLabel=${t('plugins.run', { name: manifest.name })}
-										className=${busy[id] === 'toggle' ? 'processing' : undefined}
-										disabled=${busy[id] === 'delete' || busy[id] === 'update'}
-										onChange=${() => toggle(id)}/>
-									${plugin.url && html`<button aria-label=${t('plugins.updateRun', { name: manifest.name })}
-										className=${busy[id] === 'update' ? 'processing' : ''}
-										disabled=${busy[id] === 'toggle' || busy[id] === 'delete'}
-										onClick=${() => update(id)}>
-										${t('plugins.update')}
-									</button>`}
-									<button className=${busy[id] === 'delete' ? 'processing' : ''}
-										disabled=${busy[id] === 'toggle' || busy[id] === 'update'}
-										onClick=${() => remove(id)}>
-										${t('plugins.delete')}
-									</button>
 								</div>
+								${isInlineOpen && settingsEntry && html`
+									<div className="plugins-settings-drawer">
+										<${PluginErrorBoundary} id=${id}>
+											<${settingsEntry.Component}/>
+										</${PluginErrorBoundary}>
+									</div>
+								`}
 								${manifest.description && html`<div className="plugins-description">${manifest.description}</div>`}
 								${(manifest.author || manifest.homepage) && html`
 									<div className="plugins-meta">
@@ -610,5 +652,15 @@ export function PluginsTab({ pluginStorage, pluginStart, showStartupNotice, isMi
 				<span>${t('plugins.reloadNote')}</span>
 				<button className=${reloading ? 'processing' : ''} onClick=${reload}>${t('plugins.reload')}</button>
 			</div>
+			${modalSettingsId && plugins[modalSettingsId]?.enabled && pluginSettings[modalSettingsId]?.mode === 'modal' && html`
+				<${Modal}
+					isOpen=${true}
+					onClose=${() => setModalSettingsId(null)}
+					title=${plugins[modalSettingsId].manifest.name}>
+					<${PluginErrorBoundary} id=${modalSettingsId}>
+						<${pluginSettings[modalSettingsId].Component}/>
+					</${PluginErrorBoundary}>
+				</${Modal}>
+			`}
 		</div>`;
 }

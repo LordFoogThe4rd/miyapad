@@ -4,11 +4,14 @@ import {
 	checkRequirements,
 	checkVersion,
 	clearPluginRuntimeError,
+	clearPluginUiHooks,
 	createHookRunState,
 	DEFAULT_PLUGIN_START_TIMEOUT_S,
 	fetchPluginFromUrl,
 	getPluginRuntimeErrors,
+	getPluginUiSnapshot,
 	hooks,
+	pluginEditorFor,
 	pluginHooksFor,
 	pluginStateView,
 	runMessagesHooks,
@@ -16,8 +19,10 @@ import {
 	runPlugins,
 	runPromptHooks,
 	startPlugins,
+	subscribePluginUi,
 	switchOffMismatched,
 } from './plugins';
+import type { EditorAdapter } from './editor/EditorAdapter';
 import { PluginArchiveError } from './plugins/archive';
 import { APP_VERSION } from './version';
 import type { PluginStorage } from './storage/PluginStorage';
@@ -52,6 +57,7 @@ afterEach(() => {
 	hooks.messages.length = 0;
 	hooks.output.length = 0;
 	hooks.commands.length = 0;
+	clearPluginUiHooks();
 	clearPluginRuntimeError();
 	vi.useRealTimers();
 	vi.restoreAllMocks();
@@ -516,5 +522,73 @@ describe('pluginStateView', () => {
 
 		state = { ...makeState(), label: 'changed' };
 		expect(kept.label).toBe('changed');
+	});
+});
+
+describe('pluginEditorFor', () => {
+	it('returns undefined before the editor mounts and wraps the adapter without destroy()', () => {
+		expect(pluginEditorFor(() => null)).toBeUndefined();
+		expect(pluginEditorFor(() => ({ promptEditorView: { current: null } }))).toBeUndefined();
+
+		const dom = document.createElement('div');
+		const adapter: EditorAdapter = {
+			getText: vi.fn(() => 'hello'),
+			getSelection: vi.fn(() => ({ from: 1, to: 3 })),
+			replaceText: vi.fn(),
+			replaceRange: vi.fn(),
+			replaceRanges: vi.fn(),
+			focus: vi.fn(),
+			scrollIntoView: vi.fn(),
+			setSelection: vi.fn(),
+			posAtCoords: vi.fn(() => 2),
+			coordsAtPos: vi.fn(() => ({ top: 1, left: 2, right: 3, bottom: 4 })),
+			dom,
+			destroy: vi.fn(),
+		};
+
+		const editor = pluginEditorFor(() => ({ promptEditorView: { current: adapter } }))!;
+		expect(editor).toBeDefined();
+		expect('destroy' in editor).toBe(false);
+		expect(editor.getText()).toBe('hello');
+		expect(editor.getSelection()).toEqual({ from: 1, to: 3 });
+		expect(editor.dom).toBe(dom);
+		editor.replaceText('world');
+		editor.replaceRange(0, 1, 'W');
+		editor.replaceRanges([{ from: 0, to: 1, insert: 'X' }]);
+		editor.focus();
+		editor.scrollIntoView(0, { y: 'center' });
+		editor.setSelection(0, 2);
+		expect(editor.posAtCoords({ x: 5, y: 6 })).toBe(2);
+		expect(editor.coordsAtPos(2)).toEqual({ top: 1, left: 2, right: 3, bottom: 4 });
+		expect(adapter.replaceText).toHaveBeenCalledWith('world');
+		expect(adapter.replaceRange).toHaveBeenCalledWith(0, 1, 'W');
+		expect(adapter.replaceRanges).toHaveBeenCalledWith([{ from: 0, to: 1, insert: 'X' }]);
+		expect(adapter.destroy).not.toHaveBeenCalled();
+	});
+});
+
+describe('UI hook registries', () => {
+	it('notifies subscribers and replaces settings per plugin', () => {
+		const listener = vi.fn();
+		const unsub = subscribePluginUi(listener);
+		const p = pluginHooksFor('demo', makeRecord('demo', { manifest: { name: 'Demo', order: 2 } }));
+
+		const CompA = () => null;
+		const CompB = () => null;
+		p.settings({ Component: CompA });
+		expect(getPluginUiSnapshot().settings.demo).toMatchObject({ id: 'demo', mode: 'inline', Component: CompA });
+		p.settings({ mode: 'modal', Component: CompB });
+		expect(getPluginUiSnapshot().settings.demo).toMatchObject({ id: 'demo', mode: 'modal', Component: CompB });
+
+		p.sidebar.push({ label: 'Tools', Component: CompA, expanded: true });
+		p.modals.push(CompB);
+		p.toolbar.push({ title: 'Act', icon: 'A', onClick: vi.fn() });
+
+		const snap = getPluginUiSnapshot();
+		expect(snap.sidebar).toHaveLength(1);
+		expect(snap.modals).toHaveLength(1);
+		expect(snap.toolbar).toHaveLength(1);
+		expect(listener).toHaveBeenCalledTimes(5);
+		unsub();
 	});
 });

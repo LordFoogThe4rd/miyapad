@@ -47,6 +47,7 @@ graph TD
 
 - `SettingsContext` (`src/contexts/SettingsContext.tsx`): holds global settings and generation hyperparameters (temperature, top-k, min-p, mirostat, DRY sampler options, selected model endpoints, OpenAI keys, instruction templates, active themes, TTS voice settings). It also manages connection presets (`connections` via `useDBConnections`), the per-session connection binding (`selectedConnectionId` via `useSessionState`), the saved UI `locale` (see [Localization](#6-localization-i18n)) and the prompt `editorMode` (`source` or `wysiwyg`, see [Prompt Editor](prompt-editor.md)).
 - `GenerationContext` (`src/contexts/GenerationContext.tsx`): manages runtime generation and prompt state: prompt text chunks, total token count, generation speed, active abort controllers, undo/redo stacks, which modals are open, and UI view toggles.
+- `EditorToolbar` (`src/components/EditorToolbar.tsx`) and `PluginErrorBoundary` (`src/components/PluginErrorBoundary.tsx`): render the grouped editor action bar (outer vertical gutter rail beside `#prompt-container` on desktop, switching to a fixed-height horizontal top bar on narrow/mobile screens) and isolate plugin UI slots (`settings`, `sidebar`, `modals`, `toolbar`) so render failures stay local.
 
 ## 3. Type System
 

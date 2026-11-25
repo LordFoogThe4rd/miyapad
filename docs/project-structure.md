@@ -50,9 +50,9 @@ miyapad/
     ├── version.ts                 # Generated (gitignored) — exports APP_VERSION from package.json
     ├── worldinfo.ts               # World info / lorebook data structures
     ├── api/                       # API modules for backends and shared request builder (request.ts)
-    ├── components/                # React components (Modals, Sidebar, controls, icons — .tsx)
+    ├── components/                # React components (Modals, Sidebar, EditorToolbar, PluginErrorBoundary, controls, icons — .tsx)
     ├── contexts/                  # SettingsContext.tsx and GenerationContext.tsx
-    ├── css/                       # CSS partials (23 files, imported by styles.css)
+    ├── css/                       # CSS partials (24 files, imported by styles.css)
     ├── defaults/                  # Hardcoded defaults (.ts) — presets.ts, prompt.ts, templates.ts, themes.ts
     ├── editor/                    # ProseMirror prompt editor (.ts) — schema, React<->PM sync, adapter, decoration plugins
     ├── hooks/                     # Custom hooks (.ts)

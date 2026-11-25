@@ -91,7 +91,7 @@ Import from URL… reads the update mode from the address you paste and shows wh
 
 | Surface | Fields |
 | :--- | :--- |
-| **Stable** (changes only with a `manifest.api` bump) | `id`, `name`, `version`, `hooks`, `events`, `context`, `storage`, `sessionData`, `generate`, `settings`, `generation`, `React`, `html` |
+| **Stable** (changes only with a `manifest.api` bump) | `id`, `name`, `version`, `hooks`, `events`, `context`, `storage`, `sessionData`, `generate`, `editor`, `ui`, `settings`, `generation`, `React`, `html` |
 | **Unstable** (internal objects; may change in any release) | `sessionStorage`, `templateStorage`, `themeStorage`, `connectionStorage`, `samplerPresetStorage`, `api` |
 
 Each plugin receives its own `miyapad` object (there is no `window.miyapad`):
@@ -101,12 +101,14 @@ Each plugin receives its own `miyapad` object (there is no `window.miyapad`):
 | `id` | The plugin's immutable identifier (`manifest.id`). |
 | `name` | The plugin's display name (`manifest.name`). |
 | `version` | Miyapad's version (`APP_VERSION` from `src/version.ts`). |
-| `hooks` | Per-plugin view of shared hooks (`prompt`, `messages`, `output`, `commands`) tagged with `id` and `hookTimeout`. |
+| `hooks` | Per-plugin view of shared hooks (`prompt`, `messages`, `output`, `commands`, `settings`, `sidebar`, `modals`, `toolbar`) tagged with `id` and `hookTimeout`. |
 | `events` | Scoped lifecycle event bus (`on`, `once`, `off`) with sticky `ready`, session, and generation events. |
 | `context` | Pre-truncation context injections (`setInjection`) and synchronous prompt placeholders (`setPlaceholder`). |
 | `storage` | Global key-value storage isolated under `id`. |
 | `sessionData` | Synchronous per-session storage backed by `session.pluginData[id]`, with a session-switch guard. |
 | `generate` | Quiet off-screen generation helper sharing provider payloads and `/proxy` routing without touching UI state. |
+| `editor` | Safe wrapper around the mounted prompt editor (`ProseMirrorAdapter` without `destroy()`), or `undefined` before mount. |
+| `ui` | Built-in themed UI controls (`Modal`, `InputBox`, `InputSlider`, `SelectBox`, `Checkbox`, `CollapsibleGroup`). |
 | `settings`, `generation` | Checked live views of `useSettings` and `useGeneration`. |
 | `React`, `html` | React and `htm`'s `html` tagged template helper. |
 | `sessionStorage`, `templateStorage`, `themeStorage`, `connectionStorage`, `samplerPresetStorage`, `api` | Unstable internal storage instances and API router. |
@@ -183,6 +185,16 @@ const reply = await miyapad.generate({
 - Pass `prompt` or (for Chat API connections) `messages`.
 - `connectionId` reads `connectionStorage.connections[connectionId]` and `samplerPresetId` reads `samplerPresetStorage.presets[samplerPresetId]`, each falling back to active settings when omitted.
 - Shares sampler filtering, provider quirks (`API_OPENAI_COMPAT`, `API_DEEPSEEK`, strict presets), `convertChatToJSON`, and server `/proxy` routing with `predict()`.
+
+## UI mounts, `miyapad.ui`, and `miyapad.editor`
+
+Plugins render UI inside Miyapad's React tree using `miyapad.React`, `miyapad.html`, and themed controls from `miyapad.ui` (`{ Modal, InputBox, InputSlider, SelectBox, Checkbox, CollapsibleGroup }`). Every mounted plugin component is wrapped in its own `PluginErrorBoundary`, so a render error logs under `id`, records a runtime error on the plugin's row, and renders a local fallback without crashing Miyapad.
+
+- **`hooks.settings({ mode?: 'inline' | 'modal', Component })`**: registers one settings component per plugin (calling it again replaces the previous entry). While the plugin is switched on and active, a **Configure** button appears on its row in Preferences → Plugins. `'inline'` (default) toggles an expandable drawer inside the row; `'modal'` opens a stacked `Modal` titled with `manifest.name`.
+- **`hooks.sidebar.push({ label, Component, expanded? })`**: adds a `<CollapsibleGroup>` section to the sidebar above the token counter and Predict buttons. Collapse state persists in `localStorage` under `plugin:<id>:<label>`.
+- **`hooks.modals.push(Component)`**: mounts a component inside `Modals.tsx` (within `SettingsProvider`, `I18nProvider`, and `GenerationProvider`) so plugins can control their own `miyapad.ui.Modal` instances.
+- **`hooks.toolbar.push({ title, icon, active?, disabled?, onClick })`**: adds a button to the editor toolbar (`icon` is a React node or component; `active` and `disabled` are booleans or `() => boolean`). Built-in actions occupy group 1; plugins that push 1 button share a pooled group 2 sorted by `(manifest.order, id)`; plugins that push 2+ buttons each get their own group box sorted by `(manifest.order, id)`. Tooltips and `aria-label` are prefixed `<manifest.name>: <title>`.
+- **`miyapad.editor`**: returns a wrapper around the mounted `ProseMirrorAdapter` (`getText`, `getSelection`, `replaceText`, `replaceRange`, `replaceRanges`, `focus`, `scrollIntoView`, `setSelection`, `posAtCoords`, `coordsAtPos`, `dom`) with `destroy()` omitted, or `undefined` before the editor mounts. Edits through it keep `PROGRAMMATIC_EDIT` meta so typing stats stay accurate and undo checkpoints continue to work.
 
 ## Storage
 

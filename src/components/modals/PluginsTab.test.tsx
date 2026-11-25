@@ -2,7 +2,7 @@ import { act, cleanup, fireEvent, render, screen, waitFor } from '@testing-libra
 import { strToU8, zipSync } from 'fflate';
 import { html } from 'htm/react';
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
-import { clearPluginRuntimeError, recordPluginRuntimeError } from '../../plugins';
+import { clearPluginRuntimeError, clearPluginUiHooks, pluginHooksFor, recordPluginRuntimeError } from '../../plugins';
 import type { PluginStorage } from '../../storage/PluginStorage';
 import { PluginsTab } from './PluginsTab';
 
@@ -71,6 +71,7 @@ beforeEach(() => {
 
 afterEach(() => {
 	cleanup();
+	clearPluginUiHooks();
 	clearPluginRuntimeError();
 	localStorage.clear();
 	vi.unstubAllGlobals();
@@ -348,5 +349,71 @@ describe('PluginsTab', () => {
 		expect(fetchMock).toHaveBeenCalledWith('https://api.github.com/repos/o/r/releases/latest', {
 			headers: { Accept: 'application/vnd.github+json', Authorization: 'Bearer ghp_testtoken' },
 		});
+	});
+
+	it('renders Configure button in inline and modal modes and isolates settings render errors', () => {
+		vi.spyOn(console, 'error').mockImplementation(() => {});
+		const inlineRecord: PluginRecord = {
+			code: '',
+			enabled: true,
+			manifest: { id: 'inline-p', name: 'Inline Plugin', version: '1.0.0', order: 0, api: 1, minMiyapad: '2.0.0' },
+		};
+		const modalRecord: PluginRecord = {
+			code: '',
+			enabled: true,
+			manifest: { id: 'modal-p', name: 'Modal Plugin', version: '1.0.0', order: 1, api: 1, minMiyapad: '2.0.0' },
+		};
+		const disabledRecord: PluginRecord = {
+			code: '',
+			enabled: false,
+			manifest: { id: 'off-p', name: 'Off Plugin', version: '1.0.0', order: 2, api: 1, minMiyapad: '2.0.0' },
+		};
+		const brokenRecord: PluginRecord = {
+			code: '',
+			enabled: true,
+			manifest: { id: 'broken-p', name: 'Broken Plugin', version: '1.0.0', order: 3, api: 1, minMiyapad: '2.0.0' },
+		};
+
+		pluginHooksFor('inline-p', inlineRecord).settings({
+			Component: () => html`<div>Inline settings body</div>`,
+		});
+		pluginHooksFor('modal-p', modalRecord).settings({
+			mode: 'modal',
+			Component: () => html`<div>Modal settings body</div>`,
+		});
+		pluginHooksFor('off-p', disabledRecord).settings({
+			Component: () => html`<div>Should not appear</div>`,
+		});
+		pluginHooksFor('broken-p', brokenRecord).settings({
+			Component: () => { throw new Error('settings crash'); },
+		});
+
+		const storage = storageWith({
+			'inline-p': inlineRecord,
+			'modal-p': modalRecord,
+			'off-p': disabledRecord,
+			'broken-p': brokenRecord,
+		});
+		renderTab(storage);
+
+		expect(screen.queryByRole('button', { name: 'Configure Off Plugin' })).toBeNull();
+
+		// Inline drawer toggles open and closed
+		const inlineBtn = screen.getByRole('button', { name: 'Configure Inline Plugin' });
+		expect(screen.queryByText('Inline settings body')).toBeNull();
+		fireEvent.click(inlineBtn);
+		expect(screen.getByText('Inline settings body')).toBeTruthy();
+		fireEvent.click(inlineBtn);
+		expect(screen.queryByText('Inline settings body')).toBeNull();
+
+		// Modal mode opens stacked Modal titled with manifest.name
+		fireEvent.click(screen.getByRole('button', { name: 'Configure Modal Plugin' }));
+		expect(screen.getByRole('dialog', { name: 'Modal Plugin' })).toBeTruthy();
+		expect(screen.getByText('Modal settings body')).toBeTruthy();
+		fireEvent.click(screen.getByRole('button', { name: 'Close' }));
+
+		// Broken settings component is isolated by PluginErrorBoundary
+		fireEvent.click(screen.getByRole('button', { name: 'Configure Broken Plugin' }));
+		expect(screen.getByText('Plugin "broken-p" failed to render.')).toBeTruthy();
 	});
 });

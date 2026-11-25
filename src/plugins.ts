@@ -1,8 +1,10 @@
+import type { ComponentType, ReactNode } from 'react';
 import { APP_VERSION } from './version';
 import { isNewer } from './hooks/useUpdateCheck';
 import { isZipBytes, parsePluginArchive, PluginArchiveError, type ParsedPluginArchive } from './plugins/archive';
 import { SUPPORTED_PLUGIN_API } from './plugins/manifest';
 import type { GenerationMode } from './plugins/events';
+import type { EditorAdapter } from './editor/EditorAdapter';
 import type { PluginStorage } from './storage/PluginStorage';
 
 export interface PromptHookContext {
@@ -33,6 +35,71 @@ export interface PluginCommand {
 	action: () => void;
 }
 
+export type PluginSettingsMode = 'inline' | 'modal';
+
+export interface PluginSettingsInput {
+	mode?: PluginSettingsMode;
+	Component: ComponentType;
+}
+
+export interface PluginSettingsEntry {
+	readonly id: string;
+	readonly name: string;
+	readonly order: number;
+	readonly mode: PluginSettingsMode;
+	readonly Component: ComponentType;
+}
+
+export interface PluginSidebarInput {
+	label: string;
+	Component: ComponentType;
+	expanded?: boolean;
+}
+
+export interface PluginSidebarEntry {
+	readonly id: string;
+	readonly name: string;
+	readonly order: number;
+	readonly label: string;
+	readonly Component: ComponentType;
+	readonly expanded?: boolean;
+}
+
+export interface PluginModalEntry {
+	readonly id: string;
+	readonly name: string;
+	readonly order: number;
+	readonly Component: ComponentType;
+}
+
+export interface PluginToolbarInput {
+	title: string;
+	icon: ReactNode | ComponentType;
+	active?: boolean | (() => boolean);
+	disabled?: boolean | (() => boolean);
+	onClick: () => void;
+}
+
+export interface PluginToolbarEntry {
+	readonly id: string;
+	readonly name: string;
+	readonly order: number;
+	readonly title: string;
+	readonly icon: ReactNode | ComponentType;
+	readonly active?: boolean | (() => boolean);
+	readonly disabled?: boolean | (() => boolean);
+	readonly onClick: () => void;
+}
+
+export interface PluginUiSnapshot {
+	readonly settings: Readonly<Record<string, PluginSettingsEntry>>;
+	readonly sidebar: readonly PluginSidebarEntry[];
+	readonly modals: readonly PluginModalEntry[];
+	readonly toolbar: readonly PluginToolbarEntry[];
+}
+
+export type PluginEditor = Omit<EditorAdapter, 'destroy'>;
+
 const HOOK_PLUGIN_ID = Symbol('pluginId');
 type TaggedHook<F> = F & { [HOOK_PLUGIN_ID]?: string };
 
@@ -46,6 +113,40 @@ export const hooks = {
 	output: [] as OutputHook[],
 	commands: [] as PluginCommand[],
 };
+
+let uiSnapshot: PluginUiSnapshot = {
+	settings: {},
+	sidebar: [],
+	modals: [],
+	toolbar: [],
+};
+const uiListeners = new Set<() => void>();
+
+function notifyPluginUi() {
+	for (const listener of uiListeners) listener();
+}
+
+export function getPluginUiSnapshot(): PluginUiSnapshot {
+	return uiSnapshot;
+}
+
+export function subscribePluginUi(listener: () => void): () => void {
+	uiListeners.add(listener);
+	return () => { uiListeners.delete(listener); };
+}
+
+export function clearPluginUiHooks(): void {
+	if (
+		Object.keys(uiSnapshot.settings).length === 0 &&
+		uiSnapshot.sidebar.length === 0 &&
+		uiSnapshot.modals.length === 0 &&
+		uiSnapshot.toolbar.length === 0
+	) {
+		return;
+	}
+	uiSnapshot = { settings: {}, sidebar: [], modals: [], toolbar: [] };
+	notifyPluginUi();
+}
 
 export function createHookRunState(options: { dryRun: boolean; mode: GenerationMode }): HookRunState {
 	return {
@@ -389,6 +490,128 @@ export function pluginHooksFor(id: string, record: PluginRecord) {
 		messages: { push: (hook: MessagesHook) => { hooks.messages.push(wrap(hook)); } },
 		output: { push: (hook: OutputHook) => { hooks.output.push(wrap(hook)); } },
 		commands: hooks.commands,
+		settings: (entry: PluginSettingsInput) => {
+			if (!entry || typeof entry.Component !== 'function') {
+				const detail = 'hooks.settings() requires a Component function';
+				recordPluginRuntimeError(id, detail);
+				console.error(`[plugins] "${id}": ${detail}`);
+				return;
+			}
+			const mode: PluginSettingsMode = entry.mode === 'modal' ? 'modal' : 'inline';
+			uiSnapshot = {
+				...uiSnapshot,
+				settings: {
+					...uiSnapshot.settings,
+					[id]: {
+						id,
+						name: record.manifest.name,
+						order: record.manifest.order,
+						mode,
+						Component: entry.Component,
+					},
+				},
+			};
+			notifyPluginUi();
+		},
+		sidebar: {
+			push: (entry: PluginSidebarInput) => {
+				if (!entry || typeof entry.label !== 'string' || typeof entry.Component !== 'function') {
+					const detail = 'hooks.sidebar.push() requires a label string and Component function';
+					recordPluginRuntimeError(id, detail);
+					console.error(`[plugins] "${id}": ${detail}`);
+					return;
+				}
+				uiSnapshot = {
+					...uiSnapshot,
+					sidebar: [
+						...uiSnapshot.sidebar,
+						{
+							id,
+							name: record.manifest.name,
+							order: record.manifest.order,
+							label: entry.label,
+							Component: entry.Component,
+							expanded: entry.expanded,
+						},
+					],
+				};
+				notifyPluginUi();
+			},
+		},
+		modals: {
+			push: (Component: ComponentType) => {
+				if (typeof Component !== 'function') {
+					const detail = 'hooks.modals.push() requires a Component function';
+					recordPluginRuntimeError(id, detail);
+					console.error(`[plugins] "${id}": ${detail}`);
+					return;
+				}
+				uiSnapshot = {
+					...uiSnapshot,
+					modals: [
+						...uiSnapshot.modals,
+						{
+							id,
+							name: record.manifest.name,
+							order: record.manifest.order,
+							Component,
+						},
+					],
+				};
+				notifyPluginUi();
+			},
+		},
+		toolbar: {
+			push: (entry: PluginToolbarInput) => {
+				if (!entry || typeof entry.title !== 'string' || typeof entry.onClick !== 'function') {
+					const detail = 'hooks.toolbar.push() requires a title string and onClick function';
+					recordPluginRuntimeError(id, detail);
+					console.error(`[plugins] "${id}": ${detail}`);
+					return;
+				}
+				uiSnapshot = {
+					...uiSnapshot,
+					toolbar: [
+						...uiSnapshot.toolbar,
+						{
+							id,
+							name: record.manifest.name,
+							order: record.manifest.order,
+							title: entry.title,
+							icon: entry.icon,
+							active: entry.active,
+							disabled: entry.disabled,
+							onClick: entry.onClick,
+						},
+					],
+				};
+				notifyPluginUi();
+			},
+		},
+	};
+}
+
+/**
+ * Returns a safe wrapper around the mounted prompt editor adapter with `destroy()` omitted,
+ * or `undefined` before the editor mounts.
+ */
+export function pluginEditorFor(
+	current: () => { promptEditorView: { current: EditorAdapter | null } } | null,
+): PluginEditor | undefined {
+	const adapter = current()?.promptEditorView.current;
+	if (!adapter) return undefined;
+	return {
+		getText: () => adapter.getText(),
+		getSelection: () => adapter.getSelection(),
+		replaceText: (newText: string) => adapter.replaceText(newText),
+		replaceRange: (from: number, to: number, insert: string) => adapter.replaceRange(from, to, insert),
+		replaceRanges: (changes: { from: number; to: number; insert: string }[]) => adapter.replaceRanges(changes),
+		focus: () => adapter.focus(),
+		scrollIntoView: (pos: number, options?: { y?: string }) => adapter.scrollIntoView(pos, options),
+		setSelection: (anchor: number, head: number) => adapter.setSelection(anchor, head),
+		posAtCoords: (coords: { x: number; y: number }) => adapter.posAtCoords(coords),
+		coordsAtPos: (pos: number) => adapter.coordsAtPos(pos),
+		get dom() { return adapter.dom; },
 	};
 }
 

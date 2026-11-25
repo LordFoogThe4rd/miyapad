@@ -1,5 +1,5 @@
 import { html } from 'htm/react';
-import { useEffect, useLayoutEffect, useRef } from 'react';
+import { useEffect, useLayoutEffect, useRef, useState } from 'react';
 import { EditorState, TextSelection, type Transaction } from 'prosemirror-state';
 import { EditorView } from 'prosemirror-view';
 import { keymap } from 'prosemirror-keymap';
@@ -8,8 +8,7 @@ import { useSettings } from '../contexts/SettingsContext';
 import { useGeneration } from '../contexts/GenerationContext';
 import { usePromptBuilder } from '../hooks/usePromptBuilder';
 import { useGenerationLogic } from '../hooks/useGenerationLogic';
-import { useT } from '../i18n';
-import { SVG_Settings, SVG_SearchAndReplace, SVG_SplitView, SVG_Camera } from './icons/index';
+import { EditorToolbar } from './EditorToolbar';
 import { SearchAndReplaceWidget } from './SearchAndReplaceWidget';
 import { useScreenshotCapture } from '../hooks/useScreenshotCapture';
 import { ScreenshotPreviewModal } from './modals/ScreenshotPreviewModal';
@@ -68,10 +67,11 @@ export function PromptContainer({ sidebarHeight }: PromptContainerProps) {
 	const { promptEditorView, setPromptEditorVersion, promptChunks, setPromptChunks, currentPromptChunk, setCurrentPromptChunk, undoHovered, setUndoHovered, undoStack, redoStack, lastEditMsRef, showProbs, setShowProbs, cancel, keyState, probsDelayTimer, modalState, closeModal, toggleModal, setTriggerPredict } = useGeneration();
 	const { promptText } = usePromptBuilder();
 	const { undo, redo, undoAndPredict } = useGenerationLogic();
-	const t = useT();
 	const { takeScreenshot, screenshot } = useScreenshotCapture();
 
 	const promptContainerRef = useRef<HTMLDivElement>(null);
+	const [viewportWidth, setViewportWidth] = useState(() => typeof window !== 'undefined' ? window.innerWidth : 1280);
+	const [sessionTitle, setSessionTitle] = useState(() => String(sessionStorage?.getProperty?.('name') ?? ''));
 	const editorRef = useRef<HTMLDivElement>(null);
 	const viewRef = useRef<EditorView>(null);
 	const mdModeRef = useRef(editorMode === 'wysiwyg');
@@ -184,9 +184,20 @@ export function PromptContainer({ sidebarHeight }: PromptContainerProps) {
 	}, []);
 
 	useEffect(() => {
-		function onSessionChange() { scrollToBottomRef.current = true; }
+		function onSessionChange() {
+			scrollToBottomRef.current = true;
+			setSessionTitle(String(sessionStorage?.getProperty?.('name') ?? ''));
+		}
+		setSessionTitle(String(sessionStorage?.getProperty?.('name') ?? ''));
 		sessionStorage.addEventListener('sessionchange', onSessionChange);
 		return () => sessionStorage.removeEventListener('sessionchange', onSessionChange);
+	}, [sessionStorage]);
+
+	useEffect(() => {
+		const onResize = () => setViewportWidth(window.innerWidth);
+		onResize();
+		window.addEventListener('resize', onResize);
+		return () => window.removeEventListener('resize', onResize);
 	}, []);
 
 	// Declared before the hover effect: React runs effects in declaration order
@@ -477,49 +488,40 @@ export function PromptContainer({ sidebarHeight }: PromptContainerProps) {
 		}
 	}
 
+	// Measure against viewport minus sidebar rather than .prompt-workspace.clientWidth,
+	// because body.attachSidebar shrink-wraps .prompt-workspace to its content.
+	const sidebarWidth = isMobile ? 0 : (document.getElementById('sidebar')?.offsetWidth || 266);
+	const availableWidth = Math.max(0, viewportWidth - sidebarWidth);
+	const parsedPromptWidth = promptAreaWidth ? parseFloat(promptAreaWidth) : 0;
+	const minRoomForRail = (Number.isFinite(parsedPromptWidth) && parsedPromptWidth > 0 ? parsedPromptWidth : 320) + 60;
+	const toolbarLayout: 'rail' | 'top' = isMobile || availableWidth < minRoomForRail ? 'top' : 'rail';
+
 	return html`
-		<div ref=${promptContainerRef} id="prompt-container" onMouseMove=${onEditorMouseMove} style=${{ marginBottom: isMobile ? sidebarHeight + 'px' : 0 }}>
-			<div style=${{ position: 'sticky', top: 0, zIndex: 1 }}>
-				<button
-					title=${t('prompt.preferences')}
-					className="textAreaSettings"
-					onClick=${() => toggleModal("preferences")}>
-					<${SVG_Settings}/>
-				</button>
-				<button
-					title=${t('prompt.searchAndReplace')}
-					style=${{ marginTop: "1.5em" }}
-					className="textAreaSettings"
-					onClick=${() => toggleModal("searchAndReplace")}>
-					<${SVG_SearchAndReplace} style=${{ "height": "1.3em" }} />
-				</button>
-				<button
-					title=${t('prompt.toggleMarkdownMode')}
-					style=${{ marginTop: "3em" }}
-					className=${editorMode === 'wysiwyg' ? 'textAreaSettings textAreaSettings-markdown-active' : 'textAreaSettings'}
-					onClick=${() => setEditorMode((m: 'source' | 'wysiwyg') => m === 'source' ? 'wysiwyg' : 'source')}>
-					<${SVG_SplitView}/>
-				</button>
-				<button
-					title=${t('prompt.takeScreenshot')}
-					style=${{ marginTop: "4.5em" }}
-					className="textAreaSettings"
-					onClick=${takeScreenshot}>
-					<${SVG_Camera} style=${{ "height": "1.3em" }} />
-				</button>
+		<div
+			className=${`prompt-workspace is-toolbar-${toolbarLayout}`}
+			style=${{ marginBottom: isMobile ? sidebarHeight + 'px' : 0 }}>
+			<div ref=${promptContainerRef} id="prompt-container" onMouseMove=${onEditorMouseMove}>
+				<div ref=${editorRef} id="pm-editor" />
+				<${SearchAndReplaceWidget}
+					isOpen=${modalState.searchAndReplace}
+					closeWidget=${() => closeModal("searchAndReplace")}
+					id="searchAndReplace"
+					editorView=${promptEditorView}
+					promptText=${promptText}
+					cancel=${cancel}/>
+				<${ScreenshotPreviewModal}
+					isOpen=${!!modalState.screenshot}
+					closeModal=${() => closeModal("screenshot")}
+					screenshot=${screenshot}/>
 			</div>
-			<div ref=${editorRef} id="pm-editor" />
-			<${SearchAndReplaceWidget}
-				isOpen=${modalState.searchAndReplace}
-				closeWidget=${() => closeModal("searchAndReplace")}
-				id="searchAndReplace"
-				editorView=${promptEditorView}
-				promptText=${promptText}
-				cancel=${cancel}/>
-			<${ScreenshotPreviewModal}
-				isOpen=${!!modalState.screenshot}
-				closeModal=${() => closeModal("screenshot")}
-				screenshot=${screenshot}/>
+			<${EditorToolbar}
+				layout=${toolbarLayout}
+				sessionTitle=${sessionTitle}
+				editorMode=${editorMode}
+				onOpenPreferences=${() => toggleModal("preferences")}
+				onOpenSearch=${() => toggleModal("searchAndReplace")}
+				onToggleMarkdown=${() => setEditorMode((m: 'source' | 'wysiwyg') => m === 'source' ? 'wysiwyg' : 'source')}
+				onTakeScreenshot=${takeScreenshot}/>
 		</div>
 	`;
 }

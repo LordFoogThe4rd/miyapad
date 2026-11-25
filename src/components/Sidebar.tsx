@@ -1,5 +1,5 @@
 import { html } from 'htm/react';
-import { Fragment, useState, useEffect, useRef, type FormEvent } from 'react';
+import { Fragment, useState, useEffect, useRef, useSyncExternalStore, type FormEvent } from 'react';
 import { useSettings } from '../contexts/SettingsContext';
 import { useGeneration } from '../contexts/GenerationContext';
 import { useT } from '../i18n';
@@ -16,6 +16,8 @@ import {
 import { usePersistentContextHandlers } from '../hooks/useTokenCounters';
 import { useInsertTemplate } from '../hooks/useInsertTemplate';
 import { useGenerationLogic } from '../hooks/useGenerationLogic';
+import { getPluginUiSnapshot, subscribePluginUi } from '../plugins';
+import { PluginErrorBoundary } from './PluginErrorBoundary';
 import type { SidebarProps } from '../types/components';
 
 export function Sidebar({ sidebarRef, toggleModal, currentThemeName, setCurrentThemeName, allThemes, showAPIKey, setShowAPIKey }: SidebarProps) {
@@ -52,6 +54,7 @@ export function Sidebar({ sidebarRef, toggleModal, currentThemeName, setCurrentT
 	const { predict, undo, redo, undoAndPredict } = useGenerationLogic();
 	const { handleauthorNoteTokensChange, handleMemoryTokensChange } = usePersistentContextHandlers();
 	const t = useT();
+	const { sidebar: pluginSidebarSections } = useSyncExternalStore(subscribePluginUi, getPluginUiSnapshot);
 
 	const toggleSampler = (name: string) => (v: boolean) =>
 		setEnabledSamplers(v
@@ -892,6 +895,16 @@ export function Sidebar({ sidebarRef, toggleModal, currentThemeName, setCurrentT
 					</div>
 				`}
 			</${CollapsibleGroup}>`}
+			${pluginSidebarSections.map((entry, idx) => html`
+				<${CollapsibleGroup}
+					key=${`${entry.id}:${entry.label}:${idx}`}
+					stateLabel=${`plugin:${entry.id}:${entry.label}`}
+					label=${entry.label}
+					expanded=${entry.expanded}>
+					<${PluginErrorBoundary} id=${entry.id}>
+						<${entry.Component}/>
+					</${PluginErrorBoundary}>
+				</${CollapsibleGroup}>`)}
 			${!!tokens && html`
 				<${InputBox} label=${t('sidebar.tokens')} value="${tokens}${tokensPerSec ? ` (${tokensPerSec.toFixed(2)} T/s)` : ``}" readOnly/>`}
 			${!!hordeQueuePos && html`

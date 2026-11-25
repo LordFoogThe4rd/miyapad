@@ -1,0 +1,147 @@
+/* Editor workspace wrapper and grouped EditorToolbar (gutter rail on desktop, top bar on narrow/mobile) */
+.prompt-workspace {
+	flex: 1;
+	min-width: 0;
+	min-height: 0;
+	display: flex;
+}
+
+.prompt-workspace.is-toolbar-rail {
+	flex-direction: row;
+	justify-content: center;
+	align-items: stretch;
+	gap: 0.5rem;
+}
+
+.prompt-workspace.is-toolbar-rail > #prompt-container {
+	margin-left: 0;
+	margin-right: 0;
+}
+
+.prompt-workspace.is-toolbar-top {
+	flex-direction: column;
+	justify-content: flex-start;
+	align-items: stretch;
+	gap: 0;
+}
+
+.prompt-workspace.is-toolbar-top > #prompt-container {
+	width: 100%;
+}
+
+.editor-toolbar {
+	box-sizing: border-box;
+	user-select: none;
+}
+
+.editor-toolbar.is-rail {
+	display: flex;
+	flex-direction: column;
+	align-items: center;
+	gap: 8px;
+	padding: 12px 0.5rem 12px 0;
+	overflow-y: auto;
+	flex: none;
+	scrollbar-width: thin;
+}
+
+.editor-toolbar.is-rail .editor-toolbar-groups {
+	display: flex;
+	flex-direction: column;
+	align-items: center;
+	gap: 8px;
+}
+
+.editor-toolbar.is-rail .editor-toolbar-group {
+	display: flex;
+	flex-direction: column;
+	align-items: center;
+	gap: 2px;
+	padding: 3px;
+	background: var(--color-bg-ui-1);
+	border: 1px solid var(--color-bg-rule);
+	border-radius: 6px;
+}
+
+.editor-toolbar.is-top {
+	order: -1;
+	flex: none;
+	height: 36px;
+	display: flex;
+	flex-direction: row;
+	align-items: center;
+	justify-content: space-between;
+	gap: 8px;
+	padding: 0 8px;
+	background: var(--color-bg-ui-1);
+	border-bottom: 1px solid var(--color-bg-rule);
+}
+
+.editor-toolbar-title {
+	font-size: 0.85rem;
+	color: var(--color-text-ui);
+	white-space: nowrap;
+	overflow: hidden;
+	text-overflow: ellipsis;
+	min-width: 0;
+	flex: 1 1 auto;
+}
+
+.editor-toolbar.is-top .editor-toolbar-groups {
+	display: flex;
+	flex-direction: row;
+	align-items: center;
+	gap: 6px;
+	overflow-x: auto;
+	flex: 0 1 auto;
+	scrollbar-width: none;
+}
+
+.editor-toolbar.is-top .editor-toolbar-group {
+	display: flex;
+	flex-direction: row;
+	align-items: center;
+	gap: 2px;
+	padding: 2px;
+	background: var(--color-bg-input-2);
+	border: 1px solid var(--color-bg-rule);
+	border-radius: 4px;
+	flex: none;
+}
+
+.editor-toolbar-btn {
+	display: inline-flex;
+	align-items: center;
+	justify-content: center;
+	width: 28px;
+	height: 28px;
+	padding: 4px;
+	background: transparent;
+	color: var(--color-svg-1);
+	border: none;
+	border-radius: 4px;
+	cursor: pointer;
+	flex: none;
+	line-height: 1;
+}
+
+.editor-toolbar-btn svg {
+	width: 16px;
+	height: 16px;
+	display: block;
+}
+
+.editor-toolbar-btn:hover:not(:disabled) {
+	background: var(--color-bg-highlight-1);
+}
+
+.editor-toolbar-btn.is-active {
+	background: var(--color-miku);
+	color: var(--color-base-100);
+}
+
+.editor-toolbar-btn:disabled {
+	opacity: 0.45;
+	cursor: not-allowed;
+	background: transparent;
+}
