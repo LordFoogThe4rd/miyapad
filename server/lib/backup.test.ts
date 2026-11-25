@@ -4,9 +4,11 @@ import fs from 'fs';
 import os from 'os';
 import path from 'path';
 import { spawnSync } from 'child_process';
+import { DatabaseSync } from 'node:sqlite';
 import Database from 'better-sqlite3';
 import { path7za } from '7zip-bin';
 import { rotateBackups, timestamp, startAutoBackup, stopAutoBackup, getBackupStatus } from './backup.js';
+import { PluginDbManager } from './plugin-db.js';
 
 const dirs: string[] = [];
 
@@ -111,6 +113,49 @@ describe('startAutoBackup', () => {
         const copy = new Database(path.join(restored, fs.readdirSync(restored)[0]), { readonly: true });
         open.push(copy);
         expect(copy.prepare('SELECT * FROM sessions').all()).toEqual([{ key: '1', session_data: '{"prompt":"hello"}' }]);
+    });
+
+    it('packs the main database and every healthy plugin container into the same 7z archive', async () => {
+        const { log, error } = quiet();
+        const { dir, dbPath, db, backups } = liveDatabase();
+        const pluginsDir = path.join(dir, 'plugins');
+        const manager = new PluginDbManager(pluginsDir);
+        try {
+            manager.set('alpha', '', 'greeting', 'hi from alpha');
+            manager.set('beta', 'cache', 'count', 42);
+            // Corrupt container is logged and skipped without blocking the main backup or healthy containers.
+            fs.writeFileSync(path.join(pluginsDir, 'corrupt.db'), 'garbage bytes');
+
+            startAutoBackup(db, dbPath, { dir: backups, keep: 5 });
+            await vi.waitFor(() => expect(created(log)).toBe(1), { timeout: 10_000 });
+            expect(error).toHaveBeenCalledWith(expect.stringContaining('skipping unreadable plugin container corrupt.db'), expect.any(String));
+
+            const archiveFile = fs.readdirSync(backups)[0];
+            const restored = path.join(dir, 'restored-multi');
+            expect(spawnSync(path7za, ['x', path.join(backups, archiveFile), `-o${restored}`, '-y']).status).toBe(0);
+
+            const mainEntry = archiveFile.replace(/\.7z$/, '');
+            expect(fs.existsSync(path.join(restored, mainEntry))).toBe(true);
+            expect(fs.readdirSync(path.join(restored, 'plugins')).sort()).toEqual(['alpha.db', 'beta.db']);
+
+            const copyMain = new Database(path.join(restored, mainEntry), { readonly: true });
+            open.push(copyMain);
+            expect(copyMain.prepare('SELECT * FROM sessions').all()).toEqual([{ key: '1', session_data: '{"prompt":"hello"}' }]);
+
+            const alphaSnap = new DatabaseSync(path.join(restored, 'plugins', 'alpha.db'), { readOnly: true });
+            const betaSnap = new DatabaseSync(path.join(restored, 'plugins', 'beta.db'), { readOnly: true });
+            try {
+                const alphaRow = alphaSnap.prepare('SELECT value FROM kv WHERE key = ?').get('/greeting') as { value: Uint8Array };
+                const betaRow = betaSnap.prepare('SELECT value FROM kv WHERE key = ?').get('cache/count') as { value: Uint8Array };
+                expect(JSON.parse(Buffer.from(alphaRow.value).toString('utf8'))).toBe('hi from alpha');
+                expect(JSON.parse(Buffer.from(betaRow.value).toString('utf8'))).toBe(42);
+            } finally {
+                alphaSnap.close();
+                betaSnap.close();
+            }
+        } finally {
+            manager.closeAll();
+        }
     });
 
     it('reports backups as off before auto-backup starts', async () => {

@@ -14,7 +14,7 @@ Both the `prestart` and `prebuild` hooks run `scripts/write-version.mjs`, which 
 
 ## Backend Server
 
-The server serves the frontend from the root `dist/` folder, so run `npm run build` in the root first. Without it the server logs `Warning: frontend dist not found` and the page won't load.
+The server serves the frontend from the root `dist/` folder, so run `npm run build` in the root first. Without it the server logs `Warning: frontend dist not found` and the page won't load. Running from source requires Node.js 24.10+ (for `node:sqlite`).
 
 From the `server/` directory:
 

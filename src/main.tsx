@@ -12,8 +12,8 @@ import { ThemeStorage } from './storage/ThemeStorage';
 import { ConnectionStorage } from './storage/ConnectionStorage';
 import { SamplerPresetStorage } from './storage/SamplerPresetStorage';
 import { PluginStorage } from './storage/PluginStorage';
-import { PluginData } from './storage/PluginData';
-import { pluginEditorFor, pluginHooksFor, pluginStateView, startPlugins } from './plugins';
+import { PluginDatabase } from './storage/PluginDatabase';
+import { pluginEditorFor, pluginHooksFor, pluginStateView, recordPluginRuntimeError, startPlugins } from './plugins';
 import { pluginEvents } from './plugins/events';
 import { pluginContext } from './plugins/context';
 import { sessionDataFor } from './plugins/sessionData';
@@ -70,8 +70,21 @@ async function main() {
     const samplerPresetStorage = new SamplerPresetStorage(dbAdapter);
     await samplerPresetStorage.init();
 
-	const pluginData = new PluginData(dbAdapter);
-	const pluginStorage = new PluginStorage(dbAdapter, pluginData);
+	let startupDone = false;
+	const serverEndpoint = isMiyapadEndpoint ? window.location.protocol + '//' + window.location.host : undefined;
+	let pluginStorage!: PluginStorage;
+	const pluginDb = new PluginDatabase({
+		serverEndpoint,
+		onContainerError: (id, err) => {
+			if (startupDone) {
+				recordPluginRuntimeError(id, err.message);
+			}
+			if (pluginStorage?.plugins[id]?.enabled) {
+				pluginStorage.setEnabled(id, false).catch(e => console.error(`[plugins] Couldn't switch off "${id}":`, e));
+			}
+		},
+	});
+	pluginStorage = new PluginStorage(dbAdapter, pluginDb);
 	await pluginStorage.init();
 
 	const rootEl = document.getElementById('root');
@@ -129,7 +142,8 @@ async function main() {
 			hooks: pluginHooksFor(id, record),
 			events: pluginEvents.forPlugin(id),
 			context: pluginContext.forPlugin(id, record.manifest.order),
-			storage: pluginData.storageFor(id),
+			db: (name: string) => pluginDb.dbFor(id, name),
+			storage: pluginDb.dbFor(id, ''),
 			sessionData: sessionDataFor(id, sessionStorage),
 			generate,
 			// Views: the contexts have no value until the app draws, which is after plugins start.
@@ -153,6 +167,7 @@ async function main() {
 		renderSplash();
 	}
 	const pluginStart = settled.done ? settled.pluginStart : await started;
+	startupDone = true;
 
 	const boundUseSessionState = <T,>(name: string, initialState: T) => useSessionState(sessionStorage, name, initialState);
 

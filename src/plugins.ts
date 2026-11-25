@@ -5,6 +5,7 @@ import { isZipBytes, parsePluginArchive, PluginArchiveError, type ParsedPluginAr
 import { SUPPORTED_PLUGIN_API } from './plugins/manifest';
 import type { GenerationMode } from './plugins/events';
 import type { EditorAdapter } from './editor/EditorAdapter';
+import { PluginContainerError } from './storage/PluginDatabase';
 import type { PluginStorage } from './storage/PluginStorage';
 
 export interface PromptHookContext {
@@ -195,6 +196,8 @@ export function subscribePluginRuntimeErrors(listener: () => void): () => void {
 /** What happened to the plugins on this start. Kept in memory only, for the Plugins tab. */
 export interface PluginStartInfo {
 	safeMode: boolean;
+	/** Set when the `Plugins` registry itself could not be read; no plugins run and nothing is deleted. */
+	registryError?: string;
 	/** Switched off because they aren't declared for this version or require an unavailable host capability. */
 	switchedOff: string[];
 	/** Plugins that threw while starting, with the error. */
@@ -308,6 +311,7 @@ export async function runPlugins(
 	miyapadFor: (id: string) => unknown,
 	control?: PluginStartControl,
 	host: HostCapabilities = { server: false },
+	onUnreadableContainer?: (id: string) => Promise<void> | void,
 ): Promise<Pick<PluginStartInfo, 'errors' | 'timedOut' | 'skipped'>> {
 	const errors: Record<string, string> = {};
 	const timedOut: string[] = [];
@@ -334,12 +338,14 @@ export async function runPlugins(
 				console.warn(`[plugins] "${id}" took more than ${seconds} seconds to start; Miyapad didn't wait for it.`);
 				run.catch(e => {
 					recordPluginRuntimeError(id, String(e));
+					if (e instanceof PluginContainerError) void onUnreadableContainer?.(id);
 					console.error(`[plugins] "${id}" failed to start:`, e);
 				});
 			} else if (outcome === SKIPPED) {
 				skipped.push(...ordered.slice(index));
 				run.catch(e => {
 					recordPluginRuntimeError(id, String(e));
+					if (e instanceof PluginContainerError) void onUnreadableContainer?.(id);
 					console.error(`[plugins] "${id}" failed to start:`, e);
 				});
 				break;
@@ -347,6 +353,9 @@ export async function runPlugins(
 		} catch (e) {
 			errors[id] = String(e);
 			console.error(`[plugins] "${id}" failed to start:`, e);
+			if (e instanceof PluginContainerError) {
+				await onUnreadableContainer?.(id);
+			}
 		} finally {
 			clearTimeout(timer);
 		}
@@ -365,10 +374,17 @@ export async function startPlugins(
 	control?: PluginStartControl,
 	host: HostCapabilities = { server: false },
 ): Promise<PluginStartInfo> {
+	if (pluginStorage.registryError) {
+		return { safeMode, registryError: pluginStorage.registryError, switchedOff: [], errors: {}, timedOut: [], skipped: [] };
+	}
 	if (safeMode) return { safeMode, switchedOff: [], errors: {}, timedOut: [], skipped: [] };
 	const switchedOff = await switchOffMismatched(pluginStorage, host);
 	const ids = Object.keys(pluginStorage.plugins).filter(id => pluginStorage.plugins[id].enabled && !switchedOff.includes(id));
-	return { safeMode, switchedOff, ...await runPlugins(pluginStorage.plugins, ids, miyapadFor, control, host) };
+	const switchOffContainer = async (id: string) => {
+		if (!pluginStorage.plugins[id]?.enabled) return;
+		await pluginStorage.setEnabled(id, false).catch(err => console.error(`[plugins] Couldn't save "${id}" as switched off:`, err));
+	};
+	return { safeMode, switchedOff, ...await runPlugins(pluginStorage.plugins, ids, miyapadFor, control, host, switchOffContainer) };
 }
 
 function makeHookControls(state: HookRunState): { abort: () => void; params: (overrides: Record<string, unknown>) => void } {

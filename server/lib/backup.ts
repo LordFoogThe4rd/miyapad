@@ -1,9 +1,11 @@
 import fs from 'fs';
 import path from 'path';
 import { spawn } from 'child_process';
+import { DatabaseSync } from 'node:sqlite';
 import { path7za } from '7zip-bin';
 import { pipeline } from 'stream';
 import type { Database } from 'better-sqlite3';
+import { isValidPluginId } from './plugin-db.js';
 
 let backupIntervalId: ReturnType<typeof setInterval> | null = null;
 let backupIntervalMinutes: number | null = null;
@@ -77,45 +79,147 @@ const runIntegrityCheck = (db: Database): boolean => {
     return ok;
 };
 
-// Streams srcPath into a .7z archive holding a single LZMA2-compressed entry named entryName.
+const listPluginContainers = (pluginsDir: string): string[] => {
+    try {
+        return fs.readdirSync(pluginsDir)
+            .filter(f => f.endsWith('.db') && isValidPluginId(f.slice(0, -3)))
+            .sort();
+    } catch {
+        return [];
+    }
+};
+
+const getStorageSignature = (dbPath: string, mainMtime: number): string => {
+    const pluginsDir = path.join(path.dirname(dbPath), 'plugins');
+    const pluginParts = listPluginContainers(pluginsDir).map(file => {
+        const full = path.join(pluginsDir, file);
+        return `${file}:${getDbFileMtime(full) ?? ''}:${getDbFileMtime(full + '-wal') ?? ''}`;
+    });
+    return [`main:${mainMtime}:${getDbFileMtime(dbPath + '-wal') ?? ''}`, ...pluginParts].join('|');
+};
+
+const snapshotPluginContainers = (pluginsDir: string, stageDir: string): string[] => {
+    const files = listPluginContainers(pluginsDir);
+    if (files.length === 0) return [];
+
+    const staged: string[] = [];
+    for (const file of files) {
+        const src = path.join(pluginsDir, file);
+        let pDb: DatabaseSync | undefined;
+        try {
+            pDb = new DatabaseSync(src, { allowExtension: false });
+            const rows = pDb.prepare('PRAGMA integrity_check').all() as { integrity_check: string }[];
+            if (rows.length !== 1 || rows[0].integrity_check !== 'ok') {
+                console.error(`Backup: skipping corrupt plugin container ${file}:`, rows);
+                continue;
+            }
+            const destDir = path.join(stageDir, 'plugins');
+            fs.mkdirSync(destDir, { recursive: true });
+            pDb.prepare('VACUUM INTO ?').run(path.join(destDir, file));
+            staged.push(path.join('plugins', file));
+        } catch (err) {
+            console.error(`Backup: skipping unreadable plugin container ${file}:`, (err as Error).message);
+        } finally {
+            try { pDb?.close(); } catch { /* ok */ }
+        }
+    }
+    return staged;
+};
+
+// Streams srcPath into a .7z archive holding an LZMA2-compressed entry named entryName,
+// then appends any staged `plugins/*.db` containers into the same archive.
 // LZMA2 over LZMA1 because the database is mostly zstd blobs (sqlite-zstd transparent
 // compression), and LZMA2 stores incompressible runs raw instead of paying encoder overhead
 // on them: 17,691,698 bytes against 17,870,246 on a 20.7MB snapshot, same second of work.
-const compressToArchive = (srcPath: string, archivePath: string, entryName: string, done: (err: Error | null) => void) => {
-    // `7z a` appends to an existing archive, so drop a leftover before writing.
+const compressToArchive = (
+    srcPath: string,
+    archivePath: string,
+    entryName: string,
+    extraEntries: { cwd: string; files: string[] } | null,
+    done: (err: Error | null) => void,
+) => {
+    const tmpArchivePath = archivePath + '.tmp';
+    try { fs.rmSync(tmpArchivePath, { force: true }); } catch { /* ok */ }
     try { fs.rmSync(archivePath, { force: true }); } catch { /* ok */ }
 
+    const finalize = (err: Error | null) => {
+        if (err) {
+            try { fs.rmSync(tmpArchivePath, { force: true }); } catch { /* ok */ }
+            done(err);
+            return;
+        }
+        try {
+            fs.renameSync(tmpArchivePath, archivePath);
+            done(null);
+        } catch (renameErr) {
+            try { fs.rmSync(tmpArchivePath, { force: true }); } catch { /* ok */ }
+            done(renameErr as Error);
+        }
+    };
+
+    const appendExtras = () => {
+        if (!extraEntries || extraEntries.files.length === 0) {
+            finalize(null);
+            return;
+        }
+        const child = spawn(SEVEN_ZIP, [
+            'a', '-t7z', '-m0=lzma2', '-mx=9', '-bso0', '-bsp0', tmpArchivePath, ...extraEntries.files,
+        ], { cwd: extraEntries.cwd, stdio: ['ignore', 'ignore', 'pipe'] });
+
+        let stderr = '';
+        child.stderr.on('data', (chunk: Buffer) => { stderr += chunk; });
+
+        let settled = false;
+        const finishExtra = (err: Error | null) => {
+            if (settled) return;
+            settled = true;
+            finalize(err);
+        };
+
+        child.on('error', (err: NodeJS.ErrnoException) => finishExtra(err.code === 'ENOENT'
+            ? new Error(`7-Zip executable not found (tried "${SEVEN_ZIP}"). Set MIYAPAD_7Z_PATH to a 7-Zip executable.`)
+            : err));
+
+        child.on('close', code => finishExtra(code === 0
+            ? null
+            : new Error(`7-Zip exited with code ${code}${stderr.trim() ? `: ${stderr.trim()}` : ''}`)));
+    };
+
     const child = spawn(SEVEN_ZIP, [
-        'a', '-t7z', '-m0=lzma2', '-mx=9', '-bso0', '-bsp0', `-si${entryName}`, archivePath
+        'a', '-t7z', '-m0=lzma2', '-mx=9', '-bso0', '-bsp0', `-si${entryName}`, tmpArchivePath
     ], { stdio: ['pipe', 'ignore', 'pipe'] });
 
     let stderr = '';
     child.stderr.on('data', (chunk: Buffer) => { stderr += chunk; });
 
     let settled = false;
-    const finish = (err: Error | null) => {
+    const finishMain = (err: Error | null) => {
         if (settled) return;
         settled = true;
-        done(err);
+        if (err) {
+            finalize(err);
+        } else {
+            appendExtras();
+        }
     };
 
-    child.on('error', (err: NodeJS.ErrnoException) => finish(err.code === 'ENOENT'
+    child.on('error', (err: NodeJS.ErrnoException) => finishMain(err.code === 'ENOENT'
         ? new Error(`7-Zip executable not found (tried "${SEVEN_ZIP}"). Set MIYAPAD_7Z_PATH to a 7-Zip executable.`)
         : err));
 
-    child.on('close', code => finish(code === 0
+    child.on('close', code => finishMain(code === 0
         ? null
         : new Error(`7-Zip exited with code ${code}${stderr.trim() ? `: ${stderr.trim()}` : ''}`)));
 
     pipeline(fs.createReadStream(srcPath), child.stdin, (err: Error | null) => {
         if (err) {
             child.kill();
-            finish(err);
+            finishMain(err);
         }
     });
 };
 
-const runBackup = (db: Database, dbPath: string, dir: string, keep: number, lastMtimeRef: { current: number | null }) => {
+const runBackup = (db: Database, dbPath: string, dir: string, keep: number, lastSignatureRef: { current: string | null }) => {
     const currentMtime = getDbFileMtime(dbPath);
 
     if (currentMtime === null) {
@@ -123,7 +227,8 @@ const runBackup = (db: Database, dbPath: string, dir: string, keep: number, last
         return;
     }
 
-    if (lastMtimeRef.current !== null && currentMtime === lastMtimeRef.current) {
+    const currentSignature = getStorageSignature(dbPath, currentMtime);
+    if (lastSignatureRef.current !== null && currentSignature === lastSignatureRef.current) {
         console.log("Backup: no changes detected, skipping.");
         return;
     }
@@ -137,32 +242,44 @@ const runBackup = (db: Database, dbPath: string, dir: string, keep: number, last
 
     const backupName = `web-session-storage.db.${timestamp()}.backup`;
     const backupPath = path.join(dir, backupName);
-    const tmpPath = backupPath + '.tmp';
+    const stageDir = backupPath + '.stage';
+    const tmpPath = path.join(stageDir, backupName);
 
     if (!runIntegrityCheck(db)) return;
 
+    const cleanup = () => {
+        try { fs.rmSync(stageDir, { recursive: true, force: true }); } catch { /* ok */ }
+    };
+
+    let pluginEntries: string[] = [];
     try {
+        fs.rmSync(stageDir, { recursive: true, force: true });
+        fs.mkdirSync(stageDir, { recursive: true });
         db.prepare("VACUUM INTO ?").run(tmpPath);
+        pluginEntries = snapshotPluginContainers(path.join(path.dirname(dbPath), 'plugins'), stageDir);
     } catch (err) {
+        cleanup();
         console.error("Backup: VACUUM INTO failed:", (err as Error).message);
         return;
     }
 
-    const cleanup = () => {
-        try { fs.unlinkSync(tmpPath); } catch { /* ok */ }
-    };
-
-    compressToArchive(tmpPath, backupPath + '.7z', backupName, (err: Error | null) => {
-        cleanup();
-        if (err) {
-            console.error("Backup: compression failed:", err.message);
-            return;
-        }
-        lastMtimeRef.current = currentMtime;
-        lastBackupAt = Date.now();
-        console.log(`Backup created: ${backupName}.7z`);
-        rotateBackups(dir, keep);
-    });
+    compressToArchive(
+        tmpPath,
+        backupPath + '.7z',
+        backupName,
+        pluginEntries.length > 0 ? { cwd: stageDir, files: pluginEntries } : null,
+        (err: Error | null) => {
+            cleanup();
+            if (err) {
+                console.error("Backup: compression failed:", err.message);
+                return;
+            }
+            lastSignatureRef.current = currentSignature;
+            lastBackupAt = Date.now();
+            console.log(`Backup created: ${backupName}.7z`);
+            rotateBackups(dir, keep);
+        },
+    );
 };
 
 const startAutoBackup = (db: Database, dbPath: string, { interval = 30, dir = './backups', keep = 10 } = {}) => {
@@ -174,12 +291,12 @@ const startAutoBackup = (db: Database, dbPath: string, { interval = 30, dir = '.
     const dirAbsolute = path.resolve(dir);
     backupIntervalMinutes = interval;
 
-    const lastMtimeRef: { current: number | null } = { current: null };
+    const lastSignatureRef: { current: string | null } = { current: null };
 
-    runBackup(db, dbPath, dirAbsolute, keep, lastMtimeRef);
+    runBackup(db, dbPath, dirAbsolute, keep, lastSignatureRef);
 
     backupIntervalId = setInterval(() => {
-        runBackup(db, dbPath, dirAbsolute, keep, lastMtimeRef);
+        runBackup(db, dbPath, dirAbsolute, keep, lastSignatureRef);
     }, interval * 60 * 1000);
 
     console.log(`Auto-backup scheduled every ${interval} minutes (dir: ${dirAbsolute}, keep: ${keep})`);

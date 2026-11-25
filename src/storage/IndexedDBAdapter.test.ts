@@ -1,6 +1,7 @@
 import { describe, it, expect, vi, beforeEach, afterEach } from 'vitest';
 import { IDBFactory } from 'fake-indexeddb';
 import { IndexedDBAdapter } from './IndexedDBAdapter';
+import { PluginDatabase } from './PluginDatabase';
 
 let adapter: IndexedDBAdapter;
 let db: IDBDatabase;
@@ -18,9 +19,22 @@ afterEach(() => {
 });
 
 describe('IndexedDBAdapter', () => {
-	it('creates every store on a fresh database', () => {
+	it('creates every store on a fresh database without PluginData', () => {
+		expect(db.version).toBe(9);
 		expect([...db.objectStoreNames].sort()).toEqual(
-			['Connections', 'Names', 'PluginData', 'Plugins', 'SamplerPresets', 'SessionHistory', 'Sessions', 'Templates', 'Themes']);
+			['Connections', 'Names', 'Plugins', 'SamplerPresets', 'SessionHistory', 'Sessions', 'Templates', 'Themes']);
+	});
+
+	it('supports custom database name, version and store list', async () => {
+		const custom = new IndexedDBAdapter('CustomRegistry', 2, ['Plugins']);
+		const customDb = await custom.openDatabase();
+		try {
+			expect(customDb.name).toBe('CustomRegistry');
+			expect(customDb.version).toBe(2);
+			expect([...customDb.objectStoreNames]).toEqual(['Plugins']);
+		} finally {
+			customDb.close();
+		}
 	});
 
 	it('saves, loads and lists records', async () => {
@@ -74,17 +88,65 @@ describe('IndexedDBAdapter', () => {
 		expect(await adapter.loadAllFromDatabase(db, 'Themes')).toEqual({ a: 'A' });
 	});
 
-	it('exports every store and imports it back, replacing only the stores in the file', async () => {
+	it('exports every store plus plugin:<id> containers and imports them back while ignoring legacy PluginData', async () => {
 		await adapter.saveToDatabase(db, 'Sessions', 1, { prompt: 'hi' });
 		await adapter.saveToDatabase(db, 'Themes', 't', 'theme');
+		const pDb = new PluginDatabase();
+		await pDb.dbFor('notes', '').set('greeting', 'hello');
+		await pDb.dbFor('notes', 'cache').set('count', 3);
+		pDb.closeAll();
+
 		const exported = await adapter.exportDatabase();
 		expect(exported.Sessions).toEqual([{ key: 1, value: { prompt: 'hi' } }]);
+		expect(exported['plugin:notes']).toEqual([
+			{ key: '/greeting', value: 'hello' },
+			{ key: 'cache/count', value: 3 },
+		]);
 
 		await adapter.saveToDatabase(db, 'Sessions', 2, 'extra');
 		await adapter.saveToDatabase(db, 'Themes', 'u', 'kept');
-		await adapter.importDatabase({ Sessions: exported.Sessions });
+		await pDb.deleteContainer('notes');
+
+		await adapter.importDatabase({
+			Sessions: exported.Sessions,
+			PluginData: [{ key: 'legacy/x', value: 'ignored' }],
+			'plugin:notes': exported['plugin:notes'],
+		});
 		expect(await adapter.loadAllFromDatabase(db, 'Sessions')).toEqual({ 1: { prompt: 'hi' } });
 		expect(await adapter.loadAllFromDatabase(db, 'Themes')).toEqual({ t: 'theme', u: 'kept' });
+
+		const checkDb = new PluginDatabase();
+		try {
+			expect(await checkDb.dbFor('notes', '').get('greeting')).toBe('hello');
+			expect(await checkDb.dbFor('notes', 'cache').get('count')).toBe(3);
+		} finally {
+			checkDb.closeAll();
+		}
+	});
+});
+
+describe('IndexedDBAdapter upgrade from version 8', () => {
+	it('drops the old PluginData object store while keeping existing stores intact', async () => {
+		db.close();
+		vi.stubGlobal('indexedDB', new IDBFactory());
+		await new Promise<void>((resolve, reject) => {
+			const req = indexedDB.open('MiyaPad', 8);
+			req.onupgradeneeded = () => {
+				for (const name of ['Sessions', 'Templates', 'Names', 'Themes', 'Connections', 'SamplerPresets', 'SessionHistory', 'Plugins', 'PluginData']) {
+					req.result.createObjectStore(name);
+				}
+				const tx = req.transaction!;
+				tx.objectStore('Plugins').put({ code: 'x', enabled: false }, 'demo');
+				tx.objectStore('PluginData').put('stale', 'demo/key');
+			};
+			req.onsuccess = () => { req.result.close(); resolve(); };
+			req.onerror = () => reject(req.error);
+		});
+
+		db = await adapter.openDatabase();
+		expect(db.version).toBe(9);
+		expect(db.objectStoreNames.contains('PluginData')).toBe(false);
+		expect(await adapter.loadFromDatabase(db, 'Plugins', 'demo')).toEqual({ code: 'x', enabled: false });
 	});
 });
 

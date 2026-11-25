@@ -91,7 +91,7 @@ Import from URL… reads the update mode from the address you paste and shows wh
 
 | Surface | Fields |
 | :--- | :--- |
-| **Stable** (changes only with a `manifest.api` bump) | `id`, `name`, `version`, `hooks`, `events`, `context`, `storage`, `sessionData`, `generate`, `editor`, `ui`, `settings`, `generation`, `React`, `html` |
+| **Stable** (changes only with a `manifest.api` bump) | `id`, `name`, `version`, `hooks`, `events`, `context`, `storage`, `db`, `sessionData`, `generate`, `editor`, `ui`, `settings`, `generation`, `React`, `html` |
 | **Unstable** (internal objects; may change in any release) | `sessionStorage`, `templateStorage`, `themeStorage`, `connectionStorage`, `samplerPresetStorage`, `api` |
 
 Each plugin receives its own `miyapad` object (there is no `window.miyapad`):
@@ -104,7 +104,8 @@ Each plugin receives its own `miyapad` object (there is no `window.miyapad`):
 | `hooks` | Per-plugin view of shared hooks (`prompt`, `messages`, `output`, `commands`, `settings`, `sidebar`, `modals`, `toolbar`) tagged with `id` and `hookTimeout`. |
 | `events` | Scoped lifecycle event bus (`on`, `once`, `off`) with sticky `ready`, session, and generation events. |
 | `context` | Pre-truncation context injections (`setInjection`) and synchronous prompt placeholders (`setPlaceholder`). |
-| `storage` | Global key-value storage isolated under `id`. |
+| `storage` | Default global key-value namespace (`miyapad.db('')`) inside the plugin's container. |
+| `db` | `miyapad.db(name)` — opens a named key-value namespace inside the plugin's isolated container. |
 | `sessionData` | Synchronous per-session storage backed by `session.pluginData[id]`, with a session-switch guard. |
 | `generate` | Quiet off-screen generation helper sharing provider payloads and `/proxy` routing without touching UI state. |
 | `editor` | Safe wrapper around the mounted prompt editor (`ProseMirrorAdapter` without `destroy()`), or `undefined` before mount. |
@@ -196,16 +197,33 @@ Plugins render UI inside Miyapad's React tree using `miyapad.React`, `miyapad.ht
 - **`hooks.toolbar.push({ title, icon, active?, disabled?, onClick })`**: adds a button to the editor toolbar (`icon` is a React node or component; `active` and `disabled` are booleans or `() => boolean`). Built-in actions occupy group 1; plugins that push 1 button share a pooled group 2 sorted by `(manifest.order, id)`; plugins that push 2+ buttons each get their own group box sorted by `(manifest.order, id)`. Tooltips and `aria-label` are prefixed `<manifest.name>: <title>`.
 - **`miyapad.editor`**: returns a wrapper around the mounted `ProseMirrorAdapter` (`getText`, `getSelection`, `replaceText`, `replaceRange`, `replaceRanges`, `focus`, `scrollIntoView`, `setSelection`, `posAtCoords`, `coordsAtPos`, `dom`) with `destroy()` omitted, or `undefined` before the editor mounts. Edits through it keep `PROGRAMMATIC_EDIT` meta so typing stats stay accurate and undo checkpoints continue to work.
 
-## Storage
+## Storage (`miyapad.db` and `miyapad.storage`)
 
-`miyapad.storage` stores JSON values under the plugin's `id`:
+Global plugin data lives outside the main application database in one container per plugin (`plugins/<id>.db` SQLite files on the server, `miyapad-plugin-<id>` IndexedDB databases in standalone mode), opened lazily on first use:
 
-- `get(key)` returns the saved value or `undefined`.
-- `set(key, value)` JSON-clones and saves `value` (rejecting `undefined` and `BigInt` with `TypeError`).
-- `delete(key)` deletes one key.
-- `keys()` returns saved keys in insertion order.
+```js
+const cache = miyapad.db('cache');          // /^[a-z0-9_-]{1,32}$/ (or '' for miyapad.storage)
+await cache.set('image/1', { ok: true });
+await cache.keys('image/');                 // ['image/1']
+await cache.delete('image/1');
+await cache.clear();
+```
 
-Operations are serialized on an internal queue and committed atomically with the plugin's key list. Deleting a plugin removes its saved data and registry entry.
+- `miyapad.db(name)` returns a key-value namespace isolated under `<name>/<key>` inside the plugin's container. `miyapad.storage` is an alias for `miyapad.db('')` (stored under `/<key>`), so default keys containing `/` never collide with named namespaces.
+- `get(key)` returns the saved JSON value or `undefined`.
+- `set(key, value)` JSON-clones and saves `value` (converting `Date` to an ISO string and rejecting `undefined` and `BigInt` with `TypeError` before queueing).
+- `delete(key)` removes one key in that namespace.
+- `keys(prefix?)` returns matching keys in that namespace in sorted order (`%`, `_`, and `\` in `prefix` match literally).
+- `clear()` deletes every key in that namespace without touching other namespaces in the same container.
+- Calls are queued per plugin container so writes never interleave.
+- **Backups and exports**: standalone **Export Full DB** includes non-empty containers as `plugin:<id>` entries (and **Import Full DB** restores them while ignoring legacy `PluginData` stores); server `.backup.7z` archives snapshot `plugins/*.db` alongside `web-session-storage.db`.
+
+### Corrupt storage, Clear data, and keep-data on delete
+
+- If the `Plugins` registry itself cannot be read, no plugins run, nothing is deleted, and Preferences → Plugins displays the error.
+- If a single plugin's container cannot be opened or is unreadable, only that plugin is switched off with the error shown on its row; every other plugin continues to run.
+- **Clear data**: each row in Preferences → Plugins has a **Clear data** button that asks for confirmation, deletes the plugin's container (`plugins/<id>.db` or `miyapad-plugin-<id>`), clears row errors (recovering an unreadable container without uninstalling), and marks a reload required if the plugin is switched on.
+- **Keep data on delete**: clicking **Delete** opens a confirmation dialog with an **Also delete saved plugin data** checkbox (checked by default). Leaving it checked deletes the container first and then the registry entry; unchecking it removes only the plugin from the registry so re-importing it later reattaches to its existing data.
 
 ## Rules and recommended behaviour for plugin authors
 

@@ -10,12 +10,14 @@ import readline from 'readline';
 import { initDatabase, getMaintenanceConfig, runZstdMaintenance, clearMaintenanceScheduler } from './lib/database.js';
 import { createAuthMiddleware } from './lib/auth.js';
 import { startAutoBackup, stopAutoBackup } from './lib/backup.js';
+import { PluginDbManager } from './lib/plugin-db.js';
 import { basedir, resolveExeRelative } from './lib/paths.js';
 import systemRoutes from './routes/system.js';
 import dataRoutes from './routes/data.js';
 import proxyRoutes from './routes/proxy.js';
 import zstdRoutes from './routes/zstd.js';
 import tokenizerRoutes from './routes/tokenizer.js';
+import pluginDbRoutes from './routes/plugin-db.js';
 
 const args = minimist(process.argv.slice(2)) as Record<string, any>;
 const port = args.port || process.env.MIYAPAD_PORT || 3000;
@@ -58,11 +60,13 @@ const distDir = (() => {
 app.use(express.static(distDir, { index: 'miyapad.html' }));
 
 initDatabase(storagePath).then((db) => {
+    const pluginDb = new PluginDbManager(path.join(path.dirname(path.resolve(storagePath)), 'plugins'));
     systemRoutes(app, db);
     dataRoutes(app, db);
     proxyRoutes(app);
     zstdRoutes(app, db);
     tokenizerRoutes(app, db);
+    pluginDbRoutes(app, pluginDb);
 
     if (!noBackup) {
         startAutoBackup(db, path.resolve(storagePath), {
@@ -108,6 +112,7 @@ initDatabase(storagePath).then((db) => {
         if (maintConfig.mode === 'shutdown') {
             runZstdMaintenance(db, maintConfig.duration, maintConfig.dbLoad);
         }
+        pluginDb.closeAll();
         db.close();
         process.exit(0);
     }

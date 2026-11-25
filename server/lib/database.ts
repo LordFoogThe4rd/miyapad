@@ -276,9 +276,19 @@ const initDatabase = async (storagePath: string): Promise<DB> => {
         -- Created on every start rather than in a versioned migration, so existing databases pick it up too.
         CREATE TABLE IF NOT EXISTS sessionhistory (key TEXT PRIMARY KEY, ${getColumnName('sessionhistory')} BLOB);
         CREATE TABLE IF NOT EXISTS plugins (key TEXT PRIMARY KEY, ${getColumnName('plugins')} BLOB);
-        CREATE TABLE IF NOT EXISTS plugindata (key TEXT PRIMARY KEY, ${getColumnName('plugindata')} BLOB);
         CREATE TABLE IF NOT EXISTS meta (key TEXT PRIMARY KEY, value TEXT);
     `);
+
+    if (db.prepare("SELECT 1 FROM sqlite_master WHERE name IN ('plugindata', '_plugindata_zstd')").get()) {
+        db.transaction(() => {
+            db.exec('DROP VIEW IF EXISTS plugindata');
+            db.exec('DROP TABLE IF EXISTS plugindata');
+            db.exec('DROP TABLE IF EXISTS _plugindata_zstd');
+            if (db.prepare("SELECT 1 FROM sqlite_master WHERE type = 'table' AND name = '_zstd_configs'").get()) {
+                db.prepare("DELETE FROM _zstd_configs WHERE json_extract(config, '$.table') IN ('plugindata', '_plugindata_zstd')").run();
+            }
+        })();
+    }
 
     if (!isNewDatabase) {
         if (runMigrationToV3(db)) {
@@ -297,7 +307,7 @@ const initDatabase = async (storagePath: string): Promise<DB> => {
         console.log('Initializing brand new database at version 4 schema...');
     }
 
-    for (const table of ['sessions', 'templates', 'themes', 'connections', 'samplerpresets', 'sessionhistory', 'plugins', 'plugindata']) {
+    for (const table of ['sessions', 'templates', 'themes', 'connections', 'samplerpresets', 'sessionhistory', 'plugins']) {
         enableTransparentCompressionIfMissing(db, table);
     }
 

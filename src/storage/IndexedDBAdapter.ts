@@ -1,7 +1,29 @@
-export class IndexedDBAdapter {
-	dbName: string = 'MiyaPad';
+import { exportPluginContainers, importPluginContainers } from './PluginDatabase';
 
-	constructor() {
+export const DEFAULT_IDB_STORES = [
+	'Sessions',
+	'Templates',
+	'Names',
+	'Themes',
+	'Connections',
+	'SamplerPresets',
+	'SessionHistory',
+	'Plugins',
+] as const;
+
+export class IndexedDBAdapter {
+	dbName: string;
+	dbVersion: number;
+	storeNames: readonly string[];
+
+	constructor(
+		dbName = 'MiyaPad',
+		dbVersion = 9,
+		storeNames: readonly string[] = DEFAULT_IDB_STORES,
+	) {
+		this.dbName = dbName;
+		this.dbVersion = dbVersion;
+		this.storeNames = storeNames;
 	}
 
 	async init() {
@@ -27,7 +49,7 @@ export class IndexedDBAdapter {
 
 	async openDatabase(): Promise<IDBDatabase> {
 		return new Promise((resolve, reject) => {
-			const openRequest = indexedDB.open(this.dbName, 8);
+			const openRequest = indexedDB.open(this.dbName, this.dbVersion);
 
 			openRequest.onerror = () => reject(openRequest.error);
 			openRequest.onsuccess = () => resolve(openRequest.result);
@@ -37,33 +59,35 @@ export class IndexedDBAdapter {
 				const db = request.result;
 				const transaction = request.transaction!;
 
-				for (const storeName of ["Sessions", "Templates", "Names", "Themes", "Connections", "SamplerPresets", "SessionHistory", "Plugins", "PluginData"]) {
+				for (const storeName of this.storeNames) {
 					if (!db.objectStoreNames.contains(storeName)) {
 						db.createObjectStore(storeName);
 					}
 				}
 
-				switch (event.oldVersion) {
-					case 2:
-						// NameStore has been introduced in version 3.
-						const sessionsStore = transaction.objectStore("Sessions");
-						const namesStore = transaction.objectStore("Names");
+				if (!this.storeNames.includes('PluginData') && db.objectStoreNames.contains('PluginData')) {
+					db.deleteObjectStore('PluginData');
+				}
 
-						sessionsStore.openCursor().onsuccess = (e: Event) => {
-							const cursor = (e.target as IDBRequest<IDBCursorWithValue | null>).result;
-							if (cursor) {
-								const sessionData = cursor.value;
-								const sessionId = cursor.key;
+				if (event.oldVersion === 2 && db.objectStoreNames.contains('Sessions') && db.objectStoreNames.contains('Names')) {
+					// NameStore has been introduced in version 3.
+					const sessionsStore = transaction.objectStore("Sessions");
+					const namesStore = transaction.objectStore("Names");
 
-								if (sessionData && sessionData.name && typeof sessionId === 'number') {
-									namesStore.add(sessionData.name, sessionId);
-									delete sessionData.name;
-									cursor.update(sessionData);
-								}
-								cursor.continue();
+					sessionsStore.openCursor().onsuccess = (e: Event) => {
+						const cursor = (e.target as IDBRequest<IDBCursorWithValue | null>).result;
+						if (cursor) {
+							const sessionData = cursor.value;
+							const sessionId = cursor.key;
+
+							if (sessionData && sessionData.name && typeof sessionId === 'number') {
+								namesStore.add(sessionData.name, sessionId);
+								delete sessionData.name;
+								cursor.update(sessionData);
 							}
-						};
-						break;
+							cursor.continue();
+						}
+					};
 				}
 			};
 			openRequest.onblocked = () => console.warn('Request was blocked');
@@ -233,6 +257,11 @@ export class IndexedDBAdapter {
 			});
 		}
 
+		const knownPluginIds = Array.isArray(exportObject.Plugins)
+			? exportObject.Plugins.map((item: { key: unknown }) => String(item.key))
+			: [];
+		Object.assign(exportObject, await exportPluginContainers(knownPluginIds));
+
 		return exportObject;
 	}
 
@@ -255,7 +284,7 @@ export class IndexedDBAdapter {
 			}
 		}
 
-		return new Promise((resolve, reject) => {
+		await new Promise((resolve, reject) => {
 			transaction.oncomplete = () => {
 				resolve(undefined);
 			};
@@ -263,5 +292,9 @@ export class IndexedDBAdapter {
 				reject((event.target as IDBTransaction).error);
 			};
 		});
+
+		if (data && typeof data === 'object') {
+			await importPluginContainers(data as Record<string, unknown>);
+		}
 	}
 }

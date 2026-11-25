@@ -12,7 +12,7 @@ import { hasZstd } from './testing.js';
 const loadTokenizer = vi.hoisted(() => vi.fn());
 vi.mock('../tokenizer.js', () => ({ loadTokenizer }));
 
-const compressedTables = ['sessions', 'templates', 'themes', 'connections', 'samplerpresets', 'sessionhistory', 'plugins', 'plugindata'];
+const compressedTables = ['sessions', 'templates', 'themes', 'connections', 'samplerpresets', 'sessionhistory', 'plugins'];
 
 describe.skipIf(!hasZstd)('initDatabase', () => {
     let dir: string;
@@ -179,5 +179,24 @@ describe.skipIf(!hasZstd)('initDatabase', () => {
         const db = await restartWith({});
         expect(db.pragma('journal_mode', { simple: true })).not.toBe('wal');
         expect(log).not.toHaveBeenCalledWith(expect.stringContaining('zstd maintenance completed'));
+    });
+
+    it('drops a legacy plugindata table and its zstd config cleanly on startup', async () => {
+        const first = await init();
+        first.exec('CREATE TABLE plugindata (key TEXT PRIMARY KEY, plugin_storage_data BLOB)');
+        first.prepare('SELECT zstd_enable_transparent(?)').run(JSON.stringify({
+            table: 'plugindata',
+            column: 'plugin_storage_data',
+            compression_level: 9,
+            dict_chooser: "'a'",
+        }));
+        first.prepare("INSERT INTO plugindata (key, plugin_storage_data) VALUES ('p/x', '1')").run();
+        first.close();
+        open.splice(0);
+
+        const again = await init();
+        expect(kind(again, 'plugindata')).toBeUndefined();
+        expect(kind(again, '_plugindata_zstd')).toBeUndefined();
+        expect(again.prepare('SELECT zstd_incremental_maintenance(null, 1)').run()).toBeTruthy();
     });
 });

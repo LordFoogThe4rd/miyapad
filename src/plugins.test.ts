@@ -25,6 +25,7 @@ import {
 import type { EditorAdapter } from './editor/EditorAdapter';
 import { PluginArchiveError } from './plugins/archive';
 import { APP_VERSION } from './version';
+import { PluginContainerError } from './storage/PluginDatabase';
 import type { PluginStorage } from './storage/PluginStorage';
 
 function makeRecord(
@@ -207,6 +208,55 @@ describe('startPlugins', () => {
 			.toEqual({ safeMode: true, switchedOff: [], errors: {}, timedOut: [], skipped: [] });
 		expect(storage.setEnabled).not.toHaveBeenCalled();
 		expect(miyapad.ran).toBe(false);
+	});
+
+	it('runs nothing and deletes nothing when the plugin registry is unreadable', async () => {
+		const storage = {
+			registryError: 'Failed to parse registry',
+			plugins: { p: makeRecord('p', { code: 'miyapad.ran = true', manifest: { minMiyapad: '0.1' } }) },
+			setEnabled: vi.fn(),
+		};
+		const miyapad = { ran: false };
+		expect(await startPlugins(storage as unknown as PluginStorage, false, () => miyapad))
+			.toEqual({
+				safeMode: false,
+				registryError: 'Failed to parse registry',
+				switchedOff: [],
+				errors: {},
+				timedOut: [],
+				skipped: [],
+			});
+		expect(storage.setEnabled).not.toHaveBeenCalled();
+		expect(miyapad.ran).toBe(false);
+	});
+
+	it('switches off only a plugin whose container fails to open, while running every other plugin', async () => {
+		const storage = {
+			registryError: null,
+			plugins: {
+				broken: makeRecord('broken', { code: 'await miyapad.storage.get("k")', manifest: { minMiyapad: '0.1', order: 0 } }),
+				healthy: makeRecord('healthy', { code: 'miyapad.ran.push("healthy")', manifest: { minMiyapad: '0.1', order: 1 } }),
+			} as Record<string, PluginRecord>,
+			setEnabled: vi.fn(async (id: string, enabled: boolean) => {
+				storage.plugins[id] = { ...storage.plugins[id], enabled };
+			}),
+		};
+		const ran: string[] = [];
+		const result = await startPlugins(
+			storage as unknown as PluginStorage,
+			false,
+			id => ({
+				ran,
+				storage: {
+					get: async () => { throw new PluginContainerError(id, 'file is not a database'); },
+				},
+			}),
+		);
+		expect(result.errors).toEqual({ broken: 'PluginContainerError: file is not a database' });
+		expect(storage.setEnabled).toHaveBeenCalledWith('broken', false);
+		expect(storage.plugins.broken.enabled).toBe(false);
+		expect(storage.plugins.healthy.enabled).toBe(true);
+		expect(ran).toEqual(['healthy']);
 	});
 });
 

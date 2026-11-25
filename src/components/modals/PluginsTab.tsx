@@ -22,6 +22,7 @@ import { usePersistentState } from '../../hooks/usePersistentState';
 import { PluginIdMismatchError, type PluginImportInput, type PluginStorage } from '../../storage/PluginStorage';
 import { Modal } from '../Modal';
 import { PluginErrorBoundary } from '../PluginErrorBoundary';
+import { Checkbox } from '../controls/Checkbox';
 import { InputBox } from '../controls/InputBox';
 import { Switch } from '../controls/Switch';
 import { SVG_HideKey, SVG_ShowKey } from '../icons/index';
@@ -41,7 +42,7 @@ interface BackupStatus {
 	lastBackupAt: number | null;
 }
 
-type Control = 'toggle' | 'delete' | 'update';
+type Control = 'toggle' | 'delete' | 'update' | 'clear';
 
 type RowUpdateCheck =
 	| { state: 'checking' }
@@ -88,6 +89,10 @@ export function PluginsTab({ pluginStorage, pluginStart, showStartupNotice, isMi
 	const [showToken, setShowToken] = useState(false);
 	const [openInlineSettings, setOpenInlineSettings] = useState<Record<string, boolean>>({});
 	const [modalSettingsId, setModalSettingsId] = useState<string | null>(null);
+	const [clearedLoadErrors, setClearedLoadErrors] = useState<Record<string, boolean>>({});
+	const [reloadRequired, setReloadRequired] = useState(false);
+	const [deleteTargetId, setDeleteTargetId] = useState<string | null>(null);
+	const [deleteAlsoData, setDeleteAlsoData] = useState(true);
 	const runtimeErrors = useSyncExternalStore(subscribePluginRuntimeErrors, getPluginRuntimeErrors);
 	const { settings: pluginSettings } = useSyncExternalStore(subscribePluginUi, getPluginUiSnapshot);
 
@@ -98,11 +103,15 @@ export function PluginsTab({ pluginStorage, pluginStart, showStartupNotice, isMi
 
 	useEffect(() => {
 		unmountedRef.current = false;
+		const unsub = pluginStorage.subscribe?.(() => {
+			setPlugins(pluginStorage.plugins);
+		});
 		return () => {
 			unmountedRef.current = true;
 			batchRunRef.current += 1;
+			unsub?.();
 		};
-	}, []);
+	}, [pluginStorage]);
 
 	useEffect(() => {
 		if (!isMiyapadEndpoint) return;
@@ -311,12 +320,38 @@ export function PluginsTab({ pluginStorage, pluginStart, showStartupNotice, isMi
 		run(id, 'toggle', () => pluginStorage.setEnabled(id, true, APP_VERSION), { ...plugin, enabled: true, allowedVersion: APP_VERSION });
 	};
 
-	const remove = (id: string) => {
-		if (busy[id] || !confirm(t('plugins.deleteConfirm', { name: plugins[id].manifest.name }))) return;
+	const clearData = (id: string) => {
+		const plugin = plugins[id];
+		if (!plugin || busy[id]) return;
+		if (!confirm(t('plugins.clearDataConfirm', { name: plugin.manifest.name }))) return;
+		const wasEnabled = plugin.enabled;
+		run(id, 'clear', async () => {
+			await pluginStorage.clearData(id);
+			clearPluginRuntimeError(id);
+			setClearedLoadErrors(prev => ({ ...prev, [id]: true }));
+			if (wasEnabled) setReloadRequired(true);
+		});
+	};
+
+	const openDeleteModal = (id: string) => {
+		if (busy[id]) return;
+		setDeleteAlsoData(true);
+		setDeleteTargetId(id);
+	};
+
+	const confirmDelete = () => {
+		const id = deleteTargetId;
+		if (!id || !plugins[id] || busy[id]) {
+			setDeleteTargetId(null);
+			return;
+		}
+		const keepData = !deleteAlsoData;
+		setDeleteTargetId(null);
 		bumpRowMutation(id);
 		run(id, 'delete', async () => {
-			await pluginStorage.remove(id);
+			await pluginStorage.remove(id, { keepData });
 			clearPluginRuntimeError(id);
+			setClearedLoadErrors(({ [id]: _, ...rest }) => rest);
 			setOpenInlineSettings(({ [id]: _, ...rest }) => rest);
 			if (modalSettingsId === id) setModalSettingsId(null);
 			setUpdateChecks(({ [id]: _, ...rest }) => rest);
@@ -489,6 +524,7 @@ export function PluginsTab({ pluginStorage, pluginStart, showStartupNotice, isMi
 		: backup.lastBackupAt === null ? t('plugins.backupNone')
 		: t('plugins.backupLast', { time: formatTime(backup.lastBackupAt), minutes: backup.intervalMinutes ?? '' });
 
+	const registryError = pluginStart.registryError ?? pluginStorage.registryError ?? undefined;
 	const ids = Object.keys(plugins).sort((a, b) => comparePlugins(plugins, a, b));
 	const hasUrlPlugins = ids.some(id => Boolean(plugins[id].url));
 	const allSwitchedOffForServer = pluginStart.switchedOff.length > 0 && pluginStart.switchedOff.every(id => {
@@ -521,6 +557,7 @@ export function PluginsTab({ pluginStorage, pluginStart, showStartupNotice, isMi
 				</div>
 			`}
 			${pluginStart.safeMode && html`<div className="plugins-notice" role="status">${t('plugins.safeMode')}</div>`}
+			${registryError && html`<div className="plugins-error plugins-registry-error" role="alert">${t('plugins.registryUnreadable', { error: registryError })}</div>`}
 			<div className="plugins-import">
 				<button className=${importing === 'file' ? 'processing' : ''} disabled=${importing !== null} onClick=${importFile}>${t('plugins.importFile')}</button>
 				<button className=${importing === 'url' ? 'processing' : ''} disabled=${importing !== null} onClick=${importUrl}>${t('plugins.importUrl')}</button>
@@ -534,10 +571,11 @@ export function PluginsTab({ pluginStorage, pluginStart, showStartupNotice, isMi
 						const { manifest } = plugin;
 						const fit = checkVersion(manifest);
 						const missingServer = checkRequirements(manifest, host).includes('server');
-						const loadError = pluginStart.errors[id];
+						const loadError = clearedLoadErrors[id] ? undefined : pluginStart.errors[id];
 						const runtimeError = runtimeErrors[id];
 						const displayUrl = plugin.source ?? plugin.url;
 						const check = plugin.url ? updateChecks[id] : undefined;
+						const rowBusy = Boolean(busy[id]);
 						const settingsEntry = plugin.enabled && !pluginStart.safeMode && !loadError && !pluginStart.skipped.includes(id)
 							? pluginSettings[id]
 							: undefined;
@@ -560,13 +598,13 @@ export function PluginsTab({ pluginStorage, pluginStart, showStartupNotice, isMi
 											checked=${plugin.enabled}
 											ariaLabel=${t('plugins.run', { name: manifest.name })}
 											className=${busy[id] === 'toggle' ? 'processing' : undefined}
-											disabled=${busy[id] === 'delete' || busy[id] === 'update'}
+											disabled=${rowBusy && busy[id] !== 'toggle'}
 											onChange=${() => toggle(id)}/>
 										${settingsEntry && html`<button
 											type="button"
 											aria-label=${t('plugins.configurePlugin', { name: manifest.name })}
 											aria-expanded=${settingsEntry.mode === 'inline' ? isInlineOpen : undefined}
-											disabled=${busy[id] === 'delete' || busy[id] === 'toggle'}
+											disabled=${rowBusy}
 											onClick=${() => {
 												if (settingsEntry.mode === 'modal') {
 													setModalSettingsId(id);
@@ -578,13 +616,24 @@ export function PluginsTab({ pluginStorage, pluginStart, showStartupNotice, isMi
 										</button>`}
 										${plugin.url && html`<button aria-label=${t('plugins.updateRun', { name: manifest.name })}
 											className=${busy[id] === 'update' ? 'processing' : ''}
-											disabled=${busy[id] === 'toggle' || busy[id] === 'delete'}
+											disabled=${rowBusy && busy[id] !== 'update'}
 											onClick=${() => update(id)}>
 											${t('plugins.update')}
 										</button>`}
-										<button className=${busy[id] === 'delete' ? 'processing' : ''}
-											disabled=${busy[id] === 'toggle' || busy[id] === 'update'}
-											onClick=${() => remove(id)}>
+										<button
+											type="button"
+											aria-label=${t('plugins.clearDataPlugin', { name: manifest.name })}
+											className=${busy[id] === 'clear' ? 'processing' : ''}
+											disabled=${rowBusy && busy[id] !== 'clear'}
+											onClick=${() => clearData(id)}>
+											${t('plugins.clearData')}
+										</button>
+										<button
+											type="button"
+											aria-label=${t('plugins.deletePlugin', { name: manifest.name })}
+											className=${busy[id] === 'delete' ? 'processing' : ''}
+											disabled=${rowBusy && busy[id] !== 'delete'}
+											onClick=${() => openDeleteModal(id)}>
 											${t('plugins.delete')}
 										</button>
 									</div>
@@ -649,9 +698,33 @@ export function PluginsTab({ pluginStorage, pluginStart, showStartupNotice, isMi
 				</${InputBox}>
 			</div>
 			<div className="plugins-footer">
-				<span>${t('plugins.reloadNote')}</span>
+				<span className=${reloadRequired ? 'is-required' : undefined} role=${reloadRequired ? 'status' : undefined}>
+					${reloadRequired ? t('plugins.reloadRequired') : t('plugins.reloadNote')}
+				</span>
 				<button className=${reloading ? 'processing' : ''} onClick=${reload}>${t('plugins.reload')}</button>
 			</div>
+			${deleteTargetId && plugins[deleteTargetId] && html`
+				<${Modal}
+					isOpen=${true}
+					onClose=${() => setDeleteTargetId(null)}
+					title=${t('plugins.deleteTitle', { name: plugins[deleteTargetId].manifest.name })}>
+					<div className="plugins-delete-modal">
+						<p>${t('plugins.deleteConfirmPrompt', { name: plugins[deleteTargetId].manifest.name })}</p>
+						<${Checkbox}
+							label=${t('plugins.deleteAlsoData')}
+							value=${deleteAlsoData}
+							onValueChange=${setDeleteAlsoData}/>
+						<div className="plugins-delete-actions">
+							<button type="button" onClick=${() => setDeleteTargetId(null)}>
+								${t('plugins.cancel')}
+							</button>
+							<button type="button" onClick=${confirmDelete}>
+								${t('plugins.delete')}
+							</button>
+						</div>
+					</div>
+				</${Modal}>
+			`}
 			${modalSettingsId && plugins[modalSettingsId]?.enabled && pluginSettings[modalSettingsId]?.mode === 'modal' && html`
 				<${Modal}
 					isOpen=${true}

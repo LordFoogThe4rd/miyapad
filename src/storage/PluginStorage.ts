@@ -1,6 +1,9 @@
 import { AbstractStorage } from './AbstractStorage';
 import { coercePluginRecord } from './validators';
-import type { PluginData } from './PluginData';
+
+export interface PluginContainerStore {
+	deleteContainer(id: string): Promise<void>;
+}
 
 export interface PluginImportInput {
 	code: string;
@@ -14,6 +17,10 @@ export interface PluginUpdateInput {
 	code: string;
 	manifest: PluginManifest;
 	changelog?: string;
+}
+
+export interface PluginRemoveOptions {
+	keepData?: boolean;
 }
 
 export class PluginIdMismatchError extends Error {
@@ -34,26 +41,47 @@ export class PluginIdMismatchError extends Error {
  */
 export class PluginStorage extends AbstractStorage {
 	plugins: Record<string, PluginRecord> = {};
+	/** Non-null when the `Plugins` registry itself could not be read; nothing is run or deleted. */
+	registryError: string | null = null;
 	/** Settles once every save started so far has finished. Reload waits on it. */
 	pending: Promise<void> = Promise.resolve();
-	data: PluginData;
+	containers: PluginContainerStore;
+	#listeners = new Set<() => void>();
 
-	constructor(dbAdapter: DatabaseAdapter, data: PluginData) {
+	constructor(dbAdapter: DatabaseAdapter, containers: PluginContainerStore) {
 		super('Plugins', dbAdapter);
-		this.data = data;
+		this.containers = containers;
+	}
+
+	subscribe = (listener: () => void): (() => void) => {
+		this.#listeners.add(listener);
+		return () => { this.#listeners.delete(listener); };
+	};
+
+	#notify(): void {
+		for (const listener of this.#listeners) listener();
 	}
 
 	async init() {
-		const db = await this.openDatabase();
-		const raw = await this.loadAllFromDatabase(db);
 		this.plugins = {};
+		this.registryError = null;
+		let db: DbConnection;
+		let raw: Record<string, unknown>;
+		try {
+			db = await this.openDatabase();
+			raw = await this.loadAllFromDatabase(db);
+		} catch (e) {
+			this.registryError = e instanceof Error ? e.message : String(e);
+			console.error('[PluginStorage] Failed to read plugin registry:', e);
+			return;
+		}
 		for (const [id, value] of Object.entries(raw)) {
 			const record = coercePluginRecord(value, id);
 			if (record) {
 				this.plugins[id] = { ...record, manifest: { ...record.manifest, id } };
 			} else {
 				console.warn(`[PluginStorage] Removing invalid entry: ${id}`);
-				await this.data.deleteAll(id).catch(e => console.warn(`[PluginStorage] Failed to delete data for invalid entry: ${id}`, e));
+				await this.containers.deleteContainer(id).catch(e => console.warn(`[PluginStorage] Failed to delete data for invalid entry: ${id}`, e));
 				await this.deleteFromDatabase(db, id).catch(e => console.warn(`[PluginStorage] Failed to delete invalid entry: ${id}`, e));
 			}
 		}
@@ -71,6 +99,7 @@ export class PluginStorage extends AbstractStorage {
 			const next = record(this.plugins[id]);
 			await this.saveToDatabase(await this.openDatabase(), id, next);
 			this.plugins = { ...this.plugins, [id]: next };
+			this.#notify();
 		});
 	}
 
@@ -117,16 +146,27 @@ export class PluginStorage extends AbstractStorage {
 		});
 	}
 
-	/**
-	 * Deletes the plugin's data, then the plugin. They're two stores, so the two steps aren't
-	 * atomic. If the second fails, the plugin is left with no data and can be deleted again.
-	 */
-	remove(id: string): Promise<void> {
+	/** Deletes the plugin's saved data container while leaving the plugin itself installed. */
+	clearData(id: string): Promise<void> {
 		return this.#enqueue(async () => {
-			await this.data.deleteAll(id);
+			if (!this.plugins[id]) throw new Error(`No plugin "${id}"`);
+			await this.containers.deleteContainer(id);
+		});
+	}
+
+	/**
+	 * Deletes the plugin's container first (unless `keepData` is set), then its registry entry.
+	 * If the registry delete fails, the plugin stays listed with an empty container and can be retried.
+	 */
+	remove(id: string, options?: PluginRemoveOptions): Promise<void> {
+		return this.#enqueue(async () => {
+			if (!options?.keepData) {
+				await this.containers.deleteContainer(id);
+			}
 			await this.deleteFromDatabase(await this.openDatabase(), id);
 			const { [id]: _, ...rest } = this.plugins;
 			this.plugins = rest;
+			this.#notify();
 		});
 	}
 }

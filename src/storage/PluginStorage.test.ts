@@ -1,6 +1,5 @@
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 import { PluginIdMismatchError, PluginStorage } from './PluginStorage';
-import { PluginData } from './PluginData';
 
 const DB = 'db' as unknown as DbConnection;
 
@@ -19,9 +18,13 @@ const adapter = {
 	batchMutation: vi.fn(),
 } satisfies DatabaseAdapter;
 
+const containers = {
+	deleteContainer: vi.fn(),
+};
+
 async function storageWith(records: Record<string, unknown>) {
 	adapter.loadAllFromDatabase.mockResolvedValue(records);
-	const storage = new PluginStorage(adapter, new PluginData(adapter));
+	const storage = new PluginStorage(adapter, containers);
 	await storage.init();
 	return storage;
 }
@@ -35,6 +38,7 @@ beforeEach(() => {
 	adapter.saveToDatabase.mockResolvedValue(undefined);
 	adapter.deleteFromDatabase.mockResolvedValue(undefined);
 	adapter.batchMutation.mockResolvedValue(undefined);
+	containers.deleteContainer.mockResolvedValue(undefined);
 });
 
 afterEach(() => {
@@ -43,8 +47,7 @@ afterEach(() => {
 });
 
 describe('PluginStorage', () => {
-	it('deletes legacy flat records and invalid records along with their PluginData on load', async () => {
-		adapter.loadFromDatabase.mockImplementation(async (_db, _store, key) => (key === 'legacy' ? ['k1'] : undefined));
+	it('deletes legacy flat records and invalid records along with their containers on load', async () => {
 		const storage = await storageWith({
 			good: { code: 'x', enabled: true, manifest: makeManifest('good', { minMiyapad: '2.9.0' }), extra: 1 },
 			legacy: { code: 'x', enabled: true, min: '2.9.0' },
@@ -52,6 +55,7 @@ describe('PluginStorage', () => {
 			notRecord: 'x',
 		});
 
+		expect(storage.registryError).toBeNull();
 		expect(storage.plugins).toEqual({
 			good: {
 				code: 'x',
@@ -59,11 +63,19 @@ describe('PluginStorage', () => {
 				manifest: makeManifest('good', { minMiyapad: '2.9.0' }),
 			},
 		});
-		expect(adapter.batchMutation).toHaveBeenCalledWith(DB, 'PluginData', [
-			{ type: 'delete', key: 'legacy/k1' },
-			{ type: 'delete', key: 'legacy' },
-		]);
+		expect(containers.deleteContainer.mock.calls.map(([id]) => id).sort()).toEqual(['legacy', 'noCode', 'notRecord']);
 		expect(adapter.deleteFromDatabase.mock.calls.map(([, , key]) => key).sort()).toEqual(['legacy', 'noCode', 'notRecord']);
+	});
+
+	it('records registryError and deletes nothing when the Plugins registry cannot be read', async () => {
+		adapter.loadAllFromDatabase.mockRejectedValueOnce(new Error('corrupt registry'));
+		const storage = new PluginStorage(adapter, containers);
+		await storage.init();
+
+		expect(storage.registryError).toBe('corrupt registry');
+		expect(storage.plugins).toEqual({});
+		expect(containers.deleteContainer).not.toHaveBeenCalled();
+		expect(adapter.deleteFromDatabase).not.toHaveBeenCalled();
 	});
 
 	it('loads manifest-based records with changelog and source', async () => {
@@ -143,7 +155,7 @@ describe('PluginStorage', () => {
 		expect(storage.plugins.p.enabled).toBe(true);
 	});
 
-	it('imports with manifest, changelog and source switched off, dropping allowedVersion', async () => {
+	it('imports with manifest, changelog and source switched off, dropping allowedVersion and keeping container data', async () => {
 		const storage = await storageWith({ p: { code: 'old', enabled: true, allowedVersion: '2.9.0', manifest: makeManifest('p', { minMiyapad: '1.0' }) } });
 		const manifest: PluginManifest = { id: 'p', name: 'Pretty P', version: '1.2.0', order: 2, api: 1, maxMiyapad: '3.0' };
 		await storage.importPlugin({
@@ -162,7 +174,7 @@ describe('PluginStorage', () => {
 			url: 'https://example.com/p.miyaplugin',
 			source: 'https://github.com/o/p',
 		});
-		expect(adapter.batchMutation).not.toHaveBeenCalled();
+		expect(containers.deleteContainer).not.toHaveBeenCalled();
 	});
 
 	it('updates from the address, keeping enabled, url, source and data, and clearing allowedVersion', async () => {
@@ -188,7 +200,7 @@ describe('PluginStorage', () => {
 			changelog: '## [1.1.0]\n- Renamed',
 			manifest: nextManifest,
 		});
-		expect(adapter.batchMutation).not.toHaveBeenCalled();
+		expect(containers.deleteContainer).not.toHaveBeenCalled();
 	});
 
 	it('refuses an update whose manifest.id is for a different plugin', async () => {
@@ -210,15 +222,35 @@ describe('PluginStorage', () => {
 		expect(storage.plugins.p.code).toBe('old');
 	});
 
-	it('removes the plugin\'s data first, then the plugin', async () => {
+	it('clears a plugin\'s container data while keeping its registry record', async () => {
 		const storage = await storageWith({ p: { code: 'x', enabled: true, manifest: makeManifest('p') } });
-		adapter.loadFromDatabase.mockResolvedValue(['a']);
 
-		await storage.remove('p');
+		await storage.clearData('p');
 
-		expect(adapter.batchMutation).toHaveBeenCalledWith(DB, 'PluginData', [{ type: 'delete', key: 'p/a' }, { type: 'delete', key: 'p' }]);
-		expect(adapter.deleteFromDatabase).toHaveBeenCalledWith(DB, 'Plugins', 'p');
-		expect(adapter.batchMutation.mock.invocationCallOrder[0]).toBeLessThan(adapter.deleteFromDatabase.mock.invocationCallOrder[0]);
+		expect(containers.deleteContainer).toHaveBeenCalledWith('p');
+		expect(adapter.deleteFromDatabase).not.toHaveBeenCalled();
+		expect(storage.plugins.p).toBeDefined();
+		await expect(storage.clearData('missing')).rejects.toThrow('No plugin "missing"');
+	});
+
+	it('removes the container before the registry entry by default, and keeps container data when keepData is true', async () => {
+		const storage = await storageWith({
+			a: { code: 'x', enabled: true, manifest: makeManifest('a') },
+			b: { code: 'y', enabled: false, manifest: makeManifest('b') },
+		});
+
+		await storage.remove('a');
+		expect(containers.deleteContainer).toHaveBeenCalledWith('a');
+		expect(adapter.deleteFromDatabase).toHaveBeenCalledWith(DB, 'Plugins', 'a');
+		expect(containers.deleteContainer.mock.invocationCallOrder[0]).toBeLessThan(adapter.deleteFromDatabase.mock.invocationCallOrder[0]);
+		expect(storage.plugins.a).toBeUndefined();
+
+		containers.deleteContainer.mockClear();
+		adapter.deleteFromDatabase.mockClear();
+
+		await storage.remove('b', { keepData: true });
+		expect(containers.deleteContainer).not.toHaveBeenCalled();
+		expect(adapter.deleteFromDatabase).toHaveBeenCalledWith(DB, 'Plugins', 'b');
 		expect(storage.plugins).toEqual({});
 	});
 });

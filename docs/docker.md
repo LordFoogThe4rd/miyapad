@@ -40,7 +40,7 @@ See [Backend Server](backend-server.md) for the full list of options.
 
 ## Persistence
 
-The compose file mounts a named volume, `storage`, at `/storage`. The SQLite database lives there by default, so it survives container restarts.
+The compose file mounts a named volume, `storage`, at `/storage`. Both the main SQLite database (`/storage/web-session-storage.db`) and per-plugin containers (`/storage/plugins/*.db`) live there by default, so they survive container restarts.
 
 ## HTTPS
 

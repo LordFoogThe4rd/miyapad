@@ -18,12 +18,14 @@ miyapad/
 ├── server/                        # Node.js backend server
 │   ├── lib/                       # Core modules (database, auth, utils)
 │   │   ├── auth.ts                # Basic Auth middleware factory
-│   │   ├── backup.ts              # Auto-backup with VACUUM INTO, data_version check, rotation
+│   │   ├── backup.ts              # Auto-backup with VACUUM INTO (main DB + plugins/*.db), rotation
 │   │   ├── database.ts            # DB connection, migrations, zstd setup, maintenance
+│   │   ├── plugin-db.ts           # Per-plugin node:sqlite container manager (plugins/<id>.db)
 │   │   ├── update.ts              # Cached GitHub latest-release check for the update feature
 │   │   └── utils.ts               # Helpers (column names, store-name normalization, header filters)
 │   ├── routes/                    # Express route handlers by concern
-│   │   ├── data.ts                # /load, /save, /rename, /all, /sessions, /delete
+│   │   ├── data.ts                # /load, /save, /rename, /all, /sessions, /delete, /batch
+│   │   ├── plugin-db.ts           # /plugin-db/* KV and container-delete endpoints
 │   │   ├── proxy.ts               # /proxy, /proxy/* (GET/POST/DELETE), /proxy-url
 │   │   ├── system.ts              # /version, /vacuum, /log
 │   │   ├── tokenizer.ts           # /api/v1/tokenizer/* endpoints
@@ -59,7 +61,7 @@ miyapad/
     ├── i18n/                      # UI localization — context.tsx (provider + useT), locales.ts (registry), {code}.json string tables
     ├── importer/                  # Preset importers (.ts) — SillyTavern, NovelAI
     ├── plugins/                   # Plugin manifest, archive, changelog, URL sources, events, context, sessionData, generate (.ts)
-    ├── storage/                   # Storage adapters (.ts) — IndexedDB, Server REST API, etc.
+    ├── storage/                   # Storage adapters (.ts) — IndexedDB, Server REST API, PluginDatabase, etc.
     ├── types/                     # Ambient type declarations (.d.ts) — api, components, contexts, storage, defaults, global
     ├── utils/                     # Helpers (.ts) — regex, strings, errors
     └── styles.css                 # Entry point that @imports all css/ partials

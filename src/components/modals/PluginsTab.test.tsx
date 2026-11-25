@@ -16,9 +16,10 @@ const zipReply = (files: Record<string, string>) => {
 	return vi.fn(async () => new Response(bytes, { headers: { 'content-type': 'application/octet-stream' } }));
 };
 
-function storageWith(records: Record<string, PluginRecord>) {
+function storageWith(records: Record<string, PluginRecord>, registryError: string | null = null) {
 	const storage = {
 		plugins: { ...records },
+		registryError,
 		pending: Promise.resolve(),
 		importPlugin: vi.fn(async input => {
 			storage.plugins = {
@@ -51,7 +52,8 @@ function storageWith(records: Record<string, PluginRecord>) {
 				[id]: { ...storage.plugins[id], enabled, ...(allowedVersion ? { allowedVersion } : {}) },
 			};
 		}),
-		remove: vi.fn(async (id: string) => {
+		clearData: vi.fn(async (_id: string) => {}),
+		remove: vi.fn(async (id: string, _options?: { keepData?: boolean }) => {
 			const { [id]: _, ...rest } = storage.plugins;
 			storage.plugins = rest;
 		}),
@@ -59,9 +61,13 @@ function storageWith(records: Record<string, PluginRecord>) {
 	return storage as unknown as PluginStorage & typeof storage;
 }
 
-const renderTab = (pluginStorage: PluginStorage, isMiyapadEndpoint = false) =>
+const renderTab = (
+	pluginStorage: PluginStorage,
+	isMiyapadEndpoint = false,
+	pluginStartOverrides: Partial<Parameters<typeof PluginsTab>[0]['pluginStart']> = {},
+) =>
 	render(html`<${PluginsTab} pluginStorage=${pluginStorage}
-		pluginStart=${{ safeMode: false, switchedOff: [], errors: {}, timedOut: [], skipped: [] }}
+		pluginStart=${{ safeMode: false, switchedOff: [], errors: {}, timedOut: [], skipped: [], ...pluginStartOverrides }}
 		showStartupNotice=${false} isMiyapadEndpoint=${isMiyapadEndpoint} handleExportDB=${vi.fn()}/>`);
 
 beforeEach(() => {
@@ -415,5 +421,85 @@ describe('PluginsTab', () => {
 		// Broken settings component is isolated by PluginErrorBoundary
 		fireEvent.click(screen.getByRole('button', { name: 'Configure Broken Plugin' }));
 		expect(screen.getByText('Plugin "broken-p" failed to render.')).toBeTruthy();
+	});
+
+	it('clears plugin data with confirmation, recovers unreadable container errors, and marks reload required only when enabled', async () => {
+		const storage = storageWith({
+			off: {
+				code: '',
+				enabled: false,
+				manifest: { id: 'off', name: 'Broken Off', version: '1.0.0', order: 0, api: 1, minMiyapad: '2.0.0' },
+			},
+			active: {
+				code: '',
+				enabled: true,
+				manifest: { id: 'active', name: 'Active Counter', version: '1.0.0', order: 1, api: 1, minMiyapad: '2.0.0' },
+			},
+		});
+		renderTab(storage, false, {
+			errors: { off: 'PluginContainerError: file is not a database' },
+		});
+		act(() => { recordPluginRuntimeError('active', 'stale hook error'); });
+
+		expect(screen.getByText('Failed to start: PluginContainerError: file is not a database')).toBeTruthy();
+		expect(screen.getByText('Changes take effect after a reload.')).toBeTruthy();
+
+		// Clearing data on a disabled plugin clears its container and startup error without marking reload required
+		fireEvent.click(screen.getByRole('button', { name: 'Clear data for Broken Off' }));
+		await waitFor(() => expect(storage.clearData).toHaveBeenCalledWith('off'));
+		expect(confirm).toHaveBeenLastCalledWith(expect.stringContaining('Broken Off'));
+		expect(screen.queryByText('Failed to start: PluginContainerError: file is not a database')).toBeNull();
+		expect(screen.getByText('Changes take effect after a reload.')).toBeTruthy();
+
+		// Clearing data on an enabled plugin marks reload required and clears runtime errors
+		fireEvent.click(screen.getByRole('button', { name: 'Clear data for Active Counter' }));
+		await waitFor(() => expect(storage.clearData).toHaveBeenCalledWith('active'));
+		expect(screen.queryByText('Hook error: stale hook error')).toBeNull();
+		expect(screen.getByText('Reload required for changes to take effect.')).toBeTruthy();
+	});
+
+	it('opens a Modal delete confirmation with keep-data checkbox checked by default and respects unchecking it', async () => {
+		const storage = storageWith({
+			alpha: {
+				code: '',
+				enabled: false,
+				manifest: { id: 'alpha', name: 'Alpha Plugin', version: '1.0.0', order: 0, api: 1, minMiyapad: '2.0.0' },
+			},
+			beta: {
+				code: '',
+				enabled: false,
+				manifest: { id: 'beta', name: 'Beta Plugin', version: '1.0.0', order: 1, api: 1, minMiyapad: '2.0.0' },
+			},
+		});
+		renderTab(storage);
+
+		// Default: checkbox is checked -> keepData: false
+		fireEvent.click(screen.getByRole('button', { name: 'Delete Alpha Plugin' }));
+		const dialog1 = screen.getByRole('dialog', { name: 'Delete Alpha Plugin' });
+		expect(dialog1).toBeTruthy();
+		const checkbox1 = screen.getByLabelText('Also delete saved plugin data') as HTMLInputElement;
+		expect(checkbox1.checked).toBe(true);
+
+		fireEvent.click(screen.getByRole('button', { name: 'Delete' }));
+		await waitFor(() => expect(storage.remove).toHaveBeenCalledWith('alpha', { keepData: false }));
+		expect(screen.queryByText('Alpha Plugin')).toBeNull();
+
+		// Unchecked -> keepData: true
+		fireEvent.click(screen.getByRole('button', { name: 'Delete Beta Plugin' }));
+		const checkbox2 = screen.getByLabelText('Also delete saved plugin data') as HTMLInputElement;
+		expect(checkbox2.checked).toBe(true);
+		fireEvent.click(checkbox2);
+		expect(checkbox2.checked).toBe(false);
+
+		fireEvent.click(screen.getByRole('button', { name: 'Delete' }));
+		await waitFor(() => expect(storage.remove).toHaveBeenCalledWith('beta', { keepData: true }));
+		expect(screen.queryByText('Beta Plugin')).toBeNull();
+	});
+
+	it('displays an error alert when the plugin registry itself is unreadable', () => {
+		const storage = storageWith({}, 'SQLITE_CORRUPT');
+		renderTab(storage, true, { registryError: 'SQLITE_CORRUPT' });
+		expect(screen.getByRole('alert').textContent).toContain('SQLITE_CORRUPT');
+		expect(screen.getByRole('alert').textContent).toContain('No plugins were run and nothing was deleted.');
 	});
 });
