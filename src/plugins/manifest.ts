@@ -32,15 +32,11 @@ export function isValidPluginVersion(version: unknown): version is string {
 	return typeof version === 'string' && PLUGIN_VERSION_REGEX.test(version);
 }
 
-export interface ParsedPluginManifest extends PluginManifest {
-	version: string;
-}
-
 /**
  * Strictly validates a decoded `manifest.json` object from a `.miyaplugin` archive.
  * Unknown fields are ignored so newer archives still import on older Miyapad builds.
  */
-export function parseManifest(raw: unknown): ParsedPluginManifest {
+export function parseManifest(raw: unknown): PluginManifest {
 	if (!isRecord(raw)) {
 		throw new ManifestValidationError('manifest', 'manifest.json must be a JSON object');
 	}
@@ -54,7 +50,7 @@ export function parseManifest(raw: unknown): ParsedPluginManifest {
 		throw new ManifestValidationError('version', 'manifest.version must be plain numbers like 1.0.0');
 	}
 
-	const manifest: ParsedPluginManifest = {
+	const manifest: PluginManifest = {
 		id: raw.id,
 		name: raw.name,
 		version: raw.version,
@@ -130,21 +126,4 @@ export function parseManifest(raw: unknown): ParsedPluginManifest {
 	}
 
 	return manifest;
-}
-
-/** Builds a synthetic manifest for a legacy `.js` plugin without a `manifest.json`. */
-export function legacyManifest(
-	id: string,
-	header: { min?: string; max?: string; startTimeout?: number; hookTimeout?: number } = {},
-): PluginManifest {
-	return {
-		id,
-		name: id,
-		order: 0,
-		api: 1,
-		...(header.min !== undefined ? { minMiyapad: header.min } : {}),
-		...(header.max !== undefined ? { maxMiyapad: header.max } : {}),
-		...(header.startTimeout !== undefined ? { startTimeout: header.startTimeout } : {}),
-		...(header.hookTimeout !== undefined ? { hookTimeout: header.hookTimeout } : {}),
-	};
 }

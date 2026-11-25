@@ -1,5 +1,5 @@
 import { html } from 'htm/react';
-import { useEffect, useState, useSyncExternalStore } from 'react';
+import { useCallback, useEffect, useRef, useState, useSyncExternalStore } from 'react';
 import { useT } from '../../i18n';
 import { APP_VERSION } from '../../version';
 import {
@@ -7,20 +7,20 @@ import {
 	checkVersion,
 	clearPluginRuntimeError,
 	comparePlugins,
-	fetchPluginCode,
 	fetchPluginFromUrl,
 	getPluginRuntimeErrors,
-	isArchiveUrl,
-	parseHeader,
-	pluginNameFromUrl,
 	subscribePluginRuntimeErrors,
 	type PluginStartInfo,
 } from '../../plugins';
-import { parsePluginArchive, PluginArchiveError } from '../../plugins/archive';
+import { parsePluginArchive, PluginArchiveError, type ParsedPluginArchive } from '../../plugins/archive';
 import { extractChangelogSection } from '../../plugins/changelog';
-import { isHttpUrl, legacyManifest, SUPPORTED_PLUGIN_API } from '../../plugins/manifest';
+import { isHttpUrl, SUPPORTED_PLUGIN_API } from '../../plugins/manifest';
+import { describePluginSource, PluginSourceError, resolvePluginSource } from '../../plugins/sources';
+import { usePersistentState } from '../../hooks/usePersistentState';
 import { PluginIdMismatchError, type PluginImportInput, type PluginStorage } from '../../storage/PluginStorage';
+import { InputBox } from '../controls/InputBox';
 import { Switch } from '../controls/Switch';
+import { SVG_HideKey, SVG_ShowKey } from '../icons/index';
 
 interface PluginsTabProps {
 	pluginStorage: PluginStorage;
@@ -38,6 +38,14 @@ interface BackupStatus {
 }
 
 type Control = 'toggle' | 'delete' | 'update';
+
+type RowUpdateCheck =
+	| { state: 'checking' }
+	| { state: 'up-to-date' }
+	| { state: 'available'; change: string }
+	| { state: 'error'; detail: string };
+
+const UPDATE_CHECK_CONCURRENCY = 4;
 
 const formatTime = (ms: number) => {
 	const date = new Date(ms);
@@ -67,10 +75,27 @@ export function PluginsTab({ pluginStorage, pluginStart, showStartupNotice, isMi
 	const [plugins, setPlugins] = useState(pluginStorage.plugins);
 	const [busy, setBusy] = useState<Record<string, Control>>({});
 	const [errors, setErrors] = useState<Record<string, string>>({});
+	const [updateChecks, setUpdateChecks] = useState<Record<string, RowUpdateCheck>>({});
+	const [checkingUpdates, setCheckingUpdates] = useState(false);
 	const [importing, setImporting] = useState<'file' | 'url' | null>(null);
 	const [reloading, setReloading] = useState(false);
 	const [backup, setBackup] = useState<BackupStatus | 'error' | null>(null);
+	const [githubToken, setGithubToken] = usePersistentState('githubToken', '');
+	const [showToken, setShowToken] = useState(false);
 	const runtimeErrors = useSyncExternalStore(subscribePluginRuntimeErrors, getPluginRuntimeErrors);
+
+	const unmountedRef = useRef(false);
+	const batchRunRef = useRef(0);
+	const rowMutationRef = useRef<Record<string, number>>({});
+	const inflightRef = useRef(new Map<string, { url: string; promise: Promise<ParsedPluginArchive> }>());
+
+	useEffect(() => {
+		unmountedRef.current = false;
+		return () => {
+			unmountedRef.current = true;
+			batchRunRef.current += 1;
+		};
+	}, []);
 
 	useEffect(() => {
 		if (!isMiyapadEndpoint) return;
@@ -88,7 +113,7 @@ export function PluginsTab({ pluginStorage, pluginStart, showStartupNotice, isMi
 		: max !== undefined ? t('plugins.rangeMax', { max })
 		: t('plugins.rangeNone');
 
-	const formatArchiveError = (err: PluginArchiveError): string => {
+	const formatArchiveError = useCallback((err: PluginArchiveError): string => {
 		switch (err.kind) {
 			case 'archive-too-large':
 				return t('plugins.archiveTooLarge');
@@ -111,7 +136,127 @@ export function PluginsTab({ pluginStorage, pluginStart, showStartupNotice, isMi
 			case 'syntax-error':
 				return t('plugins.archiveSyntaxError', { error: err.message });
 		}
+	}, [t]);
+
+	const formatSourceError = (err: PluginSourceError): string => {
+		switch (err.kind) {
+			case 'bad-url':
+				return t('plugins.urlBadName');
+			case 'invalid-github-url':
+				return t('plugins.urlBadGithub');
+			case 'commit-without-path':
+				return t('plugins.urlCommitNeedsPath');
+			case 'missing-repo-path':
+				return t('plugins.urlRepoNeedsPath');
+			case 'github-auth-failed':
+				return t('plugins.urlAuthFailed');
+			case 'github-rate-limit':
+				return t('plugins.urlRateLimited');
+			case 'release-not-found':
+				return t('plugins.urlReleaseNotFound');
+			case 'no-release-asset':
+				return t('plugins.urlNoAsset');
+			case 'github-api-error':
+				return t('plugins.fetchFailed', { error: err.message });
+		}
 	};
+
+	const formatSourceLabel = (sourceOrUrl: string): string => {
+		const info = describePluginSource(sourceOrUrl);
+		switch (info.mode) {
+			case 'github-latest':
+				return t('plugins.sourceLatest', { repo: info.repo });
+			case 'github-tag':
+				return t('plugins.sourceRelease', { repo: info.repo, tag: info.tag });
+			case 'github-branch':
+				return t('plugins.sourceBranch', { repo: info.repo, branch: info.branch });
+			case 'github-commit':
+				return t('plugins.sourceCommit', { repo: info.repo, sha: info.shortSha });
+			case 'direct':
+				return t('plugins.fromUrl', { url: info.url });
+		}
+	};
+
+	const describeVersionChange = useCallback((fromVersion: string, toVersion: string): string => {
+		if (!fromVersion && !toVersion) return t('plugins.updateNoVersion');
+		if (fromVersion !== toVersion) return t('plugins.updateVersionChange', { from: fromVersion, to: toVersion });
+		return t('plugins.updateSameVersion', { version: toVersion });
+	}, [t]);
+
+	const bumpRowMutation = (id: string) => {
+		rowMutationRef.current[id] = (rowMutationRef.current[id] ?? 0) + 1;
+	};
+
+	const fetchArchiveFor = useCallback((id: string, url: string): Promise<ParsedPluginArchive> => {
+		const existing = inflightRef.current.get(id);
+		if (existing && existing.url === url) return existing.promise;
+		const promise = fetchPluginFromUrl(url, isMiyapadEndpoint).finally(() => {
+			if (inflightRef.current.get(id)?.promise === promise) {
+				inflightRef.current.delete(id);
+			}
+		});
+		inflightRef.current.set(id, { url, promise });
+		return promise;
+	}, [isMiyapadEndpoint]);
+
+	const checkAllUpdates = useCallback(async () => {
+		const currentPlugins = pluginStorage.plugins;
+		const targets = Object.keys(currentPlugins)
+			.sort((a, b) => comparePlugins(currentPlugins, a, b))
+			.filter(id => Boolean(currentPlugins[id]?.url));
+		if (targets.length === 0) return;
+
+		const runId = ++batchRunRef.current;
+		setCheckingUpdates(true);
+		setUpdateChecks(prev => {
+			const next = { ...prev };
+			for (const id of targets) next[id] = { state: 'checking' };
+			return next;
+		});
+
+		let cursor = 0;
+		const worker = async () => {
+			while (cursor < targets.length) {
+				if (unmountedRef.current || batchRunRef.current !== runId) return;
+				const id = targets[cursor++];
+				const initial = pluginStorage.plugins[id];
+				const url = initial?.url;
+				if (!url) continue;
+				const mutationBefore = rowMutationRef.current[id] ?? 0;
+
+				try {
+					const archive = await fetchArchiveFor(id, url);
+					if (unmountedRef.current || batchRunRef.current !== runId) return;
+					if ((rowMutationRef.current[id] ?? 0) !== mutationBefore) continue;
+					const latest = pluginStorage.plugins[id];
+					if (!latest) continue;
+
+					if (archive.manifest.id !== id) {
+						setUpdateChecks(prev => ({ ...prev, [id]: { state: 'error', detail: t('plugins.differentPlugin') } }));
+					} else if (archive.code === latest.code && archive.manifest.version === latest.manifest.version) {
+						setUpdateChecks(prev => ({ ...prev, [id]: { state: 'up-to-date' } }));
+					} else {
+						const change = describeVersionChange(latest.manifest.version, archive.manifest.version);
+						setUpdateChecks(prev => ({ ...prev, [id]: { state: 'available', change } }));
+					}
+				} catch (e) {
+					if (unmountedRef.current || batchRunRef.current !== runId) return;
+					if ((rowMutationRef.current[id] ?? 0) !== mutationBefore) continue;
+					const detail = e instanceof PluginArchiveError ? formatArchiveError(e) : e instanceof Error ? e.message : String(e);
+					setUpdateChecks(prev => ({ ...prev, [id]: { state: 'error', detail } }));
+				}
+			}
+		};
+
+		await Promise.all(Array.from({ length: Math.min(UPDATE_CHECK_CONCURRENCY, targets.length) }, worker));
+		if (!unmountedRef.current && batchRunRef.current === runId) {
+			setCheckingUpdates(false);
+		}
+	}, [describeVersionChange, fetchArchiveFor, formatArchiveError, pluginStorage, t]);
+
+	useEffect(() => {
+		void checkAllUpdates();
+	}, [checkAllUpdates]);
 
 	/** Copies the row from storage, which only holds what was saved, so a failed save puts the row back. */
 	const syncRow = (id: string) => setPlugins(p => {
@@ -159,21 +304,18 @@ export function PluginsTab({ pluginStorage, pluginStart, showStartupNotice, isMi
 
 	const remove = (id: string) => {
 		if (busy[id] || !confirm(t('plugins.deleteConfirm', { name: plugins[id].manifest.name }))) return;
+		bumpRowMutation(id);
 		run(id, 'delete', async () => {
 			await pluginStorage.remove(id);
 			clearPluginRuntimeError(id);
+			setUpdateChecks(({ [id]: _, ...rest }) => rest);
 		});
-	};
-
-	const badHeader = ({ bad }: ReturnType<typeof parseHeader>) => {
-		if (bad?.kind === 'version') return alert(t('plugins.badVersion', { version: bad.value }));
-		if (bad?.kind === 'timeout') return alert(t('plugins.badTimeout', { timeout: bad.value }));
 	};
 
 	/** Shared by file and URL imports: replace check, warning, compatibility notices, save. */
 	const install = async (input: PluginImportInput) => {
-		const resolvedId = pluginStorage.resolveId(input.manifest.id);
-		const existing = pluginStorage.plugins[resolvedId];
+		const id = input.manifest.id;
+		const existing = pluginStorage.plugins[id];
 		if (existing && !confirm(t('plugins.replaceConfirm', { name: existing.manifest.name }))) return;
 		const fit = checkVersion(input.manifest);
 		const missingReqs = checkRequirements(input.manifest, host);
@@ -188,10 +330,16 @@ export function PluginsTab({ pluginStorage, pluginStart, showStartupNotice, isMi
 		].join('\n\n');
 		if (!confirm(question)) return;
 		try {
-			await pluginStorage.importPlugin({ ...input, manifest: { ...input.manifest, id: resolvedId } });
-			clearPluginRuntimeError(resolvedId);
-			setErrors(({ [resolvedId]: _, ...rest }) => rest);
-			syncRow(resolvedId);
+			bumpRowMutation(id);
+			await pluginStorage.importPlugin(input);
+			clearPluginRuntimeError(id);
+			setErrors(({ [id]: _, ...rest }) => rest);
+			setUpdateChecks(prev => {
+				if (input.url) return { ...prev, [id]: { state: 'up-to-date' } };
+				const { [id]: _, ...rest } = prev;
+				return rest;
+			});
+			syncRow(id);
 		} catch (e) {
 			alert(t('plugins.importFailed', { error: String(e) }));
 		}
@@ -201,24 +349,14 @@ export function PluginsTab({ pluginStorage, pluginStart, showStartupNotice, isMi
 		if (importing) return;
 		const input = document.createElement('input');
 		input.type = 'file';
-		input.accept = '.miyaplugin,.js';
+		input.accept = '.miyaplugin';
 		input.onchange = async () => {
 			const file = input.files?.[0];
 			if (!file) return;
 			setImporting('file');
 			try {
-				if (file.name.toLowerCase().endsWith('.js')) {
-					const name = file.name.replace(/\.js$/i, '');
-					if (!name) return alert(t('plugins.emptyName'));
-					const code = await file.text();
-					const header = parseHeader(code);
-					if (header.bad !== undefined) return badHeader(header);
-					const resolvedId = pluginStorage.resolveId(name);
-					await install({ code, manifest: legacyManifest(resolvedId, header) });
-				} else {
-					const archive = parsePluginArchive(await readFileBytes(file));
-					await install({ code: archive.code, manifest: archive.manifest, changelog: archive.changelog });
-				}
+				const archive = parsePluginArchive(await readFileBytes(file));
+				await install({ code: archive.code, manifest: archive.manifest, changelog: archive.changelog });
 			} catch (e) {
 				if (e instanceof PluginArchiveError) alert(formatArchiveError(e));
 				else alert(t('plugins.importFailed', { error: String(e) }));
@@ -231,27 +369,25 @@ export function PluginsTab({ pluginStorage, pluginStart, showStartupNotice, isMi
 
 	const importUrl = async () => {
 		if (importing) return;
-		const url = prompt(t('plugins.urlPrompt'))?.trim();
-		if (!url) return;
-		if (!isHttpUrl(url) || (!isArchiveUrl(url) && !pluginNameFromUrl(url))) {
+		const rawUrl = prompt(t('plugins.urlPrompt'))?.trim();
+		if (!rawUrl) return;
+		if (!isHttpUrl(rawUrl)) {
 			return alert(t('plugins.urlBadName'));
 		}
 		setImporting('url');
 		try {
-			const fetched = await fetchPluginFromUrl(url, isMiyapadEndpoint);
-			if (fetched.kind === 'archive') {
-				const { archive } = fetched;
-				await install({ code: archive.code, manifest: archive.manifest, changelog: archive.changelog, url, source: url });
-			} else {
-				const name = pluginNameFromUrl(url);
-				if (!name) return alert(t('plugins.urlBadName'));
-				const header = parseHeader(fetched.code);
-				if (header.bad !== undefined) return badHeader(header);
-				const resolvedId = pluginStorage.resolveId(name);
-				await install({ code: fetched.code, manifest: legacyManifest(resolvedId, header), url, source: url });
-			}
+			const resolved = await resolvePluginSource(rawUrl, { token: githubToken });
+			const archive = await fetchPluginFromUrl(resolved.url, isMiyapadEndpoint);
+			await install({
+				code: archive.code,
+				manifest: archive.manifest,
+				changelog: archive.changelog,
+				url: resolved.url,
+				source: resolved.source,
+			});
 		} catch (e) {
-			if (e instanceof PluginArchiveError) alert(formatArchiveError(e));
+			if (e instanceof PluginSourceError) alert(formatSourceError(e));
+			else if (e instanceof PluginArchiveError) alert(formatArchiveError(e));
 			else alert(t('plugins.fetchFailed', { error: String(e) }));
 		} finally {
 			setImporting(null);
@@ -268,44 +404,20 @@ export function PluginsTab({ pluginStorage, pluginStart, showStartupNotice, isMi
 		setErrors(({ [id]: _, ...rest }) => rest);
 		try {
 			const latest = pluginStorage.plugins[id] ?? current;
-			if (latest.manifest.version === undefined) {
-				// Legacy .js plugins keep their synthetic manifest shape when updated.
-				const code = await fetchPluginCode(url, isMiyapadEndpoint);
-				if (code === latest.code) {
-					alert(t('plugins.upToDate', { name: latest.manifest.name }));
-					return;
-				}
-				const header = parseHeader(code);
-				if (header.bad !== undefined) return badHeader(header);
-				const nextManifest = legacyManifest(id, header);
-				const fit = checkVersion(nextManifest);
-				const question = [
-					t('plugins.updateConfirm', { name: latest.manifest.name, url: displayUrl }),
-					...(fit === 'mismatched' ? [t('plugins.importMismatched', { range: range(nextManifest), version: APP_VERSION })] : []),
-					...(fit === 'undeclared' ? [t('plugins.importUndeclared')] : []),
-				].join('\n\n');
-				if (!confirm(question)) return;
-				await pluginStorage.updatePlugin(id, { code, manifest: nextManifest });
-				clearPluginRuntimeError(id);
-				return;
-			}
-
-			const fetched = await fetchPluginFromUrl(url, isMiyapadEndpoint);
-			if (fetched.kind !== 'archive') {
-				throw new PluginArchiveError('not-zip', 'Not a valid .miyaplugin zip archive');
-			}
-			const { archive } = fetched;
-			if (archive.manifest.id.toLowerCase() !== id.toLowerCase()) {
+			const archive = await fetchArchiveFor(id, url);
+			if (archive.manifest.id !== id) {
+				bumpRowMutation(id);
+				setUpdateChecks(prev => ({ ...prev, [id]: { state: 'error', detail: t('plugins.differentPlugin') } }));
 				setErrors(errs => ({ ...errs, [id]: t('plugins.differentPlugin') }));
 				return;
 			}
 			if (archive.code === latest.code && archive.manifest.version === latest.manifest.version) {
+				bumpRowMutation(id);
+				setUpdateChecks(prev => ({ ...prev, [id]: { state: 'up-to-date' } }));
 				alert(t('plugins.upToDate', { name: latest.manifest.name }));
 				return;
 			}
-			const versionLine = archive.manifest.version !== latest.manifest.version
-				? t('plugins.updateVersionChange', { from: latest.manifest.version, to: archive.manifest.version })
-				: t('plugins.updateSameVersion', { version: archive.manifest.version });
+			const versionLine = describeVersionChange(latest.manifest.version, archive.manifest.version);
 			const notes = extractChangelogSection(archive.changelog, archive.manifest.version) ?? t('plugins.changelogNone');
 			const fit = checkVersion(archive.manifest);
 			const missingReqs = checkRequirements(archive.manifest, host);
@@ -316,19 +428,32 @@ export function PluginsTab({ pluginStorage, pluginStart, showStartupNotice, isMi
 				...(fit === 'mismatched' ? [t('plugins.importMismatched', { range: range(archive.manifest), version: APP_VERSION })] : []),
 				...(fit === 'undeclared' ? [t('plugins.importUndeclared')] : []),
 			].join('\n\n');
-			if (!confirm(question)) return;
+			if (!confirm(question)) {
+				bumpRowMutation(id);
+				setUpdateChecks(prev => ({ ...prev, [id]: { state: 'available', change: versionLine } }));
+				return;
+			}
+			bumpRowMutation(id);
 			await pluginStorage.updatePlugin(id, {
 				code: archive.code,
 				manifest: archive.manifest,
 				changelog: archive.changelog,
 			});
+			setUpdateChecks(prev => ({ ...prev, [id]: { state: 'up-to-date' } }));
 			clearPluginRuntimeError(id);
 		} catch (e) {
+			bumpRowMutation(id);
 			if (e instanceof PluginArchiveError) {
-				setErrors(errs => ({ ...errs, [id]: formatArchiveError(e) }));
+				const msg = formatArchiveError(e);
+				setUpdateChecks(prev => ({ ...prev, [id]: { state: 'error', detail: msg } }));
+				setErrors(errs => ({ ...errs, [id]: msg }));
 			} else if (e instanceof PluginIdMismatchError) {
-				setErrors(errs => ({ ...errs, [id]: t('plugins.differentPlugin') }));
+				const msg = t('plugins.differentPlugin');
+				setUpdateChecks(prev => ({ ...prev, [id]: { state: 'error', detail: msg } }));
+				setErrors(errs => ({ ...errs, [id]: msg }));
 			} else {
+				const detail = e instanceof Error ? e.message : String(e);
+				setUpdateChecks(prev => ({ ...prev, [id]: { state: 'error', detail } }));
 				setErrors(errs => ({ ...errs, [id]: t('plugins.updateFailed', { error: String(e) }) }));
 			}
 		} finally {
@@ -354,6 +479,7 @@ export function PluginsTab({ pluginStorage, pluginStart, showStartupNotice, isMi
 		: t('plugins.backupLast', { time: formatTime(backup.lastBackupAt), minutes: backup.intervalMinutes ?? '' });
 
 	const ids = Object.keys(plugins).sort((a, b) => comparePlugins(plugins, a, b));
+	const hasUrlPlugins = ids.some(id => Boolean(plugins[id].url));
 	const allSwitchedOffForServer = pluginStart.switchedOff.length > 0 && pluginStart.switchedOff.every(id => {
 		const plugin = plugins[id];
 		return plugin !== undefined && checkRequirements(plugin.manifest, host).includes('server');
@@ -387,6 +513,7 @@ export function PluginsTab({ pluginStorage, pluginStart, showStartupNotice, isMi
 			<div className="plugins-import">
 				<button className=${importing === 'file' ? 'processing' : ''} disabled=${importing !== null} onClick=${importFile}>${t('plugins.importFile')}</button>
 				<button className=${importing === 'url' ? 'processing' : ''} disabled=${importing !== null} onClick=${importUrl}>${t('plugins.importUrl')}</button>
+				${hasUrlPlugins && html`<button className=${checkingUpdates ? 'processing' : ''} disabled=${checkingUpdates} onClick=${checkAllUpdates}>${t('plugins.checkUpdates')}</button>`}
 			</div>
 			${ids.length === 0
 				? html`<p className="plugins-empty">${t('plugins.empty')}</p>`
@@ -399,14 +526,14 @@ export function PluginsTab({ pluginStorage, pluginStart, showStartupNotice, isMi
 						const loadError = pluginStart.errors[id];
 						const runtimeError = runtimeErrors[id];
 						const displayUrl = plugin.source ?? plugin.url;
+						const check = plugin.url ? updateChecks[id] : undefined;
 						return html`
 							<li className="plugins-row" key=${id}>
 								<div className="plugins-row-main">
 									<span className="plugins-name">${manifest.name}</span>
-									${manifest.version !== undefined && html`<span className="plugins-version">${manifest.version}</span>`}
+									<span className="plugins-version">${manifest.version}</span>
 									<span className="plugins-range">
 										${range(manifest)}
-										${manifest.version === undefined && html` · <span className="plugins-legacy">${t('plugins.noManifest')}</span>`}
 										${manifest.requires?.includes('server') && html` · <span className="plugins-requires">${t('plugins.requiresServer')}</span>`}
 										${fit !== 'fits' && html`<span className="plugins-mark" role="img"
 											title=${fit === 'mismatched' ? t('plugins.markMismatched', { version: APP_VERSION }) : t('plugins.markUndeclared')}
@@ -415,6 +542,15 @@ export function PluginsTab({ pluginStorage, pluginStart, showStartupNotice, isMi
 											title=${t('plugins.markRequiresServer')}
 											aria-label=${t('plugins.markRequiresServer')}>⚠</span>`}
 									</span>
+									${check && html`
+										<span className=${`plugins-update-state is-${check.state}`}
+											title=${check.state === 'error' ? check.detail : undefined}>
+											${check.state === 'checking' ? t('plugins.statusChecking')
+												: check.state === 'up-to-date' ? t('plugins.statusUpToDate')
+												: check.state === 'available' ? t('plugins.statusUpdateAvailable', { change: check.change })
+												: t('plugins.statusCheckFailed')}
+										</span>
+									`}
 									<${Switch}
 										checked=${plugin.enabled}
 										ariaLabel=${t('plugins.run', { name: manifest.name })}
@@ -440,7 +576,7 @@ export function PluginsTab({ pluginStorage, pluginStart, showStartupNotice, isMi
 										${manifest.homepage && html`<a href=${manifest.homepage} target="_blank" rel="noopener noreferrer">${t('plugins.homepage')}</a>`}
 									</div>
 								`}
-								${displayUrl && html`<div className="plugins-url" title=${displayUrl}>${t('plugins.fromUrl', { url: displayUrl })}</div>`}
+								${displayUrl && html`<div className="plugins-url" title=${displayUrl}>${formatSourceLabel(displayUrl)}</div>`}
 								${manifest.api > SUPPORTED_PLUGIN_API && html`<div className="plugins-error">${t('plugins.apiNewer', { api: manifest.api, supported: SUPPORTED_PLUGIN_API })}</div>`}
 								${loadError && html`<div className="plugins-error">${t('plugins.loadError', { error: loadError })}</div>`}
 								${runtimeError && html`<div className="plugins-error">${t('plugins.hookError', { error: runtimeError })}</div>`}
@@ -450,6 +586,26 @@ export function PluginsTab({ pluginStorage, pluginStart, showStartupNotice, isMi
 							</li>`;
 					})}
 				</ul>`}
+			<div className="plugins-github-token">
+				<${InputBox}
+					label=${t('plugins.githubToken')}
+					tooltip=${t('plugins.githubTokenTooltip')}
+					type=${showToken ? 'text' : 'password'}
+					autoComplete="off"
+					spellCheck=${false}
+					placeholder=${t('plugins.githubTokenPlaceholder')}
+					value=${githubToken}
+					onValueChange=${(v: string | number) => setGithubToken(String(v))}>
+					<button
+						type="button"
+						className="eye-button"
+						title=${showToken ? t('connection.hide') : t('connection.show')}
+						aria-label=${showToken ? t('connection.hide') : t('connection.show')}
+						onClick=${() => setShowToken(s => !s)}>
+						${!showToken ? html`<${SVG_ShowKey}/>` : html`<${SVG_HideKey}/>`}
+					</button>
+				</${InputBox}>
+			</div>
 			<div className="plugins-footer">
 				<span>${t('plugins.reloadNote')}</span>
 				<button className=${reloading ? 'processing' : ''} onClick=${reload}>${t('plugins.reload')}</button>

@@ -261,15 +261,6 @@ describe('isInstructTemplate', () => {
 });
 
 describe('coercePluginRecord', () => {
-  it('converts a legacy flat record into a synthetic manifest', () => {
-    expect(coercePluginRecord({ code: '1;', enabled: true, min: '2.9.0', hookTimeout: 15 }, 'legacy'))
-      .toEqual({
-        code: '1;',
-        enabled: true,
-        manifest: { id: 'legacy', name: 'legacy', order: 0, api: 1, minMiyapad: '2.9.0', hookTimeout: 15 },
-      });
-  });
-
   it('preserves a manifest-shaped record and defaults invalid optional manifest numbers', () => {
     expect(coercePluginRecord({
       code: '1;',
@@ -288,9 +279,12 @@ describe('coercePluginRecord', () => {
     });
   });
 
-  it('returns null for missing code, enabled, or key on legacy records', () => {
+  it('rejects legacy flat records and records with missing or invalid manifest fields', () => {
+    expect(coercePluginRecord({ code: '1;', enabled: true, min: '2.9.0', hookTimeout: 15 }, 'legacy')).toBeNull();
     expect(coercePluginRecord({ code: '1;', enabled: true })).toBeNull();
-    expect(coercePluginRecord({ code: 1, enabled: true }, 'p')).toBeNull();
-    expect(coercePluginRecord({ code: '1;', enabled: true, manifest: { id: 'p', name: '' } }, 'p')).toBeNull();
+    expect(coercePluginRecord({ code: 1, enabled: true, manifest: { id: 'p', name: 'P', version: '1.0.0' } }, 'p')).toBeNull();
+    expect(coercePluginRecord({ code: '1;', enabled: true, manifest: { id: 'p', name: '', version: '1.0.0' } }, 'p')).toBeNull();
+    expect(coercePluginRecord({ code: '1;', enabled: true, manifest: { id: 'p', name: 'P' } }, 'p')).toBeNull();
+    expect(coercePluginRecord({ code: '1;', enabled: true, manifest: { id: 'BadId', name: 'P', version: '1.0.0' } }, 'BadId')).toBeNull();
   });
 });

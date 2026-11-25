@@ -1,5 +1,5 @@
 import { unzipSync } from 'fflate';
-import { ManifestValidationError, parseManifest, type ParsedPluginManifest } from './manifest';
+import { ManifestValidationError, parseManifest } from './manifest';
 
 export const MAX_ARCHIVE_BYTES = 10 * 1024 * 1024;
 export const MAX_DECOMPRESSED_BYTES = 20 * 1024 * 1024;
@@ -31,7 +31,7 @@ export class PluginArchiveError extends Error {
 }
 
 export interface ParsedPluginArchive {
-	manifest: ParsedPluginManifest;
+	manifest: PluginManifest;
 	code: string;
 	changelog?: string;
 }
@@ -108,7 +108,7 @@ export function parsePluginArchive(bytes: Uint8Array): ParsedPluginArchive {
 		throw new PluginArchiveError('bad-manifest-json', 'manifest.json is not valid JSON');
 	}
 
-	let manifest: ParsedPluginManifest;
+	let manifest: PluginManifest;
 	try {
 		manifest = parseManifest(decodedManifest);
 	} catch (e) {

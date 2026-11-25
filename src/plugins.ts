@@ -1,7 +1,7 @@
 import { APP_VERSION } from './version';
 import { isNewer } from './hooks/useUpdateCheck';
-import { isZipBytes, parsePluginArchive, type ParsedPluginArchive } from './plugins/archive';
-import { PLUGIN_VERSION_REGEX, SUPPORTED_PLUGIN_API } from './plugins/manifest';
+import { isZipBytes, parsePluginArchive, PluginArchiveError, type ParsedPluginArchive } from './plugins/archive';
+import { SUPPORTED_PLUGIN_API } from './plugins/manifest';
 import type { PluginStorage } from './storage/PluginStorage';
 
 export type PromptHook = (prompt: string) => string | Promise<string>;
@@ -86,97 +86,24 @@ export interface HostCapabilities {
 export const DEFAULT_PLUGIN_START_TIMEOUT_S = 5;
 export const DEFAULT_PLUGIN_HOOK_TIMEOUT_S = 10;
 
-const SECONDS = /^[1-9]\d*$/;
-
-export interface PluginHeader {
-	min?: string;
-	max?: string;
-	/** `// @miyapad-start-timeout`, in whole seconds. */
-	startTimeout?: number;
-	/** `// @miyapad-hook-timeout`, in whole seconds. */
-	hookTimeout?: number;
-	/** A version or timeout line that isn't accepted, which rejects the import. */
-	bad?: { kind: 'version' | 'timeout'; value: string };
-}
-
-/** Reads `// @miyapad-min`, `// @miyapad-max` and the two timeout lines from the comment lines at the top of a legacy `.js` file. */
-export function parseHeader(code: string): PluginHeader {
-	const header: PluginHeader = {};
-	for (const line of code.split('\n').map(l => l.trim())) {
-		if (line === '') continue;
-		if (!line.startsWith('//')) break;
-		const match = /^\/\/\s*@miyapad-(min|max|start-timeout|hook-timeout)\b\s*(.*)$/.exec(line);
-		if (!match) continue;
-		if (match[1] === 'min' || match[1] === 'max') {
-			if (!PLUGIN_VERSION_REGEX.test(match[2])) return { bad: { kind: 'version', value: match[2] } };
-			header[match[1]] = match[2];
-		} else {
-			if (!SECONDS.test(match[2])) return { bad: { kind: 'timeout', value: match[2] } };
-			header[match[1] === 'start-timeout' ? 'startTimeout' : 'hookTimeout'] = Number(match[2]);
-		}
-	}
-	return header;
-}
-
 /**
- * The name a legacy `.js` plugin imported from an address gets: the last part of its path, without `.js`.
- * Undefined when the address isn't http(s) or has no file name, so the import is refused.
+ * Fetches and parses a `.miyaplugin` zip archive from an address.
+ * Checks zip magic bytes rather than trusting `Content-Type`.
  */
-export function pluginNameFromUrl(url: string): string | undefined {
-	let parsed: URL;
-	try {
-		parsed = new URL(url);
-	} catch {
-		return undefined;
-	}
-	if (parsed.protocol !== 'http:' && parsed.protocol !== 'https:') return undefined;
-	const segment = parsed.pathname.split('/').filter(Boolean).pop();
-	return segment?.replace(/\.js$/i, '') || undefined;
-}
-
-export function isArchiveUrl(url: string): boolean {
-	try {
-		const parsed = new URL(url);
-		if (parsed.protocol !== 'http:' && parsed.protocol !== 'https:') return false;
-		return /\.(miyaplugin|zip)$/i.test(parsed.pathname);
-	} catch {
-		return false;
-	}
-}
-
-/**
- * Reads a legacy `.js` plugin's code from an address. Kept for callers expecting text.
- */
-export async function fetchPluginCode(url: string, viaServer: boolean): Promise<string> {
+export async function fetchPluginFromUrl(url: string, viaServer: boolean): Promise<ParsedPluginArchive> {
 	const res = await fetch(viaServer ? `/proxy-url?url=${encodeURIComponent(url)}` : url, { cache: 'no-store' });
-	if (!res.ok) throw new Error(`${res.status} ${res.statusText}`);
-	if ((res.headers.get('content-type') ?? '').includes('text/html')) throw new Error('That address is a web page, not a .js file');
-	return res.text();
-}
-
-export type FetchedPlugin =
-	| { kind: 'archive'; archive: ParsedPluginArchive }
-	| { kind: 'legacy'; code: string };
-
-/**
- * Fetches either a `.miyaplugin` zip archive or a legacy `.js` file from an address.
- * Checks zip magic bytes (and archive extensions) rather than trusting `Content-Type`.
- */
-export async function fetchPluginFromUrl(url: string, viaServer: boolean): Promise<FetchedPlugin> {
-	const res = await fetch(viaServer ? `/proxy-url?url=${encodeURIComponent(url)}` : url, { cache: 'no-store' });
-	if (!res.ok) throw new Error(`${res.status} ${res.statusText}`);
-	if ((res.headers.get('content-type') ?? '').includes('text/html')) {
-		throw new Error('That address is a web page, not a plugin file');
+	if (res.status === 413) {
+		throw new PluginArchiveError('archive-too-large', 'Plugin archive exceeds the 10 MB limit');
 	}
-	const archiveUrl = isArchiveUrl(url);
-	if (typeof res.arrayBuffer === 'function') {
-		const bytes = new Uint8Array(await res.arrayBuffer());
-		if (isZipBytes(bytes) || archiveUrl) {
-			return { kind: 'archive', archive: parsePluginArchive(bytes) };
-		}
-		return { kind: 'legacy', code: new TextDecoder().decode(bytes) };
+	if (!res.ok) throw new Error(`${res.status} ${res.statusText}`);
+	if ((res.headers.get('content-type') ?? '').toLowerCase().includes('text/html')) {
+		throw new Error('That address is a web page, not a .miyaplugin archive');
 	}
-	return { kind: 'legacy', code: await res.text() };
+	const bytes = new Uint8Array(await res.arrayBuffer());
+	if (!isZipBytes(bytes)) {
+		throw new PluginArchiveError('not-zip', 'Not a valid .miyaplugin zip archive');
+	}
+	return parsePluginArchive(bytes);
 }
 
 export type PluginFit = 'fits' | 'mismatched' | 'undeclared';

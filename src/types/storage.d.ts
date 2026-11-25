@@ -58,7 +58,7 @@ type PluginCapability = 'server';
 interface PluginManifest {
   id: string;
   name: string;
-  version?: string;
+  version: string;
   description?: string;
   author?: string;
   homepage?: string;

@@ -15,6 +15,7 @@
 | `/sessions` | POST | Fetches every session's key and metadata from the `names` table. |
 | `/proxy` | POST/GET/DELETE | Sends the LLM API request straight to the URL in the `X-Real-URL` header. Used when the frontend decides your endpoint already includes a full API path. |
 | `/proxy/*` | POST/GET/DELETE | Appends the wildcard path to the `X-Real-URL` base URL. Used when the frontend fills in a standard API path (e.g. `/v1/completions`). Both proxy routes get around CORS and support token streaming. |
+| `/proxy-url` | GET | Fetches a binary URL (`?url=…`) on the client's behalf for screenshot images and `.miyaplugin` archives, following up to 5 `http(s)` redirects and rejecting bodies over 10 MB (`413`). |
 | `/zstd_get_configs` | GET | Lists the active `sqlite-zstd` table configs. |
 | `/zstd_enable_transparent`| POST | Turns on transparent compression for a table. |
 | `/zstd_update_transparent`| POST | Changes compression config parameters. |

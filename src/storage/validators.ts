@@ -1,4 +1,4 @@
-import { isHttpUrl, isValidPluginVersion, legacyManifest } from '../plugins/manifest';
+import { isHttpUrl, isValidPluginId, isValidPluginVersion } from '../plugins/manifest';
 
 function isOptionalString(value: unknown): value is string | undefined {
   return value === undefined || typeof value === 'string';
@@ -90,17 +90,18 @@ export function coerceThemeData(value: unknown): ThemeData | null {
 
 function coerceStoredManifest(value: unknown, fallbackId?: string): PluginManifest | null {
   if (!isRecord(value)) return null;
-  const id = typeof value.id === 'string' && value.id.length > 0 ? value.id : fallbackId;
+  const id = isValidPluginId(value.id) ? value.id : isValidPluginId(fallbackId) ? fallbackId : undefined;
   if (!id) return null;
   if (typeof value.name !== 'string' || value.name.trim().length === 0) return null;
+  if (!isValidPluginVersion(value.version)) return null;
 
   const manifest: PluginManifest = {
     id,
     name: value.name,
+    version: value.version,
     order: typeof value.order === 'number' && Number.isSafeInteger(value.order) ? value.order : 0,
     api: typeof value.api === 'number' && Number.isSafeInteger(value.api) && value.api >= 1 ? value.api : 1,
   };
-  if (isValidPluginVersion(value.version)) manifest.version = value.version;
   if (typeof value.description === 'string') manifest.description = value.description;
   if (typeof value.author === 'string') manifest.author = value.author;
   if (typeof value.homepage === 'string' && isHttpUrl(value.homepage)) manifest.homepage = value.homepage;
@@ -121,22 +122,7 @@ export function coercePluginRecord(value: unknown, key?: string): PluginRecord |
   if (!isRecord(value)) return null;
   if (typeof value.code !== 'string' || typeof value.enabled !== 'boolean') return null;
 
-  let manifest: PluginManifest | null;
-  if (value.manifest !== undefined) {
-    manifest = coerceStoredManifest(value.manifest, key);
-  } else {
-    if (typeof key !== 'string' || key.length === 0) return null;
-    manifest = legacyManifest(key, {
-      ...(isValidPluginVersion(value.min) ? { min: value.min } : {}),
-      ...(isValidPluginVersion(value.max) ? { max: value.max } : {}),
-      ...(typeof value.startTimeout === 'number' && Number.isFinite(value.startTimeout) && value.startTimeout > 0
-        ? { startTimeout: value.startTimeout }
-        : {}),
-      ...(typeof value.hookTimeout === 'number' && Number.isFinite(value.hookTimeout) && value.hookTimeout > 0
-        ? { hookTimeout: value.hookTimeout }
-        : {}),
-    });
-  }
+  const manifest = coerceStoredManifest(value.manifest, key);
   if (!manifest) return null;
 
   const record: PluginRecord = {

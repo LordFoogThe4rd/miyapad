@@ -35,6 +35,9 @@ export function safeFinalUrl(targetBaseUrl: string, path: string): string | null
     return finalUrl;
 }
 
+export const MAX_PROXY_URL_REDIRECTS = 5;
+export const MAX_PROXY_URL_BYTES = 10 * 1024 * 1024;
+
 export default function(app: Express): void {
     // Named for what it does rather than for images alone: the plugins tab fetches plugin code through it too.
     app.get('/proxy-url', async (req: Request, res: Response) => {
@@ -51,14 +54,31 @@ export default function(app: Express): void {
                 headers: {
                     'User-Agent': 'Mozilla/5.0',
                 },
-                maxRedirects: 0,
+                maxRedirects: MAX_PROXY_URL_REDIRECTS,
+                maxContentLength: MAX_PROXY_URL_BYTES,
+                beforeRedirect: (options: { protocol?: string }) => {
+                    if (options.protocol && !['http:', 'https:'].includes(options.protocol)) {
+                        throw new Error('Disallowed redirect protocol');
+                    }
+                },
             });
-            res.set('Content-Type', response.headers['content-type'] as string);
+            if (response.headers['content-type']) {
+                res.set('Content-Type', response.headers['content-type'] as string);
+            }
             res.set('Access-Control-Allow-Origin', '*');
             res.set('Cache-Control', 'public, max-age=86400');
             res.send(Buffer.from(response.data as ArrayBuffer));
         } catch (e: unknown) {
-            res.status(axios.isAxiosError(e) ? e.response?.status || 500 : 500).send('Failed to fetch image');
+            if (axios.isAxiosError(e)) {
+                if (e.code === 'ERR_BAD_RESPONSE' && /maxContentLength/i.test(e.message)) {
+                    return res.status(413).send('Response exceeds size limit');
+                }
+                if (e.code === 'ERR_FR_TOO_MANY_REDIRECTS' || /Disallowed redirect protocol/i.test(e.message)) {
+                    return res.status(502).send('Too many or disallowed redirects');
+                }
+                return res.status(e.response?.status || 502).send('Failed to fetch URL');
+            }
+            res.status(500).send('Failed to fetch URL');
         }
     });
 

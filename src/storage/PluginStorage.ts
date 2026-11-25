@@ -53,6 +53,7 @@ export class PluginStorage extends AbstractStorage {
 				this.plugins[id] = { ...record, manifest: { ...record.manifest, id } };
 			} else {
 				console.warn(`[PluginStorage] Removing invalid entry: ${id}`);
+				await this.data.deleteAll(id).catch(e => console.warn(`[PluginStorage] Failed to delete data for invalid entry: ${id}`, e));
 				await this.deleteFromDatabase(db, id).catch(e => console.warn(`[PluginStorage] Failed to delete invalid entry: ${id}`, e));
 			}
 		}
@@ -81,27 +82,13 @@ export class PluginStorage extends AbstractStorage {
 		});
 	}
 
-	/**
-	 * The registry key this plugin would replace: legacy `.js` names that differ only in case
-	 * map to the existing key so `Foo.js` replaces `foo` and keeps its saved data.
-	 */
-	resolveId(id: string): string {
-		if (Object.hasOwn(this.plugins, id)) return id;
-		const lower = id.toLowerCase();
-		return Object.keys(this.plugins).find(key => key.toLowerCase() === lower) ?? id;
-	}
-
-	resolveName(name: string): string {
-		return this.resolveId(name);
-	}
-
 	/** Saves the plugin switched off. Replacing one keeps its saved data and drops its `allowedVersion`. */
 	importPlugin({ code, manifest, changelog, url, source }: PluginImportInput): Promise<void> {
-		const id = this.resolveId(manifest.id);
+		const id = manifest.id;
 		return this.#save(id, () => ({
 			code,
 			enabled: false,
-			manifest: { ...manifest, id },
+			manifest,
 			...(changelog !== undefined ? { changelog } : {}),
 			...(url !== undefined ? { url } : {}),
 			...(source !== undefined ? { source } : {}),
@@ -116,13 +103,13 @@ export class PluginStorage extends AbstractStorage {
 	updatePlugin(id: string, { code, manifest, changelog }: PluginUpdateInput): Promise<void> {
 		return this.#save(id, current => {
 			if (!current) throw new Error(`No plugin "${id}"`);
-			if (manifest.id.toLowerCase() !== id.toLowerCase()) {
+			if (manifest.id !== id) {
 				throw new PluginIdMismatchError(id, manifest.id);
 			}
 			return {
 				code,
 				enabled: current.enabled,
-				manifest: { ...manifest, id },
+				manifest,
 				...(changelog !== undefined ? { changelog } : {}),
 				...(current.url !== undefined ? { url: current.url } : {}),
 				...(current.source !== undefined ? { source: current.source } : {}),

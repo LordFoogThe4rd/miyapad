@@ -1,9 +1,12 @@
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
-import { legacyManifest } from '../plugins/manifest';
 import { PluginIdMismatchError, PluginStorage } from './PluginStorage';
 import { PluginData } from './PluginData';
 
 const DB = 'db' as unknown as DbConnection;
+
+function makeManifest(id: string, overrides: Partial<PluginManifest> = {}): PluginManifest {
+	return { id, name: id, version: '1.0.0', order: 0, api: 1, ...overrides };
+}
 
 const adapter = {
 	openDatabase: vi.fn(),
@@ -40,9 +43,11 @@ afterEach(() => {
 });
 
 describe('PluginStorage', () => {
-	it('converts legacy flat records into synthetic manifests and drops invalid records on load', async () => {
+	it('deletes legacy flat records and invalid records along with their PluginData on load', async () => {
+		adapter.loadFromDatabase.mockImplementation(async (_db, _store, key) => (key === 'legacy' ? ['k1'] : undefined));
 		const storage = await storageWith({
-			good: { code: 'x', enabled: true, min: '2.9.0', extra: 1 },
+			good: { code: 'x', enabled: true, manifest: makeManifest('good', { minMiyapad: '2.9.0' }), extra: 1 },
+			legacy: { code: 'x', enabled: true, min: '2.9.0' },
 			noCode: { enabled: true },
 			notRecord: 'x',
 		});
@@ -51,10 +56,14 @@ describe('PluginStorage', () => {
 			good: {
 				code: 'x',
 				enabled: true,
-				manifest: { id: 'good', name: 'good', order: 0, api: 1, minMiyapad: '2.9.0' },
+				manifest: makeManifest('good', { minMiyapad: '2.9.0' }),
 			},
 		});
-		expect(adapter.deleteFromDatabase.mock.calls.map(([, , key]) => key).sort()).toEqual(['noCode', 'notRecord']);
+		expect(adapter.batchMutation).toHaveBeenCalledWith(DB, 'PluginData', [
+			{ type: 'delete', key: 'legacy/k1' },
+			{ type: 'delete', key: 'legacy' },
+		]);
+		expect(adapter.deleteFromDatabase.mock.calls.map(([, , key]) => key).sort()).toEqual(['legacy', 'noCode', 'notRecord']);
 	});
 
 	it('loads manifest-based records with changelog and source', async () => {
@@ -81,21 +90,21 @@ describe('PluginStorage', () => {
 
 	it('keeps timeout fields only when they are finite and positive', async () => {
 		const storage = await storageWith({
-			good: { code: 'x', enabled: true, startTimeout: 12, hookTimeout: 30 },
-			zero: { code: 'x', enabled: true, startTimeout: 0 },
-			negative: { code: 'x', enabled: true, hookTimeout: -1 },
-			notNumber: { code: 'x', enabled: true, startTimeout: '5' },
-			infinite: { code: 'x', enabled: true, hookTimeout: Infinity },
+			good: { code: 'x', enabled: true, manifest: { ...makeManifest('good'), startTimeout: 12, hookTimeout: 30 } },
+			zero: { code: 'x', enabled: true, manifest: { ...makeManifest('zero'), startTimeout: 0 } },
+			negative: { code: 'x', enabled: true, manifest: { ...makeManifest('negative'), hookTimeout: -1 } },
+			'not-number': { code: 'x', enabled: true, manifest: { ...makeManifest('not-number'), startTimeout: '5' } },
+			infinite: { code: 'x', enabled: true, manifest: { ...makeManifest('infinite'), hookTimeout: Infinity } },
 		});
 
-		expect(storage.plugins.good.manifest).toEqual({ id: 'good', name: 'good', order: 0, api: 1, startTimeout: 12, hookTimeout: 30 });
-		for (const name of ['zero', 'negative', 'notNumber', 'infinite']) {
-			expect(storage.plugins[name].manifest).toEqual({ id: name, name, order: 0, api: 1 });
+		expect(storage.plugins.good.manifest).toEqual(makeManifest('good', { startTimeout: 12, hookTimeout: 30 }));
+		for (const name of ['zero', 'negative', 'not-number', 'infinite']) {
+			expect(storage.plugins[name].manifest).toEqual(makeManifest(name));
 		}
 	});
 
 	it('settles pending only after the save has reached the adapter', async () => {
-		const storage = await storageWith({ p: { code: 'x', enabled: false } });
+		const storage = await storageWith({ p: { code: 'x', enabled: false, manifest: makeManifest('p') } });
 		let finish!: () => void;
 		adapter.saveToDatabase.mockReturnValueOnce(new Promise<void>(resolve => { finish = resolve; }));
 
@@ -106,7 +115,7 @@ describe('PluginStorage', () => {
 		expect(adapter.saveToDatabase).toHaveBeenCalledWith(DB, 'Plugins', 'p', {
 			code: 'x',
 			enabled: true,
-			manifest: { id: 'p', name: 'p', order: 0, api: 1 },
+			manifest: makeManifest('p'),
 		});
 		expect(settled).toBe(false);
 		expect(storage.plugins.p.enabled).toBe(false);
@@ -119,7 +128,7 @@ describe('PluginStorage', () => {
 	});
 
 	it('keeps the old record when a save fails, and pending still settles', async () => {
-		const storage = await storageWith({ p: { code: 'x', enabled: false } });
+		const storage = await storageWith({ p: { code: 'x', enabled: false, manifest: makeManifest('p') } });
 		adapter.saveToDatabase.mockRejectedValueOnce(new Error('disk full'));
 
 		await expect(storage.setEnabled('p', true)).rejects.toThrow('disk full');
@@ -128,14 +137,14 @@ describe('PluginStorage', () => {
 	});
 
 	it('records the version a mismatched plugin was switched on for', async () => {
-		const storage = await storageWith({ p: { code: 'x', enabled: false, max: '1.0' } });
+		const storage = await storageWith({ p: { code: 'x', enabled: false, manifest: makeManifest('p', { maxMiyapad: '1.0' }) } });
 		await storage.setEnabled('p', true, '2.9.0');
 		expect(storage.plugins.p.allowedVersion).toBe('2.9.0');
 		expect(storage.plugins.p.enabled).toBe(true);
 	});
 
 	it('imports with manifest, changelog and source switched off, dropping allowedVersion', async () => {
-		const storage = await storageWith({ p: { code: 'old', enabled: true, min: '1.0', allowedVersion: '2.9.0' } });
+		const storage = await storageWith({ p: { code: 'old', enabled: true, allowedVersion: '2.9.0', manifest: makeManifest('p', { minMiyapad: '1.0' }) } });
 		const manifest: PluginManifest = { id: 'p', name: 'Pretty P', version: '1.2.0', order: 2, api: 1, maxMiyapad: '3.0' };
 		await storage.importPlugin({
 			code: 'new',
@@ -152,23 +161,6 @@ describe('PluginStorage', () => {
 			changelog: '## [1.2.0]\n- Fresh',
 			url: 'https://example.com/p.miyaplugin',
 			source: 'https://github.com/o/p',
-		});
-		expect(adapter.batchMutation).not.toHaveBeenCalled();
-	});
-
-	it('replaces a legacy plugin whose imported id differs only in case, leaving its data alone', async () => {
-		const storage = await storageWith({ foo: { code: 'old', enabled: true } });
-		expect(storage.resolveId('Foo')).toBe('foo');
-		expect(storage.resolveId('bar')).toBe('bar');
-
-		await storage.importPlugin({ code: 'new', manifest: legacyManifest('Foo') });
-
-		expect(storage.plugins).toEqual({
-			foo: {
-				code: 'new',
-				enabled: false,
-				manifest: { id: 'foo', name: 'Foo', order: 0, api: 1 },
-			},
 		});
 		expect(adapter.batchMutation).not.toHaveBeenCalled();
 	});
@@ -219,7 +211,7 @@ describe('PluginStorage', () => {
 	});
 
 	it('removes the plugin\'s data first, then the plugin', async () => {
-		const storage = await storageWith({ p: { code: 'x', enabled: true } });
+		const storage = await storageWith({ p: { code: 'x', enabled: true, manifest: makeManifest('p') } });
 		adapter.loadFromDatabase.mockResolvedValue(['a']);
 
 		await storage.remove('p');

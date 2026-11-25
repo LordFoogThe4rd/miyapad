@@ -3,25 +3,23 @@ import { strToU8, zipSync } from 'fflate';
 import { html } from 'htm/react';
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 import { clearPluginRuntimeError, recordPluginRuntimeError } from '../../plugins';
-import { legacyManifest } from '../../plugins/manifest';
 import type { PluginStorage } from '../../storage/PluginStorage';
 import { PluginsTab } from './PluginsTab';
 
-const LEGACY_URL = 'https://example.com/date.js';
 const ARCHIVE_URL = 'https://example.com/date.miyaplugin';
 
-const textReply = (code: string) => vi.fn().mockResolvedValue(new Response(code, { headers: { 'content-type': 'text/plain' } }));
+const makeZipBytes = (files: Record<string, string>) =>
+	zipSync(Object.fromEntries(Object.entries(files).map(([k, v]) => [k, strToU8(v)])));
+
 const zipReply = (files: Record<string, string>) => {
-	const bytes = zipSync(Object.fromEntries(Object.entries(files).map(([k, v]) => [k, strToU8(v)])));
-	return vi.fn().mockResolvedValue(new Response(bytes, { headers: { 'content-type': 'application/octet-stream' } }));
+	const bytes = makeZipBytes(files);
+	return vi.fn(async () => new Response(bytes, { headers: { 'content-type': 'application/octet-stream' } }));
 };
 
 function storageWith(records: Record<string, PluginRecord>) {
 	const storage = {
 		plugins: { ...records },
 		pending: Promise.resolve(),
-		resolveId: (id: string) => Object.keys(storage.plugins).find(k => k.toLowerCase() === id.toLowerCase()) ?? id,
-		resolveName: (id: string) => Object.keys(storage.plugins).find(k => k.toLowerCase() === id.toLowerCase()) ?? id,
 		importPlugin: vi.fn(async input => {
 			storage.plugins = {
 				...storage.plugins,
@@ -74,30 +72,12 @@ beforeEach(() => {
 afterEach(() => {
 	cleanup();
 	clearPluginRuntimeError();
+	localStorage.clear();
 	vi.unstubAllGlobals();
 	vi.restoreAllMocks();
 });
 
 describe('PluginsTab', () => {
-	it('marks legacy .js plugins with "no manifest" and updates them without gaining a manifest', async () => {
-		const storage = storageWith({
-			date: { code: 'old', enabled: true, url: LEGACY_URL, manifest: legacyManifest('date') },
-		});
-		vi.stubGlobal('fetch', textReply('// @miyapad-min 2.0.0\nnew'));
-		renderTab(storage);
-
-		expect(screen.getByText('no manifest')).toBeTruthy();
-		expect(screen.getByText(`From ${LEGACY_URL}`)).toBeTruthy();
-		fireEvent.click(screen.getByRole('button', { name: 'Update date' }));
-
-		await waitFor(() => expect(storage.updatePlugin).toHaveBeenCalledWith('date', {
-			code: '// @miyapad-min 2.0.0\nnew',
-			manifest: legacyManifest('date', { min: '2.0.0' }),
-		}));
-		expect(confirm).toHaveBeenCalledWith(expect.stringContaining(LEGACY_URL));
-		expect(alert).not.toHaveBeenCalled();
-	});
-
 	it('imports a .miyaplugin file and rejects unbundled static imports with the bundle hint', async () => {
 		const storage = storageWith({});
 		renderTab(storage);
@@ -228,9 +208,145 @@ describe('PluginsTab', () => {
 
 	it('does not fetch anything for a plugin that was imported from a file', () => {
 		vi.stubGlobal('fetch', vi.fn());
-		renderTab(storageWith({ date: { code: 'old', enabled: true, manifest: legacyManifest('date') } }));
+		renderTab(storageWith({
+			date: {
+				code: 'old',
+				enabled: true,
+				manifest: { id: 'date', name: 'Date Helper', version: '1.0.0', order: 0, api: 1 },
+			},
+		}));
 
-		expect(screen.queryByRole('button', { name: 'Update date' })).toBeNull();
+		expect(screen.queryByRole('button', { name: 'Update Date Helper' })).toBeNull();
+		expect(screen.queryByRole('button', { name: 'Check updates' })).toBeNull();
 		expect(fetch).not.toHaveBeenCalled();
+	});
+
+	it('checks URL plugins four at a time on open, shows all row update states, and re-checks on demand', async () => {
+		const storage = storageWith({
+			p1: { code: 'same', enabled: true, url: 'https://example.com/p1.miyaplugin', manifest: { id: 'p1', name: 'One', version: '1.0.0', order: 1, api: 1 } },
+			p2: { code: 'v1', enabled: true, url: 'https://example.com/p2.miyaplugin', manifest: { id: 'p2', name: 'Two', version: '1.3.0', order: 2, api: 1 } },
+			p3: { code: 'v1', enabled: true, url: 'https://example.com/p3.miyaplugin', manifest: { id: 'p3', name: 'Three', version: '1.3.0', order: 3, api: 1 } },
+			p4: { code: 'v1', enabled: true, url: 'https://example.com/p4.miyaplugin', manifest: { id: 'p4', name: 'Four', version: '1.0.0', order: 4, api: 1 } },
+			p5: { code: 'same', enabled: true, url: 'https://example.com/p5.miyaplugin', manifest: { id: 'p5', name: 'Five', version: '2.0.0', order: 5, api: 1 } },
+		});
+
+		let active = 0;
+		let peak = 0;
+		const gates: Array<() => void> = [];
+		const fetchMock = vi.fn((url: string) => new Promise<Response>((resolve, reject) => {
+			active += 1;
+			peak = Math.max(peak, active);
+			gates.push(() => {
+				active -= 1;
+				if (url.endsWith('/p1.miyaplugin')) {
+					resolve(new Response(makeZipBytes({
+						'manifest.json': JSON.stringify({ id: 'p1', name: 'One', version: '1.0.0' }),
+						'main.js': 'same',
+					})));
+				} else if (url.endsWith('/p2.miyaplugin')) {
+					resolve(new Response(makeZipBytes({
+						'manifest.json': JSON.stringify({ id: 'p2', name: 'Two', version: '1.4.0' }),
+						'main.js': 'v2',
+					})));
+				} else if (url.endsWith('/p3.miyaplugin')) {
+					resolve(new Response(makeZipBytes({
+						'manifest.json': JSON.stringify({ id: 'p3', name: 'Three', version: '1.3.0' }),
+						'main.js': 'v1-patched',
+					})));
+				} else if (url.endsWith('/p4.miyaplugin')) {
+					reject(new Error('network down'));
+				} else {
+					resolve(new Response(makeZipBytes({
+						'manifest.json': JSON.stringify({ id: 'p5', name: 'Five', version: '2.0.0' }),
+						'main.js': 'same',
+					})));
+				}
+			});
+		}));
+		vi.stubGlobal('fetch', fetchMock);
+
+		renderTab(storage);
+
+		expect(screen.getAllByText('Checking…')).toHaveLength(5);
+		expect(fetchMock).toHaveBeenCalledTimes(4);
+		expect(peak).toBe(4);
+
+		// Releasing one slot starts the 5th request while keeping peak concurrency at 4
+		gates.shift()!();
+		await waitFor(() => expect(fetchMock).toHaveBeenCalledTimes(5));
+		expect(peak).toBe(4);
+
+		while (gates.length > 0) gates.shift()!();
+
+		await waitFor(() => expect(screen.queryByText('Checking…')).toBeNull());
+		expect(peak).toBe(4);
+		expect(screen.getAllByText('Up to date')).toHaveLength(2);
+		expect(screen.getByText('Update available (1.3.0 → 1.4.0)')).toBeTruthy();
+		expect(screen.getByText('Update available (changed, version still 1.3.0)')).toBeTruthy();
+		expect(screen.getByText("Couldn't check")).toBeTruthy();
+
+		// Re-run batch check via the "Check updates" button
+		fireEvent.click(screen.getByRole('button', { name: 'Check updates' }));
+		await waitFor(() => expect(fetchMock).toHaveBeenCalledTimes(9));
+		gates.shift()!();
+		await waitFor(() => expect(fetchMock).toHaveBeenCalledTimes(10));
+		while (gates.length > 0) gates.shift()!();
+		await waitFor(() => expect(screen.queryByText('Checking…')).toBeNull());
+	});
+
+	it('imports from a GitHub repo address, stores the latest-release asset URL, and shows the pinned source label', async () => {
+		const storage = storageWith({});
+		vi.stubGlobal('prompt', vi.fn(() => 'https://github.com/o/r'));
+		vi.stubGlobal('fetch', vi.fn(async (url: string) => {
+			if (url === 'https://api.github.com/repos/o/r/releases/latest') {
+				return new Response(JSON.stringify({
+					tag_name: 'v1.0.0',
+					assets: [{ name: 'example.miyaplugin', browser_download_url: 'https://github.com/o/r/releases/download/v1.0.0/example.miyaplugin' }],
+				}));
+			}
+			if (url === '/proxy-url?url=https%3A%2F%2Fgithub.com%2Fo%2Fr%2Freleases%2Flatest%2Fdownload%2Fexample.miyaplugin') {
+				return new Response(makeZipBytes({
+					'manifest.json': JSON.stringify({ id: 'example', name: 'Example Plugin', version: '1.0.0', minMiyapad: '2.0.0' }),
+					'main.js': 'const ok = true;',
+				}), { headers: { 'content-type': 'application/octet-stream' } });
+			}
+			if (url === '/version') {
+				return new Response(JSON.stringify({ backup: { enabled: false, intervalMinutes: null, lastBackupAt: null } }));
+			}
+			throw new Error(`Unexpected fetch: ${url}`);
+		}));
+
+		renderTab(storage, true);
+		fireEvent.click(screen.getByRole('button', { name: 'Import from URL…' }));
+
+		await waitFor(() => expect(storage.importPlugin).toHaveBeenCalledWith(expect.objectContaining({
+			url: 'https://github.com/o/r/releases/latest/download/example.miyaplugin',
+			source: 'https://github.com/o/r',
+		})));
+		expect(screen.getByText('From o/r (latest release)')).toBeTruthy();
+		expect(screen.getByText('Up to date')).toBeTruthy();
+	});
+
+	it('sends the saved GitHub Personal Access Token to api.github.com when importing a GitHub release', async () => {
+		const storage = storageWith({});
+		vi.stubGlobal('prompt', vi.fn(() => 'https://github.com/o/r'));
+		const fetchMock = vi.fn(async (url: string) => {
+			if (url === 'https://api.github.com/repos/o/r/releases/latest') {
+				return new Response('', { status: 401, statusText: 'Unauthorized' });
+			}
+			throw new Error(`Unexpected fetch: ${url}`);
+		});
+		vi.stubGlobal('fetch', fetchMock);
+
+		renderTab(storage, false);
+		const tokenInput = screen.getByLabelText(/GitHub Personal Access Token/);
+		fireEvent.change(tokenInput, { target: { value: 'ghp_testtoken' } });
+		expect(JSON.parse(localStorage.getItem('githubToken')!)).toBe('ghp_testtoken');
+
+		fireEvent.click(screen.getByRole('button', { name: 'Import from URL…' }));
+		await waitFor(() => expect(alert).toHaveBeenCalledWith(expect.stringMatching(/Personal Access Token/i)));
+		expect(fetchMock).toHaveBeenCalledWith('https://api.github.com/repos/o/r/releases/latest', {
+			headers: { Accept: 'application/vnd.github+json', Authorization: 'Bearer ghp_testtoken' },
+		});
 	});
 });

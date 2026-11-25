@@ -1,6 +1,6 @@
 # Plugins
 
-A plugin is a `.miyaplugin` archive (or a legacy single `.js` file) that you import through Preferences → Plugins, from your computer or from a web address. When Miyapad starts, it runs each switched-on plugin's code in `(manifest.order, id)` order and hands it a `miyapad` object with hooks, plugin storage, and checked views of Miyapad's state.
+A plugin is a `.miyaplugin` archive that you import through Preferences → Plugins, from your computer or from a web address. When Miyapad starts, it runs each switched-on plugin's code in `(manifest.order, id)` order and hands it a `miyapad` object with hooks, plugin storage, and checked views of Miyapad's state.
 
 ## Trust
 
@@ -53,27 +53,6 @@ CHANGELOG.md      (optional)
 - `requires` (optional): host capabilities required by the plugin. Only `"server"` is recognized; plugins declaring `"requires": ["server"]` are switched off in standalone mode with a notice and cannot be switched on without the server.
 - Unknown fields are ignored so newer archives still import on older Miyapad builds.
 
-## Legacy `.js` files
-
-Single `.js` files remain supported for existing plugins and quick scripts:
-
-```js
-// Replaces {{date}} in the prompt.
-// @miyapad-min 2.9.0
-// @miyapad-max 2.10
-// @miyapad-start-timeout 5
-// @miyapad-hook-timeout 10
-
-const { hooks, storage } = miyapad;
-const count = (await storage.get('count')) ?? 0;
-await storage.set('count', count + 1);
-hooks.prompt.push(async prompt => prompt.replaceAll('{{date}}', new Date().toDateString()));
-```
-
-- A `.js` plugin gets a synthetic manifest with `id` and `name` taken from the file name (or the last URL path segment) without `.js`, `order: 0`, and no `version`. Its row shows `no manifest` next to the version range.
-- Optional `@miyapad-*` lines are read only from `//` comments at the top of the file, before the first line of code.
-- Names that differ only in case resolve to the same existing key (`Foo.js` replaces `foo`), keeping saved data. Updating a legacy `.js` plugin from its URL keeps its legacy shape.
-
 ## Version and capability checks
 
 Each plugin either **fits** this Miyapad version, is **mismatched** (outside its declared range), or is **undeclared** (neither `minMiyapad` nor `maxMiyapad`). Plugins can also require `"server"`. The tab marks incompatible rows with ⚠.
@@ -84,13 +63,26 @@ Each plugin either **fits** this Miyapad version, is **mismatched** (outside its
 
 ## Importing from a URL and updating
 
-Import from URL… accepts an `http://` or `https://` address pointing to a `.miyaplugin` archive or a `.js` file. Web pages (`text/html`) are refused. In server mode the server fetches the address via `/proxy-url`; in standalone mode the browser fetches it directly.
+Import from URL… reads the update mode from the address you paste and shows what was pinned on the plugin's row:
 
-The address is saved with the plugin, and an Update button appears on its row:
+| Address | Mode | Stored fetch URL |
+| :--- | :--- | :--- |
+| `https://github.com/o/r` | latest release | `https://github.com/o/r/releases/latest/download/<asset>` |
+| `https://github.com/o/r/releases/tag/v1.2.3` | pinned release | `https://github.com/o/r/releases/download/v1.2.3/<asset>` |
+| `https://github.com/o/r/tree/main/dist/x.miyaplugin` | pinned branch | `https://raw.githubusercontent.com/o/r/main/dist/x.miyaplugin` |
+| `https://github.com/o/r/blob/<sha>/dist/x.miyaplugin` | pinned commit | `https://raw.githubusercontent.com/o/r/<sha>/dist/x.miyaplugin` |
+| `https://…/x.miyaplugin` or `.zip` | direct | the address |
 
-- Update compares both `manifest.version` and `main.js`. If neither changed, it reports that the plugin is already up to date.
-- For `.miyaplugin` archives, an archive whose `manifest.id` does not match the installed plugin is refused (`This archive is for a different plugin.`).
-- When an archive update is available, the confirmation dialog shows either `<old> → <new>` or `changed, version still <version>`, together with the matching `## [<version>]` (or `## <version>`) section from `CHANGELOG.md` capped at 1,000 characters (`No notes for this version.` when absent).
+- Latest-release and tag imports make one GitHub API call (`/releases/latest` or `/releases/tags/<tag>`) directly from the browser to pick the `.miyaplugin` asset (falling back to `.zip`). Latest-release mode stores `/releases/latest/download/<asset>` rather than `browser_download_url` so later update checks follow new releases without calling the GitHub API. If GitHub's unauthenticated API rate limit (60 requests/hour) is exhausted at import time, either paste the direct archive download address or set an optional GitHub Personal Access Token in Preferences → Plugins (stored in `localStorage` and sent only to `api.github.com`, raising the limit to 5,000 requests/hour).
+- `commit/<sha>` without a file path is rejected with a hint to use `blob/<sha>/<path>`.
+- In server mode the archive is fetched through `/proxy-url` (which follows up to 5 redirects and caps responses at 10 MB); in standalone mode the browser fetches it directly. Miyapad checks the zip magic bytes rather than `Content-Type` (since GitHub serves release and raw assets as `application/octet-stream` or `text/plain`), while still refusing `text/html` web pages.
+
+### Checking for and applying updates
+
+- Opening Preferences → Plugins automatically checks every plugin that has a saved URL, four at a time, and marks each row as `Checking…`, `Up to date`, `Update available (…)` (`1.3.0 → 1.4.0` or `changed, version still 1.3.0`), or `Couldn't check`. **Check updates** re-runs the batch check on demand. Nothing runs at startup or on a background timer, and updates are never applied automatically.
+- Clicking **Update** on a row compares both `manifest.version` and `main.js`. If neither changed, it reports that the plugin is already up to date.
+- An archive whose `manifest.id` does not match the installed plugin is refused (`This archive is for a different plugin.`).
+- When an update is available, the confirmation dialog shows `<old> → <new>` or `changed, version still <version>`, together with the matching `## [<version>]` (or `## <version>`) section from `CHANGELOG.md` capped at 1,000 characters (`No notes for this version.` when absent).
 - Confirming replaces the code and manifest, keeps the plugin's saved data and on/off state, and clears `allowedVersion`. Changes take effect after a reload.
 
 ## The `miyapad` object

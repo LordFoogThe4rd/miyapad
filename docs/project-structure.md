@@ -58,7 +58,7 @@ miyapad/
     ├── hooks/                     # Custom hooks (.ts)
     ├── i18n/                      # UI localization — context.tsx (provider + useT), locales.ts (registry), {code}.json string tables
     ├── importer/                  # Preset importers (.ts) — SillyTavern, NovelAI
-    ├── plugins/                   # Plugin manifest, .miyaplugin zip archive, and changelog parsers (.ts)
+    ├── plugins/                   # Plugin manifest, .miyaplugin zip archive, changelog, and GitHub/URL source parsers (.ts)
     ├── storage/                   # Storage adapters (.ts) — IndexedDB, Server REST API, etc.
     ├── types/                     # Ambient type declarations (.d.ts) — api, components, contexts, storage, defaults, global
     ├── utils/                     # Helpers (.ts) — regex, strings, errors

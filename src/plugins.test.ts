@@ -5,13 +5,10 @@ import {
 	checkVersion,
 	clearPluginRuntimeError,
 	DEFAULT_PLUGIN_START_TIMEOUT_S,
-	fetchPluginCode,
 	fetchPluginFromUrl,
 	getPluginRuntimeErrors,
 	hooks,
-	parseHeader,
 	pluginHooksFor,
-	pluginNameFromUrl,
 	pluginStateView,
 	runOutputHooks,
 	runPlugins,
@@ -19,7 +16,7 @@ import {
 	startPlugins,
 	switchOffMismatched,
 } from './plugins';
-import { legacyManifest } from './plugins/manifest';
+import { PluginArchiveError } from './plugins/archive';
 import { APP_VERSION } from './version';
 import type { PluginStorage } from './storage/PluginStorage';
 
@@ -33,9 +30,12 @@ function makeRecord(
 		enabled: true,
 		...rest,
 		manifest: {
-			...legacyManifest(id),
-			...manifest,
 			id,
+			name: id,
+			version: '1.0.0',
+			order: 0,
+			api: 1,
+			...manifest,
 		},
 	};
 }
@@ -54,94 +54,48 @@ afterEach(() => {
 	vi.restoreAllMocks();
 });
 
-describe('parseHeader', () => {
-	it('reads both lines from the comments at the top', () => {
-		expect(parseHeader('// a plugin\r\n// @miyapad-min 2.9.0\n\n//   @miyapad-max 2.10\nconst x = 1;'))
-			.toEqual({ min: '2.9.0', max: '2.10' });
-	});
-
-	it('reads only one when only one is there', () => {
-		expect(parseHeader('// @miyapad-min 2.0.0\nrun();')).toEqual({ min: '2.0.0' });
-		expect(parseHeader('// @miyapad-max 3\nrun();')).toEqual({ max: '3' });
-	});
-
-	it('reads nothing past the first line of code', () => {
-		expect(parseHeader('run();\n// @miyapad-min 2.0.0')).toEqual({});
-		expect(parseHeader('')).toEqual({});
-	});
-
-	it('reports a version that is not plain numbers', () => {
-		expect(parseHeader('// @miyapad-min 2.9.0-beta')).toEqual({ bad: { kind: 'version', value: '2.9.0-beta' } });
-		expect(parseHeader('// @miyapad-max v2')).toEqual({ bad: { kind: 'version', value: 'v2' } });
-		expect(parseHeader('// @miyapad-max')).toEqual({ bad: { kind: 'version', value: '' } });
-	});
-
-	it('reads the two timeout lines', () => {
-		expect(parseHeader('// @miyapad-start-timeout 5\r\n// @miyapad-hook-timeout 30\nconst x = 1;'))
-			.toEqual({ startTimeout: 5, hookTimeout: 30 });
-	});
-
-	it('reports a timeout that is not a plain positive whole number', () => {
-		expect(parseHeader('// @miyapad-start-timeout 0')).toEqual({ bad: { kind: 'timeout', value: '0' } });
-		expect(parseHeader('// @miyapad-hook-timeout 1.5')).toEqual({ bad: { kind: 'timeout', value: '1.5' } });
-		expect(parseHeader('// @miyapad-hook-timeout')).toEqual({ bad: { kind: 'timeout', value: '' } });
-	});
-});
-
-describe('pluginNameFromUrl', () => {
-	it('takes the last part of the path without .js', () => {
-		expect(pluginNameFromUrl('https://raw.githubusercontent.com/a/b/main/plugins/foo.js')).toBe('foo');
-		expect(pluginNameFromUrl('https://cdn.jsdelivr.net/gh/a/b@1/Foo.JS?raw=1')).toBe('Foo');
-	});
-
-	it('refuses an address with no file name, or not http(s)', () => {
-		expect(pluginNameFromUrl('https://example.com/')).toBeUndefined();
-		expect(pluginNameFromUrl('https://example.com/plugins/')).toBe('plugins');
-		expect(pluginNameFromUrl('https://example.com/.js')).toBeUndefined();
-		expect(pluginNameFromUrl('file:///plugins/foo.js')).toBeUndefined();
-		expect(pluginNameFromUrl('not a url')).toBeUndefined();
-	});
-});
-
-describe('fetchPluginCode & fetchPluginFromUrl', () => {
+describe('fetchPluginFromUrl', () => {
 	const answer = (body: BodyInit, init?: ResponseInit) => vi.fn(async () => new Response(body, init));
+	const sampleZip = () => zipSync({
+		'manifest.json': strToU8(JSON.stringify({ id: 'date', name: 'Date', version: '1.0.0' })),
+		'main.js': strToU8('const x = 1;'),
+	});
 
 	afterEach(() => vi.unstubAllGlobals());
 
-	it('reads legacy code from the address', async () => {
-		vi.stubGlobal('fetch', answer('const x = 1;'));
-		expect(await fetchPluginCode('https://example.com/p.js', false)).toBe('const x = 1;');
-		expect(await fetchPluginFromUrl('https://example.com/p.js', false)).toEqual({ kind: 'legacy', code: 'const x = 1;' });
-	});
-
-	it('parses a .miyaplugin zip archive from the address even with octet-stream content-type', async () => {
-		const zip = zipSync({
-			'manifest.json': strToU8(JSON.stringify({ id: 'date', name: 'Date', version: '1.0.0' })),
-			'main.js': strToU8('const x = 1;'),
-		});
-		vi.stubGlobal('fetch', answer(zip, { headers: { 'content-type': 'application/octet-stream' } }));
+	it('parses a .miyaplugin zip archive from the address even with octet-stream or text/plain content-type', async () => {
+		vi.stubGlobal('fetch', answer(sampleZip(), { headers: { 'content-type': 'application/octet-stream' } }));
 		const result = await fetchPluginFromUrl('https://example.com/date.miyaplugin', false);
-		expect(result.kind).toBe('archive');
-		if (result.kind === 'archive') {
-			expect(result.archive.manifest).toMatchObject({ id: 'date', name: 'Date', version: '1.0.0' });
-		}
+		expect(result.manifest).toMatchObject({ id: 'date', name: 'Date', version: '1.0.0' });
+		expect(result.code).toBe('const x = 1;');
+
+		vi.stubGlobal('fetch', answer(sampleZip(), { headers: { 'content-type': 'text/plain; charset=utf-8' } }));
+		const rawResult = await fetchPluginFromUrl('https://raw.githubusercontent.com/o/r/main/dist/date.miyaplugin', false);
+		expect(rawResult.manifest.id).toBe('date');
 	});
 
-	it('goes through the server when asked', async () => {
-		const fetchMock = answer('const x = 1;');
+	it('goes through the server when asked and maps 413 to archive-too-large', async () => {
+		const fetchMock = answer(sampleZip());
 		vi.stubGlobal('fetch', fetchMock);
-		await fetchPluginCode('https://example.com/p.js', true);
-		expect(fetchMock).toHaveBeenCalledWith('/proxy-url?url=https%3A%2F%2Fexample.com%2Fp.js', { cache: 'no-store' });
+		await fetchPluginFromUrl('https://example.com/date.miyaplugin', true);
+		expect(fetchMock).toHaveBeenCalledWith('/proxy-url?url=https%3A%2F%2Fexample.com%2Fdate.miyaplugin', { cache: 'no-store' });
+
+		vi.stubGlobal('fetch', answer('Response exceeds size limit', { status: 413, statusText: 'Payload Too Large' }));
+		await expect(fetchPluginFromUrl('https://example.com/huge.miyaplugin', true)).rejects.toMatchObject({
+			name: 'PluginArchiveError',
+			kind: 'archive-too-large',
+		});
 	});
 
-	it('refuses a failed reply and a web page', async () => {
+	it('refuses a failed reply, a web page, and non-zip content', async () => {
 		vi.stubGlobal('fetch', answer('', { status: 404, statusText: 'Not Found' }));
-		await expect(fetchPluginCode('https://example.com/p.js', false)).rejects.toThrow('404 Not Found');
+		await expect(fetchPluginFromUrl('https://example.com/p.miyaplugin', false)).rejects.toThrow('404 Not Found');
 
-		vi.stubGlobal('fetch', answer('<html></html>', { headers: { 'content-type': 'text/html; charset=utf-8' } }));
-		await expect(fetchPluginCode('https://example.com/p.js', false)).rejects.toThrow('web page');
 		vi.stubGlobal('fetch', answer('<html></html>', { headers: { 'content-type': 'text/html; charset=utf-8' } }));
 		await expect(fetchPluginFromUrl('https://example.com/p.miyaplugin', false)).rejects.toThrow('web page');
+
+		vi.stubGlobal('fetch', answer('const x = 1;', { headers: { 'content-type': 'application/javascript' } }));
+		await expect(fetchPluginFromUrl('https://example.com/p.js', false)).rejects.toThrow(PluginArchiveError);
 	});
 });
 

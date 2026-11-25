@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest';
-import { legacyManifest, ManifestValidationError, parseManifest } from './manifest';
+import { ManifestValidationError, parseManifest } from './manifest';
 
 describe('parseManifest', () => {
 	const base = () => ({
@@ -100,18 +100,5 @@ describe('parseManifest', () => {
 		expect(() => parseManifest({ ...base(), startTimeout: 0 })).toThrow(ManifestValidationError);
 		expect(() => parseManifest({ ...base(), hookTimeout: 1.5 })).toThrow(ManifestValidationError);
 		expect(() => parseManifest({ ...base(), api: 0 })).toThrow(ManifestValidationError);
-	});
-});
-
-describe('legacyManifest', () => {
-	it('builds a synthetic manifest without a version', () => {
-		expect(legacyManifest('date', { min: '2.9.0', hookTimeout: 20 })).toEqual({
-			id: 'date',
-			name: 'date',
-			order: 0,
-			api: 1,
-			minMiyapad: '2.9.0',
-			hookTimeout: 20,
-		});
 	});
 });

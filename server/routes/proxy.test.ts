@@ -1,7 +1,7 @@
 // @vitest-environment node
 import { describe, it, expect, beforeAll, afterAll, beforeEach, vi } from 'vitest';
 import type { Request, Response } from 'express';
-import proxyRoutes, { isValidProxyUrl, safeFinalUrl } from './proxy.js';
+import proxyRoutes, { isValidProxyUrl, MAX_PROXY_URL_BYTES, MAX_PROXY_URL_REDIRECTS, safeFinalUrl } from './proxy.js';
 import { serve, type Served } from '../lib/testing.js';
 
 describe('isValidProxyUrl', () => {
@@ -239,11 +239,39 @@ describe('proxy handlers', () => {
             expect((await image(upstream.url + '/gone.png')).status).toBe(404);
         });
 
-        it('does not follow a redirect', async () => {
-            answer = (req, res) => { res.redirect(302, '/elsewhere.png'); };
-            const res = await image(upstream.url + '/cat.png');
-            expect(res.status).toBe(302);
-            expect(seen.map(req => req.url)).toEqual(['/cat.png']);
+        it('follows redirects up to the limit and rejects too many redirects', async () => {
+            let hops = 0;
+            answer = (req, res) => {
+                if (req.url === '/final.bin') {
+                    res.type('application/octet-stream').end(Buffer.from([0x50, 0x4b, 0x03, 0x04]));
+                    return;
+                }
+                const step = Number(req.url.replace('/hop-', '')) || 0;
+                if (step < hops) {
+                    res.redirect(302, `/hop-${step + 1}`);
+                } else {
+                    res.redirect(302, '/final.bin');
+                }
+            };
+
+            hops = MAX_PROXY_URL_REDIRECTS - 1;
+            const ok = await image(upstream.url + '/hop-0');
+            expect(ok.status).toBe(200);
+            expect([...new Uint8Array(await ok.arrayBuffer())]).toEqual([0x50, 0x4b, 0x03, 0x04]);
+
+            seen = [];
+            hops = MAX_PROXY_URL_REDIRECTS;
+            const tooMany = await image(upstream.url + '/hop-0');
+            expect(tooMany.status).toBe(502);
+        });
+
+        it('rejects a response larger than the size cap', async () => {
+            const oversized = Buffer.alloc(MAX_PROXY_URL_BYTES + 1, 0x41);
+            answer = (_req, res) => {
+                res.type('application/octet-stream').end(oversized);
+            };
+            const res = await image(upstream.url + '/huge.miyaplugin');
+            expect(res.status).toBe(413);
         });
     });
 });
