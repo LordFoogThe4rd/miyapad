@@ -20,12 +20,13 @@ miyapad/
 │   │   ├── auth.ts                # Basic Auth middleware factory
 │   │   ├── backup.ts              # Auto-backup with VACUUM INTO (main DB + plugins/*.db), rotation
 │   │   ├── database.ts            # DB connection, migrations, zstd setup, maintenance
-│   │   ├── plugin-db.ts           # Per-plugin node:sqlite container manager (plugins/<id>.db)
+│   │   ├── plugin-db.ts           # Per-plugin node:sqlite container manager (plugins/<id>.db) and SQL worker pool
+│   │   ├── plugin-db-worker.ts    # Worker process for authorized, capped, timed-out plugin raw SQL
 │   │   ├── update.ts              # Cached GitHub latest-release check for the update feature
 │   │   └── utils.ts               # Helpers (column names, store-name normalization, header filters)
 │   ├── routes/                    # Express route handlers by concern
 │   │   ├── data.ts                # /load, /save, /rename, /all, /sessions, /delete, /batch
-│   │   ├── plugin-db.ts           # /plugin-db/* KV and container-delete endpoints
+│   │   ├── plugin-db.ts           # /plugin-db/* KV, raw SQL, and container-delete endpoints
 │   │   ├── proxy.ts               # /proxy, /proxy/* (GET/POST/DELETE), /proxy-url
 │   │   ├── system.ts              # /version, /vacuum, /log
 │   │   ├── tokenizer.ts           # /api/v1/tokenizer/* endpoints

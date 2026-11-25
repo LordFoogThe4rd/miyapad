@@ -45,6 +45,12 @@ describe('PluginDatabase (standalone IndexedDB)', () => {
 		expect(await cache.keys()).toEqual([]);
 		expect(await root.get('cache/x')).toBe('in-root');
 		expect(await otherPlugin.get('x')).toBe('in-other-plugin');
+
+		// Raw SQL methods are server-only and omitted in standalone mode.
+		expect(root.query).toBeUndefined();
+		expect(root.exec).toBeUndefined();
+		expect(cache.query).toBeUndefined();
+		expect(cache.exec).toBeUndefined();
 	});
 
 	it('treats `%`, `_`, `\\`, and ASCII case literally in keys(prefix)', async () => {
@@ -151,6 +157,9 @@ describe('PluginDatabase (server mode)', () => {
 			if (url.endsWith('/plugin-db/keys')) {
 				return new Response(JSON.stringify({ ok: true, keys: ['img/1'] }));
 			}
+			if (url.endsWith('/plugin-db/query')) {
+				return new Response(JSON.stringify(body.mode === 'query' ? { ok: true, rows: [{ id: 1, tag: 'x' }] } : { ok: true }));
+			}
 			return new Response(JSON.stringify({ ok: true }));
 		}));
 
@@ -163,6 +172,8 @@ describe('PluginDatabase (server mode)', () => {
 		expect(await cache.keys('img/')).toEqual(['img/1']);
 		await cache.delete('img/1');
 		await cache.clear();
+		await cache.exec!('CREATE TABLE notes (id INTEGER PRIMARY KEY, tag TEXT)');
+		expect(await cache.query!('SELECT * FROM notes WHERE tag = ?', ['x'])).toEqual([{ id: 1, tag: 'x' }]);
 		await srv.deleteContainer('demo');
 
 		expect(calls.map(c => new URL(c.url).pathname)).toEqual([
@@ -171,8 +182,24 @@ describe('PluginDatabase (server mode)', () => {
 			'/plugin-db/keys',
 			'/plugin-db/delete',
 			'/plugin-db/clear',
+			'/plugin-db/query',
+			'/plugin-db/query',
 			'/plugin-db/drop',
 		]);
+		expect(calls[5].body).toEqual({
+			id: 'demo',
+			name: 'cache',
+			sql: 'CREATE TABLE notes (id INTEGER PRIMARY KEY, tag TEXT)',
+			params: [],
+			mode: 'exec',
+		});
+		expect(calls[6].body).toEqual({
+			id: 'demo',
+			name: 'cache',
+			sql: 'SELECT * FROM notes WHERE tag = ?',
+			params: ['x'],
+			mode: 'query',
+		});
 
 		await expect(srv.dbFor('corrupt', '').get('x')).rejects.toThrow(PluginContainerError);
 		expect(onContainerError).toHaveBeenCalledWith('corrupt', expect.any(PluginContainerError));

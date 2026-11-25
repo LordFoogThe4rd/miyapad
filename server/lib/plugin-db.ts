@@ -1,6 +1,20 @@
 import fs from 'fs';
 import path from 'path';
+import { fork, type ChildProcess } from 'child_process';
 import { DatabaseSync } from 'node:sqlite';
+import { basedir } from './paths.js';
+import {
+    MAX_PARAMS,
+    MAX_SQL_BYTES,
+    type WorkerQueryRequest,
+    type WorkerQueryResponse,
+} from './plugin-db-worker.js';
+
+export { MAX_PARAMS, MAX_SQL_BYTES };
+export const DEFAULT_QUERY_TIMEOUT_MS = 2_000;
+
+export type SqlParam = string | number | boolean | null;
+export type SqlQueryMode = 'query' | 'exec';
 
 const PLUGIN_ID_RE = /^[a-z0-9][a-z0-9_-]{0,63}$/;
 const NAMESPACE_RE = /^[a-z0-9_-]{1,32}$/;
@@ -10,6 +24,12 @@ export const isValidPluginId = (id: unknown): id is string =>
 
 export const isValidNamespace = (ns: unknown): ns is string =>
     typeof ns === 'string' && (ns === '' || NAMESPACE_RE.test(ns));
+
+export const isValidSqlParam = (value: unknown): value is SqlParam =>
+    value === null
+    || typeof value === 'string'
+    || typeof value === 'boolean'
+    || (typeof value === 'number' && Number.isFinite(value));
 
 export const escapeLikePrefix = (prefix: string): string =>
     prefix.replace(/[\\%_]/g, '\\$&');
@@ -24,6 +44,31 @@ export class PluginContainerError extends Error {
     }
 }
 
+export class PluginQueryInputError extends Error {
+    constructor(message: string) {
+        super(message);
+        this.name = 'PluginQueryInputError';
+    }
+}
+
+interface WorkerSlot {
+    worker: ChildProcess | null;
+    queue: Promise<unknown>;
+    nextReqId: number;
+    terminating: Set<Promise<unknown>>;
+}
+
+export interface PluginDbManagerOptions {
+    queryTimeoutMs?: number;
+    workerPath?: string;
+}
+
+function resolveDefaultWorkerPath(): string {
+    const bundled = path.join(basedir, 'plugin-db-worker.cjs');
+    if (fs.existsSync(bundled)) return bundled;
+    return path.join(basedir, 'plugin-db-worker.ts');
+}
+
 const isSqliteCorrupt = (err: unknown): boolean => {
     if (!err || typeof err !== 'object') return false;
     const code = (err as { errcode?: number }).errcode;
@@ -34,10 +79,15 @@ const isSqliteCorrupt = (err: unknown): boolean => {
 
 export class PluginDbManager {
     readonly dir: string;
+    readonly #queryTimeoutMs: number;
+    readonly #workerPath: string;
     #open = new Map<string, DatabaseSync>();
+    #workers = new Map<string, WorkerSlot>();
 
-    constructor(pluginsDir: string) {
+    constructor(pluginsDir: string, options: PluginDbManagerOptions = {}) {
         this.dir = path.resolve(pluginsDir);
+        this.#queryTimeoutMs = options.queryTimeoutMs ?? DEFAULT_QUERY_TIMEOUT_MS;
+        this.#workerPath = options.workerPath ?? resolveDefaultWorkerPath();
     }
 
     #filePath(id: string): string {
@@ -158,8 +208,192 @@ export class PluginDbManager {
         }
     }
 
-    deleteContainer(id: string): void {
+    #getWorkerSlot(id: string): WorkerSlot {
+        let slot = this.#workers.get(id);
+        if (!slot) {
+            slot = { worker: null, queue: Promise.resolve(), nextReqId: 1, terminating: new Set() };
+            this.#workers.set(id, slot);
+        }
+        return slot;
+    }
+
+    #trackTerminate(slot: WorkerSlot, worker: ChildProcess, force = false): Promise<unknown> {
+        const p = new Promise<void>(resolve => {
+            if (worker.exitCode !== null || worker.signalCode !== null) {
+                resolve();
+                return;
+            }
+            worker.once('exit', () => resolve());
+            try {
+                if (force) {
+                    worker.kill('SIGKILL');
+                } else if (worker.connected) {
+                    worker.disconnect();
+                } else {
+                    worker.kill('SIGKILL');
+                }
+            } catch {
+                resolve();
+            }
+        }).finally(() => {
+            slot.terminating.delete(p);
+        });
+        slot.terminating.add(p);
+        return p;
+    }
+
+    async #terminateWorker(id: string): Promise<void> {
+        const slot = this.#workers.get(id);
+        if (!slot) return;
+        if (slot.worker) {
+            const worker = slot.worker;
+            slot.worker = null;
+            this.#trackTerminate(slot, worker, false);
+        }
+        if (slot.terminating.size > 0) {
+            await Promise.all([...slot.terminating]);
+        }
+    }
+
+    #runOnWorker(
+        id: string,
+        filePath: string,
+        sql: string,
+        params: SqlParam[],
+        mode: SqlQueryMode,
+    ): Promise<Record<string, unknown>[] | undefined> {
+        const slot = this.#getWorkerSlot(id);
+        const execute = (): Promise<Record<string, unknown>[] | undefined> => new Promise((resolve, reject) => {
+            let worker = slot.worker;
+            if (!worker || !worker.connected || worker.exitCode !== null || worker.signalCode !== null) {
+                worker = fork(this.#workerPath, [], {
+                    execArgv: [],
+                    env: {
+                        ...process.env,
+                        MIYAPAD_PLUGIN_DB_PATH: filePath,
+                        MIYAPAD_PLUGIN_DB_ID: id,
+                    },
+                    stdio: ['ignore', 'ignore', 'ignore', 'ipc'],
+                });
+                slot.worker = worker;
+            }
+
+            const activeWorker = worker;
+            const reqId = slot.nextReqId++;
+            let settled = false;
+
+            const cleanup = (): void => {
+                clearTimeout(timer);
+                activeWorker.off('message', onMessage);
+                activeWorker.off('error', onError);
+                activeWorker.off('exit', onExit);
+            };
+
+            const onMessage = (res: WorkerQueryResponse): void => {
+                if (settled || res.reqId !== reqId) return;
+                settled = true;
+                cleanup();
+                if (res.ok) {
+                    resolve(res.rows);
+                    return;
+                }
+                if (res.unreadable) {
+                    const cached = this.#open.get(id);
+                    if (cached) {
+                        this.#open.delete(id);
+                        try { cached.close(); } catch { /* ignore */ }
+                    }
+                    reject(new PluginContainerError(id, res.message || `Container "${id}" is unreadable`));
+                    return;
+                }
+                if (res.status === 400) {
+                    reject(new PluginQueryInputError(res.message || 'Invalid SQL query'));
+                    return;
+                }
+                reject(new Error(res.message || 'SQL query failed'));
+            };
+
+            const onError = (err: Error): void => {
+                if (slot.worker === activeWorker) slot.worker = null;
+                if (settled) return;
+                settled = true;
+                cleanup();
+                reject(new Error(`Plugin SQL worker failed: ${err.message}`));
+            };
+
+            const onExit = (code: number | null, signal: NodeJS.Signals | null): void => {
+                if (slot.worker === activeWorker) slot.worker = null;
+                if (settled) return;
+                settled = true;
+                cleanup();
+                reject(new Error(`Plugin SQL worker exited unexpectedly (${signal ?? code ?? 'unknown'})`));
+            };
+
+            const timer = setTimeout(() => {
+                if (settled) return;
+                settled = true;
+                cleanup();
+                if (slot.worker === activeWorker) slot.worker = null;
+                void this.#trackTerminate(slot, activeWorker, true);
+                reject(new Error(`Query timed out after ${this.#queryTimeoutMs} ms`));
+            }, this.#queryTimeoutMs);
+
+            activeWorker.on('message', onMessage);
+            activeWorker.on('error', onError);
+            activeWorker.on('exit', onExit);
+
+            const req: WorkerQueryRequest = { reqId, sql, params, mode };
+            activeWorker.send(req);
+        });
+
+        const next = slot.queue.then(execute, execute);
+        slot.queue = next.then(() => undefined, () => undefined);
+        return next;
+    }
+
+    async rawQuery(
+        id: string,
+        name: string,
+        sql: string,
+        params: unknown[] = [],
+        mode: SqlQueryMode = 'query',
+    ): Promise<Record<string, unknown>[] | undefined> {
+        if (!isValidPluginId(id)) {
+            throw new PluginQueryInputError('Invalid plugin id');
+        }
+        if (!isValidNamespace(name)) {
+            throw new PluginQueryInputError('Invalid namespace');
+        }
+        if (typeof sql !== 'string' || sql.trim().length === 0) {
+            throw new PluginQueryInputError('Missing sql');
+        }
+        if (Buffer.byteLength(sql, 'utf8') > MAX_SQL_BYTES) {
+            throw new PluginQueryInputError('SQL exceeds the 100 KB limit');
+        }
+        if (mode !== 'query' && mode !== 'exec') {
+            throw new PluginQueryInputError('Invalid mode');
+        }
+        if (!Array.isArray(params)) {
+            throw new PluginQueryInputError('Parameters must be an array');
+        }
+        if (params.length > MAX_PARAMS) {
+            throw new PluginQueryInputError('Too many parameters (max 100)');
+        }
+        const validatedParams: SqlParam[] = [];
+        for (const p of params) {
+            if (!isValidSqlParam(p)) {
+                throw new PluginQueryInputError('Parameters must be strings, finite numbers, booleans, or null');
+            }
+            validatedParams.push(p);
+        }
         const filePath = this.#filePath(id);
+        return this.#runOnWorker(id, filePath, sql, validatedParams, mode);
+    }
+
+    async deleteContainer(id: string): Promise<void> {
+        const filePath = this.#filePath(id);
+        await this.#terminateWorker(id);
+        this.#workers.delete(id);
         const cached = this.#open.get(id);
         if (cached) {
             this.#open.delete(id);
@@ -170,10 +404,25 @@ export class PluginDbManager {
         }
     }
 
-    closeAll(): void {
+    async closeAll(): Promise<void> {
+        const terminations: Promise<unknown>[] = [];
+        for (const slot of this.#workers.values()) {
+            if (slot.worker) {
+                const worker = slot.worker;
+                slot.worker = null;
+                this.#trackTerminate(slot, worker);
+            }
+            for (const p of slot.terminating) {
+                terminations.push(p);
+            }
+        }
+        this.#workers.clear();
         for (const db of this.#open.values()) {
             try { db.close(); } catch { /* ignore */ }
         }
         this.#open.clear();
+        if (terminations.length > 0) {
+            await Promise.all(terminations);
+        }
     }
 }

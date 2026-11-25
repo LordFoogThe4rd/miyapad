@@ -216,6 +216,10 @@ await cache.clear();
 - `keys(prefix?)` returns matching keys in that namespace in sorted order (`%`, `_`, and `\` in `prefix` match literally).
 - `clear()` deletes every key in that namespace without touching other namespaces in the same container.
 - Calls are queued per plugin container so writes never interleave.
+- **Server-only raw SQL (`query` and `exec`)**: when Miyapad is connected to its backend server, `miyapad.db(name)` also exposes `exec(sql, params?)` and `query(sql, params?)` backed by `POST /plugin-db/query` against the plugin's `plugins/<id>.db` file. In standalone mode both are `undefined`; plugins that need them should declare `"requires": ["server"]` in `manifest.json`.
+  - Queries run in a per-container worker process with a 2-second timeout (a timed-out query kills the worker and the next query spawns a fresh one).
+  - SQLite's authorizer denies `ATTACH`, `DETACH`, `PRAGMA`, and `load_extension`; extensions are disabled at open, and a keyword check rejects `VACUUM`.
+  - Caps: 100 KB SQL, 100 parameters (strings, finite numbers, booleans, or `null`), 5,000 rows, and 5 MB serialized result.
 - **Backups and exports**: standalone **Export Full DB** includes non-empty containers as `plugin:<id>` entries (and **Import Full DB** restores them while ignoring legacy `PluginData` stores); server `.backup.7z` archives snapshot `plugins/*.db` alongside `web-session-storage.db`.
 
 ### Corrupt storage, Clear data, and keep-data on delete

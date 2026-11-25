@@ -1,8 +1,19 @@
 import type { Express, Request, Response } from 'express';
-import { isValidNamespace, isValidPluginId, PluginContainerError, type PluginDbManager } from '../lib/plugin-db.js';
+import {
+    isValidNamespace,
+    isValidPluginId,
+    PluginContainerError,
+    PluginQueryInputError,
+    type PluginDbManager,
+    type SqlQueryMode,
+} from '../lib/plugin-db.js';
 import { toKey } from './data.js';
 
 function handleError(res: Response, err: unknown): void {
+    if (err instanceof PluginQueryInputError) {
+        res.status(400).json({ ok: false, message: err.message });
+        return;
+    }
     if (err instanceof PluginContainerError) {
         res.status(500).json({ ok: false, unreadable: true, message: err.message });
         return;
@@ -111,14 +122,51 @@ export default function pluginDbRoutes(app: Express, pluginDb: PluginDbManager):
         }
     });
 
-    app.post('/plugin-db/drop', (req: Request, res: Response) => {
+    app.post('/plugin-db/drop', async (req: Request, res: Response) => {
         const { id } = req.body as { id?: unknown };
         if (!isValidPluginId(id)) {
             return res.status(400).json({ ok: false, message: 'Invalid plugin id' });
         }
         try {
-            pluginDb.deleteContainer(id);
+            await pluginDb.deleteContainer(id);
             res.json({ ok: true });
+        } catch (err) {
+            handleError(res, err);
+        }
+    });
+
+    app.post('/plugin-db/query', async (req: Request, res: Response) => {
+        const body = (req.body ?? {}) as {
+            id?: unknown;
+            name?: unknown;
+            sql?: unknown;
+            params?: unknown;
+            mode?: unknown;
+        };
+        const { id, sql, params, mode } = body;
+        const name = body.name === undefined ? '' : body.name;
+        if (!isValidPluginId(id)) {
+            return res.status(400).json({ ok: false, message: 'Invalid plugin id' });
+        }
+        if (!isValidNamespace(name)) {
+            return res.status(400).json({ ok: false, message: 'Invalid namespace' });
+        }
+        if (typeof sql !== 'string' || sql.trim().length === 0) {
+            return res.status(400).json({ ok: false, message: 'Missing sql' });
+        }
+        if (mode !== 'query' && mode !== 'exec') {
+            return res.status(400).json({ ok: false, message: 'Invalid mode' });
+        }
+        if (params !== undefined && !Array.isArray(params)) {
+            return res.status(400).json({ ok: false, message: 'Parameters must be an array' });
+        }
+        try {
+            const rows = await pluginDb.rawQuery(id, name, sql, params ?? [], mode as SqlQueryMode);
+            if (mode === 'query') {
+                res.json({ ok: true, rows: rows ?? [] });
+            } else {
+                res.json({ ok: true });
+            }
         } catch (err) {
             handleError(res, err);
         }

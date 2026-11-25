@@ -19,7 +19,8 @@
 | `/plugin-db/delete` | POST | Deletes one key (`{ id, ns, key }`) from `plugins/<id>.db`. |
 | `/plugin-db/keys` | POST | Lists keys in namespace `ns` matching optional literal `prefix` (`{ id, ns, prefix? }`). |
 | `/plugin-db/clear` | POST | Clears all keys in namespace `ns` (`{ id, ns }`) inside `plugins/<id>.db`. |
-| `/plugin-db/drop` | POST | Closes and deletes the plugin's `plugins/<id>.db` container (and WAL/SHM files). |
+| `/plugin-db/drop` | POST | Closes and deletes the plugin's `plugins/<id>.db` container (and WAL/SHM files), terminating any active SQL worker for that plugin. |
+| `/plugin-db/query` | POST | Runs a raw SQL `query` or `exec` statement (`{ id, name, sql, params?, mode }`) against `plugins/<id>.db` in a per-container worker with a 2-second timeout, `setAuthorizer` guards (`ATTACH`/`DETACH`/`PRAGMA`/`load_extension` denied, `VACUUM` rejected), and caps (100 KB SQL, 100 params, 5,000 rows, 5 MB result). |
 | `/proxy` | POST/GET/DELETE | Sends the LLM API request straight to the URL in the `X-Real-URL` header. Used when the frontend decides your endpoint already includes a full API path. |
 | `/proxy/*` | POST/GET/DELETE | Appends the wildcard path to the `X-Real-URL` base URL. Used when the frontend fills in a standard API path (e.g. `/v1/completions`). Both proxy routes get around CORS and support token streaming. |
 | `/proxy-url` | GET | Fetches a binary URL (`?url=…`) on the client's behalf for screenshot images and `.miyaplugin` archives, following up to 5 `http(s)` redirects and rejecting bodies over 10 MB (`413`). |

@@ -18,7 +18,7 @@ Nine tables in the main database (any legacy `plugindata` table/view and its zst
 8. `plugins`: each [plugin](plugins.md)'s code, manifest, on/off state and update URL. Column `plugin_data`.
 9. `names`: the lightweight key-to-metadata mapping `{name, created, modified, pinned, tags, folder, stats, trashed}`, stored as JSON. Used for listing, searching, sorting, pinning, folders and the trash.
 
-Global data saved by plugins lives outside `web-session-storage.db` in `plugins/<id>.db` (in the same directory as `--storagePath`), one SQLite file per plugin with `CREATE TABLE kv (key TEXT PRIMARY KEY, value BLOB)` and `<ns>/<key>` namespace prefixes, accessed through `/plugin-db/*`.
+Global data saved by plugins lives outside `web-session-storage.db` in `plugins/<id>.db` (in the same directory as `--storagePath`), one SQLite file per plugin with `CREATE TABLE kv (key TEXT PRIMARY KEY, value BLOB)` and `<ns>/<key>` namespace prefixes, accessed through `/plugin-db/*`. KV calls run in-process, while raw SQL (`POST /plugin-db/query`) runs in a per-container worker process (`server/lib/plugin-db-worker.ts`, bundled as `plugin-db-worker.cjs` alongside `server.cjs`) with `setAuthorizer` denying `ATTACH`, `DETACH`, `PRAGMA`, and `load_extension`, a keyword check rejecting `VACUUM`, a 2-second timeout that kills runaway workers, and caps of 100 KB SQL, 100 parameters, 5,000 rows, and 5 MB serialized output.
 
 ### Schema Column Constraints
 

@@ -16,6 +16,10 @@ fs.copyFileSync(
   path.join(root, 'dist-server', 'server.cjs'),
   path.join(distDir, 'server.cjs')
 );
+fs.copyFileSync(
+  path.join(root, 'dist-server', 'plugin-db-worker.cjs'),
+  path.join(distDir, 'plugin-db-worker.cjs')
+);
 
 const zstdLibName = process.platform === 'win32' ? 'sqlite_zstd.dll'
   : `libsqlite_zstd.${process.platform === 'darwin' ? 'dylib' : 'so'}`;

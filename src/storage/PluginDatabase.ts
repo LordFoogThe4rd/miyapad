@@ -20,12 +20,18 @@ export class PluginContainerError extends Error {
 	}
 }
 
+export type SqlParam = string | number | boolean | null;
+
 export interface PluginDbNamespace {
 	get(key: string): Promise<unknown>;
 	set(key: string, value: unknown): Promise<void>;
 	delete(key: string): Promise<void>;
 	keys(prefix?: string): Promise<string[]>;
 	clear(): Promise<void>;
+	/** Server-only raw SQL query returning rows (`undefined` in standalone mode). */
+	query?: (sql: string, params?: SqlParam[]) => Promise<Record<string, unknown>[]>;
+	/** Server-only raw SQL statement execution (`undefined` in standalone mode). */
+	exec?: (sql: string, params?: SqlParam[]) => Promise<void>;
 }
 
 /** Alias kept for `miyapad.storage` (`miyapad.db('')`). */
@@ -385,6 +391,24 @@ export class PluginDatabase {
 					tx.onerror = () => reject(tx.error);
 				});
 			}),
+
+			...(this.#serverEndpoint ? {
+				query: (sql: string, params: SqlParam[] = []) => this.#enqueue(id, async () => {
+					const res = await this.#postServer<{ rows: Record<string, unknown>[] }>(
+						id,
+						'/plugin-db/query',
+						{ id, name, sql, params, mode: 'query' },
+					);
+					return res.rows;
+				}),
+				exec: (sql: string, params: SqlParam[] = []) => this.#enqueue(id, async () => {
+					await this.#postServer(
+						id,
+						'/plugin-db/query',
+						{ id, name, sql, params, mode: 'exec' },
+					);
+				}),
+			} : {}),
 		};
 	}
 
