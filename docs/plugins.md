@@ -91,7 +91,7 @@ Import from URL… reads the update mode from the address you paste and shows wh
 
 | Surface | Fields |
 | :--- | :--- |
-| **Stable** (changes only with a `manifest.api` bump) | `id`, `name`, `version`, `hooks`, `storage`, `settings`, `generation`, `React`, `html` |
+| **Stable** (changes only with a `manifest.api` bump) | `id`, `name`, `version`, `hooks`, `events`, `context`, `storage`, `sessionData`, `generate`, `settings`, `generation`, `React`, `html` |
 | **Unstable** (internal objects; may change in any release) | `sessionStorage`, `templateStorage`, `themeStorage`, `connectionStorage`, `samplerPresetStorage`, `api` |
 
 Each plugin receives its own `miyapad` object (there is no `window.miyapad`):
@@ -101,8 +101,12 @@ Each plugin receives its own `miyapad` object (there is no `window.miyapad`):
 | `id` | The plugin's immutable identifier (`manifest.id`). |
 | `name` | The plugin's display name (`manifest.name`). |
 | `version` | Miyapad's version (`APP_VERSION` from `src/version.ts`). |
-| `hooks` | Per-plugin view of shared hooks (`prompt`, `output`, `commands`) tagged with `id` and `hookTimeout`. |
-| `storage` | Key-value storage isolated under `id`. |
+| `hooks` | Per-plugin view of shared hooks (`prompt`, `messages`, `output`, `commands`) tagged with `id` and `hookTimeout`. |
+| `events` | Scoped lifecycle event bus (`on`, `once`, `off`) with sticky `ready`, session, and generation events. |
+| `context` | Pre-truncation context injections (`setInjection`) and synchronous prompt placeholders (`setPlaceholder`). |
+| `storage` | Global key-value storage isolated under `id`. |
+| `sessionData` | Synchronous per-session storage backed by `session.pluginData[id]`, with a session-switch guard. |
+| `generate` | Quiet off-screen generation helper sharing provider payloads and `/proxy` routing without touching UI state. |
 | `settings`, `generation` | Checked live views of `useSettings` and `useGeneration`. |
 | `React`, `html` | React and `htm`'s `html` tagged template helper. |
 | `sessionStorage`, `templateStorage`, `themeStorage`, `connectionStorage`, `samplerPresetStorage`, `api` | Unstable internal storage instances and API router. |
@@ -116,13 +120,69 @@ Each plugin receives its own `miyapad` object (there is no `window.miyapad`):
 
 ## Hooks and error attribution
 
-`hooks.prompt` and `hooks.output` are push-only views (`{ push(fn) }`). Entries pushed through `miyapad.hooks` carry both the plugin's `id` and its `hookTimeout` (10 seconds by default). `hooks.commands` is the shared command array.
+`hooks.prompt`, `hooks.messages`, and `hooks.output` are push-only views (`{ push(fn) }`). Entries pushed through `miyapad.hooks` carry both the plugin's `id` and its `hookTimeout` (10 seconds by default). `hooks.commands` is the shared command array.
 
-- **`prompt`**: `(prompt: string) => string | Promise<string>`. Runs right before completion/chat requests and when Show Context previews the prompt.
+- **`prompt`**: `(prompt: string, ctx) => string | Promise<string>`. Runs right before completion/chat requests and when Show Context previews the prompt. One-argument hooks remain valid. `ctx` carries:
+  - `dryRun`: `true` in Show Context preview, `false` in a real `predict()` call.
+  - `mode`: `'completion' | 'chat' | 'fill'`.
+  - `abort()`: cancels the generation cleanly before the API call, pops the generation undo boundary, stops later hooks, and shows no error banner. No-op when `dryRun` is `true`.
+  - `params(overrides)`: shallow-merges one-off fields (such as `stop`, `grammar`, or `logit_bias`) into this request's payload without changing saved settings. Ignored when `dryRun` is `true`.
+- **`messages`**: `(messages: ChatMessage[], ctx) => ChatMessage[] | Promise<ChatMessage[]>`. Runs right after `convertChatToJSON` when Chat API mode is on, in both `predict()` and Show Context. `ctx` carries `{ dryRun, abort, params }`.
 - **`output`**: `(text: string, info: { complete: boolean }) => void | Promise<void>`. Runs on its own async queue after any generation that produced text.
 - **`commands`**: `{ label: string, action: () => void }` entries appended to the Quick Switcher's `>` command list.
 
-If a `prompt` or `output` hook throws, exceeds `hookTimeout`, or (for `prompt`) returns a non-string, Miyapad logs `[plugins] "<id>": …`, records the latest runtime failure under `id` in memory so Preferences → Plugins shows `Hook error: …` on that plugin's row, and skips the failed hook without aborting generation.
+If a `prompt`, `messages`, or `output` hook throws, exceeds `hookTimeout`, or returns the wrong type, Miyapad logs `[plugins] "<id>": …`, records the latest runtime failure under `id` in memory so Preferences → Plugins shows `Hook error: …` on that plugin's row, and skips the failed hook without aborting generation.
+
+## Lifecycle events (`miyapad.events`)
+
+`miyapad.events` exposes `{ on(event, fn), once(event, fn), off(event, fn) }`. Listener errors are caught, logged under `id`, recorded as runtime errors, and never block later listeners.
+
+- **`ready`**: sticky. Fires once after `<App>` commits its first render (when `settings`, `generation`, and the prompt editor are populated). Subscribing after it has already fired runs `fn` on a microtask.
+- **`sessionChange`**: `{ sessionId: number | undefined }`, fired when `SessionStorage` switches sessions or overwrites from a history snapshot.
+- **`generationStart`**: `{ mode: 'completion' | 'chat' | 'fill', sessionId: number | undefined }`.
+- **`generationChunk`**: `{ text: string, chunk: CompletionChunk }`, fired synchronously per streamed chunk; keep listeners non-blocking.
+- **`generationEnd`**: `{ text: string, complete: boolean, aborted: boolean }`.
+
+## Context injections and placeholders (`miyapad.context`)
+
+`hooks.prompt` runs after World Info matching, `contextLength` truncation, and token counting. To contribute text that takes part in prompt assembly, use `miyapad.context`:
+
+- **`setInjection(key, entry | null)`**: stores an entry under `<id>/<key>` (pass `null` to remove it). `entry` is `{ text, position?: 'before' | 'after' | 'depth', depth?: number, scanWorldInfo?: boolean }`.
+  - Entries with `scanWorldInfo: true` are appended to the World Info scan slice before matching entries.
+  - Every active injection's length is counted in `additionalContext` before truncation, so injected text never pushes the prompt past `contextLength`, and the token counter and Show Context include it automatically.
+  - `position: 'depth'` (default `depth: 0`) splices into the truncated prompt by line depth like Author's Note. `'before'` and `'after'` sit above or below `{prompt}`, ordered by `(manifest.order, id, key)`.
+- **`setPlaceholder(name, fn | null)`**: registers a synchronous `() => string` resolver for `{<name>}` and `{{<name>}}`, expanded before World Info scanning and truncation (pass `null` to remove). A throwing or non-string resolver logs under `id` and leaves the placeholder untouched.
+
+## Session-scoped data (`miyapad.sessionData`)
+
+For state tied to one writing session (summaries, trackers, per-session notes), use `miyapad.sessionData` instead of global `miyapad.storage`:
+
+- `sessionId`: returns `sessionStorage.selectedSession`.
+- `get(key)` / `keys()`: synchronous reads from `session.pluginData[id]` on the active session (`undefined` / `[]` when no session is open or active).
+- `set(key, value, opts?)` / `delete(key, opts?)` / `clear(opts?)`: JSON-clones `value` (same rules as `storage.set`), updates `session.pluginData[id]`, and queues a save without bumping `session.modified` or creating a version-history snapshot.
+- **Switch guard**: pass `{ sessionId: snapId }` captured before async work. If the user switched sessions (or the session is `inactive`), the write does nothing and returns `false`.
+- Because `pluginData` lives on the session body, single-session export/import carries it and purging a trashed session removes it.
+
+## Background generation (`miyapad.generate`)
+
+`miyapad.generate(options)` runs an off-screen completion and resolves to the concatenated reply string without touching `promptChunks`, undo history, tokens/sec, session stats, TTS, or plugin hooks/events:
+
+```js
+const reply = await miyapad.generate({
+  prompt: 'Summarize:\n' + text,
+  connectionId: 'fast-local',
+  samplerPresetId: 'deterministic',
+  maxTokens: 256,
+  temperature: 0.3,
+  stop: ['\n\n'],
+  params: {},
+  signal,
+});
+```
+
+- Pass `prompt` or (for Chat API connections) `messages`.
+- `connectionId` reads `connectionStorage.connections[connectionId]` and `samplerPresetId` reads `samplerPresetStorage.presets[samplerPresetId]`, each falling back to active settings when omitted.
+- Shares sampler filtering, provider quirks (`API_OPENAI_COMPAT`, `API_DEEPSEEK`, strict presets), `convertChatToJSON`, and server `/proxy` routing with `predict()`.
 
 ## Storage
 

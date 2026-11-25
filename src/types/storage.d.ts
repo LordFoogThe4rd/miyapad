@@ -10,6 +10,8 @@ interface SessionData {
   /** When the session was moved to the trash; unset for one that is not in it. */
   trashed?: number;
   inactive?: boolean;
+  /** Per-session plugin data keyed by plugin id (`miyapad.sessionData`). */
+  pluginData?: Record<string, Record<string, unknown>>;
   [key: string]: unknown;
 }
 

@@ -4,12 +4,14 @@ import {
 	checkRequirements,
 	checkVersion,
 	clearPluginRuntimeError,
+	createHookRunState,
 	DEFAULT_PLUGIN_START_TIMEOUT_S,
 	fetchPluginFromUrl,
 	getPluginRuntimeErrors,
 	hooks,
 	pluginHooksFor,
 	pluginStateView,
+	runMessagesHooks,
 	runOutputHooks,
 	runPlugins,
 	runPromptHooks,
@@ -47,6 +49,7 @@ beforeEach(() => {
 
 afterEach(() => {
 	hooks.prompt.length = 0;
+	hooks.messages.length = 0;
 	hooks.output.length = 0;
 	hooks.commands.length = 0;
 	clearPluginRuntimeError();
@@ -371,6 +374,66 @@ describe('pluginHooksFor & hook attribution', () => {
 
 	it('hands over the shared commands array', () => {
 		expect(pluginHooksFor('p', makeRecord('p')).commands).toBe(hooks.commands);
+	});
+
+	it('passes PromptHookContext, respects abort/params in live runs, and ignores them in dryRun', async () => {
+		const seenLater = vi.fn(p => p + ' later');
+		hooks.prompt.push(
+			(p, ctx) => {
+				expect(ctx.mode).toBe('chat');
+				ctx.params({ stop: ['END'] });
+				if (!ctx.dryRun) {
+					ctx.abort();
+					return undefined as unknown as string;
+				}
+				return p + ' preview';
+			},
+			seenLater,
+		);
+
+		const dryState = createHookRunState({ dryRun: true, mode: 'chat' });
+		expect(await runPromptHooks('hi', dryState)).toBe('hi preview later');
+		expect(dryState.aborted).toBe(false);
+		expect(dryState.params).toEqual({});
+		expect(seenLater).toHaveBeenCalledTimes(1);
+
+		seenLater.mockClear();
+		const liveState = createHookRunState({ dryRun: false, mode: 'chat' });
+		await runPromptHooks('hi', liveState);
+		expect(liveState.aborted).toBe(true);
+		expect(liveState.params).toEqual({ stop: ['END'] });
+		expect(seenLater).not.toHaveBeenCalled();
+		expect(getPluginRuntimeErrors()).toEqual({});
+	});
+
+	it('runs messages hooks with attribution for throws, wrong return types, timeouts, and abort', async () => {
+		vi.useFakeTimers();
+		const slow = pluginHooksFor('slow-msg', makeRecord('slow-msg', { manifest: { hookTimeout: 1 } }));
+		const broken = pluginHooksFor('broken-msg', makeRecord('broken-msg'));
+		const wrong = pluginHooksFor('wrong-msg', makeRecord('wrong-msg'));
+		const good = pluginHooksFor('good-msg', makeRecord('good-msg'));
+
+		slow.messages.push(() => new Promise(() => {}));
+		broken.messages.push(() => { throw new Error('msg boom'); });
+		wrong.messages.push((() => 'not-an-array') as unknown as (m: ChatMessage[]) => ChatMessage[]);
+		good.messages.push((msgs, ctx) => {
+			ctx.params({ temperature: 0.2 });
+			return [{ role: 'system', content: 'Injected' }, ...msgs];
+		});
+
+		const state = createHookRunState({ dryRun: false, mode: 'chat' });
+		const run = runMessagesHooks([{ role: 'user', content: 'Hi' }], state);
+		await vi.advanceTimersByTimeAsync(1000);
+		expect(await run).toEqual([
+			{ role: 'system', content: 'Injected' },
+			{ role: 'user', content: 'Hi' },
+		]);
+		expect(state.params).toEqual({ temperature: 0.2 });
+		expect(getPluginRuntimeErrors()).toEqual({
+			'slow-msg': 'Error: timed out after 1s',
+			'broken-msg': 'Error: msg boom',
+			'wrong-msg': 'messages hook returned string instead of an array',
+		});
 	});
 });
 

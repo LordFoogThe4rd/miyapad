@@ -79,7 +79,7 @@ There is no runtime validation library (no zod, no io-ts, nothing like them). Ty
 | **DeepSeek** | `deepseek.ts` | `deepseekCompletion` | `deepseekChatCompletion` | `deepseekModels` | — |
 | **AI Horde** | `aihorde.ts` | `aiHordeCompletion` | — | `aiHordeModels` | — |
 
-The router in `src/api/index.ts` picks one based on the `endpointAPI` constant (`src/constants.ts`). Picking "DeepSeek" in the sidebar (`API_DEEPSEEK = 5`) forces the endpoint to `https://api.deepseek.com`, makes the server input read-only, and sends every generation call through `deepseek.ts`. DeepSeek differs from the other providers in a few ways:
+The router in `src/api/index.ts` picks one based on the `endpointAPI` constant (`src/constants.ts`). Shared payload construction (`buildCompletionOptions`, `streamGeneration`) and instruct-to-messages conversion (`convertChatToJSON`) live in `src/api/request.ts`, so `useGenerationLogic.predict()` and plugin background generation (`miyapad.generate`) share sampler filtering, provider quirks, and server `/proxy` routing. Picking "DeepSeek" in the sidebar (`API_DEEPSEEK = 5`) forces the endpoint to `https://api.deepseek.com`, makes the server input read-only, and sends every generation call through `deepseek.ts`. DeepSeek differs from the other providers in a few ways:
 
 - Endpoints: `GET /models`, `POST /chat/completions`, `POST /beta/completions`
 - Abort does nothing, since there is no server-side abort endpoint

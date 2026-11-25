@@ -300,7 +300,7 @@ export function AppLayout() {
 		}, 500);
 		ac.signal.addEventListener('abort', () => clearTimeout(to));
 		return () => ac.abort();
-	}, [modalState["context"], promptText, endpoint, endpointAPI]);
+	}, [modalState["context"], finalPromptText, endpoint, endpointAPI]);
 
 	useEffect(() => {
 		if (endpointAPI !== API_OPENAI_COMPAT && endpointAPI !== API_AI_HORDE && endpointAPI !== API_DEEPSEEK) {

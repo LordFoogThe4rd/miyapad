@@ -1,15 +1,17 @@
-import { useEffect, useMemo, useRef } from 'react';
+import { useEffect, useMemo } from 'react';
 import { useSettings } from '../contexts/SettingsContext';
 import { useGeneration } from '../contexts/GenerationContext';
 import { usePromptBuilder } from './usePromptBuilder';
 import { useTTS } from './useTTS';
-import { getTokenCount, serverTokenCount, completion, chatCompletion, abortCompletion } from '../api/index';
+import { getTokenCount, serverTokenCount, abortCompletion } from '../api/index';
 import { buildLogitBiasParam } from '../api/common';
-import { API_LLAMA_CPP, API_KOBOLD_CPP, API_OPENAI_COMPAT, API_AI_HORDE, API_DEEPSEEK } from '../constants';
+import { streamGeneration } from '../api/request';
+import { API_LLAMA_CPP, API_OPENAI_COMPAT, API_AI_HORDE, API_DEEPSEEK } from '../constants';
 import { replaceNewlines } from '../utils/strings';
 import { regexLastIndexOf, createLenientRegex } from '../utils/regex';
 import { isAbortError } from '../utils/errors';
-import { runOutputHooks, runPromptHooks } from '../plugins';
+import { createHookRunState, runMessagesHooks, runOutputHooks, runPromptHooks } from '../plugins';
+import { pluginEvents, type GenerationMode } from '../plugins/events';
 
 type PredictionCallback = (chunk: CompletionChunk) => boolean;
 
@@ -49,12 +51,12 @@ export function useGenerationLogic() {
 			]);
 			setTokens((t: number) => t + (chunk?.completion_probabilities?.length ?? 1));
 			return true;
-		}, undefined, true);
+		}, undefined, true, {}, 'fill');
 
 		return true;
 	}
 
-	async function predict(prompt = finalPromptText, chunkCount = promptChunks.length, callback: PredictionCallback | undefined = undefined, abortController: AbortController | undefined = undefined, invalidatesUndo = false, customParams: Record<string, unknown> = {}) {
+	async function predict(prompt = finalPromptText, chunkCount = promptChunks.length, callback: PredictionCallback | undefined = undefined, abortController: AbortController | undefined = undefined, invalidatesUndo = false, customParams: Record<string, unknown> = {}, explicitMode?: GenerationMode) {
 		const myId = ++activeGenId.current;
 
 		if (!abortController && cancel) {
@@ -125,6 +127,9 @@ export function useGenerationLogic() {
 		// Everything this generation produced, for the plugins' output hooks.
 		let predictText = '';
 		let streamEnded = false;
+		let generationStarted = false;
+		let caughtAbort = false;
+		const mode: GenerationMode = explicitMode ?? ((useChatAPI || chatMode) ? 'chat' : 'completion');
 		// Separate from the tok/s startTime below, which is nudged backwards to compensate
 		// for the first token and so no longer marks when streaming actually began.
 		let streamStartMs = 0;
@@ -214,93 +219,70 @@ export function useGenerationLogic() {
 
 			// After the token count and the instruct suffix, so plugins see exactly what goes out.
 			// The token counter keeps showing the count from before they changed it.
-			prompt = await runPromptHooks(prompt);
+			const hookState = createHookRunState({ dryRun: false, mode });
+			prompt = await runPromptHooks(prompt, hookState);
 			if (myId !== activeGenId.current) return;
+			if (hookState.aborted) return false;
+
+			let messages: ChatMessage[] | undefined;
+			if (useChatAPI) {
+				messages = await runMessagesHooks(convertChatToJSON(prompt, templates[selectedTemplate]), hookState);
+				if (myId !== activeGenId.current) return;
+				if (hookState.aborted) return false;
+			}
 
 			let startTime = 0;
 			setTokensPerSec(0.0);
-			
-			for await (const chunk of (useChatAPI ? chatCompletion : completion)({
+			generationStarted = true;
+			pluginEvents.emit('generationStart', { mode, sessionId: sessionStorage.selectedSession });
+
+			for await (const chunk of streamGeneration({
 				endpoint,
 				endpointAPI,
-				...(endpointAPI == API_OPENAI_COMPAT || endpointAPI == API_LLAMA_CPP || endpointAPI == API_AI_HORDE || endpointAPI == API_DEEPSEEK ? {
-					endpointAPIKey,
-					model: endpointModel
-				} : {}),
-				...(useChatAPI ? { messages: convertChatToJSON(prompt, templates[selectedTemplate]) } : { prompt }),
-				...(seed != -1 ? { seed } : {}),
-				...(enabledSamplers.includes('temperature') ? {
-					temperature
-				} : {}),
-				...(!openaiPresets || endpointAPI != API_OPENAI_COMPAT ? {
-					...(enabledSamplers.includes('dynatemp') ? {
-						dynatemp_range: dynaTempRange,
-						dynatemp_exponent: dynaTempExp,
-					} : {}),
-					...(enabledSamplers.includes('rep_pen') ? {
-						repeat_penalty: repeatPenalty,
-						repeat_last_n: repeatLastN,
-					} : {}),
-					penalize_nl: penalizeNl,
-					ignore_eos: ignoreEos,
-				} : {}),
-				...(Object.keys(logitBias.bias).length > 0 ? {
-					logit_bias: logitBiasParam,
-				} : {}),
-				...((!openaiPresets || endpointAPI != API_OPENAI_COMPAT) && grammar.length ? { grammar } : {}),
-				...(enabledSamplers.includes('pres_pen') ? {
-					presence_penalty: presencePenalty,
-				} : {}),
-				...(enabledSamplers.includes('freq_pen') ? {
-					frequency_penalty: frequencyPenalty,
-				} : {}),
-				...((enabledSamplers.includes('mirostat') && mirostat && (!openaiPresets || endpointAPI != API_OPENAI_COMPAT)) ? {
-					mirostat,
-					mirostat_tau: mirostatTau,
-					mirostat_eta: mirostatEta,
-				} : {
-					...(enabledSamplers.includes('top_p') ? {
-						top_p: topP,
-					} : {}),
-					...(!openaiPresets || endpointAPI != API_OPENAI_COMPAT ? {
-						...(enabledSamplers.includes('top_k') ? {
-							top_k: topK,
-						} : {}),
-						...(enabledSamplers.includes('typical_p') ? {
-							typical_p: typicalP,
-						} : {}),
-						...(enabledSamplers.includes('min_p') ? {
-							min_p: minP,
-						} : {}),
-						...(enabledSamplers.includes('tfs_z') ? {
-							tfs_z: tfsZ
-						} : {}),
-						...(enabledSamplers.includes('xtc') ? {
-							xtc_threshold: xtcThreshold,
-							xtc_probability: xtcProbability,
-						}: {}),
-						...(enabledSamplers.includes('dry') ? {
-							dry_multiplier: dryMultiplier,
-							dry_base: dryBase,
-							dry_allowed_length: dryAllowedLength,
-							dry_penalty_last_n: dryPenaltyRange,
-							dry_sequence_breakers: (endpointAPI == API_OPENAI_COMPAT || endpointAPI == API_DEEPSEEK) ? 
-								drySequenceBreakers : 
-								JSON.parse(drySequenceBreakers),
-						}: {}),
-						...(enabledSamplers.includes('ban_tokens') ? {
-							banned_tokens: JSON.parse(bannedTokens),
-						}: {}),
-					} : {})
-				}),
-				n_predict: maxPredictTokens,
-				n_probs: disableLogprobs ? 0 : 10,
-				...(endpointAPI === API_LLAMA_CPP ? { post_sampling_probs: postSamplingProbs } : {}),
-				stream: useTokenStreaming,
-				...(stopParam.length ? { stop: stopParam } : {}),
+				endpointAPIKey,
+				endpointModel,
+				useChatAPI,
+				openaiPresets,
+				postSamplingProbs,
+				useTokenStreaming,
+				disableLogprobs,
+				proxyEndpoint: isMiyapadEndpoint ? sessionStorage.proxyEndpoint : undefined,
+				prompt,
+				messages,
+				seed,
+				maxPredictTokens,
+				temperature,
+				dynaTempRange,
+				dynaTempExp,
+				repeatPenalty,
+				repeatLastN,
+				penalizeNl,
+				presencePenalty,
+				frequencyPenalty,
+				topK,
+				topP,
+				typicalP,
+				minP,
+				tfsZ,
+				mirostat,
+				mirostatTau,
+				mirostatEta,
+				xtcThreshold,
+				xtcProbability,
+				dryMultiplier,
+				dryBase,
+				dryAllowedLength,
+				dryPenaltyRange,
+				drySequenceBreakers,
+				bannedTokens,
+				ignoreEos,
+				enabledSamplers,
+				grammar,
+				logitBias,
+				logitBiasParam,
+				stop: stopParam,
 				signal: ac.signal,
-				...(isMiyapadEndpoint ? { proxyEndpoint: sessionStorage.proxyEndpoint } : {}),
-				...customParams
+				customParams: { ...customParams, ...hookState.params },
 			})) {
 				if (myId !== activeGenId.current) break;
 				ac.signal.throwIfAborted();
@@ -344,11 +326,14 @@ export function useGenerationLogic() {
 				predictChars += compChunk.content.length;
 				predictText += compChunk.content;
 				if (streamStartMs === 0) streamStartMs = performance.now();
+				pluginEvents.emit('generationChunk', { text: compChunk.content, chunk: compChunk });
 				ttsAddChunk(compChunk.content);
 			}
 			streamEnded = true;
 		} catch (e: unknown) {
-			if (!isAbortError(e)) {
+			if (isAbortError(e)) {
+				caughtAbort = true;
+			} else {
 				reportError(e);
 				const errStr = String(e);
 				if ((endpointAPI == API_OPENAI_COMPAT || endpointAPI == API_LLAMA_CPP || endpointAPI == API_DEEPSEEK) && errStr.includes("401")) {
@@ -364,6 +349,11 @@ export function useGenerationLogic() {
 			}
 			return false;
 		} finally {
+			if (generationStarted) {
+				const complete = streamEnded && myId === activeGenId.current;
+				const aborted = caughtAbort || ac.signal.aborted || myId !== activeGenId.current;
+				pluginEvents.emit('generationEnd', { text: predictText, complete, aborted });
+			}
 			// Counted even when a newer generation superseded this one: the tokens it did
 			// produce were streamed into the prompt before it was cut off.
 			if (predictCount > 0) {

@@ -31,13 +31,14 @@ import { SessionHistoryModal } from './modals/SessionHistoryModal';
 import { StatisticsModal } from './modals/StatisticsModal';
 import { AboutModal } from './modals/AboutModal';
 import { QuickSwitcher } from './QuickSwitcher';
-import { hooks, runPromptHooks } from '../plugins';
+import { createHookRunState, hooks, runMessagesHooks, runPromptHooks } from '../plugins';
+import type { GenerationMode } from '../plugins/events';
 import { EditorContextMenu } from './EditorContextMenu';
 import type { ContextMenuItem, ModalsProps } from '../types/components';
 
 export function Modals({ toggleModal, currentThemeName, setCurrentThemeName, allThemes, setAllThemes, applyChatTemplate }: ModalsProps) {
 	const t = useT();
-	const { endpoint, setEndpointAPIKey, endpointAPIKey, endpointAPI, endpointModel, setEndpointModel, templates, selectedTemplate, setSelectedTemplate, templatesImport, setTemplates, templateStorage, grammar, setGrammar, isMiyapadEndpoint, sessionStorage, locale, setLocale, fontSizeMultiplier, setFontSizeMultiplier, spellCheck, setSpellCheck, attachSidebar, setAttachSidebar, preserveCursorPosition, setPreserveCursorPosition, tokenHighlightMode, setTokenHighlightMode, tokenColorMode, setTokenColorMode, showProbsMode, setShowProbsMode, ttsEnabled, setTTSEnabled, ttsVoiceId, setTTSVoiceId, ttsPitch, setTTSPitch, ttsRate, setTTSRate, ttsVolume, setTTSVolume, ttsSpeakInputs, setTTSSpeakInputs, ttsMaxUserInput, setTTSMaxUserInput, historyKeep, setHistoryKeep, historyDeletionThreshold, setHistoryDeletionThreshold, historyBeforeGenerate, setHistoryBeforeGenerate, useChatAPI, setUseChatAPI, memoryTokens, authorNoteTokens, authorNoteDepth, setAuthorNoteDepth, worldInfo, setWorldInfo, sillyTarvernWorldInfoJSON, setSillyTarvernWorldInfoJSON, logitBias, setLogitBias, templateList, setTemplateList,
+	const { endpoint, setEndpointAPIKey, endpointAPIKey, endpointAPI, endpointModel, setEndpointModel, templates, selectedTemplate, setSelectedTemplate, templatesImport, setTemplates, templateStorage, grammar, setGrammar, isMiyapadEndpoint, sessionStorage, locale, setLocale, fontSizeMultiplier, setFontSizeMultiplier, spellCheck, setSpellCheck, attachSidebar, setAttachSidebar, preserveCursorPosition, setPreserveCursorPosition, tokenHighlightMode, setTokenHighlightMode, tokenColorMode, setTokenColorMode, showProbsMode, setShowProbsMode, ttsEnabled, setTTSEnabled, ttsVoiceId, setTTSVoiceId, ttsPitch, setTTSPitch, ttsRate, setTTSRate, ttsVolume, setTTSVolume, ttsSpeakInputs, setTTSSpeakInputs, ttsMaxUserInput, setTTSMaxUserInput, historyKeep, setHistoryKeep, historyDeletionThreshold, setHistoryDeletionThreshold, historyBeforeGenerate, setHistoryBeforeGenerate, chatMode, useChatAPI, setUseChatAPI, memoryTokens, authorNoteTokens, authorNoteDepth, setAuthorNoteDepth, worldInfo, setWorldInfo, sillyTarvernWorldInfoJSON, setSillyTarvernWorldInfoJSON, logitBias, setLogitBias, templateList, setTemplateList,
 		screenshotIncludeSessionName, setScreenshotIncludeSessionName,
 		screenshotIncludeDate, setScreenshotIncludeDate,
 		screenshotBackgroundUrl, setScreenshotBackgroundUrl,
@@ -59,7 +60,7 @@ export function Modals({ toggleModal, currentThemeName, setCurrentThemeName, all
 	const { cancel, modalState, closeModal, openModal, undoStack, redoStack, instructModalState, setInstructModalState, promptEditorView, replaceEditorText, lastError, sessionEndpointConnecting, predictStartTokens, tokens, memoryTokenCount, worldInfoTokenCount, authorNoteTokenCount, contextMenuState, setContextMenuState, setTriggerPredict, sessionEndpointError, setRejectedAPIKey } = useGeneration();
 
 	const { handleauthorNoteTokensChange, handleMemoryTokensChange } = usePersistentContextHandlers();
-	const { promptText, finalPromptText, convertChatToJSON } = usePromptBuilder();
+	const { promptText, fimPromptInfo, finalPromptText, convertChatToJSON } = usePromptBuilder();
 	const { listTTSVoices, ttsStop } = useTTS();
 	const { ttsAvailable } = useGeneration();
 	const { predict, undoAndPredict, undo, redo } = useGenerationLogic();
@@ -344,8 +345,14 @@ export function Modals({ toggleModal, currentThemeName, setCurrentThemeName, all
 			handleMemoryTokensChange=${handleMemoryTokensChange}
 			finalPromptText=${useChatAPI ? JSON.stringify(convertChatToJSON(finalPromptText, templates[selectedTemplate]), null, 4) : finalPromptText}
 			previewWithPlugins=${async () => {
-				const hooked = await runPromptHooks(finalPromptText);
-				return useChatAPI ? JSON.stringify(convertChatToJSON(hooked, templates[selectedTemplate]), null, 4) : hooked;
+				const mode: GenerationMode = fimPromptInfo ? 'fill' : (useChatAPI || chatMode) ? 'chat' : 'completion';
+				const hookState = createHookRunState({ dryRun: true, mode });
+				const hooked = await runPromptHooks(finalPromptText, hookState);
+				if (useChatAPI) {
+					const messages = await runMessagesHooks(convertChatToJSON(hooked, templates[selectedTemplate]), hookState);
+					return JSON.stringify(messages, null, 4);
+				}
+				return hooked;
 			}}
 			defaultPresets=${defaultPresets}
 			cancel=${cancel}

@@ -49,7 +49,7 @@ miyapad/
     ├── polyfills.ts               # Browser polyfills
     ├── version.ts                 # Generated (gitignored) — exports APP_VERSION from package.json
     ├── worldinfo.ts               # World info / lorebook data structures
-    ├── api/                       # API modules for backends (.ts)
+    ├── api/                       # API modules for backends and shared request builder (request.ts)
     ├── components/                # React components (Modals, Sidebar, controls, icons — .tsx)
     ├── contexts/                  # SettingsContext.tsx and GenerationContext.tsx
     ├── css/                       # CSS partials (23 files, imported by styles.css)
@@ -58,7 +58,7 @@ miyapad/
     ├── hooks/                     # Custom hooks (.ts)
     ├── i18n/                      # UI localization — context.tsx (provider + useT), locales.ts (registry), {code}.json string tables
     ├── importer/                  # Preset importers (.ts) — SillyTavern, NovelAI
-    ├── plugins/                   # Plugin manifest, .miyaplugin zip archive, changelog, and GitHub/URL source parsers (.ts)
+    ├── plugins/                   # Plugin manifest, archive, changelog, URL sources, events, context, sessionData, generate (.ts)
     ├── storage/                   # Storage adapters (.ts) — IndexedDB, Server REST API, etc.
     ├── types/                     # Ambient type declarations (.d.ts) — api, components, contexts, storage, defaults, global
     ├── utils/                     # Helpers (.ts) — regex, strings, errors

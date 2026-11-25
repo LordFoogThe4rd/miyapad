@@ -1,8 +1,10 @@
 import { html } from 'htm/react';
+import { useEffect } from 'react';
 import { I18nProvider } from './i18n';
 import { SettingsProvider, useSettings } from './contexts/SettingsContext';
 import { GenerationProvider } from './contexts/GenerationContext';
 import { AppLayout } from './AppLayout';
+import { pluginEvents } from './plugins/events';
 import type { SessionStorage } from './storage/SessionStorage';
 import type { TemplateStorage } from './storage/TemplateStorage';
 import type { ThemeStorage } from './storage/ThemeStorage';
@@ -28,6 +30,9 @@ interface AppProps {
 }
 
 export function App({ sessionStorage, templateStorage, themeStorage, connectionStorage, samplerPresetStorage, pluginStorage, pluginStart, useSessionState, useDBTemplates, useDBThemes, useDBConnections, useDBSamplerPresets, isMiyapadEndpoint }: AppProps) {
+	useEffect(() => {
+		pluginEvents.emitReady();
+	}, []);
 	return html`
 		<${SettingsProvider}
 			sessionStorage=${sessionStorage}

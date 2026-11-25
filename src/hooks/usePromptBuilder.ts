@@ -1,21 +1,34 @@
-import { useMemo, useState } from 'react';
+import { useMemo } from 'react';
 import { useSettings } from '../contexts/SettingsContext';
 import { useGeneration } from '../contexts/GenerationContext';
 import { defaultPresets } from '../defaults/presets';
-import { joinPrompt, replaceNewlines } from '../utils/strings';
-import { regexSplitString, regexIndexOf, prefixMatchLength, createLenientPrefixRegex, createLenientRegex } from '../utils/regex';
+import { convertChatToJSON } from '../api/request';
+import { expandPluginPlaceholders, usePluginContext } from '../plugins/context';
+import { joinPrompt } from '../utils/strings';
+import { regexSplitString } from '../utils/regex';
+
+function joinInjections(entries: readonly { text: string }[]): string {
+	let out = '';
+	for (const entry of entries) {
+		if (!entry.text) continue;
+		if (out.length > 0 && !out.endsWith('\n')) out += '\n';
+		out += entry.text;
+	}
+	return out;
+}
 
 export function usePromptBuilder() {
 	const { templates, selectedTemplate, worldInfo, memoryTokens, authorNoteTokens, authorNoteDepth, contextLength } = useSettings();
 	const { promptChunks, cancel } = useGeneration();
+	const { injections, placeholders } = usePluginContext();
 
 	function replacePlaceholders(string: string, placeholders: Record<string, string>) {
 		return string.replace(/\{[^}]+\}/g, function (placeholder: string) {
-			return placeholders.hasOwnProperty(placeholder)
+			return Object.hasOwn(placeholders, placeholder)
 				? placeholders[placeholder]
 				: placeholder;
-		}).replace(/\\n/g, '\n')
-	};
+		}).replace(/\\n/g, '\n');
+	}
 	const templateReplacements = useMemo(() => ({
 			"{inst}": templates[selectedTemplate]?.instPre && templates[selectedTemplate]?.instPre !== ""
 				? templates[selectedTemplate]?.instPre
@@ -109,11 +122,25 @@ export function usePromptBuilder() {
 		};
 	}, [promptChunks, templates, selectedTemplate, cancel]);
 
+	const expandedPromptText = useMemo(
+		() => expandPluginPlaceholders(modifiedPromptText, placeholders),
+		[modifiedPromptText, placeholders],
+	);
+
+	const expandedInjections = useMemo(
+		() => injections
+			.map(inj => ({ ...inj, text: expandPluginPlaceholders(inj.text, placeholders) }))
+			.filter(inj => inj.text.length > 0),
+		[injections, placeholders],
+	);
+
 	// compute separately as I imagine this can get expensive
 	const assembledWorldInfo = useMemo(() => {
 		// assemble non-empty wi
 		const validWorldInfo = !Array.isArray(worldInfo.entries) ? [] : worldInfo.entries.filter((entry: any) =>
 			entry.keys.length > 0 && !(entry.keys.length == 1 && entry.keys[0] == "") && entry.text !== "");
+
+		const scanInjectionText = joinInjections(expandedInjections.filter(inj => inj.scanWorldInfo));
 
 		// search prompt
 		const activeWorldInfo = validWorldInfo.filter((entry: any) => {
@@ -124,10 +151,13 @@ export function usePromptBuilder() {
 				: Number(entry.search);
 
 			// truncate to search range. using promptText allows for search ranges larger than context
-			const searchPrompt = modifiedPromptText.substring(modifiedPromptText.length - searchRange * defaultPresets.tokenRatio);
+			const baseSlice = expandedPromptText.substring(expandedPromptText.length - searchRange * defaultPresets.tokenRatio);
+			const searchPrompt = scanInjectionText
+				? (baseSlice ? `${baseSlice}\n${scanInjectionText}` : scanInjectionText)
+				: baseSlice;
 
 			// search in range
-			return entry.keys.some((key: any, index: any) => {
+			return entry.keys.some((key: any) => {
 				// don't waste resources on disabled entries
 				if (searchPrompt.length == 0) {
 					return
@@ -146,18 +176,21 @@ export function usePromptBuilder() {
 		});
 
 		return activeWorldInfo.length > 0
-			? activeWorldInfo.map((entry: any) => entry.text).join("\n")
+			? activeWorldInfo.map((entry: any) => expandPluginPlaceholders(entry.text, placeholders)).join("\n")
 			: "";
-	}, [modifiedPromptText, worldInfo]);
+	}, [expandedPromptText, expandedInjections, placeholders, worldInfo]);
 
 	const additionalContextPrompt = useMemo(() => {
-		const order: (keyof AuthorNoteData)[] = ["prefix","text","suffix"]
-		const assembledAuthorNote = authorNoteTokens.text && authorNoteTokens.text !== ""
-			? order.map(key => authorNoteTokens[key]).join("").replace(/\\n/g,'\n')
+		const order: (keyof AuthorNoteData)[] = ["prefix", "text", "suffix"];
+		const expandedAuthorNoteText = expandPluginPlaceholders(authorNoteTokens.text ?? '', placeholders);
+		const assembledAuthorNote = expandedAuthorNoteText !== ""
+			? order.map(key => key === 'text' ? expandedAuthorNoteText : authorNoteTokens[key]).join("").replace(/\\n/g, '\n')
 			: "";
 
+		const expandedMemoryText = expandPluginPlaceholders(memoryTokens.text ?? '', placeholders);
+
 		// replacements for the contextOrder string
-		const contextReplacements: Record<string, any> = {
+		const contextReplacements: Record<string, string> = {
 			"{wiPrefix}": assembledWorldInfo && assembledWorldInfo !== ""
 				? worldInfo.prefix
 				: "", // wi prefix and suffix will be added whenever wi isn't empty
@@ -166,39 +199,85 @@ export function usePromptBuilder() {
 				? worldInfo.suffix
 				: "",
 
-			"{memPrefix}": memoryTokens.text && memoryTokens.text !== "" || assembledWorldInfo !== ""
+			"{memPrefix}": expandedMemoryText !== "" || assembledWorldInfo !== ""
 				? memoryTokens.prefix
 				: "", // memory prefix and suffix will be added whenever memory or wi aren't empty
-			"{memText}": memoryTokens.text,
-			"{memSuffix}": memoryTokens.text && memoryTokens.text !== "" || assembledWorldInfo !== ""
+			"{memText}": expandedMemoryText,
+			"{memSuffix}": expandedMemoryText !== "" || assembledWorldInfo !== ""
 				? memoryTokens.suffix
 				: "",
-		}
+		};
+
+		const beforeInjections = expandedInjections.filter(inj => inj.position === 'before');
+		const depthInjections = expandedInjections.filter(inj => inj.position === 'depth');
+		const afterInjections = expandedInjections.filter(inj => inj.position === 'after');
+
+		const beforeBlock = joinInjections(beforeInjections);
+		const afterBlock = joinInjections(afterInjections);
+		const depthChars = depthInjections.reduce((sum, inj) => sum + inj.text.length, 0);
+		const beforeExtra = beforeBlock.length > 0
+			? beforeBlock.length + (expandedPromptText.length > 0 && !beforeBlock.endsWith('\n') ? 1 : 0)
+			: 0;
+		const afterExtra = afterBlock.length > 0
+			? afterBlock.length + ((expandedPromptText.length > 0 || beforeBlock.length > 0) && !(expandedPromptText || beforeBlock).endsWith('\n') ? 1 : 0)
+			: 0;
 
 		// prompt length estimation
 		const additionalContext = (Object.values(contextReplacements)
-			.filter(value => typeof value === 'string').join('')).length;
+			.filter(value => typeof value === 'string').join('')).length
+			+ beforeExtra + depthChars + afterExtra;
 		const estimatedContextStart = Math.round(
-			modifiedPromptText.length - contextLength * defaultPresets.tokenRatio + additionalContext) + 1;
+			expandedPromptText.length - contextLength * defaultPresets.tokenRatio + additionalContext) + 1;
 
-		// trunkate prompt to context limit
-		const truncPrompt = modifiedPromptText.substring(estimatedContextStart);
+		// truncate prompt to context limit
+		const truncPrompt = expandedPromptText.substring(estimatedContextStart);
 
-		// make injection depth valid
-		const truncPromptLen = truncPrompt.split('\n').length;
-		const injDepth = truncPromptLen > authorNoteDepth ? authorNoteDepth : truncPromptLen
+		let promptWithDepth = truncPrompt;
+		if (assembledAuthorNote !== "" || depthInjections.length > 0) {
+			const truncPromptLen = truncPrompt.split('\n').length;
+			const lines = truncPrompt.match(/.*\n?/g) ?? [];
+			const buckets = new Map<number, string[]>();
+			const addAt = (depth: number, text: string) => {
+				const clamped = truncPromptLen > depth ? depth : truncPromptLen;
+				const idx = Math.max(0, lines.length - clamped - 1);
+				let bucket = buckets.get(idx);
+				if (!bucket) {
+					bucket = [];
+					buckets.set(idx, bucket);
+				}
+				bucket.push(text);
+			};
 
-		const lines = truncPrompt.match(/.*\n?/g) ?? [];
-		const injIndex = lines.length-injDepth-1
-		// inject an
-		lines.splice(injIndex,0,assembledAuthorNote)
-		// if an, return an context, else return original truncated context
-		const authorNotePrompt = assembledAuthorNote != ""
-			? lines.join('')
-			: truncPrompt;
+			if (assembledAuthorNote !== "") {
+				addAt(authorNoteDepth, assembledAuthorNote);
+			}
+			for (const inj of depthInjections) {
+				addAt(inj.depth, inj.text);
+			}
+
+			const out: string[] = [];
+			for (let i = 0; i < lines.length; i++) {
+				const bucket = buckets.get(i);
+				if (bucket) out.push(...bucket);
+				out.push(lines[i]);
+			}
+			promptWithDepth = out.join('');
+		}
+
+		let promptSection = promptWithDepth;
+		if (beforeBlock) {
+			promptSection = promptSection
+				? `${beforeBlock}${beforeBlock.endsWith('\n') ? '' : '\n'}${promptSection}`
+				: beforeBlock;
+		}
+		if (afterBlock) {
+			promptSection = promptSection
+				? `${promptSection}${promptSection.endsWith('\n') ? '' : '\n'}${afterBlock}`
+				: afterBlock;
+		}
 
 		// add the final replacement
-		contextReplacements["{prompt}"] = authorNotePrompt
+		contextReplacements["{prompt}"] = promptSection;
 
 		const workingContextOrder = memoryTokens.contextOrder && memoryTokens.contextOrder !== ""
 			? memoryTokens.contextOrder
@@ -208,98 +287,19 @@ export function usePromptBuilder() {
 		// the context is (1) split by line, (2) persistent context placeholders are 
 		// replaced, (3) instruct template placeholders are replaced (4) non-empty
 		// lines are joined back together.
-		const permContextPrompt = workingContextOrder.split("\n").map(function (line: any) {
-			return replacePlaceholders(line,contextReplacements)
-		}).filter(function (line: any) {
+		const permContextPrompt = workingContextOrder.split("\n").map(function (line: string) {
+			return replacePlaceholders(line, contextReplacements);
+		}).filter(function (line: string) {
 			return line.trim() !== "";
 		}).join("\n").replace(/\\n/g, '\n');
 
 		return permContextPrompt;
-	}, [contextLength, modifiedPromptText, memoryTokens, authorNoteTokens, authorNoteDepth, assembledWorldInfo, worldInfo.prefix, worldInfo.suffix]);
+	}, [contextLength, expandedPromptText, expandedInjections, placeholders, memoryTokens, authorNoteTokens, authorNoteDepth, assembledWorldInfo, worldInfo.prefix, worldInfo.suffix]);
 
 	const finalPromptText = useMemo(() => {
 		let text = replacePlaceholders(additionalContextPrompt, templateReplacements);
 		return text;
 	}, [additionalContextPrompt, templates, selectedTemplate]);
-	function convertChatToJSON(chatString: string, template: InstructTemplate) {
-		function extractMessage(text: string, prefix: string, suffixes: string[], role: 'system' | 'user' | 'assistant'): { message: ChatMessage; remainingString: string } | null {
-			const matches = text.match(createLenientPrefixRegex(prefix));
-			if (matches && matches.length) {
-				text = text.substring(matches[0].length);
-				let endIndex = suffixes[0] ? regexIndexOf(text, createLenientRegex(suffixes[0])) : -1;
-				if (endIndex === -1) {
-					if (suffixes.length > 1) {
-						const indices = suffixes.slice(1).map((suffix: string) => suffix ? regexIndexOf(text, createLenientRegex(suffix)) : -1).filter((index: number) => index !== -1);
-						endIndex = indices.length > 0 ? Math.min(...indices) : text.length;
-					}  else {
-						endIndex = text.length;
-					}
-				}
-				let content = text.substring(0, endIndex);
-				content = endIndex !== text.length ? content.trim() : content.trimLeft();
-				return {
-					message: { role, content },
-					remainingString: text.substring(endIndex)
-				};
-			}
-			return null;
-		}
-
-		function skipToNextKnownPrefix(text: string, ...prefixes: string[]) {
-			const indices = prefixes.map(prefix => prefix ? regexIndexOf(text, createLenientRegex(prefix)) : -1).filter(index => index !== -1);
-			const minIndex = indices.length > 0 ? Math.min(...indices) : text.length;
-			if (minIndex == 0) {
-				console.warn("Something went wrong!");
-				return "";
-			}
-			return text.substring(minIndex);
-		}
-
-		if (!template || typeof template !== 'object') {
-			console.warn('Invalid or missing template object!');
-			return [];
-		}
-
-		const messages = [];
-		const { sysPre, sysSuf, instPre, instSuf } = replaceNewlines(template);
-
-		let remainingString = chatString.trimStart();
-
-		const indices = [sysPre, instPre].map(prefix => prefix ? regexIndexOf(remainingString, createLenientPrefixRegex(prefix)) : -1).filter(index => index !== -1);
-		const minIndex = indices.length > 0 ? Math.min(...indices) : remainingString.length;
-		if (minIndex !== 0) {
-			// The prompt doesn't start with any of the prefixes.
-			// So let's assume it's a instruction.
-			const matchLen = prefixMatchLength(instPre.trim(), remainingString);
-			remainingString = instPre + remainingString.substring(matchLen);
-		}
-
-		while (remainingString.length > 0) {
-			let extracted = null;
-			if (sysPre) {
-				extracted = extractMessage(remainingString, sysPre, [sysSuf, instPre, instSuf], 'system');
-			}
-			if (instPre && !extracted) {
-				extracted = extractMessage(remainingString, instPre, [instSuf], 'user');
-			}
-			if (instSuf && !extracted) {
-				extracted = extractMessage(remainingString, instSuf, [instPre], 'assistant');
-			}
-			if (!extracted) {
-				remainingString = skipToNextKnownPrefix(remainingString, sysPre, instPre, instSuf);
-				continue;
-			}
-			messages.push(extracted.message);
-			remainingString = extracted.remainingString;
-		}
-
-		const lastMessage = messages?.length ? messages[messages.length - 1] : null;
-		if (lastMessage && lastMessage.role === 'assistant' && lastMessage.content.length === 0) {
-			messages.pop();
-		}
-
-		return messages;
-	}
 
 	return { promptText, modifiedPromptText, fimPromptInfo, assembledWorldInfo, additionalContextPrompt, finalPromptText, templateReplacements, replacePlaceholders, convertChatToJSON, displayPromptChunks, cleanPromptText, origToClean, cleanToOrig };
 }

@@ -14,6 +14,10 @@ import { SamplerPresetStorage } from './storage/SamplerPresetStorage';
 import { PluginStorage } from './storage/PluginStorage';
 import { PluginData } from './storage/PluginData';
 import { pluginHooksFor, pluginStateView, startPlugins } from './plugins';
+import { pluginEvents } from './plugins/events';
+import { pluginContext } from './plugins/context';
+import { sessionDataFor } from './plugins/sessionData';
+import { createPluginGenerate } from './plugins/generate';
 import { currentSettings } from './contexts/SettingsContext';
 import { currentGeneration } from './contexts/GenerationContext';
 import * as api from './api/index';
@@ -83,7 +87,18 @@ async function main() {
 				onSkip=${skipResolve}/>
 		</${ErrorBoundary}>`);
 
-	// No stable API: plugins get the real objects, and any release can change them.
+	sessionStorage.addEventListener('sessionchange', () => {
+		pluginEvents.emit('sessionChange', { sessionId: sessionStorage.selectedSession });
+	});
+
+	const generate = createPluginGenerate({
+		getSettings: currentSettings,
+		connectionStorage,
+		samplerPresetStorage,
+		sessionStorage,
+		isMiyapadEndpoint,
+	});
+
 	const started = startPlugins(pluginStorage, new URLSearchParams(window.location.search).has('safe'), id => {
 		const record = pluginStorage.plugins[id];
 		return {
@@ -93,7 +108,11 @@ async function main() {
 			sessionStorage, templateStorage, themeStorage, connectionStorage, samplerPresetStorage,
 			api, React, html,
 			hooks: pluginHooksFor(id, record),
+			events: pluginEvents.forPlugin(id),
+			context: pluginContext.forPlugin(id, record.manifest.order),
 			storage: pluginData.storageFor(id),
+			sessionData: sessionDataFor(id, sessionStorage),
+			generate,
 			// Views: the contexts have no value until the app draws, which is after plugins start.
 			settings: pluginStateView(currentSettings),
 			generation: pluginStateView(currentGeneration),

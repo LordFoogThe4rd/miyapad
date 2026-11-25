@@ -4,6 +4,7 @@ import { renderHook, act, cleanup } from '@testing-library/react';
 import { useGenerationLogic } from './useGenerationLogic';
 import { API_AI_HORDE, API_DEEPSEEK, API_KOBOLD_CPP, API_LLAMA_CPP, API_OPENAI_COMPAT } from '../constants';
 import { hooks } from '../plugins';
+import { pluginEvents } from '../plugins/events';
 
 function u(content: string): PromptChunk {
 	return { type: 'user', content };
@@ -65,7 +66,7 @@ const { genState, settings, builder, tts, api } = vi.hoisted(() => {
 			useBasicStoppingMode: false,
 			stoppingStrings: '[]',
 			openaiPresets: false,
-			sessionStorage: { snapshot: vi.fn(), addStats: vi.fn() },
+			sessionStorage: { snapshot: vi.fn(), addStats: vi.fn(), selectedSession: undefined as number | undefined },
 			historyBeforeGenerate: false,
 		},
 		builder: { fimPromptInfo: undefined, finalPromptText: '', convertChatToJSON: vi.fn() },
@@ -511,13 +512,24 @@ describe('useGenerationLogic requests and responses', () => {
 });
 
 describe('useGenerationLogic plugin hooks', () => {
+	const savedSettings = { ...settings };
+	const savedBuilder = { ...builder };
+
 	beforeEach(() => {
 		vi.spyOn(console, 'error').mockImplementation(() => {});
+		genState.setLastError.mockClear();
+		api.chatCompletion.mockReset();
+		settings.sessionStorage.selectedSession = 42;
 	});
 
 	afterEach(() => {
 		hooks.prompt.length = 0;
+		hooks.messages.length = 0;
 		hooks.output.length = 0;
+		pluginEvents.reset();
+		Object.assign(settings, savedSettings);
+		Object.assign(builder, savedBuilder);
+		settings.sessionStorage.selectedSession = undefined;
 		vi.restoreAllMocks();
 	});
 
@@ -571,5 +583,110 @@ describe('useGenerationLogic plugin hooks', () => {
 		await new Promise(resolve => setTimeout(resolve, 0));
 
 		expect(output).not.toHaveBeenCalled();
+	});
+
+	it('passes dryRun: false, mode, and merges ctx.params() into the request without changing settings', async () => {
+		let seenCtx: { dryRun: boolean; mode: string } | undefined;
+		hooks.prompt.push((p, ctx) => {
+			seenCtx = { dryRun: ctx.dryRun, mode: ctx.mode };
+			ctx.params({ stop: ['###'], grammar: 'root ::= "yes"' });
+			return p;
+		});
+		const { result } = renderLogic([u('hello')]);
+		api.completion.mockImplementation(zeroTokenCompletion);
+
+		await act(async () => { await result.current.predict('hello'); });
+
+		expect(seenCtx).toEqual({ dryRun: false, mode: 'completion' });
+		expect(lastCompletionArgs()).toMatchObject({ stop: ['###'], grammar: 'root ::= "yes"' });
+		expect(settings.grammar).toBe('');
+	});
+
+	it('cancels cleanly when ctx.abort() is called, pops the undo boundary, stops later hooks, and sets no error', async () => {
+		const later = vi.fn(p => p);
+		hooks.prompt.push(
+			(_p, ctx) => {
+				ctx.abort();
+				return '';
+			},
+			later,
+		);
+		const { result } = renderLogic([u('a')]);
+		genState.undoStack.current = [[u('prev')]];
+		api.completion.mockImplementation(oneTokenCompletion);
+
+		let returned: unknown;
+		await act(async () => { returned = await result.current.predict('a'); });
+
+		expect(returned).toBe(false);
+		expect(later).not.toHaveBeenCalled();
+		expect(api.completion).not.toHaveBeenCalled();
+		expect(genState.undoStack.current).toEqual([[u('prev')]]);
+		expect(genState.setLastError).toHaveBeenCalledTimes(1);
+		expect(genState.setLastError).toHaveBeenCalledWith(undefined);
+	});
+
+	it('runs hooks.messages after convertChatToJSON in Chat API mode', async () => {
+		Object.assign(settings, {
+			useChatAPI: true,
+			templates: { T: { sysPre: '', sysSuf: '', instPre: '[INST]', instSuf: '[/INST]' } },
+			selectedTemplate: 'T',
+		});
+		builder.convertChatToJSON.mockReturnValue([{ role: 'user', content: 'Hello' }]);
+		hooks.messages.push((msgs, ctx) => {
+			expect(ctx.dryRun).toBe(false);
+			ctx.params({ stop: ['STOP'] });
+			return [{ role: 'system', content: 'Rules' }, ...msgs];
+		});
+
+		const { result } = renderLogic([u('Hello')]);
+		api.chatCompletion.mockImplementation(zeroTokenCompletion);
+
+		await act(async () => { await result.current.predict('[INST]Hello[/INST]'); });
+
+		expect(api.chatCompletion).toHaveBeenCalledTimes(1);
+		expect(api.chatCompletion.mock.calls[0][0]).toMatchObject({
+			messages: [
+				{ role: 'system', content: 'Rules' },
+				{ role: 'user', content: 'Hello' },
+			],
+			stop: ['STOP'],
+		});
+	});
+
+	it('emits generationStart, generationChunk, and generationEnd in order', async () => {
+		const trace: Array<[string, unknown]> = [];
+		const events = pluginEvents.forPlugin('logger');
+		events.on('generationStart', payload => trace.push(['start', payload]));
+		events.on('generationChunk', payload => trace.push(['chunk', payload]));
+		events.on('generationEnd', payload => trace.push(['end', payload]));
+
+		const { result } = renderLogic([u('a')]);
+		api.completion.mockImplementation(yieldAll(m('hi '), m('there')));
+
+		await act(async () => { await result.current.predict(); });
+
+		expect(trace).toEqual([
+			['start', { mode: 'completion', sessionId: 42 }],
+			['chunk', { text: 'hi ', chunk: { content: 'hi ' } }],
+			['chunk', { text: 'there', chunk: { content: 'there' } }],
+			['end', { text: 'hi there', complete: true, aborted: false }],
+		]);
+	});
+
+	it('marks generationEnd as aborted when cancelled partway', async () => {
+		let endPayload: unknown;
+		pluginEvents.forPlugin('logger').on('generationEnd', payload => { endPayload = payload; });
+
+		const { result } = renderLogic([u('a')]);
+		api.completion.mockImplementation(() => (async function* () {
+			yield m('one');
+			genState.abortControllerRef.current.abort();
+			yield m('two');
+		})());
+
+		await act(async () => { await result.current.predict(); });
+
+		expect(endPayload).toEqual({ text: 'one', complete: false, aborted: true });
 	});
 });

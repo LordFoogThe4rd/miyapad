@@ -2,9 +2,31 @@ import { APP_VERSION } from './version';
 import { isNewer } from './hooks/useUpdateCheck';
 import { isZipBytes, parsePluginArchive, PluginArchiveError, type ParsedPluginArchive } from './plugins/archive';
 import { SUPPORTED_PLUGIN_API } from './plugins/manifest';
+import type { GenerationMode } from './plugins/events';
 import type { PluginStorage } from './storage/PluginStorage';
 
-export type PromptHook = (prompt: string) => string | Promise<string>;
+export interface PromptHookContext {
+	readonly dryRun: boolean;
+	readonly mode: GenerationMode;
+	abort: () => void;
+	params: (overrides: Record<string, unknown>) => void;
+}
+
+export interface MessagesHookContext {
+	readonly dryRun: boolean;
+	abort: () => void;
+	params: (overrides: Record<string, unknown>) => void;
+}
+
+export interface HookRunState {
+	readonly dryRun: boolean;
+	readonly mode: GenerationMode;
+	aborted: boolean;
+	params: Record<string, unknown>;
+}
+
+export type PromptHook = (prompt: string, ctx: PromptHookContext) => string | Promise<string>;
+export type MessagesHook = (messages: ChatMessage[], ctx: MessagesHookContext) => ChatMessage[] | Promise<ChatMessage[]>;
 export type OutputHook = (text: string, info: { complete: boolean }) => void | Promise<void>;
 export interface PluginCommand {
 	label: string;
@@ -20,9 +42,19 @@ type TaggedHook<F> = F & { [HOOK_PLUGIN_ID]?: string };
  */
 export const hooks = {
 	prompt: [] as PromptHook[],
+	messages: [] as MessagesHook[],
 	output: [] as OutputHook[],
 	commands: [] as PluginCommand[],
 };
+
+export function createHookRunState(options: { dryRun: boolean; mode: GenerationMode }): HookRunState {
+	return {
+		dryRun: options.dryRun,
+		mode: options.mode,
+		aborted: false,
+		params: {},
+	};
+}
 
 let runtimeErrors: Record<string, string> = {};
 const runtimeErrorListeners = new Set<() => void>();
@@ -238,12 +270,37 @@ export async function startPlugins(
 	return { safeMode, switchedOff, ...await runPlugins(pluginStorage.plugins, ids, miyapadFor, control, host) };
 }
 
-/** Passes the prompt through each prompt hook. A hook that throws or returns a non-string is logged and skipped. */
-export async function runPromptHooks(prompt: string): Promise<string> {
+function makeHookControls(state: HookRunState): { abort: () => void; params: (overrides: Record<string, unknown>) => void } {
+	return {
+		abort: () => {
+			if (!state.dryRun) state.aborted = true;
+		},
+		params: (overrides: Record<string, unknown>) => {
+			if (!state.dryRun && overrides && typeof overrides === 'object' && !Array.isArray(overrides)) {
+				Object.assign(state.params, overrides);
+			}
+		},
+	};
+}
+
+/**
+ * Passes the prompt through each prompt hook. A hook that throws or returns a non-string is
+ * logged and skipped. Calling `ctx.abort()` stops later hooks and marks `state.aborted`.
+ */
+export async function runPromptHooks(prompt: string, state: HookRunState = createHookRunState({ dryRun: false, mode: 'completion' })): Promise<string> {
+	const controls = makeHookControls(state);
+	const ctx: PromptHookContext = {
+		dryRun: state.dryRun,
+		mode: state.mode,
+		abort: controls.abort,
+		params: controls.params,
+	};
 	for (const hook of [...hooks.prompt]) {
+		if (state.aborted) break;
 		const id = (hook as TaggedHook<PromptHook>)[HOOK_PLUGIN_ID];
 		try {
-			const result = await hook(prompt);
+			const result = await hook(prompt, ctx);
+			if (state.aborted) break;
 			if (typeof result === 'string') {
 				prompt = result;
 			} else {
@@ -268,8 +325,48 @@ export async function runPromptHooks(prompt: string): Promise<string> {
 }
 
 /**
- * A plugin's own view of the shared hook arrays. `prompt` and `output` entries are wrapped with
- * the plugin's `id` and `hookTimeout`, so runtime failures and timeouts are attributed to `id`.
+ * Passes Chat API messages through each messages hook right after `convertChatToJSON`.
+ * A hook that throws or returns a non-array is logged and skipped.
+ */
+export async function runMessagesHooks(messages: ChatMessage[], state: HookRunState = createHookRunState({ dryRun: false, mode: 'chat' })): Promise<ChatMessage[]> {
+	const controls = makeHookControls(state);
+	const ctx: MessagesHookContext = {
+		dryRun: state.dryRun,
+		abort: controls.abort,
+		params: controls.params,
+	};
+	for (const hook of [...hooks.messages]) {
+		if (state.aborted) break;
+		const id = (hook as TaggedHook<MessagesHook>)[HOOK_PLUGIN_ID];
+		try {
+			const result = await hook(messages, ctx);
+			if (state.aborted) break;
+			if (Array.isArray(result)) {
+				messages = result;
+			} else {
+				const detail = `messages hook returned ${result === null ? 'null' : typeof result} instead of an array`;
+				if (id !== undefined) {
+					recordPluginRuntimeError(id, detail);
+					console.error(`[plugins] "${id}": ${detail}, so it was skipped:`, result);
+				} else {
+					console.error('[plugins] A messages hook returned something that isn\'t an array, so it was skipped:', result);
+				}
+			}
+		} catch (e) {
+			if (id !== undefined) {
+				recordPluginRuntimeError(id, String(e));
+				console.error(`[plugins] "${id}": messages hook failed, so it was skipped:`, e);
+			} else {
+				console.error('[plugins] A messages hook failed, so it was skipped:', e);
+			}
+		}
+	}
+	return messages;
+}
+
+/**
+ * A plugin's own view of the shared hook arrays. `prompt`, `messages` and `output` entries are
+ * wrapped with the plugin's `id` and `hookTimeout`, so runtime failures and timeouts are attributed to `id`.
  */
 export function pluginHooksFor(id: string, record: PluginRecord) {
 	const timeoutMs = (record.manifest.hookTimeout ?? DEFAULT_PLUGIN_HOOK_TIMEOUT_S) * 1000;
@@ -289,6 +386,7 @@ export function pluginHooksFor(id: string, record: PluginRecord) {
 	};
 	return {
 		prompt: { push: (hook: PromptHook) => { hooks.prompt.push(wrap(hook)); } },
+		messages: { push: (hook: MessagesHook) => { hooks.messages.push(wrap(hook)); } },
 		output: { push: (hook: OutputHook) => { hooks.output.push(wrap(hook)); } },
 		commands: hooks.commands,
 	};
